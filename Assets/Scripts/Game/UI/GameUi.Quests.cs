@@ -108,7 +108,7 @@ namespace PCShopSell.Game.UI
             _questHidden = false;
             UpdateQuestTracker();
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
-            _questWindow = OpenWindow("当前任务", 700, 520, BuildGuideWindow, onClosed: () => _questWindow = null);
+            _questWindow = OpenWindow("当前任务", 900, 720, BuildGuideWindow, onClosed: () => _questWindow = null);
         }
 
         /// <summary>冒烟截图用：弹出“完成了租铺任务、接下来去家具城”的任务完成窗口。</summary>
@@ -145,8 +145,9 @@ namespace PCShopSell.Game.UI
                 else if (done != null) Toast($"<color=#386047>完成：{done.Title}</color>" + (q != null ? $"\n接下来：{q.Title}" : "\n继续经营小店吧。"));
                 else if (q != null) Toast("新任务：" + q.Title);
             }
-            // Wait until result popups (e.g. "签约成功") are dismissed, so they read first.
-            if (_popupPending && !PopupOpen && (_questPopup == null || _questPopup.Closed) && !S.IsGameOver)
+            // Signing and the first shop's type choice both precede the task announcement.
+            if (_popupPending && !PropertyContractOpen && _propertyContractPopups.Count == 0
+                && S.PendingShopKindPlaceId == null && !PopupOpen && (_questPopup == null || _questPopup.Closed) && !S.IsGameOver)
             {
                 OpenQuestPopup(_pendingDone, _pendingNext);
                 _popupPending = false;
@@ -197,7 +198,7 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private static string QuestPaperInk(string text) => text?.Replace("<color=#FFC966>", "<color=#80551F>");
+        private static string QuestPaperInk(string text) => Ui.EmphasizeReading(text?.Replace("<color=#FFC966>", "<color=#80551F>"));
 
         private void OpenTrackedQuestDetails()
         {
@@ -382,7 +383,7 @@ namespace PCShopSell.Game.UI
             UpdateQuestTracker();
             if (S.CurrentQuest() == null && S.CurrentDistrictNode == null && S.DistrictInvitationStatus == null && !S.FirstChapterTrialCompleted) return;
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
-            _questWindow = OpenWindow("当前任务", 700, 520, BuildGuideWindow, onClosed: () => _questWindow = null);
+            _questWindow = OpenWindow("当前任务", 900, 720, BuildGuideWindow, onClosed: () => _questWindow = null);
         }
 
         /// <summary>任务变化时强制弹出：先单独弹“任务完成”（完成了什么、拿到什么），关掉后再弹“新任务”。</summary>
@@ -409,7 +410,7 @@ namespace PCShopSell.Game.UI
                 {
                     Line(w.Content, "接下来：" + next.Title, 21, Ui.Accent);
                     Para(w.Content, GuideLocation(next.Target), 16, Ui.Dim);
-                    Para(w.Content, next.Short, 18);
+                    Para(w.Content, QuestPaperInk(next.Short), 18);
                     ProgressLine(w.Content, next, 16);
                 }
                 Ui.Size(Ui.Button(w.Content, "继续游戏", w.Close, 18), -1, 42);
@@ -429,18 +430,52 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "继续", w.Close, 18), -1, 42);
                 return;
             }
-            Line(w.Content, q.Title, 23, Ui.Accent);
-            Para(w.Content, GuideLocation(q.Target), 17, Ui.Accent);
-            Para(w.Content, QuestPaperInk(q.Hint), 18);
-            if (q.Reward != null) Para(w.Content, "完成奖励：" + q.RewardText(S), 16, Ui.Good);
-            ProgressLine(w.Content, q, 16);
+            var heading = Ui.Row(w.Content, 46, 14);
+            Ui.Size(Line(heading, q.Title, 27, Ui.Accent), 0, -1, 1);
+            Ui.Size(Ui.Label(heading, "进行中", 16, TextAnchor.MiddleCenter, Ui.Accent), 80);
+
+            var columns = Ui.Row(w.Content, 360, 16);
+            var objective = QuestDetailCard(columns, "QuestObjective", 1.35f);
+            Line(objective, "任务目标", 20, Ui.Accent);
+            Para(objective, QuestPaperInk(q.Hint), 18);
+            Ui.Size(Ui.Panel(objective, "QuestObjectiveRule", Ui.Edge), -1, 1);
+            Line(objective, "下一步", 20, Ui.Accent);
+            string nextStep = q.Target == QuestTarget.RacingEnrollment
+                ? S.RacingQualificationBlocker ?? q.Short : q.Short;
+            Para(objective, QuestPaperInk(nextStep), 18,
+                q.Target == QuestTarget.RacingEnrollment && S.RacingQualificationBlocker != null ? Ui.Warn : Ui.TextColor);
+
+            var status = QuestDetailCard(columns, "QuestStatus", 1);
+            Line(status, "达成进度", 20, Ui.Accent);
+            if (q.Target == QuestTarget.RacingEnrollment)
+            {
+                Para(status, (S.HasOutstandingLoans ? "○ 待结清贷款" : "✓ 贷款已结清"), 18,
+                    S.HasOutstandingLoans ? Ui.Warn : Ui.Good);
+                Para(status, "自有现金\n" + S.CommunityOwnCash + " / "
+                    + PCShopSell.Core.Common.Money.FromYuan(GameSession.RacingCashMinimumYuan), 19);
+            }
+            else
+            {
+                string progress = ProgressOf(q);
+                Para(status, progress == null ? "完成左侧目标后自动更新。" : QuestPaperInk(progress.Replace(" · ", "\n")), 18,
+                    progress == null ? Ui.Dim : Ui.TextColor);
+            }
+            string location = GuideLocation(q.Target);
+            if (!string.IsNullOrEmpty(location))
+            {
+                Ui.Size(Ui.Panel(status, "QuestLocationRule", Ui.Edge), -1, 1);
+                Line(status, "办理地点 / 入口", 20, Ui.Accent);
+                Para(status, QuestPaperInk(location), 18);
+            }
+            if (q.Reward != null)
+                Para(w.Content, "完成奖励　" + QuestPaperInk(q.RewardText(S)), 18, Ui.Good);
             if (q.Target == QuestTarget.RacingEnrollment)
             {
                 var (label, action) = QuestAction(q.Target);
                 if (action != null)
-                    Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.FlatRow), -1, 42);
+                    Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 44);
                 else
-                    Para(w.Content, S.RacingQualificationBlocker, 16, Ui.Warn);
+                    Ui.Size(Ui.Button(w.Content, "继续经营", w.Close, 18, Ui.ButtonHot), -1, 44);
                 return;
             }
             if (q.Lesson)
@@ -454,7 +489,24 @@ namespace PCShopSell.Game.UI
                     UpdateQuestTracker();
                 }, 18, Ui.FlatRow, canComplete), -1, 42);
             }
-            else Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18), -1, 42);
+            else
+            {
+                var (label, action) = QuestAction(q.Target);
+                var actions = Ui.Row(w.Content, 44, 12);
+                if (action != null)
+                    Ui.Size(Ui.Button(actions, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), 0, 44, 1);
+                Ui.Size(Ui.Button(actions, "继续游戏", w.Close, 18), 0, 44, 1);
+            }
+        }
+
+        private static RectTransform QuestDetailCard(Transform parent, string name, float widthWeight)
+        {
+            var card = Ui.Panel(parent, name, Ui.PanelBg2);
+            card.raycastTarget = false;
+            Ui.Size(card, 0, -1, widthWeight);
+            var rect = card.rectTransform;
+            Ui.VList(rect, 14, 18);
+            return rect;
         }
 
         private static void ResetGuideScroll(Window w)

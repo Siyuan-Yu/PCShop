@@ -85,7 +85,18 @@ namespace PCShopSell.Tests
             try
             {
                 Assert.False(SaveStore.InspectSlot(false).Exists);
-                using (var session = GameSessionTests.Make()) SaveStore.Save(session, true);
+                using (var session = GameSessionTests.Make())
+                {
+                    Assert.True(SaveStore.TrySave(session, 3, campaignId: "manual"));
+                    string manual = File.ReadAllText(Path.Combine(folder, "save3.json"));
+                    Assert.True(SaveStore.TrySave(session, 3, automatic: true, campaignId: "manual"));
+                    Assert.True(SaveStore.TrySave(session, 8, automatic: true, campaignId: "manual"));
+                    Assert.AreEqual(manual, File.ReadAllText(Path.Combine(folder, "save3.json")));
+                    Assert.IsEmpty(Directory.GetFiles(folder, "*.auto.json"));
+                    Assert.False(SaveStore.IsOccupied(8));
+                    Assert.True(SaveStore.IsOccupied(3));
+                    Assert.AreEqual(1, SaveStore.FirstEmptySlot);
+                }
                 Assert.False(SaveStore.InspectSlot(false).Exists);
                 Assert.True(SaveStore.InspectSlot(true).Exists);
                 Assert.IsNotEmpty(SaveStore.InspectSlot(true).SavedAt);

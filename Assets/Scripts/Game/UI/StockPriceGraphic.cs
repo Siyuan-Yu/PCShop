@@ -118,7 +118,7 @@ namespace PCShopSell.Game.UI
                 foreach (var candle in _candles)
                 {
                     float x = CandleX(plot, candle.minute);
-                    var tint = candle.close < candle.open ? Ui.Warn : Ui.Good;
+                    var tint = Ui.ChangeColor(candle.close - candle.open);
                     AssetTrendGraphic.Stroke(mesh, new Vector2(x, Y(candle.low)), new Vector2(x, Y(candle.high)), 1.5f, tint);
                     float open = Y(candle.open), close = Y(candle.close);
                     if (Mathf.Abs(open - close) < 1) close = open + 1;
@@ -133,7 +133,12 @@ namespace PCShopSell.Game.UI
                 for (int j = 0; j < quotes.Length; j++)
                 {
                     var point = new Vector2(TimeX(plot, quotes[j].Minute), Y(quotes[j].PriceCents));
-                    if (j > 0) AssetTrendGraphic.Stroke(mesh, previous, point, tint.a == 1 ? 2.3f : 1.35f, tint);
+                    if (j > 0)
+                    {
+                        Color segmentColor = _series.Length == 1
+                            ? Ui.ChangeColor(quotes[j].PriceCents - quotes[j - 1].PriceCents) : tint;
+                        AssetTrendGraphic.Stroke(mesh, previous, point, tint.a == 1 ? 2.3f : 1.35f, segmentColor);
+                    }
                     if (quotes.Length == 1)
                         AssetTrendGraphic.Stroke(mesh, point - Vector2.right * 2, point + Vector2.right * 2, 4, tint);
                     previous = point;

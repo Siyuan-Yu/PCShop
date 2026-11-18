@@ -37,6 +37,9 @@ namespace PCShopSell.Core.Session
         }
         public string CityActivityMidText(CityActivity activity)
         {
+            if (IsCookTasting(activity))
+                return activity.Choices.Contains("cook-tasted") ? "已经尝过新菜，继续向罗师傅反馈口味、分量和定价。"
+                    : "罗师傅已经端上新菜，打开试吃页面尝一口。";
             var def = CityActivityService(activity);
             return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
         }

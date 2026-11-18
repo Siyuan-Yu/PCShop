@@ -103,7 +103,10 @@ namespace PCShopSell.Core.Session
                 all.Add(new CityActivityDefinition { Id = "social_" + number, Name = name, VenueId = venue,
                     Minutes = minutes, EventOnly = true, ServiceOptionCount = 1, Choices = choices,
                     FixedGroupPrice = number is 41 or 48 or 50,
-                    DefaultService = service, StartText = "大家到齐，开始" + name + "。", MidText = "按本次安排体验并交流。", EndText = name + "完成。" });
+                    DefaultService = service,
+                    StartText = number == 44 ? "罗师傅端上椒香鸡肉饭，请你尝过后给点真实意见。" : "大家到齐，开始" + name + "。",
+                    MidText = number == 44 ? "尝过新菜后，和罗师傅聊聊口味、分量和定价。" : "按本次安排体验并交流。",
+                    EndText = number == 44 ? "你尝过了新菜，也把三方面的建议告诉了罗师傅。他收好记录，和你道别。" : name + "完成。" });
             }
         }
     }

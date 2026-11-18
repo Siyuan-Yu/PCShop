@@ -11,10 +11,17 @@ namespace PCShopSell.Core.Session
             Math.Max(1, (int)Math.Round(baseline * (1 + (50 - aptitude) * .014), MidpointRounding.AwayFromZero));
 
         public static int EmployeeCheckoutCycleMinutes(Employee person) => WorkTaskMinutes(Math.Max(1, person.CheckoutMinutes), person.Dexterity) + 1;
-        public static int AssemblyMinutesOf(Employee person) => Math.Max(45, WorkTaskMinutes(person.AssemblyMinutes, person.Dexterity) - person.BuildsCompleted / 2);
-        public static int EmployeePurchaseMinutes(Employee person) => WorkTaskMinutes(Math.Max(1, person.PurchaseMinutes), person.Intelligence);
+        public static int AssemblyAptitude(Employee person) => (person.Dexterity + person.Intelligence) / 2;
+        public static int AssemblyMinutesOf(Employee person) => Math.Max(45, WorkTaskMinutes(person.AssemblyMinutes, AssemblyAptitude(person)) - person.BuildsCompleted / 2);
+        public static int EmployeePurchaseMinutes(Employee person) => 2;
+        public static double EmployeePurchaseDiscount(Employee person) => Math.Max(0, Math.Min(100, person.Intelligence)) * .001;
+        public static PCShopSell.Core.Common.Money EmployeePurchasePrice(Employee person, PurchaseOffer offer) =>
+            offer.Price.Scale(1 - EmployeePurchaseDiscount(person));
         public static int RestaurantEmployeeOperationMinutes(Employee person, EmployeeRole role) =>
-            WorkTaskMinutes(RestaurantOperationMinutes, role == EmployeeRole.Chef ? person.Dexterity : person.Stamina);
+            WorkTaskMinutes(RestaurantOperationMinutes, person.Dexterity);
+        public const double WaiterTipMaximumRate = .15;
+        public static double WaiterTipChance(int charm) => .05 + Math.Max(0, Math.Min(100, charm)) * .0035;
+        public static double WaiterTipUpperRate(int charm) => .05 + Math.Max(0, Math.Min(100, charm)) * .001;
         public static int EmployeeCharm(Employee person)
         {
             if(person==null)return 0;

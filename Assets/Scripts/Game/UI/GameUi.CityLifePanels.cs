@@ -29,7 +29,7 @@ namespace PCShopSell.Game.UI
             {
                 Para(w.Content, "经营、认识街坊与参加活动都发生在同一个城市。地图负责导航；查看人物只看已知资料，线下相处需要真实到场。", 19);
                 Ui.Size(Ui.Button(w.Content, "城市地图", OpenCityMap, 20, Ui.ButtonHot), -1, 50);
-                Ui.Size(Ui.Button(w.Content, "街坊与已认识的人", OpenCityPeople, 20), -1, 50);
+                Ui.Size(Ui.Button(w.Content, "通讯录", OpenContactsPanel, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "日程", OpenSchedulePanel, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "人脉经营故事", OpenCityStories, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "资产 · 门店与自有物业", OpenCityFinanceOverview, 20), -1, 50);
@@ -184,25 +184,7 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private string _cityPeopleSearch = "";
-        public void OpenCityPeople()
-        {
-            OpenPeopleWorkspace("people", w =>
-            {
-                Ui.Size(Ui.TextInput(w.Content, _cityPeopleSearch, "搜索已知名字、职业或兴趣", s => { _cityPeopleSearch = s ?? ""; w.RequestRebuild(); }), -1, 42);
-                Para(w.Content, "此处只列已认识的人和当前真实在附近的人。查看通讯录不会把对方召到身边；不显示远处人物的精确位置。", 17, Ui.Dim);
-                var people = S.CityPeople.Where(p => S.IsMet(p.PersonId) || S.CitySamePlace(p.PersonId))
-                    .Where(p => { var d = S.CityPerson(p.PersonId); return d != null && (_cityPeopleSearch.Length == 0 || (d.Name + NpcNames.Alias(p.PersonId) + S.CityPersonRole(p.PersonId) + (p.KnownTopics.Contains("interest") ? d.Interest : "")).IndexOf(_cityPeopleSearch, StringComparison.OrdinalIgnoreCase) >= 0); })
-                    .OrderByDescending(p => S.CitySamePlace(p.PersonId)).ThenBy(p => S.CityPerson(p.PersonId)?.Name).ToArray();
-                foreach (var p in people)
-                {
-                    string id = p.PersonId; var d = S.CityPerson(id); bool met = S.IsMet(id);
-                    Ui.Size(Ui.Button(w.Content, PersonNameWithKolBadge(id, d.Name) + " · " + S.CityPersonRole(id) + (S.CitySamePlace(id) ? " · 当前在附近" : " · 联系人") + (met ? $"\n熟悉 {S.Relation(id)} · 履约信任 {S.CityTrust(id)} · {(p.KnownTopics.Contains("interest") ? d.Interest : "兴趣尚未聊到")}" : "\n尚未正式认识，可当面打招呼"), () => OpenCityPersonProfile(id), 18), -1, 72);
-                }
-                if (people.Length == 0) Para(w.Content, "暂时没有可列的人。先到店铺、公共场所或街上靠近居民，再当面打招呼。", 18);
-                Ui.Size(Ui.Button(w.Content, "人脉经营故事", OpenCityStories, 18), -1, 44);
-            });
-        }
+        public void OpenCityPeople() => OpenContactsPanel();
 
         /// <summary>名望一行字：数值 + 档位；看别人时再和玩家自己比一比。</summary>
         private string StandingText(double value, bool compareWithPlayer)
@@ -338,6 +320,11 @@ namespace PCShopSell.Game.UI
             }
             var running = S.RunningCityActivity;
             bool here = S.CurrentPlace?.Id == place.Id;
+            if (here && running?.VenueId == place.Id && GameSession.IsCookTasting(running))
+            {
+                OpenCookTasting(running.Id);
+                return;
+            }
             if (here && running?.VenueId == place.Id && S.CityActivityService(running)?.Id == "hike")
             {
                 OpenCityActivityDetail(running.Id);
@@ -830,6 +817,11 @@ namespace PCShopSell.Game.UI
         private void OpenCityActivityDetail(string activityId)
         {
             var running = S.RunningCityActivity;
+            if (running?.Id == activityId && GameSession.IsCookTasting(running))
+            {
+                OpenCookTasting(activityId);
+                return;
+            }
             if (running?.Id == activityId && GameSession.IsOutdoorMarketVisit(running))
             {
                 OpenOutdoorMarketVisit(running);
@@ -1043,6 +1035,7 @@ namespace PCShopSell.Game.UI
             _cityActivityGo.interactable = !travelling && CityActivityMenuOrTravelBlocker(a.Id) == null && !_ctrl.Placing;
             Ui.SetButtonFill(_cityActivityGo, early && !here ? Ui.ButtonBg : Ui.ButtonHot);
             _cityActivityGo.GetComponentInChildren<Text>().text = travelling ? "正在前往"
+                : running && GameSession.IsCookTasting(a) ? "继续新菜试吃"
                 : running && GameSession.IsManualPlayActivity(a) ? "继续活动"
                 : signHelp ? here ? "打开帮忙页面" : "前往手机店"
                 : raceAid ? here ? "继续陪诊" : "前往医院"

@@ -75,6 +75,37 @@ namespace PCShopSell.Core.Session
 
         public bool FridgeAcceptsFood(string key) => !string.IsNullOrEmpty(key) && FridgeKey(key);
 
+        // 餐厅入库优先冷藏，余量继续由调用方放入后仓。
+        private double AutoChillRestaurantFood(Backpack from, string key, double requested)
+        {
+            if (!InPlayerShop || !RestaurantIngredientsOnly(_focus) || !CanOpenFridge || !FridgeAcceptsFood(key)) return 0;
+            var stored = ParseStored(key);
+            if (stored == null) return 0;
+            double available = Math.Min(requested, StoredHave(stored, from, null));
+            double room = RestaurantFridgeRoom(_focus);
+            double amount = stored.Rice ? Math.Min(available, room)
+                : FridgeUnitsThatFit(room, stored.UnitKg, (int)Math.Min(int.MaxValue, available));
+            if (amount <= 1e-9) return 0;
+            if (stored.Kind == "gift" && IsRawIngredientProduct(stored.Id))
+            {
+                from.TakeGift(stored.Id, (int)amount);
+                AddRetailToBag(CurrentFridge, Gifts.Get(stored.Id), (int)amount, FoodBatch.NoExpiry, chilled: true);
+            }
+            else StoredMove(stored, amount, from, null, CurrentFridge, null);
+            Chill(CurrentFridge);
+            return amount;
+        }
+
+        private bool AutoChillRestaurantIngredients(Backpack from)
+        {
+            bool moved = AutoChillRestaurantFood(from, "rice", from.Food.RiceKg) > 0;
+            foreach (var id in from.Food.Ingredient.Select(batch => batch.Id).Distinct().ToArray())
+                moved |= AutoChillRestaurantFood(from, "ing:" + id, int.MaxValue) > 0;
+            foreach (var item in from.GiftLines.Where(item => IsRawIngredientProduct(item.Key)).ToArray())
+                moved |= AutoChillRestaurantFood(from, "gift:" + item.Key, item.Value) > 0;
+            return moved;
+        }
+
         // Keep legacy chilled metadata, but refrigeration no longer grants a one-time expiry bonus.
         private static void Chill(Backpack bag)
         {

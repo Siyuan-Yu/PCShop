@@ -162,6 +162,49 @@ namespace PCShopSell.Core.Session
                 RememberSocial("keeper_farm", "赴家宴时当面送出了家常臻选礼盒。");
             }
         }
+        public static bool IsCookTasting(CityActivity activity) => activity?.DefinitionId == "social_44";
+        public static readonly string[] CookTastingTopics = { "口味", "分量", "定价" };
+
+        private bool CookTastingHere(CityActivity activity) => IsCookTasting(activity)
+            && activity.State == CityActivityPhase.Running && CurrentPlace?.Id == activity.VenueId
+            && !IsWorking && !IsGameOver && !_sleeping;
+
+        public bool TasteCooksDish(string id)
+        {
+            var activity = RunningCityActivity;
+            if (activity?.Id != id || !CookTastingHere(activity) || activity.Choices.Contains("cook-tasted")) return false;
+            activity.Choices = activity.Choices.Append("cook-tasted").ToArray();
+            ApplyCityActivityMidpoint(activity, CityActivityService(activity), activity.ActualStart + activity.Duration / 3);
+            activity.EventSettlementNote = "试吃了罗师傅提供的椒香鸡肉饭，未支付餐费。";
+            return true;
+        }
+
+        public string ReviewCooksDish(string id, int topic, int opinion)
+        {
+            var activity = RunningCityActivity;
+            if (activity?.Id != id || !CookTastingHere(activity) || !activity.Choices.Contains("cook-tasted")
+                || topic < 0 || topic >= CookTastingTopics.Length || opinion < 0 || opinion > 1) return null;
+            string key = "cook-review:" + topic + ":";
+            if (activity.Choices.Any(choice => choice.StartsWith(key, StringComparison.Ordinal))) return null;
+            string reply = (topic, opinion) switch
+            {
+                (0, 0) => "你觉得椒香很开胃。罗师傅笑着说，会保留这次的香料比例，再把油量收一点。",
+                (0, 1) => "你觉得口味偏咸。罗师傅尝了剩下的一口，记下「酱汁减量，盐晚一点放」。",
+                (1, 0) => "你觉得一份正合适。罗师傅把这份米饭和鸡肉的用量写进了备餐记录。",
+                (1, 1) => "你觉得吃完还差一点。罗师傅准备试做一份加饭版，并重新核算成本。",
+                (2, 0) => "你建议作为平价工作餐卖。罗师傅准备先向附近上班的人问问接受程度。",
+                _ => "你建议多配一点蔬菜，做成套餐。罗师傅记下建议，准备试几种配菜组合。"
+            };
+            activity.Choices = activity.Choices.Append(key + opinion).ToArray();
+            activity.EventSettlementNote += "\n" + reply;
+            RememberSocial("res_cook", reply);
+            return reply;
+        }
+
+        private static bool CookTastingReady(CityActivity activity) => !IsCookTasting(activity)
+            || activity.Choices.Contains("cook-tasted") && Enumerable.Range(0, 3)
+                .All(topic => activity.Choices.Any(choice => choice.StartsWith("cook-review:" + topic + ":", StringComparison.Ordinal)));
+
         private string SocialBatchChoiceReply(CityActivity activity, int choice)
         {
             if (activity.DefinitionId == "social_44" && choice > 0)

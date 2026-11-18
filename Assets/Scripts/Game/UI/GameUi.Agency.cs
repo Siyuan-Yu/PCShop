@@ -31,8 +31,13 @@ namespace PCShopSell.Game.UI
             var versions = Ui.Row(w.Content, 42, 8);
             Ui.Size(Ui.Button(versions,"商铺",()=>{_agencyResidential=false;w.Rebuild();},21,Ui.SelectedButton(!_agencyResidential)),-1,42,1).name="AgencyCommercialTab";
             Ui.Size(Ui.Button(versions,"住宅",()=>{_agencyResidential=true;w.Rebuild();},21,Ui.SelectedButton(_agencyResidential)),-1,42,1).name="AgencyResidentialTab";
-            BuildAgencyHeader(w, agency);
-            if(_agencyResidential){BuildResidentialAgency(w,agency);return;}
+            System.Action refreshProperty = null;
+            BuildAgencyHeader(w, agency, () => refreshProperty?.Invoke());
+            if (_agencyResidential)
+            {
+                refreshProperty = BuildResidentialAgency(w, agency);
+                return;
+            }
             var units = AgencyStreetMap.DistrictPlaces(S,agency);
             if (!units.Any(p => p.Id == _agencySelectedId))
                 _agencySelectedId = S.Listings.Where(l => S.AgencyServes(agency, S.ListingPlace(l)))
@@ -50,26 +55,41 @@ namespace PCShopSell.Game.UI
             }
             BuildAgencyMap(map, units, w, agency, RefreshProperty);
             RefreshProperty();
+            refreshProperty = RefreshProperty;
         }
 
-        private void BuildAgencyHeader(Window w, Place agency)
+        private void BuildAgencyHeader(Window w, Place agency, System.Action refreshProperty)
         {
             var header = Ui.Row(w.Content, 62, 12);
+            Button talk = null;
             if (agency.Id == "agency")
             {
                 var portrait = Ui.Rect(header, "AgentPortrait");
                 Ui.Size(portrait, 40, 54);
                 var image = FitPortrait(portrait, Rosters.AgentChen.Id);
-                var talk = image.gameObject.AddComponent<Button>();
+                talk = image.gameObject.AddComponent<Button>();
                 talk.targetGraphic = image;
-                talk.onClick.AddListener(() => OpenGreeterDialogue(agency, w));
                 talk.Tip("和陈启明聊聊");
             }
             var district=S.City.AgencyDistrictFor(agency.StreetId);
             string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));
-            string detail = _agencyResidential ? "当前住处：" + S.HomeTitle
-                : $"与{Rosters.AgentChen.Name}的熟悉度 {S.AgentRapport} · 中介费减免 {AgencyDiscountPercent}";
-            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#655E52>{detail}</color></size>", 20), -1, 62, 1);
+            var summary = Ui.Size(Ui.Label(header, "", 20), -1, 62, 1);
+            RefreshSummary();
+            if (talk != null)
+                talk.onClick.AddListener(() => OpenPersonDialogue(Rosters.AgentChen.Id, agency, onClosed: () =>
+                {
+                    if (w.Closed || summary == null) return;
+                    RefreshSummary();
+                    refreshProperty();
+                }));
+
+            void RefreshSummary()
+            {
+                string detail = _agencyResidential ? "当前住处：" + S.HomeTitle
+                    : $"与{Rosters.AgentChen.Name}的熟悉度 {S.AgentRapport} · 中介费减免 {AgencyDiscountPercent}";
+                summary.text = $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#655E52>{detail}</color></size>";
+            }
+
             if (_agencyResidential || !BusinessUnlocked || S.DistrictAccessBlocker(agency) != null) return;
             void OpenSection(int section)
             {

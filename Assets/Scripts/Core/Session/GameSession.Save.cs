@@ -171,6 +171,7 @@ namespace PCShopSell.Core.Session
             d.bankDepositCents = _bankDepositCents; d.bankInterestCents = _bankInterestCents; d.bankFraction = _bankFraction;
             d.negativeCashBankReminderDayNumber = _lastNegativeCashBankReminderDayNumber;
             d.priceDays = _priceDays.Select(p => p.Copy()).ToArray();
+            d.commodityPriceSeed = Market.CommoditySeed.ToString(System.Globalization.CultureInfo.InvariantCulture);
             d.marketPriceAlertDay = MarketPriceAlertDay;
             d.marketPriceAlerts = MarketPriceAlerts.ToArray();
             SavePropertyMarket(d);
@@ -205,6 +206,9 @@ namespace PCShopSell.Core.Session
             LoadCityFinance(d);
 
             var history = new Dictionary<PartCategory, List<double>>();
+            if (ulong.TryParse(d.commodityPriceSeed, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out ulong commoditySeed))
+                Market.CommoditySeed = commoditySeed;
             foreach (SaveHistory h in d.history ?? Array.Empty<SaveHistory>())
                 history[(PartCategory)h.category] = new List<double>(h.values ?? Array.Empty<double>());
             Market.Restore(d.marketFactors ?? Array.Empty<double>(),

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,12 +8,22 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private Window _propertyContract;
+        private readonly Queue<Action> _propertyContractPopups = new Queue<Action>();
+        private bool PropertyContractOpen => _propertyContract != null && !_propertyContract.Closed;
+
+        private void ShowPendingPropertyContractPopup()
+        {
+            if (!PropertyContractOpen && !PopupOpen && _propertyContractPopups.Count > 0)
+                _propertyContractPopups.Dequeue().Invoke();
+        }
+
         private void OpenPropertyContract(string title, string property, string details, Money due,
             Action<Transform> buildFees, string terms, bool purchase, Func<bool> sign, Action refresh,
             string confirmName, string blocker = null, Action<Transform> referral = null, int height = 610)
         {
             bool submitted = false;
-            OpenWindow(title, 760, height, contract =>
+            _propertyContract = OpenWindow(title, 760, height, contract =>
             {
                 Transform content = contract.Content;
                 var heading = Ui.Label(content, title, 32, TextAnchor.MiddleCenter);
@@ -75,10 +86,8 @@ namespace PCShopSell.Game.UI
                     if (!sign())
                     {
                         contract.Close();
-                        refresh?.Invoke();
                         return;
                     }
-                    refresh?.Invoke();
                     var reveal = NewUiReveal();
                     if (reveal == null || contract.Closed) { contract.Close(); return; }
                     contract.Closable = false;
@@ -94,6 +103,10 @@ namespace PCShopSell.Game.UI
                     PlayUiReveal(reveal);
                 }, 18, Ui.ButtonHot, blocker == null), -1, 44, 1);
                 confirm.name = confirmName;
+            }, onClosed: () =>
+            {
+                _propertyContract = null;
+                if (submitted) refresh?.Invoke();
             }, showTitleBar: false);
         }
     }

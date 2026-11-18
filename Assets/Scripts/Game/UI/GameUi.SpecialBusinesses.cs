@@ -17,9 +17,12 @@ namespace PCShopSell.Game.UI
         private void BuildIndustryNews(Window w)
         {
                 int day=S.Clock.Today.TotalDays;
-                foreach(string series in ModelProducts.SeriesIds)Para(w.Content,IndustryCycles.ModelNews(series,day)+" · 参考行情 ×"+IndustryCycles.ModelFactor(series,day).ToString("0.##"),17);
-                double clothing=IndustryCycles.ClothingFactor(day);
-                Para(w.Content,clothing>1?"服装供给事件："+(clothing>1.4?"暴雨运输受阻，参考价上涨50%":"棉花减产，参考价上涨35%")+"。":"服装供给正常，日常参考价稳定；换季会显著改变需求。",17);
+                var news = IndustryCycles.CommodityEventOn(day, S.Market.CommoditySeed);
+                if (news.IsActive(day))
+                    Para(w.Content, $"{new GameDate(news.StartDay)} · {news.Name} · {news.Headline}。", 18, Ui.Accent);
+                foreach(string series in ModelProducts.SeriesIds)Para(w.Content,IndustryCycles.ModelNews(series,day)+" · 参考行情 ×"+IndustryCycles.ModelFactor(series,day,S.Market.CommoditySeed).ToString("0.##"),17);
+                double clothing = IndustryCycles.WholesaleMarketFactor(ClothingProducts.Business, day, S.Market.CommoditySeed);
+                Para(w.Content, $"服装批发 · 参考行情 ×{clothing:0.##}。换季会改变顾客的选购倾向。",17);
             BuildHardwareMarketNews(w);
         }
         private void BuildIndustryBrief(Transform parent)
@@ -27,13 +30,13 @@ namespace PCShopSell.Game.UI
             int day=S.Clock.Today.TotalDays;
             if(S.RetailKind=="models")
                 foreach(string series in ModelProducts.SeriesIds)
-                    Line(parent,IndustryCycles.ModelNews(series,day)+" · 行情 ×"+IndustryCycles.ModelFactor(series,day).ToString("0.##"),15,Ui.Accent);
+                    Line(parent,IndustryCycles.ModelNews(series,day)+" · 行情 ×"+IndustryCycles.ModelFactor(series,day,S.Market.CommoditySeed).ToString("0.##"),15,Ui.Accent);
             else if(S.RetailKind=="clothing")
             {
                 var seasonLine=Line(parent,"季节经营 · "+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季",18,Ui.Accent);
                 seasonLine.Tip("约90%的顾客只选应季服装；换季前准备货品，过季库存可留待下一季或调整售价。");
-                double factor=IndustryCycles.ClothingFactor(day);
-                if(factor>1)Para(parent,factor>1.4?"暴雨影响运输和供给，服装参考价上涨50%，持续至本年第280天。":"棉花减产影响供给，服装参考价上涨35%，持续至本年第90天。",15,Ui.Warn);
+                var news = IndustryCycles.CommodityEventOn(day, S.Market.CommoditySeed);
+                if (news.Key == ClothingProducts.Business) Para(parent, news.Headline + "。", 15, Ui.Warn);
             }
         }
         private string SpecialCounterStructure()
@@ -420,7 +423,7 @@ namespace PCShopSell.Game.UI
             var fishOrders = state.Orders.Where(o => o.IsFishOrder).OrderBy(o => o.DueAt).ThenBy(o => o.Id).ToArray();
             Line(C, $"鱼餐预订 {fishOrders.Length} / {GameSession.RestaurantFishOrderLimit}", 19, Ui.Accent);
             if (fishOrders.Length == 0) Line(C, "当前没有鱼餐预订。", 16, Ui.Dim);
-            else Line(C, $"厨师按交期{Ui.Emphasize("优先制作备齐的预订")}。出锅后可交付收款。", 15, Ui.Dim);
+            else Para(C, $"厨师按交期{Ui.Emphasize("优先制作备齐的预订")}，做好后由在岗员工自动交付收款。", 15, Ui.Dim);
             foreach (var order in fishOrders) BuildFishOrder(state, order);
         }
 

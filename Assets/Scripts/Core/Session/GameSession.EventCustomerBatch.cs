@@ -160,6 +160,7 @@ namespace PCShopSell.Core.Session
     public sealed class CustomerEventFeedback
     {
         public string Title, Body;
+        public string ComplaintTaskId;
     }
 
     public sealed partial class SaveData

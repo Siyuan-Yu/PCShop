@@ -331,12 +331,12 @@ namespace PCShopSell.Game.UI
                 string district = replyOnly ? null : DistrictDialogueContext(portraitId);
                 string currentGreeting = S.IsPlayerPartner(portraitId) ? "你来了，正好想跟你说会儿话。" : greeting;
                 string text = ctx.Reply ?? (nearby ? district ?? currentGreeting : "对方已经离开了，等下次见面再聊吧。");
-                var line = Para(replyBody, text, 22, ink);
+                var line = Para(replyBody, Ui.EmphasizeReading(text), 22, ink);
                 line.name = "DialogueReplyText";
                 line.lineSpacing = 1.2f;
                 if (ctx.Reply == null && nearby && district != null &&
                     S.DistrictStoryState.MeetingNodeId == S.CurrentDistrictNode?.Id)
-                    Para(replyBody, S.DistrictMeetingDescription, 17, ink);
+                    Para(replyBody, Ui.EmphasizeReading(S.DistrictMeetingDescription), 17, ink);
 
                 if (replyOnly)
                     Ui.Size(Ui.Button(w.Content, replyConfirm, w.Close, 18, Ui.ButtonHot), -1, 42);
@@ -501,7 +501,7 @@ namespace PCShopSell.Game.UI
                 }
                 options.Add(new TalkOpt { Label = "聊一聊", Hot = true, Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId,remote)) });
                 options.Add(new TalkOpt { Label = "交流物价", Blocker = canTalk ? null : "对方已离开",
-                    Act = () => Reply(S.ExchangeMarketTalk(personId, remote, place)) });
+                    Act = () => Reply(S.ExchangeMarketTalk(personId, remote, place, text => Ui.Emphasize(text))) });
                 options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId,remote:remote), Act = () =>
                 {
                     discussingPeople = true;

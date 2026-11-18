@@ -93,8 +93,7 @@ namespace PCShopSell.Game.UI
             var quote = S.QuoteCart(defaultToShop);
             if (kinds == 0)
             {
-                var hint = Ui.Label(side, "拖动滑杆或输入数量，加入购物车。\n能背的优先放背包，装不下的自动叫车。\n设备、车辆直接登记为已购资产。", 16, TextAnchor.UpperLeft, Ui.Dim);
-                Ui.Size(hint, -1, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
+                Ui.Rect(side, "CartEmptySpace").gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
             }
             else
             {

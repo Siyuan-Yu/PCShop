@@ -17,6 +17,12 @@ namespace PCShopSell.Game.UI
         /// <summary>进入地点后打开对应面板。离开面板 = 回到街上。</summary>
         public void OnEnteredPlace(Place p, string activityId = null)
         {
+            var tasting = S.RunningCityActivity;
+            if (p != null && GameSession.IsCookTasting(tasting) && tasting.VenueId == p.Id)
+            {
+                OpenCookTasting(tasting.Id);
+                return;
+            }
             if (S.IsWorking) { UpdateWorkScreen(); return; }
             if (TryOpenSignHelp(p, activityId)) return;
             if(p.Kind==PlaceKind.Garage){OpenMotorGarage();return;}

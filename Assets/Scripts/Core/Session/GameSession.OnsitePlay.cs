@@ -92,7 +92,7 @@ namespace PCShopSell.Core.Session
         public static bool IsManualPlayActivity(CityActivity activity) =>
             activity != null && (IsInteractiveFishingActivity(activity) || IsOnsiteSport(activity)
                 || IsOnsiteActivity(activity) || IsOutdoorBatchActivity(activity)
-                || activity.DefinitionId is StreetMusicActivityId or NightSchoolActivityId);
+                || IsCookTasting(activity) || activity.DefinitionId is StreetMusicActivityId or NightSchoolActivityId);
         public bool ManualActivityClockPaused => IsManualPlayActivity(RunningCityActivity);
 
         private double ManualOperationTime(CityActivity activity) => activity.ManualOperationMinute > 0
@@ -143,6 +143,10 @@ namespace PCShopSell.Core.Session
 
         private double ManualParticipationProgress(CityActivity activity, long now)
         {
+            if (IsCookTasting(activity))
+                return ((activity.Choices.Contains("cook-tasted") ? 1 : 0)
+                    + Enumerable.Range(0, 3).Count(topic => activity.Choices.Any(choice =>
+                        choice.StartsWith("cook-review:" + topic + ":", StringComparison.Ordinal)))) / 4d;
             if (UsesManualVenuePass(activity))
                 return UsedManualAttempts(activity) / (double)CityLifeCatalog.ManualPlayAttempts(activity.Duration);
 
@@ -207,7 +211,8 @@ namespace PCShopSell.Core.Session
             return activity?.Id == id && IsManualPlayActivity(activity) && !UsesManualVenuePass(activity)
                 && CurrentPlace?.Id == activity.VenueId && !IsGameOver && !_sleeping && !IsWorking
                 && (activity.VenueId != OldMarketVenueId || _oldMarket.Pending == null)
-                && OnsiteCompletionReady(activity) && OutdoorCompletionReady(activity) && LifeActivityReady(activity);
+                && OnsiteCompletionReady(activity) && OutdoorCompletionReady(activity) && LifeActivityReady(activity)
+                && CookTastingReady(activity);
         }
 
         public bool FinishManualCityActivity(string id)

@@ -11,7 +11,7 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private string _residentialSelectedId;
-        private void BuildResidentialAgency(Window w,Place agency)
+        private Action BuildResidentialAgency(Window w,Place agency)
         {
             var homes=S.ResidentialPlaces.Where(p=>S.AgencyServes(agency,p)).ToArray();
             if(!homes.Any(p=>p.Id==_residentialSelectedId))_residentialSelectedId=homes.FirstOrDefault(p=>p==S.Home)?.Id
@@ -26,6 +26,7 @@ namespace PCShopSell.Game.UI
             }
             BuildResidentialMap(map, homes, agency, RefreshProperty);
             RefreshProperty();
+            return RefreshProperty;
         }
         private string ResidentialStatus(Place p)
         {

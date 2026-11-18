@@ -144,7 +144,10 @@ namespace PCShopSell.Game.UI
             string s = $"<b>{v.Name}</b>{(S.Vehicle == v.Kind ? "（当前使用）" : "")}\n{TravelSpeedText(v)}　最多载 {v.CargoCapacity * Core.Home.Backpack.KgPerSpace:0} 千克";
             if (v.Illegal) s += "\n<color=#9C4634>城里不让上路，会被交警追</color>";
             if (v.Purchasable) s += "\n" + S.VehicleUsage(v.Kind);
-            if (!S.CanUse(v.Kind)) s += v.Purchasable ? S.Owns(v.Kind) ? "\n当前没有空闲车辆，可在员工管理查看使用人。" : $"\n去车行购买：{v.Price}/台" : "\n暂时用不了";
+            if (v.Kind == Core.Session.VehicleKind.EBike && S.ScooterReturnHint is string returnHint)
+                s += "\n" + returnHint;
+            if (!S.CanUse(v.Kind) && !(v.Kind == Core.Session.VehicleKind.EBike && S.ImpoundedVehicleCount(v.Kind) > 0))
+                s += v.Purchasable ? S.Owns(v.Kind) ? "\n当前没有空闲车辆，可在员工管理查看使用人。" : $"\n去车行购买：{v.Price}/台" : "\n暂时用不了";
             return s;
         }
     }

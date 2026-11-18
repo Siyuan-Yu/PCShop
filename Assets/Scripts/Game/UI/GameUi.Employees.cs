@@ -371,7 +371,7 @@ namespace PCShopSell.Game.UI
                             details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
                         var label = CompactProduct(line, offer.Id, offer.Name, offer.UnitKg, details, false);
                         label.Tip("该货源本型号日上限 " + S.PurchaseLimit(offer) + " · 今日实货剩余 " + S.PurchaseRemaining(offer) + "\n" + capacity.Allocation);
-                        Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16, TextAnchor.MiddleLeft, Ui.Good), 110);
+                        Ui.Size(Ui.Label(line, GameSession.EmployeePurchasePrice(worker.Person, offer) + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16, TextAnchor.MiddleLeft, Ui.Good), 110);
                         PurchaseQuantity(w, line, offerKey, count, 0, fixedMaximum,
                             value => Set((int)value), canAdd: fixedMaximum >= minimum, minimumOrder: minimum, readValue: () => SelectedCount());
                         bool buyMaximum = lineItem?.BuyMaximum == true;
@@ -423,7 +423,7 @@ namespace PCShopSell.Game.UI
                         var label = Ui.Label(row, GameSession.PurchaseItemName(choice) + " <color=#80551F>" + count + "</color>\n<size=13><color=#655E52>" + (offer?.SupplierName ?? choice.SourceId ?? "自动选货源") + "</color></size>", 16, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
-                        Ui.Size(Ui.Label(row, offer == null ? "不可用" : (offer.Price * choice.Count).ToString(), 15, TextAnchor.MiddleRight, offer == null ? Ui.Warn : Ui.Good), 84, 46);
+                        Ui.Size(Ui.Label(row, offer == null ? "不可用" : (GameSession.EmployeePurchasePrice(worker.Person, offer) * choice.Count).ToString(), 15, TextAnchor.MiddleRight, offer == null ? Ui.Warn : Ui.Good), 84, 46);
                         int priority = order.IndexOf(key);
                         void Move(int offset) { int index = order.IndexOf(key); var other = order[index + offset]; order[index + offset] = key; order[index] = other; Sync(); w.Rebuild(); }
                         Ui.Size(Ui.Button(row, "↑", () => Move(-1), 16, Ui.ButtonBg, priority > 0), 30, 34);
@@ -465,7 +465,7 @@ namespace PCShopSell.Game.UI
                 if (quote.NeedsMultipleLoads)
                     Line(right, "超过单趟载重，返店卸货后继续采购。", 14, Ui.Accent);
                 var budget = Ui.Row(right, 40, 6);
-                var budgetLabel = Ui.Size(Ui.Label(budget, $"计划预算  货款 {quote.Goods} + 车费 {quote.Travel} + 运费 {quote.Freight}", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 38, 1);
+                var budgetLabel = Ui.Size(Ui.Label(budget, $"计划预算  货款 {quote.Goods}（智力优惠 {GameSession.EmployeePurchaseDiscount(worker.Person):P0}）+ 车费 {quote.Travel} + 运费 {quote.Freight}", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 38, 1);
                 budgetLabel.name = "EmployeePurchaseBudget";
                 Ui.Size(Ui.Label(budget, "<b>" + quote.Total + "</b>", 24, TextAnchor.MiddleRight, Ui.Accent), 170, 38);
 

@@ -8,6 +8,8 @@ namespace PCShopSell.Game.Runtime
     /// <summary>Procedural walking for the miniature figures. Only the visual rig moves; gameplay roots stay on the ground.</summary>
     public sealed class FigureMotion : MonoBehaviour
     {
+        private const float WalkCycleDistance = .88f;
+        private const float WalkSupportFraction = .60f;
         private static readonly List<FigureMotion> Active = new List<FigureMotion>();
         private Transform _visual;
         private readonly Transform[] _hips = new Transform[2], _knees = new Transform[2], _feet = new Transform[2], _arms = new Transform[2], _hands = new Transform[2];
@@ -168,8 +170,8 @@ namespace PCShopSell.Game.Runtime
             if (moving)
             {
                 // Distance-driven steps, capped only for accelerated simulation to keep limbs readable.
-                float cycles = Mathf.Min(distance / (1.05f * scale), dt * 3.2f);
-                _phase = Mathf.Repeat(_phase + cycles * Mathf.PI * 2f, Mathf.PI * 2f);
+                float cycles = Mathf.Min(distance / (WalkCycleDistance * scale), dt * 3.2f);
+                _phase = Mathf.Repeat(_phase + cycles, 1f);
             }
             if (animateIdle) _idleTime += blendDt;
             ApplyPose();
@@ -204,33 +206,42 @@ namespace PCShopSell.Game.Runtime
                 }
                 return;
             }
-            float bob = (-.045f + .004f * (1f - Mathf.Cos(_phase * 2f))) * _blend;
-            _visual.localPosition = Vector3.up * (bob * _scale);
-            Torso.localPosition = Vector3.up * (Mathf.Sin(_idleTime * 1.8f) * .003f * (1f - _blend));
-            Torso.localRotation = Quaternion.Euler(3f * _blend, Mathf.Cos(_phase) * 2f * _blend, Mathf.Sin(_phase) * 1.5f * _blend);
+            Vector2 leftAnkle = WalkAnkle(_phase) * _blend;
+            Vector2 rightAnkle = WalkAnkle(Mathf.Repeat(_phase + .5f, 1f)) * _blend;
+            // Set the hip height from the feet so the supporting leg can straighten as it passes under the body.
+            float legReach = 2 * segment - .003f * _blend;
+            float pelvisHeight = ankle + Mathf.Min(
+                leftAnkle.y + Mathf.Sqrt(legReach * legReach - leftAnkle.x * leftAnkle.x),
+                rightAnkle.y + Mathf.Sqrt(legReach * legReach - rightAnkle.x * rightAnkle.x));
+            _visual.localPosition = Vector3.up * ((pelvisHeight - hipHeight) * _scale);
+            float gaitAngle = _phase * 2f * Mathf.PI;
+            Torso.localRotation = Quaternion.Euler(2f * _blend, -Mathf.Cos(gaitAngle) * 3f * _blend, Mathf.Sin(gaitAngle) * _blend);
+            Vector3 walkPelvis = Vector3.up * hipHeight;
+            Torso.localPosition = walkPelvis - Torso.localRotation * walkPelvis
+                + Vector3.up * (Mathf.Sin(_idleTime * 1.8f) * .003f * (1f - _blend));
             for (int i = 0; i < 2; i++)
             {
-                float phase = _phase + i * Mathf.PI;
-                float footZ = -Mathf.Sin(phase) * .21f * _blend;
-                float lift = Mathf.Pow(Mathf.Max(0, -Mathf.Cos(phase)), 1.4f) * .13f * _blend;
-                // Two equal leg segments solve to a level foot. The supporting shoe stays at ground height.
-                float down = hipHeight + bob - (ankle + lift);
-                float reach = Mathf.Clamp(Mathf.Sqrt(down * down + footZ * footZ), .05f, 2 * segment);
+                Vector2 foot = i == 0 ? leftAnkle : rightAnkle;
+                float down = pelvisHeight - ankle - foot.y;
+                float reach = Mathf.Min(Mathf.Sqrt(down * down + foot.x * foot.x), 2 * segment);
                 float knee = 2f * Mathf.Acos(reach / (2 * segment)) * Mathf.Rad2Deg;
-                float hip = Mathf.Atan2(-footZ, down) * Mathf.Rad2Deg - knee * .5f;
+                float hip = Mathf.Atan2(-foot.x, down) * Mathf.Rad2Deg - knee * .5f;
                 _hips[i].localRotation = Quaternion.Euler(hip, 0, 0);
                 _knees[i].localRotation = Quaternion.Euler(knee, 0, 0);
                 _feet[i].localRotation = Quaternion.Euler(-hip - knee, 0, 0);
-                float arm = -Mathf.Sin(phase) * 19f * _blend;
+                float armSwing = Mathf.Cos(gaitAngle + i * Mathf.PI);
                 const float armSpread = 1.5f;
-                _arms[i].localRotation = Quaternion.Euler(arm, 0, i == 0 ? -armSpread : armSpread);
-                SetElbow(i, 6 + (5 - 5 * Mathf.Sin(phase)) * _blend);
+                _arms[i].localRotation = Quaternion.Euler(armSwing * 14f * _blend, 0, i == 0 ? -armSpread : armSpread);
+                SetElbow(i, 6 + (4 - 3 * armSwing) * _blend);
             }
             if (_reachWeight > 0)
             {
                 float bend = 68f * _reachCrouch * _reachWeight;
                 _visual.localPosition = Vector3.down * (2 * segment * (1f - Mathf.Cos(bend * Mathf.Deg2Rad)) * _scale);
-                Torso.localRotation = Quaternion.Euler(24f * _reachCrouch * _reachWeight, 0, 0);
+                Torso.localRotation = Quaternion.Euler(19f * _reachCrouch * _reachWeight, 0, 0);
+                // Hips and torso are sibling bones. Keep the waist attached as the torso leans.
+                Vector3 pelvis = Vector3.up * hipHeight;
+                Torso.localPosition = pelvis - Torso.localRotation * pelvis;
                 if (bend > 0)
                 {
                     for (int i = 0; i < 2; i++)
@@ -290,6 +301,19 @@ namespace PCShopSell.Game.Runtime
                 SetElbow(0, 31 + gesture);
                 SetElbow(1, 18 - gesture * .5f);
             }
+        }
+
+        private static Vector2 WalkAnkle(float phase)
+        {
+            float halfTravel = WalkCycleDistance * WalkSupportFraction * .5f;
+            // During support, the foot moves backwards relative to the body at the body's forward speed.
+            if (phase < WalkSupportFraction)
+                return new Vector2(Mathf.Lerp(halfTravel, -halfTravel, phase / WalkSupportFraction), 0);
+
+            float swing = Mathf.InverseLerp(WalkSupportFraction, 1f, phase);
+            float forward = Mathf.SmoothStep(-halfTravel, halfTravel, swing);
+            float lift = Mathf.Sin(swing * Mathf.PI);
+            return new Vector2(forward, .10f * lift * lift);
         }
 
         private void ApplyFurnitureSeatPose()

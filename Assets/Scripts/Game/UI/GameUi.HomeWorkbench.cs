@@ -67,7 +67,8 @@ namespace PCShopSell.Game.UI
             var rect=Ui.Rect(parent,"WorkbenchPriceTrend");Ui.Size(rect,-1,height);
             rect.gameObject.AddComponent<CanvasRenderer>();
             var graphic=rect.gameObject.AddComponent<WorkbenchHistoryGraphic>();graphic.raycastTarget=false;graphic.Values=data.Select(d=>d.Price).ToArray();
-            graphic.color=data.Length>1&&data.Last().Price<data.First().Price?new Color(.3f,.5f,.65f):Ui.Warn;return rect;
+            graphic.color = data.Length > 1 ? Ui.ChangeColor(data.Last().Price - data.First().Price) : Ui.Dim;
+            return rect;
         }
         private void RefreshWorkbenchAccess()
         {

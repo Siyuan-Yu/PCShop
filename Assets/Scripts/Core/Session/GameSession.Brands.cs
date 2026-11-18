@@ -130,7 +130,7 @@ namespace PCShopSell.Core.Session
         }
         public string BrandProductName(string id) => PartCatalog.Exists(id)?PartCatalog.Get(id).Name:Gifts.Get(id)?.Name??id;
         private long BrandProductPrice(string id) => PartCatalog.Exists(id)?Market.PriceOf(PartCatalog.Get(id)).Cents:
-            Gifts.Get(id)==null?0:Gifts.Get(id).Price.Scale(IndustryCycles.GoodsFactor(Gifts.Get(id),BrandDay)).Cents;
+            Gifts.Get(id)==null?0:Gifts.Get(id).Price.Scale(IndustryCycles.GoodsFactor(Gifts.Get(id),BrandDay,Market.CommoditySeed)).Cents;
         public int BrandProductCount(string shopId,string id)
         {var s=ShopAt(shopId);return s==null||!s.Rented?0:PartCatalog.Exists(id)?s.Sim.Stock.Count(PartCatalog.Get(id),true):s.Sim.Stock.GoodsCount(id);}
         private bool BrandTake(string shopId,string id,int count)

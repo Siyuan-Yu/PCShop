@@ -8,7 +8,12 @@ namespace PCShopSell.Core.Shop
     {
         private readonly System.Collections.Generic.Dictionary<string,long> _fixedSalePrices=new System.Collections.Generic.Dictionary<string,long>();
         public System.Collections.Generic.IReadOnlyDictionary<string,long> FixedSalePrices=>_fixedSalePrices;
-        public void RestoreFixedSalePrice(string key,long price){if(key!=null&&price>0)_fixedSalePrices[key]=price;}
+        public void RestoreFixedSalePrice(string key, long price)
+        {
+            // Older saves already store the model's markup alongside its fixed price.
+            if (key != null && price > 0 && !key.StartsWith("g:model:", StringComparison.Ordinal))
+                _fixedSalePrices[key] = price;
+        }
         private static string FixedPartKey(PartDef part,bool boxed)=>"p:"+part.Id+":"+boxed;
         private void ClearFixedPartPrices(PartDef part){_fixedSalePrices.Remove(FixedPartKey(part,true));_fixedSalePrices.Remove(FixedPartKey(part,false));}
 
@@ -27,7 +32,7 @@ namespace PCShopSell.Core.Shop
             return AssistedPurchaseIntent(boxed?1-(1-chance)*Settings.BoxedTrust:chance);
         }
         private double GoodsPurchaseChance(string id,double markup)=>AssistedPurchaseIntent(
-            ShopSettings.BuyChance(markup)*(IsGoodsShop?1:Settings.GoodsBuyFactor)*(ModelProducts.IsModel(id)?Math.Min(1.4,IndustryCycles.GoodsFactor(Gifts.Get(id),_clock.Today.TotalDays)):1)+GoodsMirrorBonus(id)+RestaurantDrinkPurchaseIntentBonus(id));
+            ShopSettings.BuyChance(markup)*(IsGoodsShop?1:Settings.GoodsBuyFactor)*(ModelProducts.IsModel(id)?Math.Min(1.4,IndustryCycles.GoodsFactor(Gifts.Get(id),_clock.Today.TotalDays,_market.CommoditySeed)):1)+GoodsMirrorBonus(id)+RestaurantDrinkPurchaseIntentBonus(id));
         private static (long min, long max) SalePriceRange(double basis) =>
             (Math.Max(1, (long)Math.Round(basis * ShopSettings.MinMarkup)), Math.Max(1, (long)Math.Round(basis * ShopSettings.MaxMarkup)));
 
@@ -57,7 +62,7 @@ namespace PCShopSell.Core.Shop
             return true;
         }
 
-        public double GoodsReferencePrice(string id) => (Gifts.Get(id)?.Price.Yuan??0)*IndustryCycles.GoodsFactor(Gifts.Get(id),_clock.Today.TotalDays);
+        public double GoodsReferencePrice(string id) => (Gifts.Get(id)?.Price.Yuan??0)*IndustryCycles.GoodsFactor(Gifts.Get(id),_clock.Today.TotalDays,_market.CommoditySeed);
         public (long min, long max) GoodsPriceRange(string id) => SalePriceRange(GoodsReferencePrice(id));
         public bool SetGoodsSalePrice(string id, long yuan)
         {
@@ -66,7 +71,7 @@ namespace PCShopSell.Core.Shop
             var range = GoodsPriceRange(id);
             if (yuan < range.min || yuan > range.max) return false;
             SetGoodsMarkup(id, yuan / GoodsReferencePrice(id));
-            _fixedSalePrices["g:"+id]=yuan;
+            if (!ModelProducts.IsModel(id)) _fixedSalePrices[GoodsKey(id)] = yuan;
             return true;
         }
     }

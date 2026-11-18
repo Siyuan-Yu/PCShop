@@ -88,7 +88,23 @@ namespace PCShopSell.Core.Session
         {if(id=="hardware")_stockMarket.IndexWatched=!_stockMarket.IndexWatched;else if(StockState(id)!=null)StockState(id).Watched=!StockState(id).Watched;}
         public long StockAvailable(string id) => id=="hardware"?_stockMarket.IndexAvailableUnits:StockState(id)?.AvailableUnits??0;
         public long StockBorrowAvailable(string id) => Math.Max(0,(CityInvestments.Get(id)?.Liquidity??0)/2-(StockState(id)?.ShortUnits??0));
-        public long StockPreviousClose(string id) => id=="hardware"?_stockMarket.IndexPreviousCloseCents:StockState(id)?.PreviousCloseCents??0;
+        public long StockPreviousClose(string id)
+        {
+            // 展示基准跟随最新报价所属的交易日，不能因开市重置限价基准而提前归零。
+            // 同时从历史报价恢复，已有存档在首笔报价前或休市时也能正确显示。
+            var quotes = StockQuotes(id);
+            var latest = quotes.LastOrDefault(quote => quote.PriceCents > 0 && quote.Minute <= Clock.Now.TotalMinutes);
+            if (latest != null)
+            {
+                long dayStart = latest.Minute / GameTimestamp.MinutesPerDay * GameTimestamp.MinutesPerDay;
+                var previous = quotes.LastOrDefault(quote => quote.PriceCents > 0 && quote.Minute < dayStart);
+                if (previous != null) return previous.PriceCents;
+                // 游戏刚开始还没有上一交易日，以初始挂牌价为基准。
+                var initial = quotes.FirstOrDefault(quote => quote.PriceCents > 0);
+                if (initial != null) return initial.PriceCents;
+            }
+            return id == "hardware" ? _stockMarket.IndexPreviousCloseCents : StockState(id)?.PreviousCloseCents ?? 0;
+        }
         public double StockDayChange(string id) => StockPreviousClose(id)>0?CityInvestmentPrice(id).Cents/(double)StockPreviousClose(id)-1:0;
         public double StockMarginRatio(string id)
         {var e=StockState(id);return e==null||e.ShortUnits<=0?0:e.ShortCollateralCents/(double)(e.PriceCents*e.ShortUnits);}

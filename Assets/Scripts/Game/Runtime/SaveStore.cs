@@ -22,15 +22,18 @@ namespace PCShopSell.Game
         public static string AutoPath => Path.Combine(SaveDirectory, "autosave.json");
         public static string CityTestPath => Path.Combine(SaveDirectory,"city-life-test.json");
         public const int SlotCount = 9;
+        public const int AutomaticSlot = 0;
 
         private static string SlotPath(int slot, bool automatic)
         {
+            if (automatic) return AutoPath;
             if (slot < 1 || slot > SlotCount) throw new ArgumentOutOfRangeException(nameof(slot));
-            if (automatic && slot == 2) return AutoPath;
-            return Path.Combine(SaveDirectory, automatic ? $"save{slot}.auto.json" : $"save{slot}.json");
+            return Path.Combine(SaveDirectory, $"save{slot}.json");
         }
 
-        private static int LegacySlot(bool automatic) => automatic ? 2 : 1;
+        private static int LegacySlot(bool automatic) => automatic ? AutomaticSlot : 1;
+        private static IEnumerable<string> AutomaticPaths() => new[] { AutoPath }
+            .Concat(Enumerable.Range(1, SlotCount).Select(slot => Path.Combine(SaveDirectory, $"save{slot}.auto.json")));
         private static string CampaignId(string savedId, int slot, bool automatic) =>
             string.IsNullOrEmpty(savedId) ? $"legacy-{slot}-{automatic}" : savedId;
 
@@ -48,11 +51,11 @@ namespace PCShopSell.Game
             }
         }
         public static string LastLoadMessage { get; private set; }
-        public static bool Exists => Enumerable.Range(1, SlotCount).Any(IsOccupied);
+        public static bool Exists => AutomaticPaths().Any(HasFile) || Enumerable.Range(1, SlotCount).Any(IsOccupied);
         public static int FirstEmptySlot => Enumerable.Range(1, SlotCount).FirstOrDefault(slot => !IsOccupied(slot));
 
         private static bool HasFile(string path) => File.Exists(path) || File.Exists(path + ".bak");
-        public static bool IsOccupied(int slot) => HasFile(SlotPath(slot, false)) || HasFile(SlotPath(slot, true));
+        public static bool IsOccupied(int slot) => HasFile(SlotPath(slot, false));
 
         [Serializable]
         private sealed class SlotHeader
@@ -80,8 +83,17 @@ namespace PCShopSell.Game
 
         public static SlotInfo InspectSlot(int slot, bool automatic)
         {
+            if (!automatic) return InspectPath(SlotPath(slot, false), slot, false);
+            var candidates = new List<SlotInfo> { InspectPath(AutoPath, 2, true) };
+            for (int legacySlot = 1; legacySlot <= SlotCount; legacySlot++)
+                candidates.Add(InspectPath(Path.Combine(SaveDirectory, $"save{legacySlot}.auto.json"), legacySlot, true));
+            return candidates.Where(info => info.Readable).OrderByDescending(info => info.Stamp).FirstOrDefault()
+                ?? new SlotInfo { Automatic = true, Exists = candidates.Any(info => info.Exists) };
+        }
+
+        private static SlotInfo InspectPath(string path, int slot, bool automatic)
+        {
             var info = new SlotInfo { Automatic = automatic };
-            string path = SlotPath(slot, automatic);
             foreach (string candidate in new[] { path, path + ".bak" })
             {
                 if (!File.Exists(candidate)) continue;
@@ -142,9 +154,16 @@ namespace PCShopSell.Game
             campaignId = null;
             string preferred = SlotPath(slot, automatic);
             string other = SlotPath(LegacySlot(!automatic), !automatic);
-            var paths = includeLegacyFallback
-                ? new[] { preferred, preferred + ".bak", other, other + ".bak" }
+            var paths = automatic ? AutomaticPaths().SelectMany(path => new[] { path, path + ".bak" })
+                    .Where(File.Exists).OrderByDescending(File.GetLastWriteTimeUtc).ToArray()
                 : new[] { preferred, preferred + ".bak" };
+            if (includeLegacyFallback)
+            {
+                var fallback = automatic ? new[] { other, other + ".bak" }
+                    : AutomaticPaths().SelectMany(path => new[] { path, path + ".bak" })
+                        .Where(File.Exists).OrderByDescending(File.GetLastWriteTimeUtc).ToArray();
+                paths = paths.Concat(fallback).Distinct().ToArray();
+            }
             foreach (string path in paths)
             {
                 if (!File.Exists(path)) continue;
@@ -153,8 +172,16 @@ namespace PCShopSell.Game
                     var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
                     if (data == null || string.IsNullOrEmpty(data.rngState)) throw new InvalidDataException("存档数据不完整");
                     GameSession session = GameSession.Load(city, data);
-                    bool legacyFallback = path == other || path == other + ".bak";
-                    campaignId = CampaignId(data.saveCampaignId, legacyFallback ? LegacySlot(!automatic) : slot, legacyFallback ? !automatic : automatic);
+                    bool sourceAutomatic = AutomaticPaths().Any(autoPath => path == autoPath || path == autoPath + ".bak");
+                    int sourceSlot = slot;
+                    if (sourceAutomatic)
+                    {
+                        sourceSlot = 2;
+                        if (path != AutoPath && path != AutoPath + ".bak")
+                            int.TryParse(Path.GetFileName(path).Substring(4).Split('.')[0], out sourceSlot);
+                    }
+                    else if (automatic) sourceSlot = 1;
+                    campaignId = CampaignId(data.saveCampaignId, sourceSlot, sourceAutomatic);
                     LastLoadMessage = path == preferred ? "读档成功。" : "已从备用存档恢复：" + Path.GetFileName(path);
                     return session;
                 }
@@ -186,10 +213,9 @@ namespace PCShopSell.Game
 
         public static void Delete()
         {
-            for (int slot = 1; slot <= SlotCount; slot++)
-            foreach (bool automatic in new[] { false, true })
+            var paths = Enumerable.Range(1, SlotCount).Select(slot => SlotPath(slot, false)).Concat(AutomaticPaths());
+            foreach (string path in paths)
             {
-                string path = SlotPath(slot, automatic);
                 if (File.Exists(path)) File.Delete(path);
                 if (File.Exists(path + ".bak")) File.Delete(path + ".bak");
             }

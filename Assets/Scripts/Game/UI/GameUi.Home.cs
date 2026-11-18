@@ -41,12 +41,26 @@ namespace PCShopSell.Game.UI
         {
             if (!S.CanSleepAt(S.CurrentPlace)) return;
             bool showHelp = false;
+            // 确认锁属于本次打开的窗口，重建内容也不能再次执行睡眠。
+            bool sleepConfirmed = false;
             OpenWindow("睡觉", 620, 410, w =>
             {
                 if (!S.CanSleepAt(S.CurrentPlace)) { w.Close(); return; }
                 w.TimeStatusOverride = $"当前 {Ui.Hm(S.Clock.MinuteOfDay)}";
                 RefreshWindowTimeStatus(w);
-                BuildBed(w, showHelp, () => { showHelp = !showHelp; w.Rebuild(); });
+                BuildBed(w, showHelp, () => { showHelp = !showHelp; w.Rebuild(); }, sleep =>
+                {
+                    if (sleepConfirmed) return;
+                    sleepConfirmed = true;
+                    foreach (var button in w.Content.GetComponentsInChildren<Button>(true))
+                        button.interactable = false;
+                    if (sleep()) w.Close();
+                    else
+                    {
+                        sleepConfirmed = false;
+                        w.Rebuild();
+                    }
+                });
             });
         }
 
@@ -623,7 +637,7 @@ namespace PCShopSell.Game.UI
         }
 
         private int _wakeMinute = 8 * 60;
-        private void BuildBed(Window w, bool showHelp, Action toggleHelp)
+        private void BuildBed(Window w, bool showHelp, Action toggleHelp, Action<Func<bool>> confirmSleep)
         {
             PlayerStats stats = S.Player;
             var status = Ui.Row(w.Content, 28, 12);
@@ -645,9 +659,9 @@ namespace PCShopSell.Game.UI
             }
 
             var presets = Ui.Row(w.Content, 74, 8);
-            SleepPreset(presets, "睡 8 小时", WakeLabel(8 * 60), () => { if (S.SleepEightHours()) w.Rebuild(); },
+            SleepPreset(presets, "睡 8 小时", WakeLabel(8 * 60), () => confirmSleep(() => S.SleepEightHours()),
                 Ui.ButtonHot, S.IsSleepTime);
-            SleepPreset(presets, "小睡 2 小时", WakeLabel(2 * 60), () => { if (S.Nap()) w.Rebuild(); },
+            SleepPreset(presets, "小睡 2 小时", WakeLabel(2 * 60), () => confirmSleep(() => S.Nap()),
                 Ui.ButtonBg, true);
 
             var rule = Ui.Panel(w.Content, "SleepSectionRule", Ui.Edge);
@@ -658,7 +672,7 @@ namespace PCShopSell.Game.UI
             int duration = (_wakeMinute - now + dayMinutes) % dayMinutes;
             var picker = ClockSelector(w.Content, "起床", _wakeMinute,
                 value => { _wakeMinute = value; w.RequestRebuild(); }, showLabel: false);
-            Ui.Size(Ui.Button(picker, "睡到这个时间", () => { if (S.SleepUntil(_wakeMinute)) w.Rebuild(); },
+            Ui.Size(Ui.Button(picker, "睡到这个时间", () => confirmSleep(() => S.SleepUntil(_wakeMinute)),
                 19, Ui.ButtonHot, S.IsSleepTime && duration > 0), 150, 42);
             string preview = "请选择与当前不同的起床时间";
             if (duration > 0)
@@ -1298,7 +1312,7 @@ namespace PCShopSell.Game.UI
         {
             RectTransform row = Ui.Row(list, 80);
             Ui.Size(ProductText(row, ProductLabel(def.Name, def.WeightKg, def.Description), 18), -1, -1, 1);
-            Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
+            Ui.Size(Ui.Label(row, S.CityGoodsRetailPrice(def).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
             int have = S.Backpack.GiftCount(def.Id);
             Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
             CartAddButton(w, row, "gift:" + def.Id, () => S.CartAddGift(def.Id), "加入购物车", 150, open);

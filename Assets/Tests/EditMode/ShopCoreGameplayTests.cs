@@ -109,14 +109,21 @@ namespace PCShopSell.Tests
                 using(var loaded=Reload(s)){Assert.Zero(loaded.CitySupplierRemaining("source",product));loaded.Clock.Restore(new GameDate(1),600);Assert.AreEqual(cap,loaded.CitySupplierRemaining("source",product));}
             }
         }
-        [Test] public void ModelHeatHasRunupPeakAndCrashWhileClothingIsStableBetweenRareEvents()
+        [Test] public void ModelHeatMovesMoreStronglyThanOrdinaryClothingPrices()
         {
             Assert.AreEqual(1,IndustryCycles.ModelFactor("harbor",0));
             Assert.Greater(IndustryCycles.ModelFactor("harbor",16),IndustryCycles.ModelFactor("harbor",10));
             Assert.Less(IndustryCycles.ModelFactor("harbor",32),1);
             Assert.AreNotEqual(IndustryCycles.ModelFactor("harbor",16),IndustryCycles.ModelFactor("garden",16));
-            Assert.AreEqual(1,IndustryCycles.ClothingFactor(30));Assert.AreEqual(1,IndustryCycles.ClothingFactor(31));
-            Assert.AreEqual(1.35,IndustryCycles.ClothingFactor(70));Assert.AreEqual(1.5,IndustryCycles.ClothingFactor(250));Assert.AreEqual(1,IndustryCycles.ClothingFactor(280));
+            Assert.Greater(IndustryCycles.ModelFactor("harbor", 19) / IndustryCycles.ModelFactor("harbor", 14), 1.4);
+            Assert.Less(IndustryCycles.ModelFactor("harbor", 34) / IndustryCycles.ModelFactor("harbor", 28), .6);
+            for (int day = 1; day < 65; day++)
+            {
+                foreach (string series in ModelProducts.SeriesIds)
+                    Assert.Less(Math.Abs(IndustryCycles.ModelFactor(series, day) / IndustryCycles.ModelFactor(series, day - 1) - 1), .20);
+                Assert.Less(Math.Abs(IndustryCycles.WholesaleMarketFactor(ClothingProducts.Business, day)
+                    / IndustryCycles.WholesaleMarketFactor(ClothingProducts.Business, day - 1) - 1), .05);
+            }
         }
         [Test] public void IndustryPricingUsesSameBasisForQuotePreviewAndConfirmation()
         {

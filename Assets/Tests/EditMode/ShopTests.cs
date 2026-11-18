@@ -605,14 +605,14 @@ namespace PCShopSell.Tests
     public class MarketTests
     {
         [Test]
-        public void ScriptedCryptoBoom_RaisesGpuPrice()
+        public void ScriptedMiningRestock_IsReportedWithoutASuddenGpuPriceJump()
         {
             var m = new HardwareMarket(new GameRandom(3));
             for (int d = 1; d <= 8; d++) m.OnNewDay(new GameDate(d));
             double before = m.Index(PartCategory.Gpu);
             m.OnNewDay(new GameDate(9));
-            Assert.IsTrue(m.News.Any(n => n.Headline.Contains("矿潮")));
-            Assert.Greater(m.Index(PartCategory.Gpu), before + 0.1);
+            Assert.IsTrue(m.News.Any(n => n.Date.TotalDays == 9 && n.Headline.Contains("矿场")));
+            Assert.Less(Math.Abs(m.Index(PartCategory.Gpu) / before - 1), .08);
         }
 
         [Test]

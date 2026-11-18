@@ -312,7 +312,7 @@ namespace PCShopSell.Game.UI
             var onShelf=S.PlayerShop.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(i=>i.Id).ToArray();
             Line(parent,pricingOnly?"二手商品定价":"二手转售库存",19,Ui.Accent);
             var items=state.Used.Where(i=>i.Owned&&!i.Sold&&(!shelfOnly||(displayed??onShelf).Contains(i.Id))&&(!pricingOnly||i.Inspected)).ToArray();
-            const int pageSize = 4;
+            const int pageSize = 8;
             int pages = Math.Max(1, (items.Length + pageSize - 1) / pageSize);
             shelfPage = Mathf.Clamp(shelfPage, 0, pages - 1);
             Transform container=parent;
@@ -323,11 +323,14 @@ namespace PCShopSell.Game.UI
                 container = frame;
                 items = items.Skip(shelfPage * pageSize).Take(pageSize).ToArray();
             }
+            RectTransform shelfRow = null;
+            int shelfIndex = 0;
             foreach(var item in items)
             {
                 int id=item.Id;bool reserved=S.UsedReserved(S.CurrentShop,id);
                 string status=reserved?"顾客已拿取 · 等待收银":onShelf.Contains(id)?"已上架 · 等待挑选":item.Listed?"等待货架空位":item.Inspected?"已鉴定 · 待定价上架":"待鉴定";
-                var card = (shelfOnly ? Ui.FlatPanel(container, "UsedStock_" + id, Ui.PanelBg)
+                if (shelfOnly && shelfIndex++ % 2 == 0) shelfRow = Ui.Row(container, 148, 10);
+                var card = (shelfOnly ? Ui.Size(Ui.FlatPanel(shelfRow, "UsedStock_" + id, Ui.PanelBg), 0, 148, 1)
                     : Ui.Panel(container, "UsedStock_" + id, Ui.PanelBg2)).rectTransform;
                 Ui.VList(card, 5, 8);
                 var title = Ui.Row(card, 46, 8);
@@ -338,6 +341,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(row,item.Listed?"调整售价":"定价并上架",()=>OpenUsedPrice(id,owner),16,Ui.ButtonBg,item.Inspected&&!reserved),-1,34,1);
                 if(item.Listed)Ui.Size(Ui.Button(row,"下架",()=>{S.UnlistUsedItem(id);owner?.Rebuild();RebuildDock();},16,Ui.ButtonBg,!reserved),85,34);
             }
+            if (shelfOnly && shelfIndex % 2 != 0) Ui.Size(Ui.Rect(shelfRow, "EmptyUsedShelfSlot"), 0, 148, 1);
             if(items.Length==0)Line(parent,"暂无二手转售库存。",16,Ui.Dim);
             if (shelfOnly)
             {

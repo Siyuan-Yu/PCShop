@@ -154,11 +154,12 @@ namespace PCShopSell.Game.UI
                         WorkDurationDetail("动手能力", employee.Dexterity, GameSession.EmployeeCheckoutCycleMinutes(employee), Math.Max(1, employee.CheckoutMinutes) + 1)),
                 EmployeeRole.Assembler =>
                     ("组装订单电脑", $"装机 · {GameSession.AssemblyMinutesOf(employee)} 分钟 / 台",
-                        WorkDurationDetail("动手能力", employee.Dexterity, GameSession.AssemblyMinutesOf(employee), Math.Max(45, employee.AssemblyMinutes - employee.BuildsCompleted / 2))
+                        WorkDurationDetail("动手与智力综合", GameSession.AssemblyAptitude(employee), GameSession.AssemblyMinutesOf(employee), Math.Max(45, employee.AssemblyMinutes - employee.BuildsCompleted / 2))
+                        + $" 动手能力 {employee.Dexterity} · 智力 {employee.Intelligence}，各占一半。"
                         + $" 已装机 {employee.BuildsCompleted} 台，经验会缩短用时。"),
                 EmployeeRole.Buyer =>
-                    ("按计划外出进货", $"进货处理 · {GameSession.EmployeePurchaseMinutes(employee)} 分钟 / 型号",
-                        WorkDurationDetail("智力", employee.Intelligence, GameSession.EmployeePurchaseMinutes(employee), Math.Max(1, employee.PurchaseMinutes)) + " 往返用时另计。"),
+                    ("按计划外出进货", $"采购货价优惠 {GameSession.EmployeePurchaseDiscount(employee):P0}",
+                        $"智力 {employee.Intelligence} · 最高优惠10%。统一每型号 {GameSession.EmployeePurchaseMinutes(employee)} 分钟，往返另计。"),
                 EmployeeRole.Salesperson =>
                     ("向顾客推介商品", $"购买意愿 +{GameSession.EmployeeSalesBonus(employee) * 100:0.#} 个百分点", $"魅力 {GameSession.EmployeeCharm(employee)} · 在店上班时生效。"),
                 EmployeeRole.Chef =>
@@ -166,11 +167,13 @@ namespace PCShopSell.Game.UI
                         WorkDurationDetail("动手能力", employee.Dexterity, GameSession.RestaurantEmployeeOperationMinutes(employee, role), GameSession.RestaurantOperationMinutes) + " 走动和等菜另计。"),
                 EmployeeRole.Waiter =>
                     ("上菜、桌边收款和收桌", $"服务员 · 每步操作 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟",
-                        WorkDurationDetail("体能", employee.Stamina, GameSession.RestaurantEmployeeOperationMinutes(employee, role), GameSession.RestaurantOperationMinutes) + " 走动用时另计。"),
+                        WorkDurationDetail("动手能力", employee.Dexterity, GameSession.RestaurantEmployeeOperationMinutes(employee, role), GameSession.RestaurantOperationMinutes)
+                        + $" 魅力 {GameSession.EmployeeCharm(employee)} · 小费概率 {GameSession.WaiterTipChance(GameSession.EmployeeCharm(employee)):P0}，每次¥1起，最高为菜价的 {GameSession.WaiterTipUpperRate(GameSession.EmployeeCharm(employee)):P0}。"),
                 EmployeeRole.Appraiser =>
                     ("判断成色并收购旧物", $"识别真实成色 {GameSession.AppraiserAccuracy(employee.Intelligence) * 100:0.#}%", $"智力 {employee.Intelligence} · 未能识别时按卖家说法估价。"),
                 EmployeeRole.PetKeeper =>
-                    ("给宠物喂食、换水、清理和陪玩", $"照顾 {GameSession.PetsPerKeeper} 只宠物 · 每只状态每天 +{GameSession.PetKeeperCareBonus(employee)}", $"魅力 {GameSession.EmployeeCharm(employee)} · 到岗后开始照料，补粮和换猫砂需要库存。"),
+                    ("给宠物喂食、换水、清理和陪玩", $"照顾 {GameSession.PetsPerKeeper} 只宠物 · 每只状态每天 +{GameSession.PetKeeperCareBonus(employee)}",
+                        $"魅力 {GameSession.EmployeeCharm(employee)} · 动手能力 {employee.Dexterity}，各占一半。到岗后开始照料，补粮和换猫砂需要库存。"),
                 _ => ("暂未分配工作", "待安排", "待安排期间照常发薪。")
             };
 

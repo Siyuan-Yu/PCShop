@@ -473,7 +473,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(head, RetailShopTypes.Name(id), 16, TextAnchor.MiddleLeft), 0, -1, 1);
                 Ui.Size(WbPriceGraph(head, history, 26), 84, 26, 0);
                 string changeText = change.HasValue ? change.Value.ToString("+0.0;-0.0;0.0") + "%" : "—";
-                var changeLabel = Ui.Label(head, changeText, 15, TextAnchor.MiddleRight, change.HasValue && Math.Abs(change.Value) > 0.05 ? WbInk : WbDim); changeLabel.raycastTarget = false;
+                var changeLabel = Ui.Label(head, changeText, 15, TextAnchor.MiddleRight, change.HasValue ? Ui.ChangeColor(change.Value, .05) : WbDim); changeLabel.raycastTarget = false;
                 Ui.Size(changeLabel, 64, -1, 0);
                 WbChip(head, S.MyShops.Any(s => s.RetailKind == id) ? "经营中" : "关注", S.MyShops.Any(s => s.RetailKind == id) ? 'g' : 'n');
                 WbDivider(head);

@@ -355,7 +355,24 @@ namespace PCShopSell.Core.Session
                 CancelCityTravel();
                 return Fail(garageBlock);
             }
-            if(CurrentPlace==place){CityIntent=null;Time.SetPaused(false);return true;}
+            if (CurrentPlace == place)
+            {
+                var intent = CityIntent;
+                CityIntent = null;
+                Time.SetPaused(false);
+                // 关闭地点窗口后，再次快捷前往同一地点应重新打开服务界面。
+                if (intent.EnterOnArrival) CityPlaceEntered?.Invoke(place, intent.ActivityId);
+                return true;
+            }
+            if (CurrentPlace == null && Trip == null && NearbyPlace == place
+                && CityIntent.EnterOnArrival && ClosedReason(place) == null)
+            {
+                var intent = CityIntent;
+                CityIntent = null;
+                bool entered = EnterNearby();
+                if (entered) CityPlaceEntered?.Invoke(place, intent.ActivityId);
+                return entered;
+            }
             bool result=GoTo(place);
             if(!result) {CancelCityTravel();return false;}
             CompleteCityTravel();return true;
@@ -538,7 +555,7 @@ namespace PCShopSell.Core.Session
                     StartOutdoorBatch(a);
                     StartOnsitePlay(a);
                     foreach(var shop in _shops)shop.Sim.PlayerPresent=false;
-                    if (a.ServiceConfirmed && a.ServiceChoice >= 0 && a.DefinitionId != "fishing" && !IsVenueSport(a))
+                    if (a.ServiceConfirmed && a.ServiceChoice >= 0 && a.DefinitionId != "fishing" && !IsVenueSport(a) && !IsCookTasting(a))
                         ChooseCityActivity(a.Id, a.ServiceChoice);
                     if (IsDrinkTasting(a))
                         Say($"开始{def.Name}。三杯尝完后，统一结算 {a.Duration} 分钟。");
@@ -641,6 +658,7 @@ namespace PCShopSell.Core.Session
             var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId&&x.State==CityActivityPhase.Running);
             var def=CityActivityService(a);
             if(def==null||IsOnsiteBasketball(a)||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
+            if (IsCookTasting(a) && choice > 0) return Fail("请在新菜试吃页面尝过菜后，再给罗师傅具体意见。");
             if (a.DefinitionId == "social_60" && choice == 3 && FishingActive && _fishing.Phase != FishingPhase.Ready)
                 return Fail("请先处理当前鱼口或鱼获，再换钓位");
             if (a.ServiceConfirmed && choice < def.ServiceCount && choice != a.ServiceChoice) return false;

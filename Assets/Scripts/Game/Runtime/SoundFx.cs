@@ -16,6 +16,8 @@ namespace PCShopSell.Game.Runtime
         ShopGuestLeaves,
         Cooking,
         Dining,
+        CatMeow,
+        DogBark,
     }
 
     /// <summary>
@@ -71,6 +73,8 @@ namespace PCShopSell.Game.Runtime
                 Sfx.ShopGuestLeaves => (0.55f, 0.85f),
                 Sfx.Cooking => (0.45f, 1.7f),
                 Sfx.Dining => (0.38f, 3.2f),
+                Sfx.CatMeow => (0.46f, 4f),
+                Sfx.DogBark => (0.40f, 4f),
                 _ => (0.80f, 0.20f),
             };
             NextPlayTime[index] = now + cooldown;
@@ -120,10 +124,33 @@ namespace PCShopSell.Game.Runtime
                 case Sfx.Dining:
                     return Build("dining", 0.65f, t => 0.40f * Chime(1680, t, 0, 54) + 0.25f * Chime(2180, t, 0.09f, 58)
                         + 0.35f * Bite(t, .19f, .14f) + 0.29f * Bite(t, .39f, .15f));
+                case Sfx.CatMeow:
+                    return Build("cat-meow", .78f, t =>
+                    {
+                        const float length = .78f;
+                        float u = t / length;
+                        // 连续滑音与谐波形成短促的“喵呜”，首尾包络避免爆音。
+                        float phase = 2 * Mathf.PI * (420 * t + 180 * length / Mathf.PI * (1 - Mathf.Cos(Mathf.PI * u)) - 60 * t * t / length);
+                        float vowel = Mathf.Sin(phase) * .52f + Mathf.Sin(phase * 2) * (.36f - .16f * u)
+                            + Mathf.Sin(phase * 3) * .16f + Mathf.Sin(phase * 5) * .06f;
+                        return Mathf.Pow(Mathf.Max(0, Mathf.Sin(Mathf.PI * u)), .8f) * vowel;
+                    });
+                case Sfx.DogBark:
+                    return Build("dog-bark", .52f, t => Bark(t, 0) + .72f * Bark(t, .27f));
                 default:
                     return Build("success", 0.39f, t => 0.7f * Chime(523, t, 0, 15) + 0.7f * Chime(659, t, 0.065f, 15)
                         + 0.7f * Chime(784, t, 0.13f, 15) + 0.65f * Chime(1047, t, 0.196f, 13));
             }
+        }
+
+        private static float Bark(float t, float start)
+        {
+            float elapsed = t - start;
+            if (elapsed < 0 || elapsed >= .22f) return 0;
+            float phase = 2 * Mathf.PI * (190 * elapsed - 160 * elapsed * elapsed);
+            float voice = Mathf.Sin(phase) * .38f + Mathf.Sin(phase * 2) * .22f
+                + Mathf.Sin(phase * 3) * .18f + Noise(t, 3800) * .25f;
+            return Mathf.Min(1, elapsed * 100) * Mathf.Exp(-elapsed * 13) * voice;
         }
 
         private static float Bite(float t, float start, float length)

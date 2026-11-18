@@ -24,7 +24,7 @@ namespace PCShopSell.Core.Session
         public int LastPlayDay = -1, Happiness = 55, LastPlayBonus;
         public int Weeks, PaidWeeks, Condition = 68;
         public int LastConditionDay = -1, LastKeeperDay = -1;
-        public int WeeklyPrice => Dog ? 1800 : 1400;
+        public int WeeklyPrice => Dog ? 2340 : 1820;
     }
 
     [Serializable]
@@ -275,7 +275,7 @@ namespace PCShopSell.Core.Session
         }
 
         private static void AdjustPetCondition(PetStay pet,int delta) => pet.Condition = Math.Max(0,Math.Min(100,pet.Condition+delta));
-        public static int PetKeeperCareBonus(Employee keeper) => 3 + EmployeeCharm(keeper) / 10;
+        public static int PetKeeperCareBonus(Employee keeper) => 3 + (EmployeeCharm(keeper) + keeper.Dexterity) / 20;
         private Employee[] PetKeepers(OwnedShop shop) => ShopStaff(shop,EmployeeRole.PetKeeper).OrderBy(e => e.Id,StringComparer.Ordinal).ToArray();
 
         public (int coveredPets, int missingKeepers) PetKeeperCoverage(OwnedShop shop)

@@ -288,7 +288,14 @@ namespace PCShopSell.Tests
             Assert.AreEqual(a.VenueId, loaded.CityActivityService(a).VenueId);
             Attend(loaded, a); Assert.IsTrue(loaded.IsMet(personId));
             int relation = loaded.Relation(personId);
-            loaded.AdvanceClock(a.Duration + 1);
+            if (number == 44)
+            {
+                Assert.IsFalse(loaded.CanFinishManualCityActivity(a.Id));
+                Assert.IsTrue(loaded.TasteCooksDish(a.Id));
+                for (int topic = 0; topic < 3; topic++) Assert.IsNotNull(loaded.ReviewCooksDish(a.Id, topic, 0));
+                Assert.IsTrue(loaded.FinishManualCityActivity(a.Id));
+            }
+            else loaded.AdvanceClock(a.Duration + 1);
             Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason);
             Assert.Greater(loaded.Relation(personId), relation);
             Assert.AreEqual(balance - Money.FromYuan(netCost), loaded.Ledger.Balance);

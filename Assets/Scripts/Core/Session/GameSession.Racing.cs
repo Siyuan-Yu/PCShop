@@ -123,12 +123,22 @@ namespace PCShopSell.Core.Session
             string why=MotorStorageBlocker(modelId,forCommute,garageId);if(why!=null)return why;
             return Ledger.CanAfford(Money.FromYuan(MotorCatalog.Get(modelId).Price))?null:"购车现金不足";
         }
+        public const string ScooterGuidePending = "guide:scooter:pending";
+        public const string ScooterGuideCompleted = "guide:scooter:completed";
+
         public bool BuyMotor(string modelId,bool forCommute=true,string garageId=null)
         {
             string why=MotorPurchaseBlocker(modelId,forCommute,garageId);if(why!=null)return Fail(why);
             var m=MotorCatalog.Get(modelId);
+            bool firstScooter = m.Kind == VehicleKind.EBike && !Owns(VehicleKind.EBike)
+                && !Flags.Contains(ScooterGuideCompleted) && !Flags.Contains("guide:scooter:purchased");
             if(!Ledger.TryDebit(Clock.Today,"购车",Money.FromYuan(m.Price),m.Name))return Fail("购车现金不足。");
             PlaceAcquiredMotor(NewMotor(modelId),forCommute,garageId);
+            if (firstScooter)
+            {
+                Flags.Add("guide:scooter:purchased");
+                Flags.Add(ScooterGuidePending);
+            }
             Say(m.Name+(m.Kind==VehicleKind.Van?"已加入员工进货车队，不占车位，不可通勤或参赛。":forCommute?"已设为通勤车，不占车库车位；参赛前需在车库改为入库车辆。":"已停入"+RegionalGarages.Get(garageId).Name+"。"));return true;
         }
         public bool MotorAvailable(GarageVehicle v)
@@ -357,6 +367,9 @@ namespace PCShopSell.Core.Session
                     foreach (var vehicle in _garage.Where(v => MotorCatalog.Get(v.ModelId).Kind == kind).Take(Math.Max(0, count))) vehicle.Impounded = true;
                 }
             }
+            foreach (var vehicle in _garage.Where(v => v.Impounded && v.ImpoundReleaseAt <= 0
+                && MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike))
+                vehicle.ImpoundReleaseAt = Clock.Now.TotalMinutes + ScooterImpoundDays * 1440L;
             foreach (var vehicle in _garage.Where(v => MotorCatalog.Get(v.ModelId).Kind == VehicleKind.Van))
             { vehicle.Commuter = false; vehicle.GarageId = null; }
         }

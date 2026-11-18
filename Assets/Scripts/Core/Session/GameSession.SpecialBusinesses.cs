@@ -28,6 +28,8 @@ namespace PCShopSell.Core.Session
         public int Stove=-1;
         public DiningStage Stage;
         public bool TableCleared;
+        public bool HasWaiterService;
+        public int ServiceCharm;
         public string FishId;
         public long DueAt;
         public FishDefinition Fish => FishingCatalog.Get(FishId);
@@ -630,11 +632,12 @@ namespace PCShopSell.Core.Session
                 return;
             }
             var drink = SellRestaurantDrink(shop, state, order, now);
+            var tip = RestaurantServiceTip(shop, state, order, now);
             RecordRestaurantVisit(state, now, new ShopVisitDetail
             {
                 CustomerId = order.Id, ArrivalMinute = order.Arrived, State = CustomerState.Paid,
                 ProductName = drink.Name == null ? name : name + "、" + drink.Name,
-                PaidCents = Money.FromYuan(order.Price).Cents + drink.Price.Cents
+                PaidCents = Money.FromYuan(order.Price).Cents + drink.Price.Cents + tip.Cents
             });
         }
         private void TickRestaurant(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool open,bool canServe)

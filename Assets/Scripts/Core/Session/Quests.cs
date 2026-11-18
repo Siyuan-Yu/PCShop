@@ -148,6 +148,15 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
+                Id = "third_shop", Title = "开第三家店", Target = QuestTarget.Agency,
+                Short = $"去{K("中介")}寻找新铺，筹备第三家店",
+                Hint = "第二家店稳定经营后，可以按自己的节奏筹备第三家店。到中介选择新铺、签约并选好店型，摆齐开业设施；门店从装修次日起计入进度。",
+                QuietTransition = true,
+                Done = s => s.OperatingStorefrontCount >= 3,
+                Progress = s => $"已开业 {Math.Min(s.OperatingStorefrontCount, 3)}/3 家",
+            },
+            new QuestDef
+            {
                 Id = "racing_enrollment", Title = "办理赛车登记", Target = QuestTarget.RacingEnrollment,
                 Short = "到城郊赛场车库门口按 F，找负责人办理登记",
                 Hint = $"{K("结清所有贷款")}，攒够 {K($"{Money.FromYuan(GameSession.RacingCashMinimumYuan)} 自有现金")}后，"

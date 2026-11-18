@@ -37,6 +37,17 @@ namespace PCShopSell.Game.UI
         private Dictionary<string, long> StockDraft(bool shortMode) => shortMode ? _stockShortDraft : _stockSpotDraft;
         private int StockStep => StockLotSteps[_stockLotStep] * GameSession.StockLotSize;
 
+        private void ResetStockOrderDrafts()
+        {
+            _stockSpotDraft.Clear();
+            _stockShortDraft.Clear();
+            _stockTradeFeedback = null;
+            _stockTradeFailed = false;
+            _stockTradeRevealPending = false;
+            _stockShortMode = false;
+            _stockLotStep = 0;
+        }
+
         // 证券页可以放进别的容器（居家工作台「投资」页）：构建期间 _stockHost 指向容器，_stockEmbedded 为真。
         private Transform _stockHost;
         private bool _stockEmbedded;
@@ -78,6 +89,8 @@ namespace PCShopSell.Game.UI
             string blocker = S.AppBlocker(PhoneApps.Securities);
             if (blocker != null) { Toast(blocker); if (S.HasSmartphone) OpenPhoneStore(); return; }
             EnsureStockSessionState();
+            // 仅在主动进入应用时清空，界面刷新及本次浏览期间切页保留当前操作。
+            ResetStockOrderDrafts();
             ClosePhone();
             if (_stockWindow != null && !_stockWindow.Closed)
             {
@@ -89,6 +102,7 @@ namespace PCShopSell.Game.UI
             _stockWindow = OpenPhoneAppWindow("证券", BuildStockWorkspace, scrollContent: false);
             _stockWindow.OnClosed = () =>
             {
+                ResetStockOrderDrafts();
                 if (_workbenchTab == 2) _homeWorkbench?.RequestRebuild();
             };
         }
@@ -372,7 +386,11 @@ namespace PCShopSell.Game.UI
             name.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
             double change = S.StockDayChange(id);
             StockCell(row, S.CityInvestmentPrice(id).ToString(), 106);
-            StockCell(row, change.ToString("+0.00%;-0.00%;0.00%"), StockQuoteWidth - 106 - StockQuoteGap, change < 0 ? Ui.Warn : Ui.Good);
+            string changeText = change == 0 ? "0.00%" : Math.Abs(change) < .00005
+                ? (change > 0 ? "+<0.01%" : "−<0.01%") : change.ToString("+0.00%;-0.00%");
+            StockCell(row, changeText, StockQuoteWidth - 106 - StockQuoteGap, Ui.ChangeColor(change, 0))
+                .Tip("较上一交易日收盘价的涨跌幅。尚无新报价时保留最近一次涨跌幅。\n对比价格："
+                    + PCShopSell.Core.Common.Money.FromCents(S.StockPreviousClose(id)));
             StockCell(row, held.ToString("N0"), StockPositionWidth);
             StockCell(row, costText, StockCostWidth, cost.HasValue ? StockPriceGraphic.CostColor : Ui.Dim);
             var pending = StockCell(row, "—", StockDraftWidth, Ui.Dim);

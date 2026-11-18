@@ -219,6 +219,7 @@ namespace PCShopSell.Core.Session
         {
             if(!HasWarehouseHere)return Fail("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");
             if (!CanStoreBackpackInWarehouse) return Fail("没有可批量入库的物品。即食食物留在背包里。");
+            bool chilled = AutoChillRestaurantIngredients(Backpack);
             var packagedIngredients = Backpack.GiftLines.Where(item => IsRawIngredientProduct(item.Key)).ToArray();
 
             var storage=InPlayerShop?ShopLocker:HomeBox;
@@ -232,7 +233,8 @@ namespace PCShopSell.Core.Session
                     AddRetailToBag(storage, Gifts.Get(item.Key), item.Value, FoodBatch.NoExpiry);
             if(InPlayerShop)ListAutomaticShopGoods(out _,includeFood:false);
             ApplyCargoLimit();
-            Say("物品已放入后仓，即食食物留在背包里。");
+            Say(chilled ? "食材已优先放入冰箱，其余物品放入后仓；即食食物留在背包里。"
+                : "物品已放入后仓，即食食物留在背包里。");
             return true;
         }
 
@@ -265,9 +267,11 @@ namespace PCShopSell.Core.Session
             if (!intoBox && !CanCarry(kg)) return false;
 
             StoredMove(sk, amount, from, fromParts, to, toParts);
+            double chilled = intoBox && shop ? AutoChillRestaurantFood(store, key, amount) : 0;
             ApplyCargoLimit();
             string qty = sk.Rice ? $" {amount:0.##} 千克" : amount > 1 ? "×" + (int)Math.Round(amount) : "";
             string where = shop && sk.Part != null ? "货架上" : storeName + "里";
+            if (chilled > 1e-9) where = chilled >= amount - 1e-9 ? "冰箱里" : "冰箱和后仓里（冰箱装不下的部分留在后仓）";
             Say(intoBox ? $"把「{sk.Name}」{qty}放到了{where}。" : $"从{where}拿了「{sk.Name}」{qty}放进背包。");
             return true;
         }
@@ -429,6 +433,7 @@ namespace PCShopSell.Core.Session
                     s.Name = s.Id == null ? "饭盒" : MealName(s.Id);
                     return s;
                 case "gift":
+                    s.Id = key.Substring(5);
                     GiftDef g = Gifts.Get(s.Id);
                     if (g == null) return null;
                     s.UnitKg = g.WeightKg;
@@ -543,10 +548,11 @@ namespace PCShopSell.Core.Session
             if (g.SoldAt == FarmBusiness) return BuyFarmWholesale(id, count);
             if (!AtBusiness(g.SoldAt)) return Fail("要去烟酒茶行买。");
             string what = g.Name + (count > 1 ? "×" + count : "");
+            Money price = CityGoodsRetailPrice(g) * count;
             if (SendByCourier)
-                return PayAndSend("人情", g.Price * count, what, false, new CourierItem { Kind = CourierItemKind.Gift, Id = id, Count = count });
+                return PayAndSend("人情", price, what, false, new CourierItem { Kind = CourierItemKind.Gift, Id = id, Count = count });
             if (!CanCarry(g.WeightKg * count)) return false;
-            if (!Ledger.TryDebit(Clock.Today, "人情", g.Price * count, what)) return Fail("钱不够。");
+            if (!Ledger.TryDebit(Clock.Today, "人情", price, what)) return Fail("钱不够。");
             Backpack.AddGift(id, count);
             ApplyCargoLimit();
             Say($"买了「{g.Name}」放进背包。");
@@ -632,7 +638,8 @@ namespace PCShopSell.Core.Session
                 if(listed>0)done.Add($"经营商品 {listed} 件已入后仓，按对应货架/展示台自动陈列；架上满后其余留后仓待补");
                 if(stockFull)done.Add("后仓仓位已满，未放下的经营商品仍在背包或本店后仓里");
 
-                if (MoveFoodAndGiftsToLocker(out bool lockerFull) > 0) done.Add("吃的、礼品放进了店里后仓");
+                if (AutoChillRestaurantIngredients(Backpack)) done.Add("食材已优先放进冰箱，装不下的留在后仓");
+                if (MoveFoodAndGiftsToLocker(out bool lockerFull) > 0) done.Add("其余食材、礼品放进了店里后仓");
                 if (lockerFull) done.Add($"店里后仓满了（{ShopBoxes} 个，{ShopLockerLimitKg:0} 千克），剩下的还在背包里");
             }
             else

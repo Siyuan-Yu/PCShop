@@ -16,6 +16,7 @@ namespace PCShopSell.Core.Session
     {
         public string Id,ModelId,GarageId; public int Motor,Battery,Tyres,Steering; public double Condition=100;
         public bool Commuter,Impounded;
+        public long ImpoundReleaseAt;
         public bool EventBatteryWorn;
         public int SponsorRacesRemaining;
         public GarageVehicle Copy()=>(GarageVehicle)MemberwiseClone();

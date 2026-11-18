@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Market
@@ -51,17 +52,18 @@ namespace PCShopSell.Core.Market
 
         private static readonly Dictionary<MacroFactor, string[]> UpNews = new Dictionary<MacroFactor, string[]>
         {
-            [MacroFactor.Crypto] = new[] { "某虚拟币一周涨了 40%，矿老板又开始扫货显卡", "海外矿场扩产，显卡、硬盘出货紧张" },
-            [MacroFactor.AiDemand] = new[] { "大模型创业潮，公司抢购内存和显卡", "高校开设 AI 专业，学生装机需求上升" },
+            [MacroFactor.Crypto] = new[] { "部分矿场开始补货，显卡询价增多", "海外矿场追加少量显卡和硬盘订单" },
+            [MacroFactor.AiDemand] = new[] { "几家软件公司追加内存和显卡订单", "高校公布新学期的装机采购计划" },
         };
 
         private static readonly Dictionary<MacroFactor, string[]> DownNews = new Dictionary<MacroFactor, string[]>
         {
-            [MacroFactor.Crypto] = new[] { "虚拟币暴跌，矿机二手显卡大量流入市场", "多地清理矿场，显卡需求骤降" },
-            [MacroFactor.AiDemand] = new[] { "AI 公司融资遇冷，服务器内存订单减少", "大厂暂停算力采购，内存价格松动" },
+            [MacroFactor.Crypto] = new[] { "有矿场拆下闲置显卡，交给经销商出货", "几家矿场推迟设备采购" },
+            [MacroFactor.AiDemand] = new[] { "服务器厂商调整排期，内存订单减少", "部分算力采购推迟，内存报价略松" },
         };
 
         private readonly GameRandom _rng;
+        private int _day;
         private readonly double[] _factor = new double[Factors.Length];
         private readonly Dictionary<PartCategory, double> _index = new Dictionary<PartCategory, double>();
         private readonly Dictionary<PartCategory, List<double>> _history = new Dictionary<PartCategory, List<double>>();
@@ -75,10 +77,13 @@ namespace PCShopSell.Core.Market
 
         public IReadOnlyList<NewsItem> News => _news;
         public GameRandom Random => _rng;
+        public ulong CommoditySeed { get; internal set; }
 
-        public HardwareMarket(GameRandom rng)
+        public HardwareMarket(GameRandom rng, int day = 0)
         {
             _rng = rng ?? throw new ArgumentNullException(nameof(rng));
+            CommoditySeed = rng.State;
+            _day = day;
             foreach (PartCategory c in PartCatalog.Categories)
             {
                 _history[c] = new List<double>();
@@ -111,15 +116,16 @@ namespace PCShopSell.Core.Market
         /// <summary>新的一天：指标回归 + 随机波动 + 新闻冲击，然后更新价格指数。</summary>
         public void OnNewDay(GameDate today)
         {
+            _day = today.TotalDays;
             for (int i = 0; i < _factor.Length; i++)
-                _factor[i] = Clamp(_factor[i] * 0.9 + _rng.Gaussian(0.065));
+                _factor[i] = Clamp(_factor[i] * .94 + _rng.Range(-.02, .02));
 
             ApplyBias(today);
             EnsureOutlook(today);
 
             NewsItem scripted = ScriptedNews(today);
             if (scripted != null) Apply(scripted);
-            else if (_rng.Chance(0.3)) Apply(RandomNews(today));
+            else if (_rng.Chance(.10)) Apply(RandomNews(today));
 
             Recompute();
         }
@@ -157,7 +163,7 @@ namespace PCShopSell.Core.Market
             {
                 bool planned = false;
                 foreach (var shock in _shocks) if (shock.category == category && shock.day > today.TotalDays) { planned = true; break; }
-                if (!planned) ScheduleShock(today.AddDays(2 + _rng.Next(0, 3)), category, (_rng.Chance(0.5) ? 1 : -1) * _rng.Range(0.07, 0.13));
+                if (!planned) ScheduleShock(today.AddDays(_rng.Next(5, 11)), category, (_rng.Chance(.5) ? 1 : -1) * _rng.Range(.006, .015));
             }
         }
 
@@ -194,11 +200,11 @@ namespace PCShopSell.Core.Market
             }
         }
 
-        /// <summary>第 10 天的固定矿潮新闻。</summary>
+        /// <summary>第 10 天的矿场补货消息，属于普通行情。</summary>
         private static NewsItem ScriptedNews(GameDate today)
         {
             if (today.TotalDays == 9)
-                return new NewsItem(today, "【头条】某虚拟币一夜翻倍，全国矿潮来袭，显卡被抢购一空", MacroFactor.Crypto, 0.9);
+                return new NewsItem(today, "部分矿场开始补货，显卡询价比前几天多", MacroFactor.Crypto, .065);
             return null;
         }
 
@@ -208,7 +214,7 @@ namespace PCShopSell.Core.Market
             bool up = _rng.Chance(0.5);
             string[] pool = up ? UpNews[f] : DownNews[f];
             string headline = pool[_rng.Next(0, pool.Length)];
-            double shock = (up ? 1 : -1) * _rng.Range(0.2, 0.45);
+            double shock = (up ? 1 : -1) * _rng.Range(.025, .045);
             return new NewsItem(today, headline, f, shock);
         }
 
@@ -236,6 +242,8 @@ namespace PCShopSell.Core.Market
             double v = 1.0;
             for (int i = 0; i < _factor.Length; i++) v += s[i] * _factor[i];
             v += BiasOf(c);
+            string key = c.ToString();
+            v *= IndustryCycles.OrdinaryFactor(key, _day) * IndustryCycles.CommodityEventFactor(key, _day, CommoditySeed);
             return Math.Max(0.6, Math.Min(1.8, v));
         }
 

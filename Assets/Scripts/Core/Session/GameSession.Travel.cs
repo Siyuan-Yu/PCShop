@@ -237,7 +237,9 @@ namespace PCShopSell.Core.Session
                 Vehicle = VehicleKind.Walk;
                 ApplyCargoLimit();
                 if (Trip != null) Trip.ChangeVehicle(Vehicles.Walk);
-                body += $"\n{name}被扣了！货只能自己扛（走得慢）。去车行交 {PoliceSystem.RedeemFee} 可以赎回。";
+                body += caught == VehicleKind.EBike
+                    ? $"\n{name}被扣了！扣押满 {ScooterImpoundDays} 天会免费自动归还，也可提前去车行交 {PoliceSystem.RedeemFee} 领回。"
+                    : $"\n{name}被扣了！货只能自己扛（走得慢）。去车行交 {PoliceSystem.RedeemFee} 可以赎回。";
             }
             Show("被交警抓到了", body);
         }
@@ -278,12 +280,42 @@ namespace PCShopSell.Core.Session
             return v!=null&&SellMotor(v.Id);
         }
 
+        public const int ScooterImpoundDays = 7;
+
+        public string ScooterReturnHint
+        {
+            get
+            {
+                var scooters = _garage.Where(v => v.Impounded && MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike).ToArray();
+                if (scooters.Length == 0) return null;
+                long minutes = Math.Max(0, scooters.Min(v => v.ImpoundReleaseAt) - Clock.Now.TotalMinutes);
+                long hours = (minutes + 59) / 60;
+                string remaining = hours >= 24 ? $"{hours / 24} 天 {hours % 24} 小时" : hours > 0 ? $"{hours} 小时" : "片刻";
+                return (scooters.Length > 1 ? "最近一台" : "小电驴") + $"还需 {remaining} 自动归还，也可到车行提前领回。";
+            }
+        }
+
+        private void UpdateImpoundedVehicles(long now)
+        {
+            foreach (var motor in _garage.Where(v => v.Impounded && v.ImpoundReleaseAt > 0
+                && v.ImpoundReleaseAt <= now && MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike))
+            {
+                motor.Impounded = false;
+                motor.ImpoundReleaseAt = 0;
+                QueueCustomerFeedback("小电驴已归还", MotorCatalog.Get(motor.ModelId).Name
+                    + $"的 {ScooterImpoundDays} 天扣押期已满，车辆已免费归还。"
+                    + (motor.Commuter ? "\n点击左下角「小电驴」即可切换出行方式。" : "\n车辆已回到原车库，可到车库查看或设为通勤车。"));
+            }
+        }
+
         private void ImpoundVehicle(VehicleKind kind,string vehicleId=null)
         {
 
             var motor=vehicleId==null?_garage.FirstOrDefault(v=>v.Commuter&&MotorCatalog.Get(v.ModelId).Kind==kind):_garage.Find(v=>v.Id==vehicleId);
             if(motor==null||motor.Impounded)return;
             motor.Impounded=true;
+            motor.ImpoundReleaseAt = kind == VehicleKind.EBike
+                ? Clock.Now.TotalMinutes + ScooterImpoundDays * 1440L : 0;
 
         }
 
@@ -294,7 +326,9 @@ namespace PCShopSell.Core.Session
             string name = Vehicles.Get(kind).Name;
             if (!Ledger.TryDebit(Clock.Today, "罚款", PoliceSystem.RedeemFee, "赎回" + name)) return Fail("钱不够赎车。");
 
-            var motor=_garage.FirstOrDefault(v=>v.Impounded&&MotorCatalog.Get(v.ModelId).Kind==kind);if(motor!=null)motor.Impounded=false;
+            var motor=_garage.Where(v=>v.Impounded&&MotorCatalog.Get(v.ModelId).Kind==kind)
+                .OrderBy(v => v.ImpoundReleaseAt).FirstOrDefault();
+            if (motor != null) { motor.Impounded = false; motor.ImpoundReleaseAt = 0; }
             Say(name + "赎回来了。");
             return true;
         }

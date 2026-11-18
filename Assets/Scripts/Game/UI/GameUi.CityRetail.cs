@@ -29,11 +29,11 @@ namespace PCShopSell.Game.UI
                             Choose($"加强服务 · 日薪每人 +¥{GameSession.PromotionServiceWageRaise}", "position");
                             Choose("维持原价 · 人气 −1", "maintain");
                         }
-                        else if (item.Kind == "terms") { Choose("接受3件起订", "batch"); Choose("小批次 / 价格+8%", "small"); }
+                        else if (item.Kind == "terms") { Choose("接受新起订量", "batch"); Choose("小批量进货 · 批发价 +8%", "small"); }
                         else Choose("改看其他已知货源", "alternative");
                     }
                 }
-                if (S.CityCompetitions.Count == 0) Para(w.Content, "目前没有市场变化。第15天起按固定节奏出现，每次持续3天，结束后临时影响解除。", 17, Ui.Dim);
+                if (S.CityCompetitions.Count == 0) Para(w.Content, "暂时没有同行促销或供货变动的消息。", 17, Ui.Dim);
 
         }
 
@@ -50,7 +50,7 @@ namespace PCShopSell.Game.UI
             foreach(var product in ModelProducts.All.Where(p=>_modelSeries==null||p.ModelSeries==_modelSeries))
             {
                 var item=product;var row=Ui.Row(w.Content,52,6);
-                Ui.Size(Ui.Label(row,item.Name+" · "+item.Price+" · "+item.WeightKg.ToString("0.##")+"千克"+(item.LimitedEdition?" · 限定":""),17),-1,52,1);
+                Ui.Size(Ui.Label(row,item.Name+" · 零售参考价 "+S.CityGoodsRetailPrice(item)+" · "+item.WeightKg.ToString("0.##")+"千克"+(item.LimitedEdition?" · 限定":""),17),-1,52,1);
                 Ui.Size(Ui.Button(row,"详情",()=>OpenWorkspace("product-info",item.Id,item.Name,720,540,detail=>
                 {
                     Para(detail.Content,item.Description,18);

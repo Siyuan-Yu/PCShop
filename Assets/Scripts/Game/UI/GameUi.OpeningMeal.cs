@@ -193,6 +193,86 @@ namespace PCShopSell.Game.UI
             r.sizeDelta = new Vector2(Mathf.Max(0, w), Mathf.Max(0, h));
         }
 
+        private GameSession _firstUseGuideSession;
+        private Button _mealDeliveryGuideButton;
+        private RectTransform _firstUseGuideRoot, _firstUseGuideCard;
+        private Text _firstUseGuideText, _firstUseGuideArrow;
+        private readonly Image[] _firstUseGuideFrame = new Image[4];
+
+        private void UpdateFirstUseGuide()
+        {
+            if (!ReferenceEquals(_firstUseGuideSession, S))
+            {
+                _firstUseGuideSession = S;
+                _mealDeliveryGuideButton = null;
+            }
+            Button target = null;
+            bool meal = _mealDeliveryGuideButton != null && _mealDeliveryGuideButton.gameObject.activeInHierarchy
+                && _windows.Count > 0 && _mealDeliveryGuideButton.transform.IsChildOf(_windows[_windows.Count - 1].Root);
+            string text = null;
+            if (meal)
+            {
+                target = _mealDeliveryGuideButton;
+                text = S.MealDeliveryEnabled ? "这里可以开关自动订餐\n缺饭时会按选定餐档下单"
+                    : "在这里开启自动订餐\n缺饭时会按选定餐档下单";
+            }
+            else if (!AnyModalOpen && S.Flags.Contains(GameSession.ScooterGuidePending) && S.CanUse(VehicleKind.EBike))
+            {
+                target = _vehicleButtons.FirstOrDefault(entry => entry.kind == VehicleKind.EBike).b;
+                text = "点「小电驴」切换出行方式\n之后就能骑它通勤";
+            }
+            bool show = target != null && target.interactable && target.gameObject.activeInHierarchy
+                && !MainMenuOpen && !S.IsGameOver && !S.IsWorking && !S.Racing && !_ctrl.Placing
+                && !_ctrl.PetFocusActive && !PopupOpen && S.Trip == null
+                && (_guideRoot == null || !_guideRoot.gameObject.activeSelf);
+            if (_firstUseGuideRoot != null) _firstUseGuideRoot.gameObject.SetActive(show);
+            if (!show || _tutorialCanvas == null) return;
+            if (_firstUseGuideRoot == null)
+            {
+                _firstUseGuideRoot = Ui.Rect(_tutorialCanvas.transform, "FirstUseGuide").Fill();
+                for (int i = 0; i < _firstUseGuideFrame.Length; i++)
+                {
+                    var frame = _firstUseGuideFrame[i] = Ui.Panel(_firstUseGuideRoot, "FirstUseFrame" + i, Ui.FlatHotEdge);
+                    frame.raycastTarget = false;
+                    frame.rectTransform.anchorMin = frame.rectTransform.anchorMax = Vector2.zero;
+                    frame.rectTransform.pivot = Vector2.zero;
+                }
+                var card = Ui.FlatPanel(_firstUseGuideRoot, "FirstUseHint", Ui.PanelBg, Ui.FlatHotEdge);
+                card.raycastTarget = false;
+                _firstUseGuideCard = card.rectTransform;
+                _firstUseGuideCard.anchorMin = _firstUseGuideCard.anchorMax = Vector2.zero;
+                _firstUseGuideCard.pivot = Vector2.zero;
+                _firstUseGuideText = Ui.Label(_firstUseGuideCard, "", 19, TextAnchor.MiddleCenter, Ui.Accent);
+                _firstUseGuideText.raycastTarget = false;
+                _firstUseGuideText.rectTransform.Fill(10);
+                _firstUseGuideArrow = Ui.Label(_firstUseGuideRoot, "▼", 25, TextAnchor.MiddleCenter, Ui.ChromeGold);
+                _firstUseGuideArrow.raycastTarget = false;
+                var arrow = _firstUseGuideArrow.rectTransform;
+                arrow.anchorMin = arrow.anchorMax = Vector2.zero;
+                arrow.pivot = Vector2.zero;
+            }
+            _firstUseGuideRoot.SetAsLastSibling();
+            var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
+            Rect hole = GuideTargetBounds((RectTransform)target.transform, size, 5);
+            const float edge = 3;
+            GuideRect(_firstUseGuideFrame[0].rectTransform, hole.xMin, hole.yMax, hole.width, edge);
+            GuideRect(_firstUseGuideFrame[1].rectTransform, hole.xMin, hole.yMin - edge, hole.width, edge);
+            GuideRect(_firstUseGuideFrame[2].rectTransform, hole.xMin - edge, hole.yMin - edge, edge, hole.height + edge * 2);
+            GuideRect(_firstUseGuideFrame[3].rectTransform, hole.xMax, hole.yMin - edge, edge, hole.height + edge * 2);
+            Color color = Ui.FlatHotEdge;
+            color.a = .6f + .4f * (.5f + .5f * Mathf.Sin(Time.unscaledTime * 4));
+            foreach (var frame in _firstUseGuideFrame) frame.color = color;
+            float width = Mathf.Min(330, size.x - 24);
+            float x = Mathf.Clamp(hole.center.x - width * .5f, 12, size.x - width - 12);
+            bool above = hole.yMax + 116 < size.y;
+            float y = above ? hole.yMax + 28 : hole.yMin - 104;
+            GuideRect(_firstUseGuideCard, x, Mathf.Clamp(y, 12, size.y - 92), width, 80);
+            _firstUseGuideText.text = text;
+            _firstUseGuideArrow.text = above ? "▼" : "▲";
+            GuideRect(_firstUseGuideArrow.rectTransform, hole.center.x - 16,
+                above ? hole.yMax + 2 : hole.yMin - 28, 32, 26);
+        }
+
         private void UpdateOpeningMealGuide()
         {
             if (_tutorialCanvas == null) return;

@@ -16,6 +16,8 @@ namespace PCShopSell.Core.Shop
         public long arrived, ready, waiting, spendCents, budgetCents;
         public bool cash, boxed, chilled, preferenceAssigned;
         public bool countedBrandVisit;
+        public bool hasBrowseStart;
+        public long browseStartedMinute;
         public string referralProductId;
         public bool referralBoxed, referralReserved, storyReferral;
         public int resaleId;
@@ -73,6 +75,7 @@ namespace PCShopSell.Core.Shop
             customers = _active.Where(c => c.State == CustomerState.Browsing || c.State == CustomerState.WaitingCheckout).Select(c => new CitySavedCustomer {
                 id = c.Id, intent = (int)c.Intent, category = (int)c.DesiredCategory, tier = c.BuildTier, countedBrandVisit = c.CountedBrandVisit,
                 state = (int)c.State, reason = (int)c.Reason, paidWith = (int)c.PaidWith,
+                hasBrowseStart = c.BrowseStartedMinute >= 0, browseStartedMinute = c.BrowseStartedMinute,
                 personId = c.PersonId, visitId = c.VisitId, itemId = c.Item?.Id, goodsId = c.GoodsId, interest = c.RetailInterestSeries,
                 arrived = c.ArrivedAt.TotalMinutes, ready = c.ReadyAt.TotalMinutes, waiting = c.WaitingSince.TotalMinutes,
                 spendCents = c.Spend.Cents, budgetCents = c.RetailBudgetCents, cash = c.CarriesCash,
@@ -103,6 +106,7 @@ namespace PCShopSell.Core.Shop
                 var c = new ShopCustomer(x.id, (CustomerIntent)x.intent, (PartCategory)x.category,
                     Math.Max(0, Math.Min(PartCatalog.TierCount - 1, x.tier)), new GameTimestamp(x.arrived), new GameTimestamp(x.ready), x.cash) {
                     State = (CustomerState)x.state, CountedBrandVisit = x.countedBrandVisit, Reason = Enum.IsDefined(typeof(LeaveReason), x.reason) ? (LeaveReason)x.reason : LeaveReason.None,
+                    BrowseStartedMinute = x.hasBrowseStart ? Math.Max(x.arrived, x.browseStartedMinute) : -1,
                     PaidWith = Enum.IsDefined(typeof(PayChannel), x.paidWith) ? (PayChannel)x.paidWith : PayChannel.Cash,
                     PersonId = string.IsNullOrEmpty(x.personId) ? null : x.personId, VisitId = string.IsNullOrEmpty(x.visitId) ? null : x.visitId, WaitingSince = new GameTimestamp(x.waiting),
                     Item = itemId == null ? null : PartCatalog.Get(itemId), GoodsId = goodsId,ResaleId=x.resaleId,ResaleName=x.resaleName,

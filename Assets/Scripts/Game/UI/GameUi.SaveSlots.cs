@@ -28,40 +28,37 @@ namespace PCShopSell.Game.UI
         private void OpenSaveSlots(bool saving, bool confirmProgress)
         {
             string title = saving ? "save" : "load";
-            OpenWindow(L(title), 1140, 664, w =>
+            OpenWindow(L(title), 1140, 850, w =>
             {
                 MenuTitle(w, title);
                 Ui.Size(Ui.Label(w.Content, L(saving ? "pick_save_slot" : "pick_load_slot"), 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 34);
                 RectTransform row = null;
-                for (int slot = 1; slot <= SaveStore.SlotCount; slot++)
+                for (int index = 0; index < 12; index++)
                 {
-                    if ((slot - 1) % 3 == 0) row = Ui.Row(w.Content, 172, 12);
-                    BuildSaveSlot(row, w, slot, saving, confirmProgress);
+                    if (index % 3 == 0) row = Ui.Row(w.Content, 172, 12);
+                    if (index <= SaveStore.SlotCount)
+                        BuildSaveSlot(row, w, index, saving, confirmProgress, automatic: index == SaveStore.AutomaticSlot);
+                    else Ui.Size(Ui.Rect(row, "SaveSlotSpacer"), 0, -1, 1);
                 }
             }, scrollContent: false, allowDuringOpeningMeal: true);
         }
 
-        private void BuildSaveSlot(Transform row, Window window, int slot, bool saving, bool confirmProgress)
+        private void BuildSaveSlot(Transform row, Window window, int slot, bool saving, bool confirmProgress, bool automatic = false)
         {
-            var manual = SaveStore.InspectSlot(slot, false);
-            var auto = SaveStore.InspectSlot(slot, true);
-            bool occupied = manual.Exists || auto.Exists;
-            // An automatic snapshot from a previous campaign must not appear next to its replacement.
-            bool hasVersions = manual.Readable && auto.Readable && manual.Campaign == auto.Campaign;
-            var latest = auto.Readable && (!manual.Readable || (hasVersions && auto.Stamp > manual.Stamp)) ? auto : manual;
-            bool active = _ctrl.ActiveSaveSlot == slot;
+            var latest = SaveStore.InspectSlot(slot, automatic);
+            bool occupied = latest.Exists;
+            bool active = !automatic && _ctrl.ActiveSaveSlot == slot;
             string number = slot.ToString("00");
-            string title = MenuLocalization.Format("save_slot_number", number);
+            string title = automatic ? L("auto_save") : MenuLocalization.Format("save_slot_number", number);
 
             var card = Ui.Size(Ui.Button(row, "", () =>
             {
-                if (saving)
+                if (saving && !automatic)
                     SaveIntoSlot(window, slot, number);
-                else if (hasVersions)
-                    ChooseSaveVersion(slot, title, latest, latest.Automatic ? manual : auto, confirmProgress);
                 else
                     LoadSaveVersion(slot, latest, confirmProgress);
-            }, bg: active ? Ui.SelectedButton(true) : occupied ? Ui.ButtonBg : Ui.FlatWell, interactable: saving || occupied), 0, -1, 1);
+            }, bg: active ? Ui.SelectedButton(true) : occupied ? Ui.ButtonBg : Ui.FlatWell,
+                interactable: automatic ? !saving && occupied : saving || occupied), 0, -1, 1);
 
             var name = SlotLabel(card.transform, title, 22, 1, -44, 11, Ui.TextColor);
             name.fontStyle = FontStyle.Bold;
@@ -73,7 +70,7 @@ namespace PCShopSell.Game.UI
             if (!latest.Readable)
             {
                 SlotLabel(card.transform, L(occupied ? "unreadable_save_slot" : "empty_save_slot"), 18, 1, -113, 72, occupied ? Ui.Warn : Ui.Dim);
-                if (saving && !occupied)
+                if (saving && !automatic && !occupied)
                     SlotLabel(card.transform, L("save_in_empty_slot"), 15, 0, 9, -36, Ui.Accent);
                 return;
             }
@@ -90,7 +87,7 @@ namespace PCShopSell.Game.UI
             cash.resizeTextMinSize = 11;
             cash.resizeTextMaxSize = 18;
             SlotLabel(card.transform, latest.SavedAt ?? "", 14, 0, 11, -40, Ui.Dim);
-            SlotLabel(card.transform, L(hasVersions ? "slot_versions" : VersionKey(latest)), 14, 0, 11, -40, Ui.Accent, TextAnchor.MiddleRight);
+            SlotLabel(card.transform, L(VersionKey(latest)), 14, 0, 11, -40, Ui.Accent, TextAnchor.MiddleRight);
         }
 
         private static Text SlotLabel(Transform parent, string text, int size, float anchorY, int bottom, int top,
@@ -125,21 +122,6 @@ namespace PCShopSell.Game.UI
             if (SaveStore.IsOccupied(slot))
                 ConfirmMenuAction("overwrite_save", "overwrite_save_prompt", "overwrite_save", Write, number);
             else Write();
-        }
-
-        private void ChooseSaveVersion(int slot, string title, SaveStore.SlotInfo latest, SaveStore.SlotInfo older, bool confirmProgress)
-        {
-            OpenWindow(title, 640, 330, w =>
-            {
-                w.TitleText.text = title;
-                foreach (var version in new[] { latest, older })
-                {
-                    string when = version.SavedAt == null ? "" : " · " + version.SavedAt;
-                    string caption = L(VersionKey(version)) + when + "\n" + SaveGameTime(version);
-                    Ui.Size(Ui.Button(w.Content, caption, () => LoadSaveVersion(slot, version, confirmProgress), 21,
-                        Ui.SelectedButton(version == latest)), -1, 69);
-                }
-            }, allowDuringOpeningMeal: true);
         }
 
         private void LoadSaveVersion(int slot, SaveStore.SlotInfo version, bool confirmProgress)

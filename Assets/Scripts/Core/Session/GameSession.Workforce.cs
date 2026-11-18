@@ -127,12 +127,13 @@ namespace PCShopSell.Core.Session
         public int BuyMinutes, ReturnMinutes, DeliveryMinutes, Trucks;
         public bool NeedsMultipleLoads;
         internal VehicleKind Transport;
+        internal Employee Buyer;
         internal readonly List<PurchaseLine> RemainingItems = new List<PurchaseLine>();
         public Money Total => Goods + Travel + Freight;
         internal readonly List<(PurchaseOffer offer, PurchaseLine item)> Lines = new List<(PurchaseOffer, PurchaseLine)>();
         /// <summary>给界面看的只读明细：商品、货源、件数、小计。</summary>
         public IReadOnlyList<EmployeePurchaseQuoteLine> Preview => Lines.Select(l => new EmployeePurchaseQuoteLine
-        { ItemId = l.offer.Id, Name = l.offer.Name, SourceName = l.offer.SupplierName, Count = l.item.Count, Total = l.offer.Price * l.item.Count, Kg = l.offer.UnitKg * l.item.Count }).ToArray();
+        { ItemId = l.offer.Id, Name = l.offer.Name, SourceName = l.offer.SupplierName, Count = l.item.Count, Total = GameSession.EmployeePurchasePrice(Buyer, l.offer) * l.item.Count, Kg = l.offer.UnitKg * l.item.Count }).ToArray();
     }
 
     public sealed partial class GameSession
@@ -323,6 +324,7 @@ namespace PCShopSell.Core.Session
             var q = new EmployeePurchaseQuote();
             var row = FindEmployee(id);
             if (row == null || row.Role != EmployeeRole.Buyer) { q.Error = "请选择进货员"; return q; }
+            q.Buyer = row.Person;
             plan = plan ?? row.Person.PurchasePlan;
             if (!resolved) plan = EffectiveEmployeePurchasePlan(row, plan, planningOnly, catalog);
             string blocker = planningOnly?null:IsGameOver ? "游戏已结束"
@@ -372,7 +374,7 @@ namespace PCShopSell.Core.Session
                 foreach (var entry in stop)
                 {
                     buyMinutes += EmployeePurchaseMinutes(row.Person);
-                    q.Goods += entry.offer.Price * entry.item.Count;
+                    q.Goods += EmployeePurchasePrice(row.Person, entry.offer) * entry.item.Count;
                     q.Kg += entry.offer.UnitKg * entry.item.Count;
                     space += entry.offer.StockSpace * entry.item.Count;
                     q.Lines.Add(entry);
@@ -535,8 +537,9 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < q.Lines.Count; i++)
             {
                 var line = q.Lines[i];
-                if (!Ledger.TryDebit(Clock.Today, "进货", line.offer.Price * line.item.Count, row.Person.Name + "代采预付款",
-                    LedgerAttribution.ForShop(row.Shop.Place.Id, orderId + ":goods:" + i, "采购").Product(line.item.PartId, line.item.Count, line.offer.Price.Cents)))
+                var unitPrice = EmployeePurchasePrice(row.Person, line.offer);
+                if (!Ledger.TryDebit(Clock.Today, "进货", unitPrice * line.item.Count, row.Person.Name + "代采预付款",
+                    LedgerAttribution.ForShop(row.Shop.Place.Id, orderId + ":goods:" + i, "采购").Product(line.item.PartId, line.item.Count, unitPrice.Cents)))
                     throw new InvalidOperationException("采购总额预检通过后扣款失败，未继续发货。");
             }
             if (q.Travel.IsPositive) Ledger.ForceDebit(Clock.Today, "交通", q.Travel, row.Person.Name + "进货往返打车", LedgerAttribution.ForShop(row.Shop.Place.Id, orderId + ":travel", "物流"));
@@ -555,7 +558,7 @@ namespace PCShopSell.Core.Session
                 RemainingItems = q.RemainingItems.Count == 0 ? null : q.RemainingItems.ToArray(),
                 CostsRecorded=true,GoodsCents=q.Goods.Cents,TravelCents=q.Travel.Cents,FreightCents=q.Freight.Cents,
                 ReceiptLines=q.Lines.Select(x=>new EmployeePurchaseReceiptLine {SourceId=x.offer.Source.Id,SourceName=x.offer.SupplierName,
-                    ProductName=x.offer.Name,Count=x.item.Count,UnitCents=x.offer.Price.Cents}).ToArray(),
+                    ProductName=x.offer.Name,Count=x.item.Count,UnitCents=EmployeePurchasePrice(row.Person, x.offer).Cents}).ToArray(),
                 DepartAt=now,BoughtAt = now + q.BuyMinutes, ReturnAt = now + q.ReturnMinutes, DeliveryAt = now + q.DeliveryMinutes,
                 Items = q.Lines.Select(x =>
                 {

@@ -253,6 +253,12 @@
       "en": "Saved to slot {0}."
     },
     {
+      "key": "autosaved",
+      "zh": "已自动存档。",
+      "ja": "オートセーブしました。",
+      "en": "Autosaved."
+    },
+    {
       "key": "autosaved_in_slot",
       "zh": "已自动保存到 {0} 号档位。",
       "ja": "枠 {0} にオートセーブしました。",

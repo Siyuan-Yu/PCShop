@@ -112,7 +112,7 @@ namespace PCShopSell.Core.Session
             Player.EnergyChanged = SynchronizeEnergyExhaustion;
             Ledger = new Ledger(openingCash) { SalesAccountOfShop = id => ShopAt(id)?.SalesAccountId };
             Time = new TimeController();
-            Market = new HardwareMarket(Random);
+            Market = new HardwareMarket(Random, start.Date.TotalDays);
             Market.EnsureOutlook(start.Date);
             Online = new Online1788();
             Police = new PoliceSystem(city);
@@ -498,6 +498,7 @@ namespace PCShopSell.Core.Session
             DeliverCouriers(to);
             TickHomeWorkbench(from,to);
             UpdateEmployeePurchases(to);
+            UpdateImpoundedVehicles(to.TotalMinutes);
             DeliverDirect(to);
             if (from.Date == to.Date) TrackCreatorCampaigns(to);
 
@@ -530,6 +531,9 @@ namespace PCShopSell.Core.Session
         {
             TickPropertyMarket();
             Market.OnNewDay(today);
+            var commodityNews = IndustryCycles.CommodityEventOn(today.TotalDays, Market.CommoditySeed);
+            if (commodityNews.IsActive(today.TotalDays) && commodityNews.StartDay == today.TotalDays)
+                Notice?.Invoke($"行业新闻 · {commodityNews.Name} · {commodityNews.Headline}。");
             RecordPriceDay(announceMoves: true);
             if (Market.News.Count > 0)
             {

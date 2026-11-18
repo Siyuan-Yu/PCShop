@@ -29,7 +29,9 @@ namespace PCShopSell.Game.UI
             else if (!S.HasWorkContract && S.OffersPlayerWork(p))
             {
                 var offer = S.PlayerWorkFor(p);
-                Ui.Size(Ui.Button(parent, "在这里打工 · " + offer.Title + " · ¥" + offer.Wage + "/天", () => OpenPlayerWork(p, placeWindow), 17, Ui.ButtonBg), -1, 40);
+                var row = Ui.Row(parent, 40, 12);
+                Ui.Size(Ui.Button(row, "在这里打工", () => OpenPlayerWork(p, placeWindow), 18, Ui.ButtonHot), 136, 40);
+                Ui.Size(Ui.Label(row, $"{offer.Title} · ¥{offer.Wage:N0}/天", 17, TextAnchor.MiddleLeft, Ui.Accent), flexWidth: 1);
             }
         }
 

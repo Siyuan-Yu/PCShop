@@ -40,7 +40,7 @@ namespace PCShopSell.Game.UI
         {
             int page = 0;
             string previousKind = null;
-            OpenCompactWindow("货架", 1000, w =>
+            OpenCompactWindow("货架", 1240, w =>
             {
                 if (layoutIndex < 0 || layoutIndex >= S.ShopLayout.Count) { w.Close(); return; }
                 ShopSimulation shop = S.PlayerShop;

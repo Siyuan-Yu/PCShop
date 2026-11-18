@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using UnityEngine;
@@ -25,16 +26,19 @@ namespace PCShopSell.Game.UI
         {
             var moves = S.MarketPriceAlerts;
             var day = new GameDate(S.MarketPriceAlertDay);
+            var news = IndustryCycles.CommodityEventOn(day.TotalDays, S.Market.CommoditySeed);
+            bool showNews = news.IsVolatile(day.TotalDays);
             S.DismissMarketPriceAlert();
-            OpenWindow("物价异动", 640, Mathf.Min(680, 228 + moves.Count * 34), w =>
+            OpenWindow("物价异动", 640, Mathf.Min(680, 228 + moves.Count * 34 + (showNews ? 52 : 0)), w =>
             {
                 Line(w.Content, $"{day} · 较前一日", 18, Ui.Dim);
+                if (showNews) Para(w.Content, $"{news.Name} · {news.Headline}。", 18, Ui.Accent);
                 foreach (var move in moves)
                 {
                     var row = Ui.Row(w.Content, 34, 10);
                     Ui.Size(Ui.Label(row, move.Name, 18), -1, -1, 1);
                     var label = Ui.Label(row, $"{(move.Change > 0 ? "上涨" : "下跌")} {Math.Abs(move.Change):0.##%}",
-                        19, TextAnchor.MiddleRight, move.Change > 0 ? Ui.Warn : Ui.Good);
+                        19, TextAnchor.MiddleRight, Ui.ChangeColor(move.Change));
                     label.fontStyle = FontStyle.Bold;
                     Ui.Size(label, 154, -1);
                 }
@@ -270,7 +274,7 @@ namespace PCShopSell.Game.UI
         }
 
         private static string PriceMovement(double change) => Math.Abs(change) < 0.005 ? "持平" : change.ToString("+0.00;-0.00") + "%";
-        private static Color PriceMovementColor(double change) => change >= 0.005 ? Ui.Warn : change <= -0.005 ? Ui.Good : Ui.Dim;
+        private static Color PriceMovementColor(double change) => Ui.ChangeColor(change, .004999999);
 
         private void DrawPriceTrend(Transform parent, PriceDay[] days, double[] values)
         {
@@ -301,12 +305,12 @@ namespace PCShopSell.Game.UI
                 if (i > 0)
                 {
                     var delta = point - previous;
-                    var line = Ui.Panel(area, "Line", Ui.Accent).rectTransform;
+                    var line = Ui.Panel(area, "Line", Ui.ChangeColor(values[i] - values[i - 1])).rectTransform;
                     line.anchorMin = line.anchorMax = Vector2.zero; line.pivot = new Vector2(0, 0.5f);
                     line.anchoredPosition = previous; line.sizeDelta = new Vector2(delta.magnitude, 3);
                     line.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
                 }
-                var dot = Ui.Panel(area, "Point", Ui.Accent).rectTransform;
+                var dot = Ui.Panel(area, "Point", i > 0 ? Ui.ChangeColor(values[i] - values[i - 1]) : Ui.Dim).rectTransform;
                 dot.anchorMin = dot.anchorMax = Vector2.zero; dot.pivot = new Vector2(0.5f, 0.5f); dot.anchoredPosition = point; dot.sizeDelta = new Vector2(7, 7);
                 previous = point;
                 if (i != values.Length - 1 && (i % dateStep != 0 || values.Length - 1 - i < dateStep)) continue;

@@ -66,6 +66,7 @@ namespace PCShopSell.Game.Runtime
                 RestaurantJob.Plate => FigureWorkAction.Plate,
                 RestaurantJob.Serve => worker.Carrying ? FigureWorkAction.Serve : FigureWorkAction.Plate,
                 RestaurantJob.Clear => FigureWorkAction.Clear,
+                RestaurantJob.Deliver => FigureWorkAction.Serve,
                 _ => FigureWorkAction.None
             };
             RestaurantCarry(figure,worker.Carrying);

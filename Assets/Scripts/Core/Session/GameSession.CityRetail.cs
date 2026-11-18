@@ -91,8 +91,11 @@ namespace PCShopSell.Core.Session
         {
             if (product == null) return Money.Zero;
             bool small = ActiveCityCompetition("terms").Any(e => e.SupplierId == source?.Id && e.Response == "small");
-            return product.WholesalePrice.Scale(IndustryCycles.GoodsFactor(product,Clock.Today.TotalDays)*(small?1.08:1));
+            return product.WholesalePrice.Scale(IndustryCycles.GoodsFactor(product, Clock.Today.TotalDays, Market.CommoditySeed) * (small ? 1.08 : 1));
         }
+        public Money CityGoodsRetailPrice(GiftDef product) => ModelProducts.IsModel(product.Id)
+            ? product.Price.Scale(IndustryCycles.GoodsFactor(product, Clock.Today.TotalDays, Market.CommoditySeed))
+            : product.Price;
         private IEnumerable<CityCompetition> ActiveCityCompetition(string kind = null) => _cityCompetitions.Where(e => !e.Ended && CompetitionMatchesShop(e) && e.StartDay <= Clock.Today.TotalDays && Clock.Today.TotalDays < e.EndDay && (kind == null || e.Kind == kind));
         private string SupplierCounterKey(string sourceId, string productId) => Clock.Today.TotalDays + "|" + sourceId + "|" + productId;
         public int CitySupplierRemaining(string sourceId, string productId)
@@ -161,7 +164,7 @@ namespace PCShopSell.Core.Session
             }
             e.Response = response;
             ApplyCityRetailDemand();
-            Say("已记录应对：" + CityCompetitionTitle(e) + "。市场变化按到期时间自然结束。"); return true;
+            Say("已确认应对方案。"); return true;
         }
         private void ApplyCityRetailDemand()
         {
@@ -180,7 +183,7 @@ namespace PCShopSell.Core.Session
             _cityRetailTickDay = day;
             foreach (var e in _cityCompetitions.Where(e => !e.Ended && (day >= e.EndDay || !CompetitionMatchesShop(e)
                 || e.RivalPlaceId != null && !PromotionRivalStillTrading(e))))
-            { e.Ended = true; Say(CityCompetitionTitle(e) + "已结束，对应临时影响解除。"); }
+            { e.Ended = true; Say(CityCompetitionTitle(e) + "已结束。"); }
             int slot = day < 14 ? -1 : (day - 14) / 7;
             if (slot >= 0 && slot > _cityCompetitionSlot && MyShopCount > 0)
             {
@@ -230,12 +233,13 @@ namespace PCShopSell.Core.Session
             if (IsGameOver || IsWorking || !CityComicExpoOpen) return Fail("请在每月22—24日的漫展开放时间到会展中心现场采购。 ");
             var product = Gifts.Get(productId);
             if (product?.LimitedEdition != true || count < 1 || count > CityExpoModelRemaining(productId)) return Fail("本届该限定款每人限5件，请检查剩余数量。 ");
-            Money price = CityRetailWholesalePrice(CurrentPlace,product) * count;
+            Money unitPrice = CityRetailWholesalePrice(CurrentPlace, product);
+            Money price = unitPrice * count;
             if (toBag)
             {
                 if (!CanCarry(product.WeightKg * count)) return false;
                 if (!Ledger.TryDebit(Clock.Today, "进货", price, "漫展限定现货 " + product.Name + "×" + count,
-                    LedgerAttribution.ForShop(null, transactionKind: "采购").Product(productId, count, product.WholesalePrice.Cents))) return Fail("现金不足。 ");
+                    LedgerAttribution.ForShop(null, transactionKind: "采购").Product(productId, count, unitPrice.Cents))) return Fail("现金不足。 ");
                 Backpack.AddGift(productId, count); ApplyCargoLimit();
             }
             else

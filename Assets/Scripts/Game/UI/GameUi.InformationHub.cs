@@ -85,9 +85,8 @@ namespace PCShopSell.Game.UI
             var tabs = Ui.Size(Ui.Row(header, 38, 6), 0, 38, 1);
             void Tab(string id, string title, Action open)
             { Ui.Tab(tabs, title, open, selected == id, 108).name = "PeopleTab_" + id; }
-            Tab("people", "已认识的人", OpenCityPeople);
-            Tab("relations", "关系图", OpenRelationsPanel);
             Tab("contacts", "通讯录", OpenContactsPanel);
+            Tab("relations", "关系图", OpenRelationsPanel);
             if (_peopleReturnPhone != null && !_peopleReturnPhone.Closed)
                 Ui.Size(Ui.Button(header, "‹ 返回手机", w.Close, 16), 132, 38).name = "PeopleReturnPhone";
         }

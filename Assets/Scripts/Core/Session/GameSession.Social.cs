@@ -399,7 +399,14 @@ namespace PCShopSell.Core.Session
 
             var shocks = new List<(int, PartCategory, double)>();
             n = MinLen(s.shockDays, s.shockCategories, s.shockDeltas);
-            for (int i = 0; i < n; i++) shocks.Add((s.shockDays[i], (PartCategory)s.shockCategories[i], s.shockDeltas[i]));
+            for (int i = 0; i < n; i++)
+            {
+                double delta = s.shockDeltas[i];
+                // Older markets queued an automatic 7–13% jump for every hardware category.
+                if (string.IsNullOrEmpty(d.commodityPriceSeed) && Math.Abs(delta) >= .07 && Math.Abs(delta) <= .13)
+                    delta *= .12;
+                shocks.Add((s.shockDays[i], (PartCategory)s.shockCategories[i], delta));
+            }
             Market.RestoreBias(s.marketBias, shocks);
         }
 

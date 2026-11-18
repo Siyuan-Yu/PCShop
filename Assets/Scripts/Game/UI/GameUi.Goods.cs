@@ -22,7 +22,9 @@ namespace PCShopSell.Game.UI
                 return;
             }
 
-            const int columns = 3, pageSize = columns * 2, slotHeight = 198, railHeight = 2, gap = 6, padding = 10;
+            int columns = products.Length <= 6 ? 3 : 4;
+            int pageSize = columns * 3;
+            const int slotHeight = 198, railHeight = 2, gap = 6, padding = 10;
             int pages = (products.Length + pageSize - 1) / pageSize;
             page = Mathf.Clamp(page, 0, pages - 1);
             int boards = (Mathf.Min(pageSize, products.Length) + columns - 1) / columns;

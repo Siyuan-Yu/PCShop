@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -17,12 +20,46 @@ namespace PCShopSell.Game.UI
         public static readonly Color ButtonHot = Tone("F1BF68");
         public static readonly Color Warn = Tone("9C4634");
         public static readonly Color Good = Tone("386047");
+        internal static Color ChangeColor(double change, double threshold = 0) =>
+            change > threshold ? Good : change < -threshold ? Warn : Dim;
         public static readonly Color Dim = Tone("655E52");
         public static readonly Color TextColor = Tone("292E28");
         public static readonly Color Edge = Tone("DED3BE");
         public static readonly Color WarningSurface = Tone("FAE7DA");
         internal static string Emphasize(string text, Color? color = null) =>
             $"<b><color=#{ColorUtility.ToHtmlStringRGB(color ?? Accent)}>{text}</color></b>";
+
+        private static readonly Regex ReadingHighlights = new Regex(
+            @"(?<tag></?[a-zA-Z]+(?:=[^<>]+)?>)"
+            + @"|(?<up>往上走(?:一些)?|向上走(?:一些)?|看涨|上涨|上行|涨价|走高|回升|抬高报价|提价|涨了(?=\s*\d))"
+            + @"|(?<down>往下走(?:一些)?|向下走(?:一些)?|看跌|下跌|下行|跌价|走低|回落|下降|降价|跌了(?=\s*\d))"
+            + @"|(?<focus>"
+            + string.Join("|", CityInvestments.All.Select(company => Regex.Escape(company.Name)))
+            + @"|(?:硬件|电脑配件|服装|文创|模型手办|餐饮|零售|宠物用品|汽车|物流|地产|房地产|家具)行业"
+            + @"|「[^「」<>\r\n]{1,18}」|[+−-]?[¥￥]\s*[\d,]+(?:\.\d+)?"
+            + @"|第\d+年\d+月\d+日(?:\s+[0-2]?\d:[0-5]\d)?"
+            + @"|(?<!\d)[0-2]?\d:[0-5]\d"
+            + @"|(?<![0-9.])\d+(?:\.\d+)?\s*(?:%|％|万元|元|千克|个游戏小时|游戏分钟|游戏小时|游戏日|小时|分钟|天|家店)"
+            + @"|(?<![A-Za-z])(?:WASD|Esc)(?![A-Za-z])|(?<=按\s)F(?![A-Za-z]))");
+
+        internal static string EmphasizeReading(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            int styledDepth = 0;
+            return ReadingHighlights.Replace(text, match =>
+            {
+                string value = match.Value;
+                if (match.Groups["tag"].Success)
+                {
+                    if (value == "<b>" || value.StartsWith("<color=", System.StringComparison.Ordinal)) styledDepth++;
+                    else if ((value == "</b>" || value == "</color>") && styledDepth > 0) styledDepth--;
+                    return value;
+                }
+                if (styledDepth > 0) return value;
+                Color color = match.Groups["up"].Success ? Good : match.Groups["down"].Success ? Warn : Accent;
+                return Emphasize(value, color);
+            });
+        }
 
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
         private static Sprite _roundedPlate;

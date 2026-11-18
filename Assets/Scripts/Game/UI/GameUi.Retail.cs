@@ -135,7 +135,7 @@ namespace PCShopSell.Game.UI
                 foreach(var item in ModelProducts.Limited)
                 {
                     var product=item;
-                    Offer("expo:"+product.Id,product.Name,ModelProducts.SeriesName(product.ModelSeries),product.WeightKg,product.WholesalePrice,
+                    Offer("expo:"+product.Id,product.Name,ModelProducts.SeriesName(product.ModelSeries),product.WeightKg,S.CityRetailWholesalePrice(source, product),
                         product.Description+" · 本届每款限5件",()=>S.CartAddExpoModel(product.Id),()=>S.CityExpoModelRemaining(product.Id)-S.CartAmount("expo:"+product.Id));
                 }
             }
@@ -151,7 +151,7 @@ namespace PCShopSell.Game.UI
                     string group = farm && FishingCatalog.Get(item.IngredientId) != null
                         ? "鱼类" : ShelfKinds.ForGift(item.Id)?.Name ?? "商品";
                     Offer(key,item.Name,group,item.WeightKg,S.CityRetailWholesalePrice(source,item),
-                        (farm ? "" : "零售参考价 " + item.Price.Scale(IndustryCycles.GoodsFactor(item,S.Clock.Today.TotalDays)) + " · ")
+                        (farm ? "" : "零售参考价 " + item.Price.Scale(IndustryCycles.GoodsFactor(item,S.Clock.Today.TotalDays,S.Market.CommoditySeed)) + " · ")
                         + S.WholesaleMinimumText(source.Id,item.Id) + " · 今日可购 " + S.CitySupplierRemaining(source.Id,item.Id)
                         + (item.ShelfDays > 0 ? " · 保鲜 " + item.ShelfDays + " 天" : ""),
                         null, () => (available < minimum ? 0 : available) - S.CartAmount(key),
@@ -225,7 +225,7 @@ namespace PCShopSell.Game.UI
                 foreach(var product in Gifts.All.Where(g=>g.SoldAt==source.Business && !g.LimitedEdition))
                 {
                     var item=product;
-                    Offer("gift:"+item.Id,item.Name,ShelfKinds.ForGift(item.Id)?.Name??"商品",item.WeightKg,item.Price,item.Description,()=>S.CartAddGift(item.Id));
+                    Offer("gift:"+item.Id,item.Name,ShelfKinds.ForGift(item.Id)?.Name??"商品",item.WeightKg,S.CityGoodsRetailPrice(item),item.Description,()=>S.CartAddGift(item.Id));
                 }
             }
             if(!wholesale && !expo)
@@ -293,7 +293,7 @@ namespace PCShopSell.Game.UI
                 Ui.Round(strip);
                 Ui.Size(Ui.Label(columnLabels, "商品", 14, color: Ui.Dim), 0, -1, 1);
                 Ui.Size(Ui.Label(columnLabels, "批发单价", 14, color: Ui.Dim), 120);
-                Ui.Size(Ui.Label(columnLabels, "订购数量", 14, TextAnchor.MiddleCenter, Ui.Dim), 252);
+                Ui.Size(Ui.Label(columnLabels, "订购数量", 14, TextAnchor.MiddleCenter, Ui.Dim), 292);
             }
             var list=GoodsList(w.Content);
             var visible=selectedOffers.Where(o=>(facility==PurchaseFacets.All || o.Group==facility)
@@ -333,7 +333,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(row,price,19,TextAnchor.MiddleLeft,Ui.Good),farm || item.Price.Yuan >= 1000000 ? 120 : 96);
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);
                 var setAmount = ShopQuantity(w, row, item.Key, item.Add, canAdd, max, item.AddCount, UpdateRow,
-                    item.MinimumOrder, showSlider: !farm);
+                    item.MinimumOrder);
                 if (supportsMaximum && limited)
                 {
                     maximum = Ui.Size(Ui.Button(row, "最大", () => setAmount(max), 15), 58, 34);
@@ -372,6 +372,7 @@ namespace PCShopSell.Game.UI
                 foreach(var kind in new[]{VehicleKind.EBike,VehicleKind.Tricycle})
                 {
                     var selected=kind;if(S.ImpoundedVehicleCount(kind)<=0)continue;
+                    if (kind == VehicleKind.EBike) Para(w.Content, S.ScooterReturnHint, 17, Ui.Accent);
                     Ui.Size(Ui.Button(w.Content,"交 "+PoliceSystem.RedeemFee+" 赎回"+Vehicles.Get(kind).Name,()=>{S.RedeemVehicle(selected);w.Rebuild();},17),-1,40);
                 }
             });

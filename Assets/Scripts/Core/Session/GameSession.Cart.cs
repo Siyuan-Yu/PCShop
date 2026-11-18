@@ -262,8 +262,8 @@ namespace PCShopSell.Core.Session
         }
         public bool CartAddExpoModel(string id)
         {
-            var item=Gifts.Get(id);if(item==null || !CityComicExpoOpen || CartAmount("expo:"+id)>=CityExpoModelRemaining(id))return false;
-            PutLine(_cart,new CartLine {Key="expo:"+id,Name=item.Name,UnitKg=item.WeightKg,UnitPrice=()=>item.WholesalePrice,
+            var item=Gifts.Get(id);if(item?.LimitedEdition!=true || !CityComicExpoOpen || CartAmount("expo:"+id)>=CityExpoModelRemaining(id))return false;
+            PutLine(_cart,new CartLine {Key="expo:"+id,Name=item.Name,UnitKg=item.WeightKg,UnitPrice=()=>CityRetailWholesalePrice(CurrentPlace, item),
                 DeliveryShopKind="models",
                 Blocker=()=>!CityComicExpoOpen?"漫展展位尚未营业":CartAmount("expo:"+id)>CityExpoModelRemaining(id)?"超过本届剩余配额":null,
                 Run=n=>{_retailCartBatch=true;try{return BuyCityExpoModel(id,(int)n,CourierShop(true)?.Place.Id,!SendByCourier);}finally{_retailCartBatch=false;}}
@@ -320,7 +320,7 @@ namespace PCShopSell.Core.Session
                 Key = "gift:" + id,
                 Name = g.Name,
                 UnitKg = g.WeightKg,
-                UnitPrice = () => g.Price,
+                UnitPrice = () => CityGoodsRetailPrice(g),
                 Run = n => BuyGift(id, (int)Math.Round(n)),
             }, count);
             return true;

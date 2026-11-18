@@ -34,9 +34,14 @@ namespace PCShopSell.Game.Runtime
         private readonly List<string> _retiredPetOwners = new List<string>();
         private Rect _petArea;
         private float _petTime, _petActionTime, _petActionDuration;
+        private float _petVoiceIn = 4f;
         private string _petAction;
         private long _petActionId;
         private Vector3 _petActionStart, _petActionMeeting, _petActionTarget, _petBallLaunch;
+        private Vector3 _petEntrance, _petEntranceForward;
+        private List<Vector3> _petApproach;
+        private int _petApproachIndex;
+        private bool _petAtEntrance;
         private bool _petBallReleased;
         private bool _petReachLeft;
         private FigureMotion _petOwnerMotion;
@@ -73,6 +78,7 @@ namespace PCShopSell.Game.Runtime
             PetHousePresent = house != null;
             if (house == null)
             {
+                _petVoiceIn = 4f;
                 foreach (var actor in _petActors.Values) Kill.It(actor.Figure);
                 foreach (var owner in _petOwners.Values) Kill.It(owner);
                 _petActors.Clear();
@@ -83,12 +89,28 @@ namespace PCShopSell.Game.Runtime
                 EndPetInteraction();
                 return;
             }
-            var bounds = RoomPlanner.Footprint(session.ShopRoom,FurnitureCatalog.Get(house.Id),house);
+            var def = FurnitureCatalog.Get(house.Id);
+            var bounds = RoomPlanner.Footprint(session.ShopRoom,def,house);
             _petArea = Rect.MinMaxRect((float)bounds.MinX,(float)bounds.MinZ,(float)bounds.MaxX,(float)bounds.MaxZ);
+            _petEntranceForward = Quaternion.Euler(0, 90f * house.Rot, 0) * Vector3.forward;
+            _petEntrance = new Vector3((float)house.X, 0, (float)house.Z) - _petEntranceForward * ((float)def.Depth * .5f);
             var stays = session.PetGuests(shop);
+            if (stays.Count == 0) _petVoiceIn = 4f;
+            else if (session.Time.IsRunning && !PetActionPlaying)
+            {
+                // 按现实时间控制间隔，加速游戏和增加宠物数量都不会刷屏式叠叫。
+                _petVoiceIn -= realDt;
+                if (_petVoiceIn <= 0)
+                {
+                    var vocalPet = stays[Random.Range(0, stays.Count)];
+                    SoundFx.Play(vocalPet.Dog ? Sfx.DogBark : Sfx.CatMeow);
+                    _petVoiceIn = Random.Range(12f, 24f);
+                }
+            }
             UpdatePetCareProps(session,house,shop);
             _petTime += session.Time.IsRunning ? realDt : 0;
-            _petActionTime = Mathf.Min(_petActionDuration,_petActionTime+realDt);
+            if (PetActionPlaying && !UpdatePetApproach(realDt))
+                _petActionTime = Mathf.Min(_petActionDuration,_petActionTime+realDt);
             float idleDt = session.Time.IsRunning ? realDt : 0;
             for (int i = 0; i < stays.Count; i++)
             {
@@ -113,7 +135,11 @@ namespace PCShopSell.Game.Runtime
             {
                 Kill.It(_petActors[id].Figure);
                 _petActors.Remove(id);
-                if (id == _petActionId) _petActionDuration = 0;
+                if (id == _petActionId)
+                {
+                    _petActionDuration = 0;
+                    _petApproach = null;
+                }
             }
             UpdatePetOwnerPose(realDt);
             UpdateHeldToy();
@@ -194,12 +220,12 @@ namespace PCShopSell.Game.Runtime
         {
             var figure = actor.Figure.transform;
             var previous = figure.localPosition;
-            bool acting = id == _petActionId && PetActionPlaying;
+            bool acting = id == _petActionId && PetActionPlaying && _petApproach == null;
             float t = acting ? _petActionTime / _petActionDuration : 0;
             float paw = 0, headPitch = 0, headTilt = 0;
             Vector3 idleTarget = PetIdleTarget(slot);
             float moveDt = idleDt;
-            if (!acting && PetActionPlaying)
+            if (!acting && PetActionPlaying && _petApproach == null)
             {
                 Vector3 away = idleTarget - _petActionMeeting;
                 if (away.sqrMagnitude < .68f * .68f)
@@ -242,7 +268,6 @@ namespace PCShopSell.Game.Runtime
                         headTilt = Mathf.Sin(t * 16f) * 8f * touch;
                     }
                 }
-                next = ClampToPetArea(next);
             }
             figure.localPosition = next;
             direction.y = 0;
@@ -389,8 +414,31 @@ namespace PCShopSell.Game.Runtime
 
         private FigureMotion PetOwnerMotion => _petOwnerMotion ??= _owner.GetComponent<FigureMotion>();
 
+        private bool AtPetEntrance(Vector3 position)
+        {
+            Vector3 offset = position - _petEntrance;
+            float distance = -Vector3.Dot(offset, _petEntranceForward);
+            Vector3 sideways = Vector3.Cross(Vector3.up, _petEntranceForward);
+            return distance >= .33f && distance <= .54f && Mathf.Abs(Vector3.Dot(offset, sideways)) <= .13f;
+        }
+
+        private bool UpdatePetApproach(float dt)
+        {
+            if (_petApproach == null) return false;
+            bool moving = CityRoomRoute.Advance(_petApproach, ref _petApproachIndex, _owner.transform, dt, 2.5f, _moveAlongRoute);
+            if (moving && _petApproachIndex < _petApproach.Count) return true;
+            _petApproach = null;
+            if (_petActors.TryGetValue(_petActionId, out var actor)) SetPetActionTargets(actor);
+            return true;
+        }
+
         private void UpdatePetOwnerPose(float dt)
         {
+            if (_petApproach != null)
+            {
+                _petOwnerMotion?.ClearReachPose();
+                return;
+            }
             if (!PetActionPlaying || !_petActors.TryGetValue(_petActionId, out var actor))
             {
                 if (_heldPetToy != null)
@@ -405,14 +453,9 @@ namespace PCShopSell.Game.Runtime
 
             float t = _petActionTime / _petActionDuration;
             Transform owner = _owner.transform;
-            Vector3 target = _petActionMeeting - owner.localPosition;
-            target.y = 0;
-            if (t < .25f && target.magnitude > .72f)
-                MoveOwner(_root.TransformDirection(target), Mathf.Min(dt, (target.magnitude - .72f) / OwnerWalkSpeed));
-
             Vector3 look = _petAction == PetShopCatalog.Ball && t < .64f ? _petActionTarget : _petActionMeeting;
             Vector3 forward = FlatPetDirection(look - owner.localPosition);
-            float stanceAngle = _petAction == PetShopCatalog.Ball ? 0 : _petReachLeft ? 20 : -20;
+            float stanceAngle = _petAction == PetShopCatalog.Ball ? 0 : _petReachLeft ? 8 : -8;
             Vector3 stance = Quaternion.AngleAxis(stanceAngle, Vector3.up) * forward;
             owner.localRotation = Quaternion.RotateTowards(owner.localRotation, Quaternion.LookRotation(stance), dt * 620f);
             Vector3 right = Vector3.Cross(Vector3.up, forward);
@@ -427,23 +470,28 @@ namespace PCShopSell.Game.Runtime
                         + Vector3.up * Mathf.Lerp(1.13f, .94f, throwSwing);
                     handTarget = Vector3.Lerp(handTarget, release, PetEase(t, 0, .10f) * (1 - PetEase(t, .29f, .49f)));
                     float receive = PetEase(t, .77f, .90f) * (1 - PetEase(t, .96f, 1));
-                    handTarget = Vector3.Lerp(handTarget, _root.InverseTransformPoint(actor.Head.TransformPoint(new Vector3(0,-.055f,.17f))), receive);
-                    crouch = .82f * receive;
+                    if (_petAtEntrance)
+                    {
+                        handTarget = Vector3.Lerp(handTarget, _root.InverseTransformPoint(actor.Head.TransformPoint(new Vector3(0,-.055f,.17f))), receive);
+                        crouch = .82f * receive;
+                    }
                     break;
                 case PetShopCatalog.Wand:
                     float tease = PetEase(t, .16f, .35f) * (1 - PetEase(t, .84f, 1));
-                    Vector3 wandHand = _petActionMeeting - forward * .40f + right * (Mathf.Sin(t * 17f) * .24f)
-                        + Vector3.up * (.52f + Mathf.Sin(t * 26f) * .045f);
-                    handTarget = Vector3.Lerp(handTarget, wandHand, tease);
-                    crouch = .76f * tease;
+                    Vector3 wandHand = _petAtEntrance
+                        ? _petActionMeeting - forward * .40f + Vector3.up * (.52f + Mathf.Sin(t * 26f) * .045f)
+                        : handTarget + Vector3.up * .18f;
+                    handTarget = Vector3.Lerp(handTarget, wandHand + right * (Mathf.Sin(t * 17f) * .16f), tease);
+                    crouch = _petAtEntrance ? .76f * tease : 0;
                     break;
                 default:
                     float touch = PetEase(t, .11f, .37f) * (1 - PetEase(t, .79f, 1));
                     float stroke = Mathf.Sin(PetEase(t, .38f, .79f) * Mathf.PI * 4);
-                    handTarget = _root.InverseTransformPoint(actor.Head.TransformPoint(new Vector3(
-                        _petReachLeft ? .025f : -.025f, .12f + .014f * Mathf.Abs(stroke), -.015f + .065f * stroke)));
+                    handTarget = _petAtEntrance
+                        ? _root.InverseTransformPoint(actor.Head.TransformPoint(new Vector3(.04f * stroke, .105f, .02f)))
+                        : handTarget + Vector3.up * (.24f + .04f * stroke);
                     weight = touch;
-                    crouch = 1;
+                    crouch = _petAtEntrance ? .97f : 0;
                     break;
             }
             if (weight > 0) PetOwnerMotion.SetReachPose(_root.TransformPoint(handTarget), weight, crouch, _petReachLeft);
@@ -461,7 +509,7 @@ namespace PCShopSell.Game.Runtime
             var item = _heldPetToy.transform;
             item.localPosition = hand;
             item.localRotation = Quaternion.LookRotation(forward + Vector3.down * .15f);
-            if (!PetActionPlaying) return;
+            if (!PetActionPlaying || _petApproach != null) return;
             float t = _petActionTime / _petActionDuration;
             if (_petAction == PetShopCatalog.Ball)
             {
@@ -500,22 +548,33 @@ namespace PCShopSell.Game.Runtime
             _petActionTime = 0;
             _petActionDuration = toy == PetShopCatalog.Ball ? 2.7f : toy == PetShopCatalog.Wand ? 2.25f : 1.6f;
             _petBallReleased = false;
+            var owner = _owner.transform.localPosition;
+            var walkArea = Rect.MinMaxRect(.3f, .4f, Width - .3f, Depth - .3f);
+            _petApproach = AtPetEntrance(owner) ? null : CityRoomRoute.Find(owner, walkArea, AtPetEntrance, _decor.Blockers);
+            _petApproachIndex = 0;
+            if (_petApproach == null) SetPetActionTargets(actor);
+        }
+
+        private void SetPetActionTargets(PetActor actor)
+        {
+            SoundFx.Play(actor.Dog ? Sfx.DogBark : Sfx.CatMeow);
+            _petVoiceIn = Random.Range(12f, 24f);
             _petActionStart = actor.Figure.transform.localPosition;
             var owner = _owner.transform.localPosition;
+            _petAtEntrance = AtPetEntrance(owner);
             owner.y = .052f;
-            _petActionMeeting = ClampToPetArea(owner);
-            if ((_petActionMeeting - owner).sqrMagnitude < .12f)
-                _petActionMeeting = ClampToPetArea(owner + FlatPetDirection(_petActionStart - owner) * .64f);
             var middle = new Vector3(_petArea.center.x,.052f,_petArea.center.y);
             Vector3 inward = FlatPetDirection(middle - owner);
-            Vector3 nearSide = Vector3.Cross(Vector3.up, inward) * (_petReachLeft ? -1 : 1);
-            _petActionMeeting = ClampToPetArea(_petActionMeeting + nearSide * .24f);
+            _petActionMeeting = _petAtEntrance
+                ? _petEntrance + _petEntranceForward * .32f + Vector3.up * .052f
+                : ClampToPetArea(owner + inward * .55f);
             _petActionTarget = ClampToPetArea(middle + inward * .64f + Vector3.Cross(Vector3.up, inward) * .23f);
         }
 
         public void EndPetInteraction()
         {
             _petActionDuration = 0;
+            _petApproach = null;
             _petOwnerMotion?.ClearReachPose();
             HoldPetToy(null);
             MarkPet(-1);

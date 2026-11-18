@@ -93,6 +93,7 @@ namespace PCShopSell.Core.Shop
         public PartDef DesiredPart => PartCatalog.Find(DesiredCategory, BuildTier);
         public GameTimestamp ArrivedAt { get; }
         public GameTimestamp ReadyAt { get; }
+        internal long BrowseStartedMinute = -1;
         public bool CarriesCash { get; }
 
         /// <summary>结账时用的付款方式（结账后才有值）。</summary>
@@ -498,7 +499,7 @@ namespace PCShopSell.Core.Shop
             double promotion = TemporaryPriceFactorOf?.Invoke(id) ?? 1;
             if(_fixedSalePrices.TryGetValue("g:"+id,out var fixedPrice))return Money.FromYuan(fixedPrice).Scale(promotion);
             double markup = _partMarkups.TryGetValue(GoodsKey(id), out double individual) ? individual : globalMarkup;
-            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays) * markup))).Scale(promotion);
+            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays,_market.CommoditySeed) * markup))).Scale(promotion);
         }
 
         public void RestorePartMarkups(IEnumerable<KeyValuePair<string, double>> items)
@@ -520,6 +521,7 @@ namespace PCShopSell.Core.Shop
 
         public IReadOnlyList<ShopCustomer> ActiveCustomers => _active;
         public Func<ShopCustomer,bool> CustomerCanBrowse;
+        public Func<ShopCustomer, bool> CustomerFinishedBrowsingView;
         // A finite value is the active, unscaled clock of the shop the player is currently observing.
         // Unobserved/background simulations keep their ordinary game-time patience.
         public Func<double> CheckoutClock;
@@ -906,13 +908,20 @@ namespace PCShopSell.Core.Shop
             for (int i = _active.Count - 1; i >= 0; i--)
             {
                 ShopCustomer c = _active[i];
-                if (c.State == CustomerState.Browsing && (!inHours || now >= c.ReadyAt))
+                if (c.State == CustomerState.Browsing)
                 {
                     if (CustomerCanBrowse?.Invoke(c) == false)
                     {
                         if (!inHours) Leave(c, LeaveReason.ShopClosed);
                     }
-                    else if (now >= c.ReadyAt) Decide(c, now);
+                    else
+                    {
+                        if (c.BrowseStartedMinute < 0) c.BrowseStartedMinute = now.TotalMinutes;
+                        long browseMinutes = Math.Max(1, c.ArrivedAt.MinutesUntil(c.ReadyAt));
+                        if (now.TotalMinutes - c.BrowseStartedMinute >= browseMinutes
+                            && CustomerFinishedBrowsingView?.Invoke(c) != false)
+                            Decide(c, now);
+                    }
                 }
                 else if (c.State == CustomerState.WaitingCheckout &&
                          c.WaitingSince.MinutesUntil(now) >= Settings.PatienceMinutes && CheckoutPatienceElapsed(c))
@@ -1149,7 +1158,7 @@ namespace PCShopSell.Core.Shop
                     c.RetailBudgetCents = RetailBudgetOf?.Invoke(c) ?? 0;
                     if (c.RetailBudgetCents <= 0) c.RetailBudgetCents = new long[] { 8000, 15000, 30000, 60000 }[Random.Next(0, 4)];
                 }
-                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents*IndustryCycles.GoodsFactor(Gifts.Get(l.Key),_clock.Today.TotalDays));
+                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents*IndustryCycles.GoodsFactor(Gifts.Get(l.Key),_clock.Today.TotalDays,_market.CommoditySeed));
                 if (lines.Count == 0) { Leave(c, LeaveReason.TooExpensive); return true; }
                 var preferred = lines.FindAll(l => Gifts.Get(l.Key)?.ModelSeries == c.RetailInterestSeries);
                 if (preferred.Count > 0) lines = preferred;

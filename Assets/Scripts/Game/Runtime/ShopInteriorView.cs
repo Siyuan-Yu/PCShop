@@ -49,6 +49,7 @@ namespace PCShopSell.Game.Runtime
             public string GoodsKind;
             public GameObject Held;
             public float BrowseTimer;
+            public bool LookedAtShelf;
             public bool Build;
 
             /// <summary>拿的是展示台上的整机（不是货架上的配件）。</summary>
@@ -206,10 +207,37 @@ namespace PCShopSell.Game.Runtime
         private void Hook(ShopSimulation shop)
         {
             if (_hooked == shop) return;
-            if (_hooked != null) { _hooked.CustomerLeft -= OnCustomerLeft; _hooked.CustomerPaid -= OnCustomerPaid; }
+            if (_hooked != null)
+            {
+                _hooked.CustomerLeft -= OnCustomerLeft;
+                _hooked.CustomerPaid -= OnCustomerPaid;
+                _hooked.CustomerFinishedBrowsingView = null;
+            }
             _hooked = shop;
             _leaveReasons.Clear();
-            if (shop != null) { shop.CustomerLeft += OnCustomerLeft; shop.CustomerPaid += OnCustomerPaid; }
+            if (shop != null)
+            {
+                shop.CustomerLeft += OnCustomerLeft;
+                shop.CustomerPaid += OnCustomerPaid;
+                shop.CustomerFinishedBrowsingView = c => _visitors.TryGetValue(c.Id, out var visitor) && visitor.LookedAtShelf;
+            }
+        }
+
+        private Vector3 CustomerBrowseSpot(ShopCustomer customer, ShopSimulation shop, Vector3 from)
+        {
+            if (shop.RetailKind == "secondhand") return GoodsShelfSpot("secondhand", from);
+            if (customer.Intent != CustomerIntent.Goods)
+                return customer.Intent == CustomerIntent.Build ? RandomDeskSpot() : ShelfSpotFor(customer.DesiredCategory, from, _rng);
+
+            var spots = new List<Vector3>();
+            for (int i = 0; i < _shelves.Count && i < _shelfSpots.Count; i++)
+            {
+                var kind = ShelfKinds.Get(_shelves[i].KindId);
+                if (kind != null && kind.IsGoods && kind.GiftIds.Any(id => RetailShopTypes.Sells(shop.RetailKind, id)))
+                    spots.Add(_shelfSpots[i]);
+            }
+            if (spots.Count > 0) return spots[_rng.Next(spots.Count)];
+            return _shelfSpots.Count > 0 ? _shelfSpots[_rng.Next(_shelfSpots.Count)] : Center;
         }
 
         /// <summary>某个品类的货架前（离 from 最近的那个）；没有这个品类的货架就随便一个。</summary>
@@ -658,6 +686,7 @@ namespace PCShopSell.Game.Runtime
 
         public void SetActive(bool on)
         {
+            if (!on) Hook(null);
             _root.gameObject.SetActive(on);
             if (!on && _wasOn) ClearUsedSellerFigures();
             if (on && !_wasOn)
@@ -1395,10 +1424,8 @@ namespace PCShopSell.Game.Runtime
                         Mats.Glow(new Color(1f, 0.8f, 0.1f), new Color(3f, 2.2f, 0.2f), false));
                     v.Build = c.Intent == CustomerIntent.Build;
                     v.Want = c.DesiredCategory;
-                    v.Target = _shelfSpots.Count == 0 ? Center
-                        : shop.RetailKind=="secondhand"?Jitter(GoodsShelfSpot("secondhand",_door)):v.Build ? Jitter(RandomDeskSpot())
-                        : Jitter(ShelfSpotFor(c.DesiredCategory, _door, _rng));
-                    v.BrowseTimer = 0.5f + (float)_rng.NextDouble() * 1.5f;
+                    v.Target = CustomerBrowseSpot(c, shop, _door);
+                    v.BrowseTimer = .8f + (float)_rng.NextDouble() * .6f;
                     _visitors[c.Id] = v;
                 }
 
@@ -1439,16 +1466,15 @@ namespace PCShopSell.Game.Runtime
                     }
                     if (v.Phase == 2) v.Target = QueueSpot(qi);
                 }
-                else if (v.Phase == 0 && Reached(v) && _shelfSpots.Count > 0)
+                else if (v.Phase == 0 && Reached(v))
                 {
                     // 逛：站一会儿，再挪到别的货架前看看
-                    v.BrowseTimer -= dt;
+                    v.BrowseTimer -= s.Time.IsRunning ? realDt * s.Time.Speed : 0;
                     if (v.BrowseTimer <= 0)
                     {
+                        v.LookedAtShelf = true;
                         v.BrowseTimer = 1f + (float)_rng.NextDouble() * 2f;
-                        v.Target = v.Build ? Jitter(RandomDeskSpot())
-                            : _rng.NextDouble() < 0.6 ? Jitter(ShelfSpotFor(c.DesiredCategory, v.Go.transform.position, _rng))
-                            : Jitter(_shelfSpots[_rng.Next(_shelves.Count > 0 ? _shelves.Count : _shelfSpots.Count)]);
+                        v.Target = CustomerBrowseSpot(c, shop, v.Go.transform.position);
                     }
                 }
                 Move(v, dt);
@@ -1560,7 +1586,7 @@ namespace PCShopSell.Game.Runtime
                 return $"就要这个！\n<b>{c.ItemName}</b>\n<color={Ok}>{shop.GoodsPriceOf(c.GoodsId)}</color>";
             if (v.Phase == 1 && c.Item != null)
                 return $"就要这个！\n<b>{c.Item.Name}</b>（{(c.ItemBoxed ? "盒装" : "散件")}）\n<color={Ok}>{shop.PriceOf(c.Item, c.ItemBoxed)}</color>";
-            string browsing = BrowseLine(c, now);
+            string browsing = BrowseLine(v);
             if (c.Intent == CustomerIntent.Goods)
                 return "看看店里的" + RetailShopTypes.Name(shop.RetailKind).Replace("店", "商品") + "\n" + browsing;
             if (v.Build)
@@ -1582,13 +1608,11 @@ namespace PCShopSell.Game.Runtime
             return $"<size=13>{v.Profile}</size>\n想买<b>{want.Name}</b>\n{stock}\n{browsing}";
         }
 
-        /// <summary>还在逛：挑款式、比价格，进度条走满才决定买不买（嫌贵就走）。</summary>
-        private static string BrowseLine(ShopCustomer c, GameTimestamp now)
+        /// <summary>按实际站位显示正在找货架或查看商品。</summary>
+        private static string BrowseLine(Visitor visitor)
         {
-            long total = Mathf.Max(1, (int)c.ArrivedAt.MinutesUntil(c.ReadyAt));
-            long done = Mathf.Clamp((int)c.ArrivedAt.MinutesUntil(now), 0, (int)total);
-            int pct = Mathf.Clamp(Mathf.RoundToInt(done * 100f / total), 0, 100);
-            return $"<size=13><color=#6B6F78>正在挑、比价格… {pct}%</color></size>";
+            string action = Reached(visitor) ? "看看款式和价格…" : "去货架前看看…";
+            return $"<size=13><color=#6B6F78>{action}</color></size>";
         }
 
         /// <summary>排队的第 k 个位置：沿柜台长边排，接近前墙或侧墙时转向。</summary>

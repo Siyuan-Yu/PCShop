@@ -33,7 +33,8 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        public string ExchangeMarketTalk(string id, bool remote = false, Place workplaceHint = null)
+        public string ExchangeMarketTalk(string id, bool remote = false, Place workplaceHint = null,
+            Func<string, string> emphasize = null)
         {
             if (IsGameOver) return "现在不能交谈。";
             if (remote && RemoteConversationBlocker(id) is string blocker) return blocker;
@@ -75,8 +76,9 @@ namespace PCShopSell.Core.Session
 
             var signal = talkRandom.Pick(ranked);
             int connection = Affinity(signal);
+            string subject = emphasize?.Invoke(signal.Subject) ?? signal.Subject;
             if (talkRandom.Chance(connection > 0 ? .05 : .19))
-                return $"我听说{signal.Subject}接下来可能有变动，有人看涨，也有人说还要往下走。我还没弄清哪个版本靠得住。";
+                return $"我听说{subject}接下来可能有变动，有人看涨，也有人说还要往下走。我还没弄清哪个版本靠得住。";
 
             double reliability = connection switch { 3 => .91, 2 => .84, 1 => .67, _ => .52 };
             bool accurate = talkRandom.Chance(reliability);
@@ -84,7 +86,8 @@ namespace PCShopSell.Core.Session
             string source = accurate ? signal.Source : AlternateMarketLead(signal, up);
             string introduction = connection >= 2 ? "刚跟同行对过口风，" : connection == 1 ? "跟我们有来往的人提到，" : "听朋友转述，";
             string direction = up ? "往上走一些" : "往下走一些";
-            return $"{introduction}{source}。照这个说法，{signal.Horizon}{signal.Subject}可能会{direction}。";
+            string horizon = emphasize?.Invoke(signal.Horizon) ?? signal.Horizon;
+            return $"{introduction}{source}。照这个说法，{horizon}{subject}可能会{direction}。";
         }
 
         private static string AlternateMarketLead(MarketLead signal, bool up)
@@ -101,6 +104,16 @@ namespace PCShopSell.Core.Session
 
         private IEnumerable<MarketLead> MarketConversationLeads(int today)
         {
+            var news = IndustryCycles.CommodityEventOn(today + 4, Market.CommoditySeed);
+            bool nearMajorMove = news.IsVolatile(Math.Max(today + 1, news.StartDay));
+            if (nearMajorMove && Enum.TryParse<PartCategory>(news.Key, out var affectedPart))
+            {
+                int nextMoveDay = Math.Max(today + 1, news.StartDay);
+                double pressure = IndustryCycles.CommodityEventFactor(news.Key, nextMoveDay, Market.CommoditySeed)
+                    / IndustryCycles.CommodityEventFactor(news.Key, nextMoveDay - 1, Market.CommoditySeed) - 1;
+                yield return new MarketLead("硬件", news.Name + "批发价", news.Headline, pressure, 5, category: affectedPart);
+            }
+
             foreach (var category in Market.PendingShocks.Where(shock => shock.day > today && shock.day <= today + 4)
                 .GroupBy(shock => shock.category))
             {
@@ -115,23 +128,15 @@ namespace PCShopSell.Core.Session
 
             foreach (string series in ModelProducts.SeriesIds)
             {
-                double current = IndustryCycles.ModelFactor(series, today);
-                for (int day = today + 1; day <= today + 5; day++)
-                {
-                    double pressure = IndustryCycles.ModelFactor(series, day) / current - 1;
-                    if (Math.Abs(pressure) < .005) continue;
-                    string name = ModelProducts.SeriesName(series);
-                    string source = IndustryCycles.ModelPhase(series, day) switch
-                    {
-                        0 => $"有档口在打听{name}下一轮上新的预订量，准备恢复常规报价",
-                        8 => $"有人拿到了{name}的新作排期，已经在问店家要不要多订一批模型",
-                        14 => $"几个店家在加订{name}的角色款，工坊刚开始整理补单",
-                        22 => $"店家说{name}这一轮宣传就快收尾，好几家的追加订单都先停了",
-                        _ => $"有批{name}的模型准备从库里腾出来，店家在商量做一次尾货折扣"
-                    };
-                    yield return new MarketLead("文创", name + "模型的批发价", source, pressure, 3);
-                    break;
-                }
+                double current = IndustryCycles.ModelFactor(series, today, Market.CommoditySeed);
+                double pressure = IndustryCycles.ModelFactor(series, today + 4, Market.CommoditySeed) / current - 1;
+                if (Math.Abs(pressure) < .005) continue;
+                string name = ModelProducts.SeriesName(series);
+                bool affected = nearMajorMove && news.Key == series;
+                string source = affected ? news.Headline : pressure > 0
+                    ? $"有店家在加订{name}的模型，工坊开始排补单"
+                    : $"有店家准备给{name}的现货做折扣，正在问同行的报价";
+                yield return new MarketLead("文创", name + "的模型行情", source, pressure, affected ? 5 : 2);
             }
 
             foreach (var (industry, business, subject, goods) in new[]
@@ -144,13 +149,13 @@ namespace PCShopSell.Core.Session
                 ("宠物", PetShopCatalog.SupplierBusiness, "宠物用品的进货价", "宠物用品")
             })
             {
-                double Factor(int day) => IndustryCycles.WholesaleMarketFactor(business, day)
-                    * (business == ClothingProducts.Business ? IndustryCycles.ClothingFactor(day) : 1);
-                double pressure = Factor(today + 3) / Factor(today) - 1;
+                double Factor(int day) => IndustryCycles.WholesaleMarketFactor(business, day, Market.CommoditySeed);
+                double pressure = Factor(today + 4) / Factor(today) - 1;
                 if (Math.Abs(pressure) < .006) continue;
-                string source = pressure > 0 ? $"做{goods}的供货商在收紧新一批的折扣，有些单子要重报"
+                bool affected = nearMajorMove && news.Key == business;
+                string source = affected ? news.Headline : pressure > 0 ? $"做{goods}的供货商在收紧新一批的折扣，有些单子要重报"
                     : $"做{goods}的批发商正在问谁能接下批货，愿意给接单的店多让一点";
-                yield return new MarketLead(industry, subject, source, pressure, Math.Abs(pressure) >= .1 ? 3 : 2);
+                yield return new MarketLead(industry, subject, source, pressure, affected ? 5 : 2);
             }
 
             foreach (var competition in ActiveCityCompetition("terms").Where(e => e.Response == "small" && e.EndDay <= today + 4))

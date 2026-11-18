@@ -1377,7 +1377,7 @@ namespace PCShopSell.Tests
                 Assert.AreSame(market, r.Workspace("market"));
                 StringAssert.DoesNotContain("市场变化与原创模型", r.Text);
                 r.Ui.CloseAllWindows(); r.Ui.OpenContactsPanel(); var people = r.Workspace("people");
-                r.Button("PeopleTab_relations").onClick.Invoke(); r.Button("PeopleTab_people").onClick.Invoke();
+                r.Button("PeopleTab_relations").onClick.Invoke(); r.Button("PeopleTab_contacts").onClick.Invoke();
                 Assert.AreSame(people, r.Workspace("people"));
                 r.Ui.CloseAllWindows(); Assert.False(r.S.Time.IsHeld);
             }

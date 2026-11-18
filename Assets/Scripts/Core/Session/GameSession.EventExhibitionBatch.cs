@@ -117,13 +117,13 @@ namespace PCShopSell.Core.Session
             if (a?.Id != activityId || s == null || s.Number is not (75 or 77) || CurrentPlace?.Id != a.VenueId || s.Pending != null || !CityComicExpoOpen
                 || product == null || !ModelProducts.IsModel(productId)) return false;
             if (product.LimitedEdition) return BuyCityExpoModel(productId, 1);
-            if (!CanCarry(product.WeightKg) || !Ledger.TryDebit(Clock.Today, "展位作品购买", product.Price, product.Name)) return false;
+            if (!CanCarry(product.WeightKg) || !Ledger.TryDebit(Clock.Today, "展位作品购买", CityGoodsRetailPrice(product), product.Name)) return false;
             Backpack.AddGift(product.Id, 1); ApplyCargoLimit(); Say("已购入 " + product.Name + "，放入背包。"); return true;
         }
         public Money ExhibitionModelPrice(string productId)
         {
             var product = Gifts.Get(productId);
-            return product == null ? Money.Zero : product.LimitedEdition ? CityRetailWholesalePrice(CurrentPlace, product) : product.Price;
+            return product == null ? Money.Zero : product.LimitedEdition ? CityRetailWholesalePrice(CurrentPlace, product) : CityGoodsRetailPrice(product);
         }
         public bool GiftExhibitionModel(string activityId, string productId)
         {

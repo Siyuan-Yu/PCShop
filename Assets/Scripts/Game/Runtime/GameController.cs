@@ -260,7 +260,7 @@ namespace PCShopSell.Game
         {
             GameSession s = SaveStore.LoadSlot(City, slot, automatic, out string campaignId);
             if (s == null) return false;
-            StartSession(s, slot, campaignId);
+            StartSession(s, automatic ? 0 : slot, campaignId);
             Ui.Toast(MenuLocalization.Get(SaveStore.LastLoadMessage.Contains("备用") ? "loaded_backup" : "loaded"));
             return true;
         }
@@ -272,16 +272,9 @@ namespace PCShopSell.Game
                 Ui.Toast(SaveStore.TrySave(Session, true) ? "已自动存档。" : SaveStore.LastSaveMessage);
                 return;
             }
-            int slot = ActiveSaveSlot != 0 ? ActiveSaveSlot : SaveStore.FirstEmptySlot;
-            if (slot == 0)
+            if (SaveStore.TrySave(Session, SaveStore.AutomaticSlot, automatic: true, campaignId: _saveCampaignId))
             {
-                Ui.Toast(MenuLocalization.Get("autosave_slots_full"));
-                return;
-            }
-            if (SaveStore.TrySave(Session, slot, automatic: true, campaignId: _saveCampaignId))
-            {
-                ActiveSaveSlot = slot;
-                Ui.Toast(MenuLocalization.Format("autosaved_in_slot", slot.ToString("00")));
+                Ui.Toast(MenuLocalization.Get("autosaved"));
             }
             else Ui.Toast(SaveStore.LastSaveMessage);
         }
@@ -289,8 +282,9 @@ namespace PCShopSell.Game
         /// <summary>前往某地并在到达后进入。已经在门口就直接进去。</summary>
         public void GoToPlace(Place p)
         {
-            if (Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen) return;
+            if (p == null || Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen) return;
             CancelHomeBedTrip();
+            if (Session.CurrentPlace == null && Session.Trip == null && Session.NearbyPlace == p && ShowClosed(p)) return;
             Session.BeginCityTravel(p.Id);
         }
 

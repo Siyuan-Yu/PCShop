@@ -161,8 +161,7 @@ namespace PCShopSell.Game.UI
                 trackWidth: trackWidth, minimumOrder: minimumOrder);
 
         private Action<double> ShopQuantity(Window w, Transform row, string key, Func<bool> add, bool enabled,
-            double? maxAmount = null, Func<int, bool> addCount = null, Action<double> changed = null, int minimumOrder = 1,
-            bool showSlider = true)
+            double? maxAmount = null, Func<int, bool> addCount = null, Action<double> changed = null, int minimumOrder = 1)
         {
             if (row.Find("Quantity_" + key) != null) return null;
             double amount = S.CartAmount(key);
@@ -183,8 +182,7 @@ namespace PCShopSell.Game.UI
                     double before = S.CartAmount(key);
                     if (!add() || S.CartAmount(key) <= before) break;
                 }
-            }, canAdd: enabled, minimumOrder: minimumOrder, readValue: () => S.CartAmount(key), changed: changed,
-                trackWidth: showSlider ? 112 : 0);
+            }, canAdd: enabled, minimumOrder: minimumOrder, readValue: () => S.CartAmount(key), changed: changed);
         }
 
         private int OnlineQuantity(Window w, Transform row, string key)

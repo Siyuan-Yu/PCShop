@@ -16,7 +16,49 @@ namespace PCShopSell.Game.UI
                 || S.PendingEvent != null || S.OpeningAgencyGuidePending || OpeningMealRestricted || _ctrl.Placing || _ctrl.PetFocusActive)
                 return;
             var feedback = S.TakeCustomerFeedback();
-            if (feedback != null) Popup(feedback.Title, feedback.Body);
+            if (feedback?.ComplaintTaskId != null)
+            {
+                if (S.PendingComplaint(feedback.ComplaintTaskId) != null) OpenComplaintFeedback(feedback.ComplaintTaskId);
+            }
+            else if (feedback?.Title == "顾客反馈") OpenComplaintResult(feedback.Body);
+            else if (feedback != null) Popup(feedback.Title, feedback.Body);
+        }
+
+        private void OpenComplaintResult(string result)
+        {
+            OpenWindow("售后处理结果", 800, 680, w =>
+            {
+                Para(w.Content, Ui.EmphasizeReading(result), 19);
+                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 19, Ui.ButtonHot), -1, 44);
+            });
+        }
+
+        private void OpenComplaintFeedback(string id)
+        {
+            OpenWindow("顾客反馈", 800, 760, w =>
+            {
+                var task = S.PendingComplaint(id);
+                if (task == null)
+                {
+                    Para(w.Content, "这条反馈已经处理。", 19);
+                    return;
+                }
+                var shop = S.ShopAt(task.ShopId);
+                Line(w.Content, shop != null ? S.ShopTitle(shop) : "原门店", 21, Ui.Accent);
+                Para(w.Content, Ui.EmphasizeReading(task.Message), 19);
+                Line(w.Content, $"智力 {S.Player.Intelligence} · 魅力 {S.EffectiveCharm} · 门店口碑 {shop?.Sim.ShopReputation:0.#} · 名望 {shop?.Sim.Reputation:0.#}", 17, Ui.Dim);
+                foreach (var choice in S.ComplaintChoices(id))
+                {
+                    var option = choice;
+                    bool enabled = option.Enabled?.Invoke(S) != false;
+                    Ui.Size(Ui.Button(w.Content, option.Text, () =>
+                    {
+                        string result = option.Apply(S);
+                        if (S.PendingComplaint(id) != null) w.Rebuild();
+                        else { w.Close(); OpenComplaintResult(result); }
+                    }, 18, Ui.ButtonBg, enabled), -1, 44).Tip(enabled ? null : option.DisabledReason);
+                }
+            });
         }
 
         private bool HasShopEventFollowUps() => S.ShopEventTasks.Length > 0
@@ -74,6 +116,8 @@ namespace PCShopSell.Game.UI
             if (t.Started && t.Remaining > 0) status = "进行中 · 还需" + t.Remaining + "分钟";
             if (t.At > S.Clock.Now.TotalMinutes) status += " · " + new GameTimestamp(t.At);
             Line(w.Content, status, 17);
+            if (t.Kind == "complaint" && t.Status == "待回应")
+                Ui.Size(Ui.Button(w.Content, "查看反馈并处理", () => OpenComplaintFeedback(t.Id), 18, Ui.ButtonHot), -1, 44);
             if (t.Kind == "bank" && !t.Started)
             {
                 var row = Ui.Row(w.Content, 38, 8);

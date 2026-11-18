@@ -36,6 +36,83 @@ namespace PCShopSell.Game.UI
             if (here) OpenCityVenue(S.City.GetPlace(activity.VenueId), id);
             else S.GoToCityActivity(id);
         }
+        private string _openedCookTasting;
+        private GameSession _cookTastingSession;
+
+        private void CheckCookTasting()
+        {
+            if (!ReferenceEquals(_cookTastingSession, S))
+            {
+                _cookTastingSession = S;
+                _openedCookTasting = null;
+            }
+            var activity = S.RunningCityActivity;
+            if (MainMenuOpen || AnyModalOpen || PopupOpen || _ctrl.Placing || S.IsGameOver
+                || !GameSession.IsCookTasting(activity) || activity.Id == _openedCookTasting
+                || S.CurrentPlace?.Id != activity.VenueId) return;
+            OpenCookTasting(activity.Id);
+        }
+
+        private void OpenCookTasting(string id)
+        {
+            _openedCookTasting = id;
+            _cookTastingSession = S;
+            OpenWindow("罗师傅的新菜试吃", 820, 800, w =>
+            {
+                var activity = S.RunningCityActivity;
+                if (activity?.Id != id || !GameSession.IsCookTasting(activity))
+                {
+                    Para(w.Content, "这次试吃已经结束。", 19);
+                    return;
+                }
+                Line(w.Content, "椒香鸡肉饭 · 罗师傅招待", 24, Ui.Accent);
+                Para(w.Content, "罗师傅把试做的一份端上桌，想听听你对口味、分量和定价的真实意见。", 19);
+                Line(w.Content, "本次免费 · 完成试吃后结算 60 分钟", 17, Ui.Good);
+                bool tasted = activity.Choices.Contains("cook-tasted");
+                if (!tasted)
+                {
+                    Para(w.Content, "鸡肉刚出锅，配着热米饭，酱汁里带着明显的胡椒香。", 19);
+                    Ui.Size(Ui.Button(w.Content, "尝一口新菜", () =>
+                    {
+                        if (S.TasteCooksDish(id)) w.Rebuild();
+                    }, 20, Ui.ButtonHot), -1, 48).name = "CookTastingTaste";
+                }
+                else
+                {
+                    Para(w.Content, "你尝过了：鸡肉焦香，酱汁比较浓，米饭吸了汁。罗师傅拿着本子等你的意见。", 19);
+                    string[][] opinions =
+                    {
+                        new[] { "椒香很开胃", "口味可以淡一点" },
+                        new[] { "一份刚好", "可以再加一点饭" },
+                        new[] { "做平价工作餐", "加蔬菜做套餐" }
+                    };
+                    for (int i = 0; i < GameSession.CookTastingTopics.Length; i++)
+                    {
+                        int topic = i;
+                        string key = "cook-review:" + topic + ":";
+                        bool reviewed = activity.Choices.Any(choice => choice.StartsWith(key, StringComparison.Ordinal));
+                        var row = Ui.Row(w.Content, 44, 8);
+                        Ui.Size(Ui.Label(row, GameSession.CookTastingTopics[topic], 18, color: Ui.Accent), 60, 44);
+                        for (int j = 0; j < 2; j++)
+                        {
+                            int opinion = j;
+                            bool selected = activity.Choices.Contains(key + opinion);
+                            Ui.Size(Ui.Button(row, (selected ? "✓ " : "") + opinions[topic][opinion], () =>
+                            {
+                                if (S.ReviewCooksDish(id, topic, opinion) != null) w.Rebuild();
+                            }, 17, Ui.SelectedButton(selected), !reviewed), -1, 44, 1).name = $"CookTastingReview_{topic}_{opinion}";
+                        }
+                    }
+                    Para(w.Content, activity.EventSettlementNote, 18);
+                    Ui.Size(Ui.Button(w.Content, "试吃结束，和罗师傅道别", () =>
+                    {
+                        if (S.FinishManualCityActivity(id)) CloseWindowSilently(w);
+                    }, 19, Ui.ButtonHot, S.CanFinishManualCityActivity(id)), -1, 48).name = "FinishCookTasting";
+                }
+                Ui.Size(Ui.Button(w.Content, "提前离开", () => ConfirmEndCityActivity(activity, false), 17), -1, 40);
+            });
+        }
+
         private static string VenuePlayerEffects(CityVenueService service)
         {
             var effects=new List<string>();
