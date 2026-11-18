@@ -244,11 +244,16 @@ namespace PCShopSell.Game
                 Ui.SetWorldLoadingStage(stage);
             }
             pending.Push(world.BuildIncrementally(SetStage,Ui.SetWorldLoadingProgress));
-            // The opaque loading UI is an overlay canvas. Avoid rendering the growing
-            // city and its shadow maps on every loading frame.
+            // Keep a camera rendering behind the overlay so the Editor does not show
+            // "No cameras rendering". An empty culling mask still skips the city and
+            // its shadow casters throughout the incremental build.
             var loadingCamera=Cam;
             bool cameraWasEnabled=loadingCamera.enabled;
-            loadingCamera.enabled=false;
+            int previousCullingMask=loadingCamera.cullingMask;
+            var previousClearFlags=loadingCamera.clearFlags;
+            loadingCamera.cullingMask=0;
+            loadingCamera.clearFlags=CameraClearFlags.SolidColor;
+            loadingCamera.enabled=true;
             try
             {
                 while (pending.Count > 0)
@@ -273,7 +278,12 @@ namespace PCShopSell.Game
             }
             finally
             {
-                if(loadingCamera!=null)loadingCamera.enabled=cameraWasEnabled;
+                if(loadingCamera!=null)
+                {
+                    loadingCamera.cullingMask=previousCullingMask;
+                    loadingCamera.clearFlags=previousClearFlags;
+                    loadingCamera.enabled=cameraWasEnabled;
+                }
                 if(activeStage!=null)Debug.Log($"[城市加载] {activeStage}: {buildClock.ElapsedMilliseconds-stageStarted} ms");
                 Debug.Log($"[城市加载] 总耗时: {buildClock.ElapsedMilliseconds} ms");
                 foreach (var step in pending) (step as IDisposable)?.Dispose();

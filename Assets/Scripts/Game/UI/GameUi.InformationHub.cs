@@ -10,7 +10,7 @@ namespace PCShopSell.Game.UI
         private void OpenMarketView(int tab)
         {
             S.ReadNews();
-            int period = -1, selected = -1;
+            var prices = new ReportPriceViewState();
             SwitchTab(tab);
 
             void SwitchTab(int next)
@@ -36,13 +36,8 @@ namespace PCShopSell.Game.UI
                     case 2: BuildCompetitionMarket(w); break;
                     case 3: BuildModelCatalog(w); break;
                     default:
-                        var (start, end, ongoing) = BuildEconomicPeriodNavigation(w, period, true, next => period = next);
-                        BuildEconomicPriceSummary(w.Content, start, end, ongoing, selected, group =>
-                        {
-                            selected = group;
-                            w.ResetScrollOnRebuild = true;
-                            w.Rebuild();
-                        });
+                        BuildPriceDashboard(w.Content, Math.Max(0, S.Clock.Today.TotalDays - 7),
+                            S.Clock.Today.TotalDays, prices, w.Rebuild, true);
                         break;
                 }
             }

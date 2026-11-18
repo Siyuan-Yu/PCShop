@@ -3,11 +3,12 @@ using System.Linq;
 using PCShopSell.Core.Time;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace PCShopSell.Game.UI
 {
     [RequireComponent(typeof(CanvasRenderer))]
-    public sealed class AssetTrendGraphic : MaskableGraphic
+    public sealed class AssetTrendGraphic : MaskableGraphic, IPointerClickHandler
     {
         internal static Color ExpenseColor => Ui.Warn;
 
@@ -19,9 +20,20 @@ namespace PCShopSell.Game.UI
 
         private long[] _income = Array.Empty<long>(), _expense = Array.Empty<long>();
         private bool _compact, _groupedBars;
+        private int _firstDay;
+        public Action<int> DaySelected;
+        public void OnPointerClick(PointerEventData e)
+        {
+            if (DaySelected == null || _income.Length == 0) return;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, e.position, e.pressEventCamera, out var p);
+            var r = rectTransform.rect;
+            float t = (p.x - r.xMin - 94) / Math.Max(1, r.width - 106);
+            if (t < 0 || t > 1) return;
+            DaySelected(_firstDay + Mathf.Clamp(Mathf.FloorToInt(t * _income.Length), 0, _income.Length - 1));
+        }
         public void Initialize(long[] income, long[] expense, int firstDay, bool compact, bool groupedBars = false)
         {
-            _income = income; _expense = expense; _compact = compact; _groupedBars = groupedBars; raycastTarget = false;
+            _income = income; _expense = expense; _compact = compact; _groupedBars = groupedBars; _firstDay = firstDay; raycastTarget = DaySelected != null;
             if (!compact)
             {
                 float axisWidth = groupedBars ? 86 : 47;

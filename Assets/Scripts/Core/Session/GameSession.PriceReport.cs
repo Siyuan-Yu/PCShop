@@ -13,8 +13,9 @@ namespace PCShopSell.Core.Session
     public sealed class PriceDay
     {
         public int Day;
+        public int SchemaVersion;
         public double[] Prices;
-        public PriceDay Copy() => new PriceDay { Day = Day, Prices = (double[])Prices.Clone() };
+        public PriceDay Copy() => new PriceDay { Day = Day, SchemaVersion = SchemaVersion, Prices = (double[])Prices.Clone() };
     }
 
     [Serializable]
@@ -42,6 +43,9 @@ namespace PCShopSell.Core.Session
         public IReadOnlyList<MarketPriceMove> MarketPriceAlerts { get; private set; } = Array.Empty<MarketPriceMove>();
         private const string EconomicReportDisabled = "economy-report:disabled";
         public IReadOnlyList<PriceDay> PriceDays => _priceDays;
+        // A live quote is separate from the daily historical snapshot.
+        public PriceDay CurrentMarketPriceSnapshot => new PriceDay
+        { Day = Clock.Today.TotalDays, SchemaVersion = 1, Prices = CurrentMarketPrices(Clock.Today.TotalDays).ToArray() };
         public EconomicReportCadence ReportCadence { get; private set; }
         public bool EconomicReportAutomatic => !Flags.Contains(EconomicReportDisabled);
         public bool EconomicReportPending { get; private set; }
@@ -68,7 +72,7 @@ namespace PCShopSell.Core.Session
                 .Average(p => (double)Market.PriceOf(p).Cents)).ToList();
             prices.Add(Ingredients.All.Where(i => !FishingCatalog.RequiresCatch(i.Id)).Select(i => (double)i.Price.Cents)
                 .Append(Pantry.RicePricePerKg.Cents).Average() * IndustryCycles.WholesaleMarketFactor(FarmBusiness, day, Market.CommoditySeed));
-            prices.Add(Gifts.All.Average(g => (double)g.Price.Cents) * IndustryCycles.WholesaleMarketFactor(Gifts.TobaccoBusiness, day, Market.CommoditySeed));
+            prices.Add(Gifts.All.Where(g => g.SoldAt == Gifts.TobaccoBusiness).Average(g => (double)g.Price.Cents) * IndustryCycles.WholesaleMarketFactor(Gifts.TobaccoBusiness, day, Market.CommoditySeed));
             prices.Add(FurnitureCatalog.All.Where(f => !f.Starter).Average(f => (double)f.Price.Cents));
             prices.Add(FastFoodCatalog.All.Average(f => (double)f.Price.Cents) * IndustryCycles.WholesaleMarketFactor(FastFoodBusiness, day, Market.CommoditySeed));
             prices.Add(Vehicles.All.Where(v => v.Purchasable).Average(v => (double)v.Price.Cents));
@@ -81,12 +85,21 @@ namespace PCShopSell.Core.Session
         private void RecordPriceDay(bool announceMoves = false)
         {
             int day = Clock.Today.TotalDays;
-            if (_priceDays.Any(p => p.Day == day)) return;
+            var existing = _priceDays.FirstOrDefault(p => p.Day == day);
+            if (existing != null)
+            {
+                if (existing.SchemaVersion < 1)
+                {
+                    existing.Prices[7] = CurrentMarketPrices(day)[7];
+                    existing.SchemaVersion = 1;
+                }
+                return;
+            }
             var prices = CurrentMarketPrices(day);
             var yesterday = _priceDays.LastOrDefault();
-            _priceDays.Add(new PriceDay { Day = day, Prices = prices.ToArray() });
+            _priceDays.Add(new PriceDay { Day = day, SchemaVersion = 1, Prices = prices.ToArray() });
             if (announceMoves && yesterday?.Day == day - 1)
-                RecordMarketPriceMoves(day, yesterday.Prices, prices);
+                RecordMarketPriceMoves(day, yesterday.Prices, prices, yesterday.SchemaVersion);
             int elapsed = day - EconomicReportAnchorDay;
             if (EconomicReportAutomatic && _priceDays.Count > 1 && elapsed > 0 && elapsed % EconomicReportPeriodDays == 0)
             {
@@ -95,7 +108,7 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        private void RecordMarketPriceMoves(int day, double[] previous, List<double> current)
+        private void RecordMarketPriceMoves(int day, double[] previous, List<double> current, int previousSchema = 1)
         {
             var moves = new List<MarketPriceMove>();
             void Compare(string name, double before, double after)
@@ -106,7 +119,7 @@ namespace PCShopSell.Core.Session
                     moves.Add(new MarketPriceMove { Name = name, Change = change });
             }
             for (int i = 0; i < PriceGroups.Length; i++)
-                Compare(PriceGroups[i], previous[i], current[i]);
+                if (i != 7 || previousSchema >= 1) Compare(PriceGroups[i], previous[i], current[i]);
 
             // Wholesale and retail prices share the model series multiplier.
             foreach (string series in ModelProducts.SeriesIds)
@@ -148,7 +161,7 @@ namespace PCShopSell.Core.Session
             // Keep historical quotes, but compare tomorrow against today's quotes under the new rules.
             if (string.IsNullOrEmpty(data.commodityPriceSeed) && _priceDays.LastOrDefault() is PriceDay latest
                 && latest.Day == Clock.Today.TotalDays)
-                latest.Prices = CurrentMarketPrices(latest.Day).ToArray();
+                { latest.Prices = CurrentMarketPrices(latest.Day).ToArray(); latest.SchemaVersion = 1; }
             RecordPriceDay();
         }
     }
