@@ -61,7 +61,7 @@ namespace PCShopSell.Game.UI
 
         private void PositionRightHudCards()
         {
-            var position = RightHudRestPosition;
+            var position = RightHudRestPosition + Vector2.down * HudFunctionOffset;
             var dock = DockOpen ? _dock : HomeDockOpen ? _homeDock : null;
             if (dock != null)
             {
@@ -69,7 +69,7 @@ namespace PCShopSell.Game.UI
             }
             else if (_shopDockToggle.gameObject.activeSelf || _homeDockToggle.gameObject.activeSelf)
             {
-                position.y = -120;
+                position.y = -120 - HudFunctionOffset;
             }
 
             if (_loanReminderHud.gameObject.activeSelf)

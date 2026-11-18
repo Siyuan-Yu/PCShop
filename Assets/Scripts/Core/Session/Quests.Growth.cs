@@ -10,7 +10,7 @@ namespace PCShopSell.Core.Session
     public enum QuestTarget
     {
         Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades, Mall,
-        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed, ScooterDealer, CommunityGoal, RacingEnrollment
+        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed, ScooterDealer, CommunityGoal, RacingEnrollment, BankSecurities
     }
 
     public static partial class Quests

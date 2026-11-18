@@ -144,7 +144,7 @@ namespace PCShopSell.Game.Runtime
                 planting.FlowerBed(at+Vector3.forward*1.6f,2.5f,1.2f,seed,false);
             }
             planting.Build(root,"Motor hub waterside planting");
-            StaticBatchingUtility.Combine(root.gameObject);
+            BatchStatic(root.gameObject);
         }
     }
 }

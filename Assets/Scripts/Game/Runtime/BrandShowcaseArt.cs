@@ -13,7 +13,10 @@ namespace PCShopSell.Game.Runtime
     {
         private static readonly Dictionary<string, Texture2D> Cache = new Dictionary<string, Texture2D>();
         private static readonly Dictionary<string, int> Models = ModelProducts.All
-            .Select((p, i) => new { p.Id, Index = i }).ToDictionary(p => p.Id, p => p.Index);
+            // The original atlas has twelve cells. Premium variants reuse their series'
+            // established artwork until dedicated illustrations are available.
+            .Select((p, i) => new { p.Id, Index = i < 12 ? i : System.Array.IndexOf(ModelProducts.SeriesIds, p.ModelSeries) * 3 + 1 })
+            .ToDictionary(p => p.Id, p => p.Index);
 
         public readonly struct ProductLayer
         {

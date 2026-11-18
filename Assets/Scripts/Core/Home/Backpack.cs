@@ -19,14 +19,17 @@ namespace PCShopSell.Core.Home
         public int ShelfDays;
         public string ModelSeries;
         public bool LimitedEdition;
-        public Money WholesalePrice => Price.Scale(0.65);
+        public Money WholesalePrice { get; }
 
-        public GiftDef(string id, string name, string description, long priceYuan, double weightKg, string soldAt)
+        public GiftDef(string id, string name, string description, long priceYuan, double weightKg, string soldAt,
+            double retailPriceFactor = 1, double wholesalePriceFactor = 1)
         {
             Id = id;
             Name = name;
             Description = description;
-            Price = Money.FromYuan(priceYuan);
+            var basis = Money.FromYuan(priceYuan);
+            Price = basis.Scale(retailPriceFactor);
+            WholesalePrice = basis.Scale(.65).Scale(wholesalePriceFactor);
             WeightKg = weightKg;
             SoldAt = soldAt;
         }

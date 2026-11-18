@@ -12,6 +12,7 @@ namespace PCShopSell.Core.Session
         public string ProductId => "clothing:" + Id;
         public string Name { get; }
         public Money Price { get; }
+        public Money WholesaleBasePrice { get; }
         public Money RetailBasePrice => Price;
         public int CharmBonus { get; }
         public string Description { get; }
@@ -28,7 +29,7 @@ namespace PCShopSell.Core.Session
             int tier = 0, string occasion = "daily", double minC = 23, double maxC = 32,
             string visual = "short", string color = "BF7753", string seasons = "summer")
         {
-            Id=id; Name=name; Price=Money.FromYuan(priceYuan); CharmBonus=Math.Min(9,Math.Max(0,charmBonus)); Description=description;
+            Id=id; Name=name; WholesaleBasePrice=Money.FromYuan(priceYuan); Price=WholesaleBasePrice.Scale(.95); CharmBonus=Math.Min(9,Math.Max(0,charmBonus)); Description=description;
             Tier=tier; OccasionTags=occasion; ComfortMinC=minC; ComfortMaxC=maxC; VisualPreset=visual; ColorHex=color; SeasonTags=seasons;
             FictionalBrandId=new[]{"巷日","远迹","序章","岚序"}[Math.Max(0,Math.Min(3,tier))];
             WeightKg=visual=="winter"?1.8:visual=="short"?.35:visual=="formal"?1.1:.75;

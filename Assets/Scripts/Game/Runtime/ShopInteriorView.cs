@@ -1102,6 +1102,8 @@ namespace PCShopSell.Game.Runtime
                 }
                 var occupied = new List<Vector3>();
                 var usedDesk = session.CurrentShop.RetailKind == "secondhand" ? _usedBuyDesk : null;
+                var repairBenches = session.CurrentShop.Layout.Where(p=>p.Id=="used_repairbench").ToArray();
+                int repairerIndex = 0;
                 if (usedDesk != null) occupied.AddRange(_usedSellerStands);
                 foreach (var employee in staff.OrderBy(e => e.Role == EmployeeRole.Cashier ? 0
                     : usedDesk != null && e.Role == EmployeeRole.Appraiser ? 1 : 2))
@@ -1116,7 +1118,10 @@ namespace PCShopSell.Game.Runtime
                         _staffFigures.Add(employee.Person.Id, figure);
                     }
                     bool atUsedDesk = employee.Role == EmployeeRole.Appraiser && usedDesk != null;
-                    var preferred = atUsedDesk ? UsedDeskStand(usedDesk, seller: false)
+                    var repairBench = employee.Role == EmployeeRole.Repairer && repairBenches.Length > 0
+                        ? repairBenches[repairerIndex++ % repairBenches.Length] : null;
+                    var preferred = repairBench != null ? UsedDeskStand(repairBench, seller: false)
+                        : atUsedDesk ? UsedDeskStand(usedDesk, seller: false)
                         : employee.Role == EmployeeRole.Cashier ? _clerkStand
                         : employee.Role == EmployeeRole.Assembler ? _assemblerStand
                         : employee.Role == EmployeeRole.PetKeeper && PetHousePresent ? new Vector3(_petArea.center.x,0,_petArea.yMin-.42f)
@@ -1126,7 +1131,8 @@ namespace PCShopSell.Game.Runtime
                     figure.transform.localPosition = stand;
                     Vector3 facing = employee.Role == EmployeeRole.Cashier ? _counterRot * Vector3.back
                         : employee.Role == EmployeeRole.Assembler && _hasBench ? _benchWorkPoint - stand : Vector3.back;
-                    if (atUsedDesk) FaceUsedDesk(figure.transform, usedDesk);
+                    if (repairBench != null) FaceUsedDesk(figure.transform, repairBench);
+                    else if (atUsedDesk) FaceUsedDesk(figure.transform, usedDesk);
                     else if (facing.sqrMagnitude > .01f) figure.transform.localRotation = Quaternion.LookRotation(facing);
                 }
             }

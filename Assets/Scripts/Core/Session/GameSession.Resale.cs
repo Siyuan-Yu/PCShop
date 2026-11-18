@@ -9,15 +9,16 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        public static double UsedWeight(UsedItem item)=>item.Product == ArtifactProduct ? 1.5 : new[]{1.2,3,.2,1}[Math.Max(0,Math.Min(3,item.Product))];
+        public static double UsedWeight(UsedItem item)=>UsedWeights[Math.Max(0,Math.Min(UsedWeights.Length-1,item.Product))];
         public bool UsedReserved(OwnedShop shop,int id)=>shop.Sim.Queue.Any(c=>c.ResaleId==id);
         private IEnumerable<ResaleOffer> UsedOffers(OwnedShop shop)=>shop.RetailKind!="secondhand"?Enumerable.Empty<ResaleOffer>():
             SpecialBusiness(shop.Place.Id).Used.Where(i=>i.Owned&&i.Inspected&&i.Listed&&!i.Sold&&!UsedReserved(shop,i.Id))
-                .Select(i=>new ResaleOffer{Id=i.Id,Product=i.Product,Name=UsedNames[i.Product]+" · "+UsedConditionName(i),Kg=UsedWeight(i),Price=i.Price,ReferencePrice=UsedValue(i)});
+                .Select(i=>new ResaleOffer{Id=i.Id,Product=i.Product,Name=UsedNames[i.Product]+" · "+UsedConditionName(i),Kg=UsedWeight(i),Price=i.Price,ReferencePrice=UsedValue(i),ListedAt=i.ListedAt});
         private string SetUsedListing(OwnedShop shop, UsedItem item, long price)
         {
             if (item == null || !item.Owned || !item.Inspected || item.Sold)
                 return "这件旧物目前无法上架。请确认已收购、已鉴定且尚未售出。";
+            if (item.RepairWorkRemaining > 0) return "物品正在修复，请完成后再上架。";
             if (price < 1 || price > 1000000) return "请将标价设在 ¥1 到 ¥1,000,000 之间。";
             if (UsedReserved(shop, item.Id)) return "这件商品已被顾客拿去结账，暂时不能改价或下架。";
             var fill = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand"));
@@ -26,6 +27,7 @@ namespace PCShopSell.Core.Session
             if (!item.Listed && (fill.Total >= fill.CapacityItems || fill.UsedKg + UsedWeight(item) > fill.CapacityKg + 1e-9))
                 return "二手转售品货架已满，或剩余承重不足。请增加货架或等货架腾出空位。";
             item.Price = price;
+            if (!item.Listed) item.ListedAt = Clock.Now.TotalMinutes;
             item.Listed = true;
             return null;
         }
@@ -46,7 +48,7 @@ namespace PCShopSell.Core.Session
             double reputation = UsedSaleReputation(item);
             if (reputation > 0) shop.Sim.AdjustPersonalReputation(reputation);
             string reward = reputation > 0 ? $" · 名望 +{reputation:0.#}" : "";
-            Say($"{ShopTitle(shop)}：{UsedNames[item.Product]}已售出，收入 ¥{item.SalePrice}，收购成本 ¥{item.Cost}，毛利 ¥{item.SalePrice - item.Cost}{reward}。");
+            Say($"{ShopTitle(shop)}：{UsedNames[item.Product]}已售出，收入 ¥{item.SalePrice}，总成本 ¥{item.Cost}，毛利 ¥{item.SalePrice - item.Cost}{reward}。");
         }
 
         private void RecordUsedSale(SpecialBusinessState state, UsedItem item, long salePrice)

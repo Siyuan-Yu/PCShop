@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Session;
@@ -106,9 +108,10 @@ namespace PCShopSell.Game.Runtime
         public GameObject Root => _root.gameObject;
         public Bounds CityBounds { get; private set; }
 
-        public StreetWorldBuilder(CityLayout city, int seed)
+        public StreetWorldBuilder(CityLayout city, int seed, bool? firstChapterTrial = null)
         {
             _city = city;
+            _firstChapterTrial=firstChapterTrial??GameSession.FirstChapterTrial;
             _rng = new System.Random(seed);
         }
 
@@ -118,7 +121,7 @@ namespace PCShopSell.Game.Runtime
 
         private void LimitTrialScenery()
         {
-            if (!GameSession.FirstChapterTrial || !_city.IsLakeCity) return;
+            if (!_firstChapterTrial || !_city.IsLakeCity) return;
             var gates = DistrictRoadGate.ForCity(_city);
             if (gates.Count == 0) return;
 
@@ -163,6 +166,43 @@ namespace PCShopSell.Game.Runtime
 
         public GameObject Build()
         {
+            DrainBuild(BuildIncrementally(useBaked:false));
+            return _root.gameObject;
+        }
+
+        private static void DrainBuild(IEnumerator routine)
+        {
+            try
+            {
+                while (routine.MoveNext())
+                    if (routine.Current is IEnumerator nested) DrainBuild(nested);
+            }
+            finally { (routine as IDisposable)?.Dispose(); }
+        }
+
+        private Action<float> _buildProgress;
+        private Action<string> _buildStage;
+        private void ReportBuildProgress(float progress)=>_buildProgress?.Invoke(progress);
+        private void ReportBuildStage(string stage)=>_buildStage?.Invoke(stage);
+
+        public IEnumerator BuildIncrementally(Action<string> stage = null, Action<float> progress = null, bool useBaked = true)
+        {
+            _buildProgress=progress;
+            _buildStage=stage;
+            ReportBuildProgress(0);
+            if(useBaked&&!Baking&&Application.isPlaying)
+            {
+                ReportBuildStage("loading_baked_map");
+                var request=Resources.LoadAsync<GameObject>(BakedCityMap.ResourcePath);
+                while(!request.isDone){ReportBuildProgress(.02f+.38f*request.progress);yield return null;}
+                var prefab=(request.asset as GameObject)?.GetComponent<BakedCityMap>();
+                var layout=Resources.Load<TextAsset>("Data/city_layout");
+                if(prefab!=null&&prefab.Version==BakedCityMap.CurrentVersion&&prefab.Trial==_firstChapterTrial
+                    &&prefab.LayoutHash==BakedCityMap.HashLayout(layout.text))
+                {yield return LoadBakedMap(prefab);yield break;}
+                if(prefab!=null)Debug.LogWarning("预生成地图与当前版本不符，使用地图生成回退路径。");
+            }
+            stage?.Invoke("loading_ground");
             Mats.ClearNightGlow();
             _root = new GameObject("City").transform;
 
@@ -174,14 +214,25 @@ namespace PCShopSell.Game.Runtime
                 IndustrialMaterials.Surface("meadow",Grass,new Vector2(groundBounds.size.x/11,groundBounds.size.z/11)),true);
             ground.AddComponent<GroundMarker>();
 
-            if(_city.LayoutVersion>=7){BuildPlannedCity();return _root.gameObject;}
+            ReportBuildProgress(.02f);
+            yield return null;
+            if (_city.LayoutVersion >= 7)
+            {
+                yield return BuildPlannedCity(stage);
+                yield break;
+            }
+            stage?.Invoke("loading_roads");
             BuildRoads();
             BuildSidewalks();
             BuildCitySidewalks();
-            foreach (Place p in _city.PublicPlaces) BuildPlace(p);
+            stage?.Invoke("loading_buildings");
+            foreach (Place p in _city.PublicPlaces)
+            {
+                BuildPlace(p);
+                yield return null;
+            }
             BuildFiller();
             BuildStreetProps();
-            return _root.gameObject;
         }
 
         // ---------- 路 ----------
@@ -222,7 +273,7 @@ namespace PCShopSell.Game.Runtime
         private void BatchLakeRoads()
         {
             if(!_city.IsLakeCity)return;
-            var roads=_root.Find("Roads");if(roads!=null)StaticBatchingUtility.Combine(roads.gameObject);
+            var roads=_root.Find("Roads");if(roads!=null)BatchStatic(roads.gameObject);
         }
         private void BuildSidewalks()
         {
@@ -480,7 +531,7 @@ namespace PCShopSell.Game.Runtime
             int rows = Mathf.Max(1, Mathf.RoundToInt(height / 3.2f));
             var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
             q.name = "Windows";
-            Object.DestroyImmediate(q.GetComponent<Collider>());
+            UnityEngine.Object.DestroyImmediate(q.GetComponent<Collider>());
             q.transform.SetParent(parent, false);
             q.transform.localPosition = center;
             q.transform.localRotation = faceMinusX ? Quaternion.Euler(0, 90, 0) : Quaternion.identity;

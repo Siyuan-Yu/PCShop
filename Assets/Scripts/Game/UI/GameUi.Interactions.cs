@@ -171,6 +171,9 @@ namespace PCShopSell.Game.UI
                         + $" 魅力 {GameSession.EmployeeCharm(employee)} · 小费概率 {GameSession.WaiterTipChance(GameSession.EmployeeCharm(employee)):P0}，每次¥1起，最高为菜价的 {GameSession.WaiterTipUpperRate(GameSession.EmployeeCharm(employee)):P0}。"),
                 EmployeeRole.Appraiser =>
                     ("判断成色并收购旧物", $"识别真实成色 {GameSession.AppraiserAccuracy(employee.Intelligence) * 100:0.#}%", $"智力 {employee.Intelligence} · 未能识别时按卖家说法估价。"),
+                EmployeeRole.Repairer =>
+                    ("在二手修复台修复旧物", $"工作速度 {GameSession.UsedRepairSpeed(employee):0.##}倍 · 成功率 {GameSession.UsedRepairSuccessChance(employee):P0}",
+                        $"动手能力 {employee.Dexterity}、智力 {employee.Intelligence}共同影响。需要修复台和耗材，每件仅一次尝试。"),
                 EmployeeRole.PetKeeper =>
                     ("给宠物喂食、换水、清理和陪玩", $"照顾 {GameSession.PetsPerKeeper} 只宠物 · 每只状态每天 +{GameSession.PetKeeperCareBonus(employee)}",
                         $"魅力 {GameSession.EmployeeCharm(employee)} · 动手能力 {employee.Dexterity}，各占一半。到岗后开始照料，补粮和换猫砂需要库存。"),

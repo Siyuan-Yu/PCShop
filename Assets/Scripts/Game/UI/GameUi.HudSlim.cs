@@ -11,7 +11,12 @@ namespace PCShopSell.Game.UI
         private const KeyCode QuestHotkey = KeyCode.R;
 
         private RectTransform _hudTopRow;
-        private LayoutElement _hudShortcutsSize;
+        private RectTransform _hudFunctionBar;
+        private Button _hudFoldButton;
+        private bool _hudFunctionsCollapsed;
+        private float HudFunctionOffset => _hudFunctionsCollapsed ? 0 : 54;
+        private float _appliedHudFunctionOffset = -1;
+        private RectTransform _appliedShopDock, _appliedHomeDock;
         private Button _brandButton;
         private float _fittedHudWidth;
         private Button _pauseButton;
@@ -61,37 +66,86 @@ namespace PCShopSell.Game.UI
                 Ui.SetButtonFill(button, S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg);
         }
 
+        private void BuildHudSystemControls(Transform parent)
+        {
+            _hudFunctionsCollapsed = PlayerPrefs.GetInt("petshop:hud-functions-collapsed", 0) != 0;
+            _hudFoldButton = Ui.Size(Ui.Button(parent, "收起功能栏 ▴", ToggleHudFunctions, 16), 142);
+            _hudFoldButton.name = "HudFoldFunctions";
+            _hudFoldButton.Tip("Tab · 收起或展开功能栏");
+            _noticeButtonText = Ui.Size(HudPanelButton(parent, "通知", NoticeHotkey, OpenNoticeHistory,
+                "查看本次会话的通知记录。"), 94, -1, 0).GetComponentInChildren<Text>();
+            _noticeButtonText.transform.parent.name = "HudNotifications";
+            Ui.Size(HudPanelButton(parent, "菜单", KeyCode.Escape, OpenSystemPanel,
+                "存档、读档、重新开始和音效设置。"), 76, -1, 0).name = "HudMenu";
+        }
+
         private void BuildHudShortcuts(Transform parent)
         {
-            const float gap = 3;
-            var shortcuts = Ui.Size(Ui.Row(parent, 48, gap), 700, -1, 0);
-            shortcuts.name = "HudShortcuts";
-            _hudShortcutsSize = shortcuts.GetComponent<LayoutElement>();
-
-            var rows = Ui.Size(Ui.Rect(shortcuts, "HudShortcutRows"), 0, -1, 1);
-            Ui.VList(rows, gap, 0, expandHeight: true);
-            var daily = Ui.Row(rows, 0, gap);
-            daily.name = "HudDailyShortcuts";
-            var business = Ui.Row(rows, 0, gap);
-            business.name = "HudBusinessShortcuts";
-
-            HudPanelButton(daily, "我的", KeyCode.M, OpenMyPanel, "身体状况、住处、饮食与人物关系。", bg: Ui.SelectedButton(true));
-            HudPanelButton(daily, "背包", KeyCode.B, ToggleBackpack, "身上带的货和负重；在家或店里一键全放下。");
-            HudPanelButton(daily, "手机", KeyCode.P, OpenPhone, "通讯录与智能手机应用。");
-            HudPanelButton(daily, "任务", QuestHotkey, OpenQuests, "当前任务与待办；左上角的任务条收起后可从这里再打开。");
-            HudPanelButton(daily, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
-            _noticeButtonText = HudPanelButton(daily, "通知", NoticeHotkey, OpenNoticeHistory, "查看本次会话的通知记录。").GetComponentInChildren<Text>();
-
-            HudPanelButton(business, "员工", KeyCode.H, OpenEmployeesPanel, "各门店的员工、岗位与排班。").name = "HudEmployees";
-            HudPanelButton(business, "资产", KeyCode.O, OpenBusinessPanel, "门店收支、物业与车辆。").name = "HudAssets";
-            HudPanelButton(business, "采购", KeyCode.G, OpenCityProcurement, "商铺采购、补货目标、在途订单与直供协议。").name = "HudProcurement";
-            HudPanelButton(business, "物价", KeyCode.I, OpenMarketPanel, "查看本期物价、历史涨跌和各品类报价走势。").name = "HudPrices";
-            _brandButton = HudPanelButton(business, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
+            _hudFunctionBar = Ui.Panel(parent, "HudFunctionBar", Ui.Chrome).rectTransform
+                .Anchor(0, 1, 1, 1, 12, -126, 12, 76);
+            var row = Ui.Row(_hudFunctionBar, 46, 8).Fill();
+            row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 5, 5);
+            HudPanelButton(row, "我的", KeyCode.M, OpenMyPanel, "个人资料、饮食、住处、我的资产与人物关系。");
+            HudPanelButton(row, "背包", KeyCode.B, ToggleBackpack, "身上带的物品与负重。");
+            HudPanelButton(row, "手机", KeyCode.P, OpenPhone, "通讯录与智能手机应用。");
+            HudPanelButton(row, "任务", QuestHotkey, OpenQuests, "当前任务与待办。");
+            HudPanelButton(row, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
+            HudPanelButton(row, "经营", KeyCode.H, OpenEmployeesPanel, "各门店的员工、岗位、排班、采购与补货。").name = "HudManagement";
+            HudPanelButton(row, "物价", KeyCode.I, OpenMarketPanel, "查看本期物价、历史涨跌和报价走势。").name = "HudPrices";
+            _brandButton = HudPanelButton(row, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
             _brandButton.name = "HudBrand";
             if (!GameSession.FirstChapterTrial)
-                HudPanelButton(business, "赛车", KeyCode.T, OpenRacingDestinations, "赛场开放条件、入门路线与比赛安排。").name = "HudRacing";
+                HudPanelButton(row, "赛车", KeyCode.T, OpenRacingDestinations, "赛场开放条件与比赛安排。").name = "HudRacing";
+            _hudFunctionBar.gameObject.SetActive(!_hudFunctionsCollapsed);
+        }
 
-            Ui.Size(HudPanelButton(shortcuts, "菜单", KeyCode.Escape, OpenSystemPanel, "存档、读档、重新开始和音效设置。"), 54, -1, 0).name = "HudMenu";
+        private void ToggleHudFunctions()
+        {
+            _hudFunctionsCollapsed = !_hudFunctionsCollapsed;
+            PlayerPrefs.SetInt("petshop:hud-functions-collapsed", _hudFunctionsCollapsed ? 1 : 0);
+            ApplyHudFunctionLayout();
+        }
+
+        private void ApplyHudFunctionLayout()
+        {
+            if (_appliedHudFunctionOffset == HudFunctionOffset && _appliedShopDock == _dock && _appliedHomeDock == _homeDock)
+                return;
+            _appliedHudFunctionOffset = HudFunctionOffset;
+            _appliedShopDock = _dock;
+            _appliedHomeDock = _homeDock;
+            _hudFunctionBar.gameObject.SetActive(!_hudFunctionsCollapsed);
+            _hudFoldButton.GetComponentInChildren<Text>().text = _hudFunctionsCollapsed ? "展开功能栏 ▾" : "收起功能栏 ▴";
+            float shift = HudFunctionOffset;
+            if (_questPanel != null)
+            {
+                var rect = _questPanel.rectTransform;
+                rect.offsetMax = new Vector2(rect.offsetMax.x, -82 - shift);
+                rect.offsetMin = new Vector2(16, -(82 + shift - _questText.rectTransform.offsetMax.y + 118));
+            }
+            foreach (var button in new[] { _shopDockToggle, _homeDockToggle })
+                if (button != null)
+                {
+                    var rect = (RectTransform)button.transform;
+                    rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -93 - shift);
+                }
+            foreach (var dock in new[] { _dock, _homeDock })
+                if (dock != null) dock.offsetMax = new Vector2(dock.offsetMax.x, -120 - shift);
+            if (_storageWarning != null)
+            {
+                var rect = (RectTransform)_storageWarning.transform;
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -90 - shift);
+            }
+            if (_chaseText != null)
+            {
+                var rect = (RectTransform)_chaseText.transform.parent;
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -102.5f - shift);
+            }
+            if (_hungerBanner != null)
+            {
+                var rect = _hungerBanner.rectTransform;
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -176 - shift);
+            }
+            RefreshToastPlacement();
         }
 
         private void FitHudTopRow()
@@ -99,7 +153,6 @@ namespace PCShopSell.Game.UI
             float availableWidth = ((RectTransform)_hudTopRow.parent).rect.width;
             if (availableWidth <= 0 || Mathf.Approximately(availableWidth, _fittedHudWidth)) return;
             _fittedHudWidth = availableWidth;
-            _hudShortcutsSize.preferredWidth = Mathf.Max(700, availableWidth * .364f);
 
             var layout = _hudTopRow.GetComponent<HorizontalLayoutGroup>();
             float preferredWidth = layout.padding.horizontal;

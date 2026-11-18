@@ -58,7 +58,7 @@ namespace PCShopSell.Core.Session
         {
             EmployeeRole.Assembler => ("computer", "电脑店"),
             EmployeeRole.Chef or EmployeeRole.Waiter => ("restaurant", "餐馆"),
-            EmployeeRole.Appraiser => ("secondhand", "二手旧物店"),
+            EmployeeRole.Appraiser or EmployeeRole.Repairer => ("secondhand", "二手旧物店"),
             EmployeeRole.PetKeeper => (PCShopSell.Core.Home.PetShopCatalog.ShopKind, "宠物用品店"),
             _ => (null, null)
         };

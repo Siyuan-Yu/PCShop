@@ -13,50 +13,100 @@ namespace PCShopSell.Game.UI
     {
         private readonly Dictionary<string, EmployeePurchasePlan> _purchaseDrafts = new Dictionary<string, EmployeePurchasePlan>();
 
-        public void OpenEmployeesPanel()
+        private Window _managementWindow;
+        private GameSession _managementSession;
+        private bool _managementProcurement;
+        private readonly HashSet<string> _managementExpandedShops = new HashSet<string>();
+        private readonly HashSet<string> _managementExpandedEmployees = new HashSet<string>();
+
+        public void OpenEmployeesPanel() => OpenManagementPanel(false);
+
+        private void OpenManagementPanel(bool procurement)
         {
-            var firstShop = S.ShopAt(S.CurrentPlace) ?? S.MyShops.FirstOrDefault();
-            var expandedShops = new HashSet<string> { firstShop?.Place.Id };
-            var expandedEmployees = new HashSet<string>();
-            OpenWindow("员工管理", 1120, 900, w =>
+            if (_managementSession != S)
             {
-                var rows = S.Employees;
-                Line(w.Content, $"员工 {rows.Count} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
-                Line(w.Content, "同店换岗当天生效，跨店调动次日生效。", 16, Ui.Dim);
-                var bar = Ui.Row(w.Content, 40);
-                Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
-                Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); if(S.IsOwnedVenue(S.CurrentPlace))OpenVenueManagement(S.CurrentPlace);else{OpenDock();SelectTab(ShopTab.Staff);} }, 17, Ui.ButtonBg, S.InPlayerShop), 220);
-                if (rows.Count == 0) Para(w.Content, "还没有员工。到自己的店里打开“员工”页，聘用后选择工作安排。", 20);
-                var roster = rows.ToLookup(row => row.Shop);
-                foreach (var shop in S.MyShops) BuildGroup(shop);
-                if (roster[null].Any()) BuildGroup(null);
+                _managementSession = S;
+                _managementExpandedShops.Clear();
+                _managementExpandedEmployees.Clear();
+                _managementExpandedShops.Add((S.ShopAt(S.CurrentPlace) ?? S.MyShops.FirstOrDefault())?.Place.Id);
+            }
+            bool changed = _managementProcurement != procurement;
+            _managementProcurement = procurement;
+            if (_managementWindow != null && !_managementWindow.Closed)
+            {
+                _managementWindow.Root.SetAsLastSibling();
+                _managementWindow.ResetScrollOnRebuild |= changed;
+                _managementWindow.Rebuild();
+                return;
+            }
+            _managementWindow = OpenWindow("经营", 1280, 960, BuildManagementPanel, scrollContent: false,
+                onClosed: () => _managementWindow = null);
+            _managementWindow.Root.name = "Workspace_management";
+        }
 
-                void BuildGroup(OwnedShop shop)
+        private void BuildManagementPanel(Window w)
+        {
+            var tabs = Ui.Row(w.Content, 42, 8);
+            foreach (bool procurement in new[] { false, true })
+            {
+                bool page = procurement;
+                Ui.Tab(tabs, page ? "采购" : "员工", () =>
                 {
-                    string id = shop?.Place.Id;
-                    bool expanded = expandedShops.Contains(id);
-                    var employees = roster[shop];
-                    string label = shop == null ? $"待安排人员 · {employees.Count()} 人"
-                        : $"{S.ShopTitle(shop)} · {S.City.StreetName(shop.Place.StreetId)} · {employees.Count()} 人 · 名额 {S.StaffCommitted(shop)}/{GameSession.StaffLimit(shop.Place.Size)}";
-                    var header = Ui.Size(Ui.Button(w.Content, (expanded ? "▾  " : "▸  ") + label, () =>
-                    {
-                        if (!expandedShops.Add(id)) expandedShops.Remove(id);
-                        w.Rebuild();
-                    }, 19), -1, 42);
-                    var heading = header.GetComponentInChildren<Text>();
-                    heading.alignment = TextAnchor.MiddleLeft;
-                    heading.fontStyle = FontStyle.Bold;
-                    if (!expanded) return;
+                    _managementProcurement = page;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }, _managementProcurement == page).name = page ? "ManagementProcurement" : "ManagementEmployees";
+            }
+            var content = PhoneFlexibleScroll(w.Content, "ManagementContent");
+            var parent = w.Content;
+            w.Content = content;
+            try
+            {
+                if (_managementProcurement) BuildProcurementContent(w);
+                else BuildEmployeesContent(w, _managementExpandedShops, _managementExpandedEmployees);
+            }
+            finally { w.Content = parent; }
+        }
 
-                    var body = Ui.Rect(w.Content, "EmployeeGroup_" + (id ?? "Unassigned"));
-                    Ui.VList(body, 5, 0).padding = new RectOffset(14, 0, 0, 3);
-                    if (shop?.Assembler != null)
-                        Ui.Size(Ui.Button(body, "自动装机 · " + (shop.AutoBuild ? "开" : "关"),
-                            () => { S.ToggleAutoBuildAt(shop); w.Rebuild(); }, 16), -1, 34);
-                    if (!employees.Any()) Line(body, "本店暂无在编员工。", 16, Ui.Dim);
-                    foreach (var row in employees) BuildEmployeeCard(body, row, w, expandedEmployees);
-                }
-            });
+        private void BuildEmployeesContent(Window w, HashSet<string> expandedShops, HashSet<string> expandedEmployees)
+        {
+            var rows = S.Employees;
+            Line(w.Content, $"员工 {rows.Count} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
+            Line(w.Content, "同店换岗当天生效，跨店调动次日生效。", 16, Ui.Dim);
+            var bar = Ui.Row(w.Content, 40);
+            Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
+            Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); if(S.IsOwnedVenue(S.CurrentPlace))OpenVenueManagement(S.CurrentPlace);else{OpenDock();SelectTab(ShopTab.Staff);} }, 17, Ui.ButtonBg, S.InPlayerShop), 220);
+            if (rows.Count == 0) Para(w.Content, "还没有员工。到自己的店里打开“员工”页，聘用后选择工作安排。", 20);
+            var roster = rows.ToLookup(row => row.Shop);
+            foreach (var shop in S.MyShops) BuildGroup(shop);
+            if (roster[null].Any()) BuildGroup(null);
+
+            void BuildGroup(OwnedShop shop)
+            {
+                string id = shop?.Place.Id;
+                bool expanded = expandedShops.Contains(id);
+                var employees = roster[shop];
+                string label = shop == null ? $"待安排人员 · {employees.Count()} 人"
+                    : $"{S.ShopTitle(shop)} · {S.City.StreetName(shop.Place.StreetId)} · {employees.Count()} 人 · 名额 {S.StaffCommitted(shop)}/{GameSession.StaffLimit(shop.Place.Size)}";
+                var header = Ui.Size(Ui.Button(w.Content, (expanded ? "▾  " : "▸  ") + label, () =>
+                {
+                    if (!expandedShops.Add(id)) expandedShops.Remove(id);
+                    w.Rebuild();
+                }, 19), -1, 42);
+                var heading = header.GetComponentInChildren<Text>();
+                heading.alignment = TextAnchor.MiddleLeft;
+                heading.fontStyle = FontStyle.Bold;
+                if (!expanded) return;
+
+                var body = Ui.Rect(w.Content, "EmployeeGroup_" + (id ?? "Unassigned"));
+                Ui.VList(body, 5, 0).padding = new RectOffset(14, 0, 0, 3);
+                if (shop?.Assembler != null)
+                    Ui.Size(Ui.Button(body, "自动装机 · " + (shop.AutoBuild ? "开" : "关"),
+                        () => { S.ToggleAutoBuildAt(shop); w.Rebuild(); }, 16), -1, 34);
+                if (!employees.Any()) Line(body, "本店暂无在编员工。", 16, Ui.Dim);
+                foreach (var row in employees) BuildEmployeeCard(body, row, w, expandedEmployees);
+            }
+
         }
 
         private void BuildEmployeeCard(Transform parent, EmployeeAssignment row, Window w, HashSet<string> expandedEmployees)

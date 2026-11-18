@@ -42,7 +42,7 @@ namespace PCShopSell.Game.Runtime
                     walk.transform.localRotation = Quaternion.LookRotation(delta.normalized);
                 }
             }
-            if(_city.IsLakeCity)StaticBatchingUtility.Combine(walks.gameObject);
+            if(_city.IsLakeCity)BatchStatic(walks.gameObject);
         }
         private void BuildCityPlace(Place p)
         {

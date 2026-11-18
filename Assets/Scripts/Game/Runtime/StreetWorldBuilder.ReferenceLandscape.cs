@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,9 +8,9 @@ namespace PCShopSell.Game.Runtime
     {
         private static readonly Rect CommunityGarden=new Rect(-108,191,26,23);
 
-        private void BuildReferenceLandscape()
+        private IEnumerator BuildReferenceLandscape()
         {
-            if(_city.IsLakeCity){BuildLakeLandscape();return;}
+            if(_city.IsLakeCity){yield return BuildLakeLandscape();yield break;}
             var root=new GameObject("ReferenceNeighborhoodLandscape").transform;root.SetParent(_root,false);
             Garden(root,CommunityGarden,false);
             // The lake is part of the existing, interactive life_park property.
@@ -52,7 +53,7 @@ namespace PCShopSell.Game.Runtime
                 if(!clear)continue;
                 CityVegetation.Build(root,new Vector3(point.x,0,point.y),index++);
             }
-            StaticBatchingUtility.Combine(root.gameObject);
+            BatchStatic(root.gameObject);
         }
         private void Garden(Transform parent,Rect area,bool lake)
         {

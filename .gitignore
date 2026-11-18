@@ -124,3 +124,9 @@ __pycache__/
 !ExternalTools/EventEditor/EventEditor.csproj
 ExternalTools/EventEditor/bin/
 ExternalTools/EventEditor/obj/
+
+# 打包前自动生成的地图缓存，不提交重复的大型模型数据
+/Assets/Generated/CityBake/
+/Assets/Generated/CityBake.meta
+
+/Assets/Generated.meta

@@ -9,7 +9,7 @@ namespace PCShopSell.Core.Home
         public const string Business="服装";
         public static readonly IReadOnlyList<GiftDef> All=Outfits.All.Where(x=>x.Id!=Outfits.Default).Select(x=>
             new GiftDef(x.ProductId,x.Name,x.FictionalBrandId+" · "+x.TierName+" · "+x.OccasionName+" · "+x.ComfortMinC+"—"+x.ComfortMaxC+"℃。"+x.Description,
-                x.Price.Yuan,x.WeightKg,Business)).ToArray();
+                x.WholesaleBasePrice.Yuan,x.WeightKg,Business,retailPriceFactor:.95)).ToArray();
         public static OutfitDef Outfit(string productId)=>productId!=null&&productId.StartsWith("clothing:")?Outfits.Get(productId.Substring(9)):null;
         public static bool IsClothing(string id)=>Outfit(id)!=null;
         public static string SeasonGroup(string productId)

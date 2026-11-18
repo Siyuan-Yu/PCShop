@@ -23,19 +23,20 @@ namespace PCShopSell.Game.UI
         private const int StockQuoteGap = 6, StockQuoteWidth = 218, StockPositionWidth = 104;
         private const int StockCostWidth = 100, StockDraftWidth = 116, StockActionWidth = 74;
         private const int StockCashCardHeight = 68;
-        private static readonly int[] StockLotSteps = { 1, 5, 25, 100 };
+        private static readonly int[] StockLotSteps = { 1, 5, 25, 100, 200, 500 };
         private readonly Dictionary<string, long> _stockSpotDraft = new Dictionary<string, long>();
         private readonly Dictionary<string, long> _stockShortDraft = new Dictionary<string, long>();
         private readonly HashSet<string> _stockHiddenChartSeries = new HashSet<string>();
         private GameSession _stockSession;
         private Window _stockWindow;
+        private bool _stockAtBank;
         private StockPage _stockPage = StockPage.Exchange;
         private string _stockExpanded, _stockTradeFeedback;
         private bool _stockShortMode, _stockCandles, _stockWatchOnly, _stockHelp, _stockTradeFailed;
         private bool _stockTradeRevealPending;
         private int _stockSort, _stockChartDays = 7, _stockLotStep;
         private Dictionary<string, long> StockDraft(bool shortMode) => shortMode ? _stockShortDraft : _stockSpotDraft;
-        private int StockStep => StockLotSteps[_stockLotStep] * GameSession.StockLotSize;
+        private int StockStep => StockLotSteps[_stockLotStep];
 
         private void ResetStockOrderDrafts()
         {
@@ -88,12 +89,14 @@ namespace PCShopSell.Game.UI
         {
             string blocker = S.AppBlocker(PhoneApps.Securities);
             if (blocker != null) { Toast(blocker); if (S.HasSmartphone) OpenPhoneStore(); return; }
+            _stockAtBank = false;
             EnsureStockSessionState();
             // 仅在主动进入应用时清空，界面刷新及本次浏览期间切页保留当前操作。
             ResetStockOrderDrafts();
             ClosePhone();
             if (_stockWindow != null && !_stockWindow.Closed)
             {
+                _stockWindow.TitleText.text = "证券";
                 _stockWindow.Root.SetAsLastSibling();
                 _stockWindow.Rebuild();
                 return;
@@ -103,6 +106,31 @@ namespace PCShopSell.Game.UI
             _stockWindow.OnClosed = () =>
             {
                 ResetStockOrderDrafts();
+                _stockAtBank = false;
+                if (_workbenchTab == 2) _homeWorkbench?.RequestRebuild();
+            };
+        }
+
+        private void OpenBankSecurities()
+        {
+            string blocker = S.BankBlocker();
+            if (blocker != null) { Toast(blocker); return; }
+            EnsureStockSessionState();
+            ResetStockOrderDrafts();
+            S.VisitQuestTarget(QuestTarget.BankSecurities);
+            _stockAtBank = true;
+            if (_stockWindow != null && !_stockWindow.Closed)
+            {
+                _stockWindow.TitleText.text = "银行 · 证券交易";
+                _stockWindow.Root.SetAsLastSibling();
+                _stockWindow.Rebuild();
+                return;
+            }
+            _stockWindow = OpenPhoneAppWindow("银行 · 证券交易", BuildStockWorkspace, scrollContent: false);
+            _stockWindow.OnClosed = () =>
+            {
+                ResetStockOrderDrafts();
+                _stockAtBank = false;
                 if (_workbenchTab == 2) _homeWorkbench?.RequestRebuild();
             };
         }
@@ -172,7 +200,27 @@ namespace PCShopSell.Game.UI
             StockFlex(Ui.Label(summary, "总浮动盈亏  " + floating, 18, color: floating.IsNegative ? Ui.Warn : Ui.Good), 48);
             StockFlex(Ui.Label(summary, "已实现盈亏  " + realized, 18, color: realized.IsNegative ? Ui.Warn : Ui.Good), 48);
             StockFlex(Ui.Label(summary, S.StockTradingStatus + "\n下次报价 " + S.StockNextQuote, 15, color: Ui.Dim), 48);
-            if (!_stockEmbedded) Ui.Size(Ui.Button(summary, "返回手机", () => { w.Close(); OpenPhone(); }, 16), 124, 36);
+            if (!_stockEmbedded)
+            {
+                bool atBank = _stockAtBank;
+                Ui.Size(Ui.Button(summary, atBank ? "返回银行" : "返回手机", () =>
+                {
+                    w.Close();
+                    if (atBank) { if (S.AtBank) OpenBank(S.CurrentPlace); }
+                    else OpenPhone();
+                }, 16), 124, 36);
+            }
+            if (_stockAtBank && !_stockEmbedded && S.CurrentQuest()?.Id == "bank_securities")
+            {
+                var lesson = Ui.Row(root, 88, 12);
+                Ui.Size(Ui.Label(lesson, "证券入门\n先看股价和涨跌，点 + 或 − 选择待成交股数，再点「成交」。最低 1 股，买卖收取 0.2% 手续费。\n可以先买 1 股体验；股价会波动，请为门店留足周转资金。手机安装证券应用后可使用同一持仓。", 17), 0, 88, 1);
+                Ui.Size(Ui.Button(lesson, "已了解，继续开店", () =>
+                {
+                    if (!S.CompleteQuestLesson("bank_securities")) return;
+                    w.Rebuild();
+                    UpdateQuestTracker();
+                }, 18, Ui.ButtonHot, S.CanCompleteQuestLesson("bank_securities")), 190, 60).name = "BankSecuritiesLessonComplete";
+            }
 
             var (navigation, refreshNavigation) = BuildStockPageTabs(w, root);
             switch (_stockPage)
@@ -241,7 +289,7 @@ namespace PCShopSell.Game.UI
             if (_stockHelp)
             {
                 StockText(root, $"个股单日涨跌上限为 ±{GameSession.StockDailyLimitPercent}%，第 {GameSession.StockEarlyMarketDays + 1} 天起波动加大。\n"
-                    + $"股票每手 {Ui.Emphasize("100 股")}。表头倍率控制每次加减的手数，点{Ui.Emphasize("「成交」")}统一结算。做空冻结自有保证金及卖出所得，每日借股费 0.03%，{Ui.Emphasize("担保比例≤130%时自动平仓", Ui.Warn)}。", 15, Ui.Dim);
+                    + $"股票最低买入 {Ui.Emphasize("1 股")}。表头数量控制每次加减的股数，点{Ui.Emphasize("「成交」")}统一结算。做空冻结自有保证金及卖出所得，每日借股费 0.03%，{Ui.Emphasize("担保比例≤130%时自动平仓", Ui.Warn)}。", 15, Ui.Dim);
                 Ui.Size(Ui.Button(root, "账户与费用明细", OpenStockFees, 15), -1, 30);
             }
 
@@ -276,7 +324,7 @@ namespace PCShopSell.Game.UI
             void Sort(int column) { _stockSort = _stockSort == column ? 0 : column; w.Rebuild(); }
             Ui.Size(Ui.Button(quotes, "股价", () => Sort(1), 15), 65, 31);
             Text stepLabel = null;
-            string StepLabel() => "×" + StockLotSteps[_stockLotStep] + " 手";
+            string StepLabel() => "×" + StockLotSteps[_stockLotStep] + " 股";
             var cycle = Ui.Size(Ui.Button(quotes, StepLabel(), () =>
             {
                 _stockLotStep = (_stockLotStep + 1) % StockLotSteps.Length;
@@ -355,8 +403,6 @@ namespace PCShopSell.Game.UI
             long minimum = -Math.Min(held, GameSession.StockOrderLimit);
             long maximum = CanOpenStockPosition(id, shortMode) ? GameSession.StockOrderLimit : 0;
             long next = Math.Max(minimum, Math.Min(maximum, current + direction * StockStep));
-            // 旧存档可能含零股；整笔卖出／平仓可以包含零股，其余订单仍按整手。
-            if (id != "hardware" && next != -held) next -= next % GameSession.StockLotSize;
             SetStockDraft(id, shortMode, next);
             refresh();
         }

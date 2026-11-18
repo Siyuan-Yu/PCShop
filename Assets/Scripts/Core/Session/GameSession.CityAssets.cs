@@ -193,7 +193,7 @@ namespace PCShopSell.Core.Session
         public bool CityInvestmentUsesReserve(string id, long units) => Ledger.Balance - CityInvestmentTradeTotal(id, units, true) < GetCityCashReserve().Total;
         public bool TradeCityInvestment(string id, long units, bool buy, bool acknowledgeReserve = false)
         {
-            string appBlocker=AppBlocker(PhoneApps.Securities);if(appBlocker!=null)return Fail(appBlocker);
+            string appBlocker=SecuritiesAccessBlocker;if(appBlocker!=null)return Fail(appBlocker);
             string tradeBlocker=StockTradeBlocker(id,units,buy?"buy":"sell");if(tradeBlocker!=null)return Fail(tradeBlocker+"。");
             var e = _cityEquities.Find(x => x.Id == id);
             long minute = Clock.Now.TotalMinutes;

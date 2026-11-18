@@ -82,8 +82,9 @@ namespace PCShopSell.Game.UI
             var launcherRect = (RectTransform)_workbenchLauncher.transform;
             bool besideHomeToggle = _homeDockToggle.gameObject.activeSelf;
             float launcherLeft = besideHomeToggle ? -427 : -232;
-            if (launcherRect.offsetMin.x != launcherLeft)
-                launcherRect.Anchor(1, 1, 1, 1, launcherLeft, -112, besideHomeToggle ? 208 : 18, besideHomeToggle ? 74 : 68);
+            float launcherTop = (besideHomeToggle ? 74 : 68) + HudFunctionOffset;
+            if (launcherRect.offsetMin.x != launcherLeft || launcherRect.offsetMax.y != -launcherTop)
+                launcherRect.Anchor(1, 1, 1, 1, launcherLeft, -112 - HudFunctionOffset, besideHomeToggle ? 208 : 18, launcherTop);
             bool visible=S.CurrentPlace==S.Home&&!_ctrl.Placing&&!S.IsGameOver&&!MainMenuOpen;
             _workbenchLauncher.gameObject.SetActive(visible);
             _workbenchLauncher.interactable=S.CanUseHomeWorkbench;

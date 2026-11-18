@@ -24,6 +24,7 @@ public static class WebGlTrialBuild
             PlayerSettings.WebGL.decompressionFallback = true;
             PlayerSettings.WebGL.template = "APPLICATION:Default";
 
+            CityMapBaker.SelectEdition(true);
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { "Assets/Scenes/Main.unity" },

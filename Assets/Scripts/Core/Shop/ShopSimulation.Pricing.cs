@@ -62,7 +62,7 @@ namespace PCShopSell.Core.Shop
             return true;
         }
 
-        public double GoodsReferencePrice(string id) => (Gifts.Get(id)?.Price.Yuan??0)*IndustryCycles.GoodsFactor(Gifts.Get(id),_clock.Today.TotalDays,_market.CommoditySeed);
+        public double GoodsReferencePrice(string id) => (Gifts.Get(id)?.Price.Cents??0)/100.0*IndustryCycles.GoodsFactor(Gifts.Get(id),_clock.Today.TotalDays,_market.CommoditySeed);
         public (long min, long max) GoodsPriceRange(string id) => SalePriceRange(GoodsReferencePrice(id));
         public bool SetGoodsSalePrice(string id, long yuan)
         {

@@ -227,6 +227,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("restaurant_table","餐馆餐桌","提供一个堂食桌位；上菜后用餐结账，需要收桌。",190,FurnitureSlot.Floor,.85,.85,true){WeightKg=15});
             Add(new FurnitureDef("used_buydesk","收购鉴定台","听说辞、出价收购；买下后才可鉴定。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=25});
             Add(new FurnitureDef("used_display","二手销售展示台","每台展示4件已鉴定的旧物，按真实状态标价出售。",450,FurnitureSlot.Floor,1,.65,true){WeightKg=20});
+            Add(new FurnitureDef("used_repairbench","二手修复台","修复师处理已鉴定的瑕疵或损坏旧物；每台同时修复一件，需支付耗材。",1200,FurnitureSlot.Floor,1.3,.75,true){WeightKg=35});
             // ---- 出租屋：开局自带 ----
             Add(new FurnitureDef(HomeWorkbench, "居家办公台", "大型经营终端，需中型及以上住宅安装。摆好后可集中管理门店、投资、联系人和生活托管。", 1_080_000, FurnitureSlot.Floor, 6.4, 1.2) { WeightKg=160 });
             Add(new FurnitureDef(BedBoard, "硬板床", "一块木板加一层薄褥子。", 0, FurnitureSlot.Floor, 2.0, 1.0, false, true) { Role = FurnitureRole.Bed, BedQuality = 1.0 });

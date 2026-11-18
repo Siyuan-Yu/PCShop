@@ -1,5 +1,89 @@
 {
   "entries": [
+{
+  "key": "loading_baked_details",
+  "zh": "读取建筑与绿化部件…",
+  "ja": "建物と緑地のパーツを読み込み中…",
+  "en": "Preparing shared building and garden models…"
+},
+{
+  "key": "loading_baked_map",
+  "zh": "读取预生成地图…",
+  "ja": "事前生成したマップを読み込み中…",
+  "en": "Loading the prepared map…"
+},
+{
+  "key": "loading_elapsed",
+  "zh": "已用 {0} 秒",
+  "ja": "経過 {0} 秒",
+  "en": "{0} seconds elapsed"
+},
+{
+  "key": "loading_background_hint",
+  "zh": "切换到其他窗口后仍会继续加载",
+  "ja": "他のウィンドウに切り替えても読み込みを続けます",
+  "en": "Loading continues while you use another window"
+},
+{
+  "key": "loading_forest_layout",
+  "zh": "安排树木与灌木的位置…",
+  "ja": "樹木と低木を配置中…",
+  "en": "Placing trees and shrubs…"
+},
+{
+  "key": "loading_forest_meshes",
+  "zh": "生成树林显示数据…",
+  "ja": "森林の描画データを生成中…",
+  "en": "Preparing woodland meshes…"
+},
+{
+  "key": "loading_shore_details",
+  "zh": "布置桥梁与湖岸细节…",
+  "ja": "橋と湖岸の細部を準備中…",
+  "en": "Preparing bridges and shoreline details…"
+},
+{
+  "key": "loading_world",
+  "zh": "正在加载街区",
+  "ja": "街を読み込み中",
+  "en": "Loading the neighborhood"
+},
+{
+  "key": "loading_ground",
+  "zh": "准备地图与地形…",
+  "ja": "地図と地形を準備中…",
+  "en": "Preparing the map and terrain…"
+},
+{
+  "key": "loading_roads",
+  "zh": "铺设道路与人行道…",
+  "ja": "道路と歩道を準備中…",
+  "en": "Preparing roads and pavements…"
+},
+{
+  "key": "loading_buildings",
+  "zh": "布置建筑与场馆…",
+  "ja": "建物と施設を準備中…",
+  "en": "Preparing buildings and venues…"
+},
+{
+  "key": "loading_scenery",
+  "zh": "布置树林与街景…",
+  "ja": "木々と街並みを準備中…",
+  "en": "Preparing trees and scenery…"
+},
+{
+  "key": "loading_people",
+  "zh": "准备人物与室内设施…",
+  "ja": "人物と室内設備を準備中…",
+  "en": "Preparing characters and interiors…"
+},
+{
+  "key": "loading_session",
+  "zh": "准备进入游戏…",
+  "ja": "ゲームを準備中…",
+  "en": "Getting ready to play…"
+},
     {
       "key": "game_title",
       "zh": "PETSHOP",

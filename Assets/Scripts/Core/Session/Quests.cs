@@ -139,6 +139,18 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
+                Id = "bank_securities", Title = "去银行了解股票", Target = QuestTarget.BankSecurities,
+                Short = $"到{K("银行")}，了解证券交易",
+                Hint = $"在银行选择{K("证券交易")}，看报价、持仓与手续费。最少可以买 1 股，点数量按钮切换加减股数，选好后统一成交。留足进货和租金，可先看教学再决定是否投资。安装手机证券应用后，也能随时查看账户。",
+                Lesson = true,
+                LessonReady = s => s.AtBank && s.BankBlocker() == null,
+                Done = s => s.QuestLessonRead("bank_securities") || s.QuestCompleted("second_shop")
+                    || s.OperatingStorefrontCount >= 2 || s.RacingUnlocked,
+                Progress = s => s.Flags.Contains("tutorial:visited:bank_securities")
+                    ? "已查看银行证券页面 · 确认教学后继续" : "前往银行 · 打开证券交易",
+            },
+            new QuestDef
+            {
                 Id = "second_shop", Title = "开第二家店", Target = QuestTarget.Agency,
                 Short = $"去{K("中介")}找间新铺，筹备第二家店",
                 Hint = "手头周转得开时，可以去中介签下一间新铺并选好店型。摆齐开业设施后，门店从装修次日起计入进度。",

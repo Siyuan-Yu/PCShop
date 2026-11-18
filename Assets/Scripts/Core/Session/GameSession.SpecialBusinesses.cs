@@ -19,6 +19,10 @@ namespace PCShopSell.Core.Session
         public long SalePrice,SoldAt;
         public bool Owned, Inspected, Listed, Sold;
         public bool ArtifactAssessmentMade, ArtifactIdentified;
+        public bool RepairAttempted, RepairSucceeded;
+        public long RepairCost;
+        public long ListedAt;
+        public double RepairWorkRemaining, RepairWorkTotal, RepairQualityWork;
         public bool WaitingForPurchase => !Owned && !Listed && !Sold;
         public UsedItem Copy() => (UsedItem)MemberwiseClone();
     }
@@ -54,7 +58,7 @@ namespace PCShopSell.Core.Session
         public List<ShopVisitDetail> RestaurantCompletedVisits = new List<ShopVisitDetail>();
         public int RecipeMask=7;
         public bool AutoPurchasePaused;
-        public long DailyBudget=500, MaxOffer=200;
+        public long DailyBudget=10000, MaxOffer=3000;
         public double Risk=.5, MenuMarkup=1;
         public List<UsedItem> Used=new List<UsedItem>();
         public List<DiningOrder> Orders=new List<DiningOrder>();
@@ -71,6 +75,8 @@ namespace PCShopSell.Core.Session
         public SpecialBusinessState[] specialBusinesses;
         public SavedFixedSalePrice[] fixedSalePrices;
         public int restaurantFishOrderPriceVersion;
+        public int usedPurchaseDefaultsVersion;
+        public int retailGoodsBalanceVersion;
     }
     public sealed partial class GameSession
     {
@@ -81,8 +87,10 @@ namespace PCShopSell.Core.Session
         public const double ArtifactSaleReputation = 1;
         public const int GenuineArtifactValue = 10000;
         private const int ReplicaArtifactValue = 150;
-        public static readonly string[] UsedNames={"旧台灯","旧音箱","旧腕表","旧装饰摆件","疑似古文物"};
-        private static readonly long[] UsedValues={120,260,450,180};
+        // Append new products so existing saves keep their product identities (especially artifact #4).
+        public static readonly string[] UsedNames={"旧台灯","旧音箱","旧腕表","旧装饰摆件","疑似古文物","二手数码相机","二手游戏机","二手高保真音响"};
+        private static readonly long[] UsedValues={120,260,450,180,GenuineArtifactValue,1500,1800,2400};
+        private static readonly double[] UsedWeights={1.2,3,.2,1,1.5,.8,2.8,6};
         public static readonly string[] SellerNames={"王先生","陈先生","张女士","李女士","赵先生","周女士","刘先生","孙女士","许先生","林女士","吴先生","黄女士"};
         public static readonly string[] SellerPersonalities={"说话直来直去","很会推销","态度谨慎"};
         private static readonly string[] SellerStatements={"一直是自己用的，情况我跟你说清楚。","朋友送的，我也不太懂这些。","搬家急着出，你看着给个价。","闲置好一阵了，平时保管得挺好。"};
@@ -100,7 +108,7 @@ namespace PCShopSell.Core.Session
             ? (item.Condition == UsedCondition.Good ? "真品文物" : "仿制文物") : ConditionName(item.Condition);
         public static long UsedValue(UsedItem i) => i.Product == ArtifactProduct
             ? (i.Condition == UsedCondition.Good ? GenuineArtifactValue : ReplicaArtifactValue)
-            : (long)Math.Round(UsedValues[Math.Max(0,Math.Min(3,i.Product))]*(i.Condition==UsedCondition.Good?1:i.Condition==UsedCondition.Flawed?.55:i.Condition==UsedCondition.Replica?.22:.03));
+            : (long)Math.Round(UsedValues[Math.Max(0,Math.Min(UsedValues.Length-1,i.Product))]*(i.Condition==UsedCondition.Good?1:i.Condition==UsedCondition.Flawed?.55:i.Condition==UsedCondition.Replica?.22:.03));
         public static double UsedSaleReputation(UsedItem item) =>
             item.Inspected && item.Product == ArtifactProduct && item.Condition == UsedCondition.Good ? ArtifactSaleReputation : 0;
         public static string SellerSpeech(UsedItem i) => SellerStatements[Math.Max(0,Math.Min(3,i.Statement))]
@@ -149,7 +157,8 @@ namespace PCShopSell.Core.Session
             && (playerPresent || SpecialWorkers(shop, EmployeeRole.Chef, now).Length > 0
                 || SpecialWorkers(shop, EmployeeRole.Waiter, now).Length > 0
                 || shop.RetailKind == "secondhand" && (SpecialWorkers(shop, EmployeeRole.Appraiser, now).Length > 0
-                    || SpecialWorkers(shop, EmployeeRole.Cashier, now).Length > 0));
+                    || SpecialWorkers(shop, EmployeeRole.Cashier, now).Length > 0
+                    || SpecialWorkers(shop, EmployeeRole.Repairer, now).Length > 0));
         public bool ShopFinishingService(OwnedShop shop)
         {
             if (shop == null || shop.Sim.InHours(Clock.Now)) return false;
@@ -199,7 +208,8 @@ namespace PCShopSell.Core.Session
                 item.Asking = item.Minimum + Random.Next(200, 801);
                 return item;
             }
-            item.Product = Random.Next(0, UsedValues.Length);
+            // Ordinary higher-value electronics are regular stock, not rare artifact rewards.
+            item.Product = Random.Chance(.15) ? Random.Next(5, UsedValues.Length) : Random.Next(0, 4);
             int roll=Random.Next(0,100);item.Condition=roll<45?UsedCondition.Good:roll<73?UsedCondition.Flawed:roll<90?UsedCondition.Replica:UsedCondition.Broken;
             bool truthful=Random.Chance(item.Personality==0?.8:item.Personality==1?.35:.65);
             item.Claim=truthful?item.Condition:(UsedCondition)(((int)item.Condition+Random.Next(1,4))%4);
@@ -259,12 +269,26 @@ namespace PCShopSell.Core.Session
         {
             if(!SpecialPlayer(CurrentShop))return false;
             if(UsedReserved(CurrentShop,id))return Fail("顾客正在结账，不能丢弃这件商品。");
+            if(SpecialBusiness(CurrentShop.Place.Id).Used.Any(i=>i.Id==id&&i.RepairWorkRemaining>0))return Fail("修复中的物品不能丢弃。");
             return SpecialBusiness(CurrentShop.Place.Id).Used.RemoveAll(i=>i.Id==id&&i.Owned&&!i.Sold)>0;
         }
         public static double AppraiserAccuracy(int intelligence)=>.3+.006*Math.Max(0,Math.Min(100,intelligence));
+        public static double UsedTargetGrossMargin(double risk) => .45 - .20 * Math.Max(0, Math.Min(1, risk));
+        private static long AutomaticUsedOffer(UsedItem seller, UsedItem estimate, SpecialBusinessState state, long cash)
+        {
+            long estimatedValue = UsedValue(estimate);
+            long quote = seller.Product == ArtifactProduct
+                ? (long)(estimatedValue * (.35 + .35 * state.Risk))
+                : Math.Min((long)Math.Floor(estimatedValue * (1 - UsedTargetGrossMargin(state.Risk))),
+                    Math.Max(1, (long)Math.Floor(seller.Asking * .9)));
+            // Negotiate from the public asking price and appraisal, never the seller's hidden minimum.
+            return Math.Max(0, Math.Min(quote, Math.Min(state.MaxOffer,
+                Math.Min(Math.Max(0, state.DailyBudget - state.SpentToday), Math.Max(0, cash)))));
+        }
         private void TickUsedShop(OwnedShop shop,SpecialBusinessState state,GameTimestamp now)
         {
             long minute=now.TotalMinutes;
+            TickUsedRepairs(shop, state, now);
             if(state.BudgetDay!=now.Date.TotalDays){state.BudgetDay=now.Date.TotalDays;state.SpentToday=0;}
             state.Used.RemoveAll(i=>i.WaitingForPurchase&&i.ExpiresAt<=minute);
             bool inHours=shop.Sim.InHours(now);
@@ -291,8 +315,7 @@ namespace PCShopSell.Core.Session
                 bool identified = artifact ? seller.ArtifactIdentified : Random.Chance(AppraiserAccuracy(worker.Intelligence));
                 var estimate = seller.Copy();
                 estimate.Condition = identified ? seller.Condition : seller.Claim;
-                long bid = Math.Min(state.MaxOffer, (long)(UsedValue(estimate) * (.35 + .35 * state.Risk)));
-                bid = Math.Min(bid, Math.Max(0, state.DailyBudget - state.SpentToday));
+                long bid = AutomaticUsedOffer(seller, estimate, state, Ledger.Balance.Yuan);
                 // A worker only commits the high acquisition price after identifying an artifact.
                 if ((artifact && !identified) || bid < seller.Minimum || !BuyUsed(shop,state,seller,bid,minute))
                     state.Used.Remove(seller);
@@ -300,6 +323,9 @@ namespace PCShopSell.Core.Session
             foreach(var item in state.Used.Where(i=>i.Owned&&!i.Sold).ToArray())
             {
                 item.Inspected=true;
+                if (item.RepairWorkRemaining > 0 || UsedCanRepair(item) && Furnished(shop, "used_repairbench") > 0
+                    && SpecialWorkers(shop, EmployeeRole.Repairer, now).Length > 0
+                    && Ledger.Balance >= Money.FromYuan(UsedRepairMaterialCost(item))) continue;
                 if(!item.Listed&&shop.Sim.ShelfFillOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand")).UsedKg+UsedWeight(item)<=shop.Sim.ShelfCapacityOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand"))
                     && SetUsedListing(shop, item, Math.Max(1, UsedValue(item))) is string blocker)
                     Fail(blocker);
@@ -756,18 +782,40 @@ namespace PCShopSell.Core.Session
         private void SaveSpecialBusinesses(SaveData d)
         {
             d.restaurantFishOrderPriceVersion = RestaurantFishOrderPriceVersion;
+            d.usedPurchaseDefaultsVersion = 2;
+            d.retailGoodsBalanceVersion = 2;
             d.specialBusinesses=_specialBusinesses.Values.Select(s=>s.Copy()).ToArray();
             d.fixedSalePrices=MyShops.SelectMany(shop=>shop.Sim.FixedSalePrices.Select(p=>new SavedFixedSalePrice{ShopId=shop.Place.Id,Key=p.Key,Price=p.Value})).ToArray();
         }
         private void LoadSpecialBusinesses(SaveData d)
         {
             _specialBusinesses.Clear();
-            foreach(var price in d.fixedSalePrices??Array.Empty<SavedFixedSalePrice>())if(price!=null)ShopAt(price.ShopId)?.Sim.RestoreFixedSalePrice(price.Key,price.Price);
+            foreach (var price in d.fixedSalePrices ?? Array.Empty<SavedFixedSalePrice>())
+            {
+                if (price == null) continue;
+                long value = price.Price;
+                if (d.retailGoodsBalanceVersion < 2 && price.Key != null && price.Key.StartsWith("g:", StringComparison.Ordinal))
+                {
+                    string id = price.Key.Substring(2);
+                    double factor = ClothingProducts.IsClothing(id)
+                        ? (d.retailGoodsBalanceVersion < 1 ? .95 : .95 / .9)
+                        : PetShopCatalog.IsProduct(id) && d.retailGoodsBalanceVersion < 1 ? 1.5 : 1;
+                    value = Math.Max(1, (long)Math.Round(value * factor, MidpointRounding.AwayFromZero));
+                }
+                ShopAt(price.ShopId)?.Sim.RestoreFixedSalePrice(price.Key, value);
+            }
             foreach(var saved in d.specialBusinesses??Array.Empty<SpecialBusinessState>())
                 if(saved!=null&&ShopAt(saved.ShopId)!=null)
                 {
                     saved.Used=saved.Used??new List<UsedItem>();saved.Orders=saved.Orders??new List<DiningOrder>();saved.Workers=saved.Workers??new List<RestaurantWorker>();
                     var state=saved.Copy();var used=new HashSet<int>();
+                    // Only migrate the default pair for that save version; preserve custom policies.
+                    if ((d.usedPurchaseDefaultsVersion < 1 && state.DailyBudget == 500 && state.MaxOffer == 200)
+                        || (d.usedPurchaseDefaultsVersion == 1 && state.DailyBudget == 5000 && state.MaxOffer == 2000))
+                    {
+                        state.DailyBudget = 10000;
+                        state.MaxOffer = 3000;
+                    }
                     if (state.LastFishOrderDayPlusOne == 0 && state.NextFishOrder >= LegacyFishOfferInterval && state.NextFishOrder != long.MaxValue)
                     {
                         // 旧存档保存的是上一单发出时间加两天。

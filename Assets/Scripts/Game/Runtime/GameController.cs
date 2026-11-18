@@ -82,7 +82,7 @@ namespace PCShopSell.Game
             var json = Resources.Load<TextAsset>("Data/city_layout");
             City = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(json.text));
 
-            if (showMenus && GameSession.FirstChapterTrial)
+            if (showMenus)
             {
                 Ui = new GameUi(this);
                 Ui.ShowMainMenu();
@@ -99,6 +99,11 @@ namespace PCShopSell.Game
             SetupRendering();
             var world = new StreetWorldBuilder(City, 7);
             world.Build();
+            CompleteWorld(world);
+        }
+
+        private void CompleteWorld(StreetWorldBuilder world)
+        {
             World = world;
             _rig.SetCityBounds(world.CityBounds);
             var checkpoints = new GameObject("DistrictCheckpoints").AddComponent<DistrictGateView>();
@@ -188,7 +193,9 @@ namespace PCShopSell.Game
             }
             SyncCrowdDoor();
 
-            _wasRoomKind = RoomKind;
+            // Apply the initial room visibility, furniture and actor placement before
+            // revealing the session. Do not wait for the first gameplay Update.
+            SyncViews(0);
             SnapCamera();
             if (s.CurrentPlace != null && !s.IsGameOver) Ui.OnEnteredPlace(s.CurrentPlace);
             if(s.CityIntent!=null&&s.Trip==null&&!s.IsGameOver)
@@ -219,22 +226,83 @@ namespace PCShopSell.Game
                 return;
             }
             _enteringWorld = true;
-            StartCoroutine(EnterFirstTrialSession(enter));
+            StartCoroutine(EnterFirstSession(enter));
         }
 
-        private IEnumerator EnterFirstTrialSession(Action enter)
+        private IEnumerator BuildWorldIncrementally()
         {
-            var loading = Ui.ShowTrialWorldLoading();
-            // Give the browser a rendered frame before synchronous mesh creation.
-            yield return null;
-            yield return null;
+            SetupRendering();
+            var world = new StreetWorldBuilder(City, 7);
+            var pending = new Stack<IEnumerator>();
+            var buildClock=System.Diagnostics.Stopwatch.StartNew();
+            long stageStarted=0;
+            string activeStage=null;
+            void SetStage(string stage)
+            {
+                if(activeStage!=null)Debug.Log($"[城市加载] {activeStage}: {buildClock.ElapsedMilliseconds-stageStarted} ms");
+                activeStage=stage;stageStarted=buildClock.ElapsedMilliseconds;
+                Ui.SetWorldLoadingStage(stage);
+            }
+            pending.Push(world.BuildIncrementally(SetStage,Ui.SetWorldLoadingProgress));
+            // The opaque loading UI is an overlay canvas. Avoid rendering the growing
+            // city and its shadow maps on every loading frame.
+            var loadingCamera=Cam;
+            bool cameraWasEnabled=loadingCamera.enabled;
+            loadingCamera.enabled=false;
             try
             {
-                BuildWorld();
-                enter();
+                while (pending.Count > 0)
+                {
+                    var step = pending.Peek();
+                    if (!step.MoveNext())
+                    {
+                        (step as IDisposable)?.Dispose();
+                        pending.Pop();
+                        continue;
+                    }
+                    if (step.Current is IEnumerator nested) pending.Push(nested);
+                    else yield return step.Current;
+                }
+                Ui.SetWorldLoadingProgress(.97f);
+                SetStage("loading_people");
+                yield return null;
+                CompleteWorld(world);
+                Ui.SetWorldLoadingProgress(.99f);
+                SetStage("loading_session");
+                yield return null;
             }
             finally
             {
+                if(loadingCamera!=null)loadingCamera.enabled=cameraWasEnabled;
+                if(activeStage!=null)Debug.Log($"[城市加载] {activeStage}: {buildClock.ElapsedMilliseconds-stageStarted} ms");
+                Debug.Log($"[城市加载] 总耗时: {buildClock.ElapsedMilliseconds} ms");
+                foreach (var step in pending) (step as IDisposable)?.Dispose();
+            }
+        }
+
+        private IEnumerator EnterFirstSession(Action enter)
+        {
+            var loading = Ui.ShowWorldLoading();
+            bool previousBackground=Application.runInBackground;
+            Application.runInBackground=true;
+            try
+            {
+                yield return null;
+                yield return null;
+                var routine = BuildWorldIncrementally();
+                try
+                {
+                    while (routine.MoveNext()) yield return routine.Current;
+                }
+                finally { (routine as IDisposable)?.Dispose(); }
+                enter();
+                Ui.SetWorldLoadingProgress(1);
+                Canvas.ForceUpdateCanvases();
+                yield return null;
+            }
+            finally
+            {
+                Application.runInBackground=previousBackground;
                 loading.Close();
                 _enteringWorld = false;
             }
@@ -386,6 +454,11 @@ namespace PCShopSell.Game
         private void Update()
         {
             if (!_bootstrapped) return;
+            if(_enteringWorld)
+            {
+                Ui?.RefreshWorldLoading();
+                return;
+            }
             if (Session == null)
             {
                 if (Input.GetKeyDown(KeyCode.Escape)) Ui?.CloseTopWindow();
@@ -620,6 +693,7 @@ namespace PCShopSell.Game
                 else if (InInterior)
                 {
                     if (Interior.NearbyPetOwner(out _) is PetStay pet) Ui.OpenPetOwnerVisit(pet.Id);
+                    else if (Interior.NearUsedRepairBench) Ui.OpenUsedRepairDesk();
                     else if (Interior.NearUsedBuyDesk) Ui.OpenUsedDesk();
                     else if (NearbyRestaurantTableToClear() is DiningOrder meal)
                     {
@@ -851,6 +925,10 @@ namespace PCShopSell.Game
                     bool dropOff = Session.PetBoarding(Session.CurrentShop)?.Offer?.Id == pet.Id;
                     label = (person?.Name ?? "宠物主人") + (dropOff ? " · 送养" : " · 探望结算") + "（按 F）";
                     return true;
+                }
+                if (Interior.NearUsedRepairBench)
+                {
+                    world = Interior.UsedRepairBenchWorld; label = "二手修复台 · 按 F 安排修复／查看进度"; return true;
                 }
                 if (Interior.NearUsedBuyDesk)
                 {

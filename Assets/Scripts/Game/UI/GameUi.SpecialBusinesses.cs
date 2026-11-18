@@ -43,7 +43,7 @@ namespace PCShopSell.Game.UI
         {
             var state = S.SpecialBusiness(S.CurrentShop.Place.Id);
             if (S.RetailKind == "secondhand")
-                return string.Join(",", state.Used.Select(i => $"{i.Id}:{i.Owned}:{i.Inspected}:{i.Listed}:{i.Sold}:{i.Price}:{i.SalePrice}"));
+                return string.Join(",", state.Used.Select(i => $"{i.Id}:{i.Owned}:{i.Inspected}:{i.Listed}:{i.Sold}:{i.Price}:{i.SalePrice}:{i.RepairAttempted}:{i.RepairWorkRemaining>0}"));
 
             if (_tab == ShopTab.Counter)
                 return $"{RestaurantCounterSlots(state)}:{S.CanOpenFridge}";

@@ -25,17 +25,20 @@ namespace PCShopSell.Game.UI
             if (shop != null) _procurementShopId = shop.Place.Id;
             else if (S.ShopAt(_procurementShopId)?.Rented != true) _procurementShopId = S.MyShops.FirstOrDefault(s => s.Rented)?.Place.Id;
             _procurementDetail = shop != null; _procurementAgreement = agreement; _procurementOrders = false; _procurementFilter = 0; _procurementSearch = "";
-            OpenWorkspace("procurement", "main", "商铺采购与补货", 1160, 860, w =>
-            {
-                S.VisitQuestTarget(QuestTarget.Restock);
-                var shops = S.MyShops.Where(s => s.Rented).ToArray();
-                if (shops.Length == 0) { Line(w.Content, "先开一家店，再安排进货", 18, Ui.Dim); return; }
-                var current = shops.FirstOrDefault(s => s.Place.Id == _procurementShopId);
-                if (_procurementAgreement) { BuildProcurementAgreement(w, shops.Length > 1); return; }
-                if (_procurementDetail && current != null) BuildProcurementShop(w, current, shops.Length > 1);
-                else BuildProcurementShops(w, shops);
-            });
+            OpenManagementPanel(true);
         }
+
+        private void BuildProcurementContent(Window w)
+        {
+            S.VisitQuestTarget(QuestTarget.Restock);
+            var shops = S.MyShops.Where(s => s.Rented).ToArray();
+            if (shops.Length == 0) { Line(w.Content, "先开一家店，再安排进货", 18, Ui.Dim); return; }
+            var current = shops.FirstOrDefault(s => s.Place.Id == _procurementShopId);
+            if (_procurementAgreement) { BuildProcurementAgreement(w, shops.Length > 1); return; }
+            if (_procurementDetail && current != null) BuildProcurementShop(w, current, shops.Length > 1);
+            else BuildProcurementShops(w, shops);
+        }
+
         private void OpenProcurementBudget()
         {
             int days=S.RestockReserveDays;long cash=S.RestockReserveYuan,budget=S.RestockDailyBudgetYuan;

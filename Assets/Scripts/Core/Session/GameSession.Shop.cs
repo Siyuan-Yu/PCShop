@@ -246,7 +246,7 @@ namespace PCShopSell.Core.Session
 
         public bool IsEmployeeOnDuty(GameTimestamp t)
         {
-            return Employees.Where(e=>e.Shop==_focus&&(e.Role==EmployeeRole.Cashier||e.Role==EmployeeRole.Assembler||IsSpecialBusiness(_focus)&&(e.Role==EmployeeRole.Chef||e.Role==EmployeeRole.Waiter||e.Role==EmployeeRole.Appraiser))).Any(e=>e.Person.OnDuty(t));
+            return Employees.Where(e=>e.Shop==_focus&&(e.Role==EmployeeRole.Cashier||e.Role==EmployeeRole.Assembler||IsSpecialBusiness(_focus)&&(e.Role==EmployeeRole.Chef||e.Role==EmployeeRole.Waiter||e.Role==EmployeeRole.Appraiser||e.Role==EmployeeRole.Repairer))).Any(e=>e.Person.OnDuty(t));
         }
 
         public (bool WillClose, string Message) ShopLeaveStatus()

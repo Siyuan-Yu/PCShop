@@ -15,7 +15,7 @@ namespace PCShopSell.Game.Runtime
         private ParticleSystem _tyreSmoke;
         private int _visibleStartLights = -1, _previousRecoveries;
         private bool _wasDrifting;
-        public void Build(RaceTrack track)
+        public void Build(RaceTrack track,bool combineScenery=true)
         {
             Track=track;transform.position=new Vector3((float)track.X,.65f,(float)track.Y);
             var scenery=new GameObject("CircuitScenery").transform;scenery.SetParent(transform,false);
@@ -39,8 +39,15 @@ namespace PCShopSell.Game.Runtime
             if (starter) BuildStarterLandmarks(scenery, resources);
             if (track.Kerbs.Length > 0) BuildKerbs(scenery, resources);
             for(int i=0;i<4;i++){Prims.Box(scenery,"FloodlightPole",new Vector3((i%2==0?-1:1)*(float)track.Width*.43f,4,(i<2?-1:1)*(float)track.Depth*.43f),new Vector3(.3f,8,.3f),Mats.Lit(ArtDirection.Ink));}
-            StaticBatchingUtility.Combine(scenery.gameObject);
+            if(combineScenery)StaticBatchingUtility.Combine(scenery.gameObject);
             _moving=new GameObject("RaceVehicles").transform;_moving.SetParent(transform,false);_moving.gameObject.SetActive(false);
+        }
+        public void RestoreBaked(RaceTrack track)
+        {
+            Track=track;
+            _moving=transform.Find("RaceVehicles");
+            var signals=transform.Find("StartSignals");
+            for(int i=0;i<_startLamps.Length;i++)_startLamps[i]=signals.Find("StartSignal"+(i+1)).GetComponent<Renderer>();
         }
         private Vector3 Point(int i){var p=Track.Points[i%Track.Points.Length];return new Vector3((float)p.X,0,(float)p.Y);}
 

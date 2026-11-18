@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -109,13 +110,14 @@ namespace PCShopSell.Game.Runtime
                 var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(root,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=material;
             }
         }
-        private void BuildContinuousStreetSurfaces()
+        private IEnumerator BuildContinuousStreetSurfaces()
         {
             var root=new GameObject("ContinuousStreetSurfaces").transform;root.SetParent(_root,false);
             var resources=root.gameObject.AddComponent<CityLandscapeResources>();
             _lakeAccessSurfaces.Clear();
             _streetPavementEnvelopes = new RoadSurfaceGeometry.Index();
             float deck = LakeAccessHeight(_city);
+            float deadline = Time.realtimeSinceStartup + .008f;
             var segments=new List<StreetSegment>();var seen=new HashSet<string>();
             foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))
             {
@@ -135,11 +137,21 @@ namespace PCShopSell.Game.Runtime
             var roads=new SurfaceMesh();var paving=new SurfaceMesh();var white=new SurfaceMesh();var yellow=new SurfaceMesh();
             foreach (var s in segments)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 s.PavingIndex = _streetPavementEnvelopes.Polygons.Count;
                 _streetPavementEnvelopes.Add(RoadSurfaceGeometry.Road(s.A, s.B, s.PavedWidth));
             }
             foreach (var s in segments)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 if (!s.Raised || !(s.GroundAtA || s.GroundAtB)) continue;
                 // Keep the full shared junction at street level, then rise after the intersecting pavement ends.
                 var footprint = _streetPavementEnvelopes.Polygons[s.PavingIndex];
@@ -162,6 +174,11 @@ namespace PCShopSell.Game.Runtime
             }
             foreach(var s in segments)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 var p=RoadSurfaceGeometry.Road(s.A,s.B,s.Width);
                 s.AddSurface(roads, roadIndex.Cut(new List<Vector2[]>{p},p));roadIndex.Add(p);
             }
@@ -172,11 +189,21 @@ namespace PCShopSell.Game.Runtime
             }
             foreach (var s in segments)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 Pavement(_streetPavementEnvelopes.Polygons[s.PavingIndex], s);
                 if (s.Raised) _lakeAccessSurfaces.Add(s);
             }
             foreach(var p in _city.PublicPlaces.Where(BuildsPlace))
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 var a=NodeWorld(p.NodeId);var b=a+new Vector3((float)p.EntranceX,0,(float)p.EntranceY);
                 if ((a-b).sqrMagnitude <= .01f) continue;
                 var from = new Vector2(a.x, a.z);
@@ -195,6 +222,11 @@ namespace PCShopSell.Game.Runtime
             var endClearance = new float[segments.Count];
             for (int i = 0; i < segments.Count; i++)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 var street = segments[i];
                 startClearance[i] = MarkCrossing(street, i, street.A, street.Direction);
                 endClearance[i] = MarkCrossing(street, i, street.B, -street.Direction);
@@ -241,6 +273,11 @@ namespace PCShopSell.Game.Runtime
             var markIndex = new RoadSurfaceGeometry.Index();
             for(int i=0;i<segments.Count;i++)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 var s=segments[i];var delta=s.B-s.A;float length=delta.magnitude;if(length<.1f)continue;
                 float from = startClearance[i], to = length - endClearance[i];
                 if (to <= from + .05f) continue;
@@ -267,10 +304,10 @@ namespace PCShopSell.Game.Runtime
             paving.Build(root,"PavementSurface",IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(1.25f,1.25f)),resources);
             white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Cream),resources);
             yellow.Build(root,"LaneMarkings",Mats.Lit(ArtDirection.Brass),resources);
-            BuildStreetVerge(root,segments,pavingIndex);
+            yield return BuildStreetVerge(root,segments,pavingIndex);
         }
 
-        private void BuildStreetVerge(Transform parent,List<StreetSegment> streets,RoadSurfaceGeometry.Index paving)
+        private IEnumerator BuildStreetVerge(Transform parent,List<StreetSegment> streets,RoadSurfaceGeometry.Index paving)
         {
             var reserved=new RoadSurfaceGeometry.Index();
             void Reserve(Vector2 at,float heading,float width,float depth)
@@ -296,8 +333,14 @@ namespace PCShopSell.Game.Runtime
             var treeBark=Mats.Lit(ArtDirection.Hex("866342"),.06f);
             bool Overlaps(RoadSurfaceGeometry.Index index,Vector2[] probe) =>
                 index.Nearby(probe).Any(id=>RoadSurfaceGeometry.Intersect(probe,index.Polygons[id]).Length>=3);
+            float deadline = Time.realtimeSinceStartup + .008f;
             foreach(var street in streets)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .008f;
+                }
                 if(street.Raised||street.Length<8)continue;
                 var direction=street.Direction;
                 var across=new Vector2(-direction.y,direction.x);
@@ -315,8 +358,7 @@ namespace PCShopSell.Game.Runtime
                     var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
                     if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
                     if(!gardens.TryGetValue(key,out var garden)){garden=new MiniatureDetailMesh();gardens.Add(key,garden);}
-                    var leaf= garden.Part(treeLeaf); var tips=garden.Part(treeTips);var bark=garden.Part(treeBark);
-                    CityVegetation.AppendTree(leaf.V,leaf.T,tips.V,tips.T,bark.V,bark.T,world,5.4f+seed%3*.35f,false,seed%12);
+                    garden.Tree(world,5.4f+seed%3*.35f,seed%12,treeLeaf,treeTips,treeBark);
                     garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
                     var pole=Mats.Lit(ArtDirection.Hex("46515A"),.25f);
                     var lamp=world-new Vector3(across.x,0,across.y)*side*1.8f;
@@ -353,7 +395,11 @@ namespace PCShopSell.Game.Runtime
                     seed=(seed*113+91)&1023;
                 }
             }
-            foreach(var pair in gardens)pair.Value.Build(parent,$"Street planting {pair.Key.x}/{pair.Key.y}");
+            foreach(var pair in gardens)
+            {
+                pair.Value.Build(parent,$"Street planting {pair.Key.x}/{pair.Key.y}");
+                yield return null;
+            }
             string[] colors={"54793D","9DAA58","E2B66C"};
             foreach(var pair in details)
                 for(int i=0;i<colors.Length;i++)

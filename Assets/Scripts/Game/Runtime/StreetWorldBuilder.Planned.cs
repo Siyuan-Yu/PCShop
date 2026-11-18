@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections;
 using PCShopSell.Core.World;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -24,21 +25,32 @@ namespace PCShopSell.Game.Runtime
             string id=_city.AgencyDistrictFor(p.StreetId)?.id;
             return id=="outskirts"?ArtDirection.Hex("B58B32"):id=="community"?ArtDirection.Sage:id=="park"?ArtDirection.Blue:ArtDirection.Hex("82659C");
         }
-        private void BuildPlannedCity()
+        private IEnumerator BuildPlannedCity(Action<string> stage)
         {
-            if(_city.IsLakeCity)BuildContinuousStreetSurfaces();
+            stage?.Invoke("loading_roads");
+            yield return null;
+            if(_city.IsLakeCity)yield return BuildContinuousStreetSurfaces();
             else {BuildRoads(); BatchLakeRoads(); BuildCitySidewalks();}
+            ReportBuildProgress(.14f);
+            stage?.Invoke("loading_buildings");
+            yield return null;
             var housing=new GameObject("ResidentialCompounds").transform;housing.SetParent(_root,false);
             var residenceBlocks = _city.Blocks.Where(block => _city.HasPlace(block.homeId))
                 .ToDictionary(block => block.homeId);
-            foreach (var place in _city.PublicPlaces.Where(BuildsPlace))
+            var placesToBuild=_city.PublicPlaces.Where(BuildsPlace).ToArray();
+            var blocksToBuild=_city.Blocks.Where(b=>!_city.HasPlace(b.homeId)&&BuildsStreet(b.street)).ToArray();
+            int buildingsDone=0,buildingsTotal=placesToBuild.Length+blocksToBuild.Length;
+            float buildingDeadline=Time.realtimeSinceStartup+.016f;
+            foreach (var place in placesToBuild)
             {
                 residenceBlocks.TryGetValue(place.Id, out var block);
                 BuildPlannedPlace(place, block, block == null ? _root : housing);
+                ReportBuildProgress(.14f+.20f*++buildingsDone/Mathf.Max(1,buildingsTotal));
+                if(Time.realtimeSinceStartup>=buildingDeadline)
+                { yield return null;buildingDeadline=Time.realtimeSinceStartup+.016f; }
             }
-            foreach(var block in _city.Blocks)
+            foreach(var block in blocksToBuild)
             {
-                if (_city.HasPlace(block.homeId) || !BuildsStreet(block.street)) continue;
                 // The configuration validates real footprints, roads and door aisles. Render every
                 // configured building: broad proximity culling previously erased whole apartment rows.
                 Vector3 at=new Vector3((float)block.x,0,(float)block.y);
@@ -46,12 +58,20 @@ namespace PCShopSell.Game.Runtime
                 root.rotation=Quaternion.Euler(0,(float)block.heading,0);
                 PlannedBuilding(root,block.model,block.tier,(float)block.width,(float)block.depth,null,(float)block.height,block.variant);
                 BuildResidentialPlot(root,block);
+                ReportBuildProgress(.14f+.20f*++buildingsDone/Mathf.Max(1,buildingsTotal));
+                if(Time.realtimeSinceStartup>=buildingDeadline)
+                { yield return null;buildingDeadline=Time.realtimeSinceStartup+.016f; }
             }
             // Residential geometry is static even when the door and occupants are interactive.
-            StaticBatchingUtility.Combine(housing.gameObject);
+            ReportBuildProgress(.34f);
+            stage?.Invoke("loading_scenery");
+            yield return null;
+            BatchStatic(housing.gameObject);
+            yield return null;
             BuildPlannedProps();
-            BuildReferenceLandscape();
+            yield return BuildReferenceLandscape();
             BuildStarterTrees();
+            ReportBuildProgress(.96f);
         }
         private void BuildResidentialPlot(Transform root,LayoutBlockData block)
         {
@@ -94,7 +114,7 @@ namespace PCShopSell.Game.Runtime
             var track=RaceTracks.Get(p.Id,_city);
             if(track!=null)
             {
-                var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track);
+                var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track,!Baking);
                 BuildRaceEntrance(root,door,track);
                 var office=Prims.Box(root,"RaceReception",new Vector3(0,2,0),new Vector3(9,4,6),Mats.Lit(ArtDirection.Cream),true);
                 CityArchitecture.Roof(root,new Vector3(0,4.1f,0),9.8f,6.8f,1.3f,ArtDirection.Hex("57758A"));

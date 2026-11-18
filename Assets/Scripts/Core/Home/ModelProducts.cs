@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace PCShopSell.Core.Home
 {
-    /// <summary>原创现货模型；每系列两款常规品及一款漫展限量品，不采用随机付费抽取。</summary>
+    /// <summary>原创现货模型；每系列三款常规品（含一款高价品）及一款漫展限量品，不采用随机付费抽取。</summary>
     public static class ModelProducts
     {
         public const string Business = "潮玩模型";
@@ -25,6 +25,10 @@ namespace PCShopSell.Core.Home
             Item("starlight", "lamp", "星灯·口袋观测站", 68, .25, "把小型天文台放在掌心，灯罩像一颗星。"),
             Item("starlight", "rover", "星灯·陨石采样车", 168, .55, "四轮小车运回一箱发光石头。"),
             Item("starlight", "tower", "星灯·云上信标塔", 328, .9, "给远行者指路的三层信标，带展期星纹。", true),
+            Item("harbor", "flagship", "晨湾·远航旗舰", 518, 1.2, "带完整甲板陈设和海浪底座的大型航船模型。"),
+            Item("rainbot", "workshop", "雨巷·钟楼工坊", 518, 1.1, "修理员与钟楼组成的精装场景，工具和齿轮细节齐全。"),
+            Item("garden", "conservatory", "苔园·四季庭院", 518, 1.3, "花房、庭院与小访客组成的精装生态场景。"),
+            Item("starlight", "observatory", "星灯·穹顶天文台", 518, 1.4, "带穹顶、望远镜与星图底座的大型观测站模型。"),
         };
         public static bool IsModel(string id) => id != null && id.StartsWith("model:");
         public static IEnumerable<GiftDef> Regular => All.Where(p => !p.LimitedEdition);

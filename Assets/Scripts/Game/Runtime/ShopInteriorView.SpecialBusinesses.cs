@@ -11,6 +11,8 @@ namespace PCShopSell.Game.Runtime
     {
         public bool NearSpecialFurniture {get;private set;}
         public bool NearUsedBuyDesk {get;private set;}
+        public bool NearUsedRepairBench {get;private set;}
+        public Vector3 UsedRepairBenchWorld {get;private set;}
         public Vector3 UsedBuyDeskWorld {get;private set;}
         public Vector3 SpecialFurnitureWorld {get;private set;}
         public string SpecialFurnitureName {get;private set;}
@@ -132,6 +134,7 @@ namespace PCShopSell.Game.Runtime
             var shop=session.CurrentShop;
             NearSpecialFurniture=false;
             NearUsedBuyDesk=false;
+            NearUsedRepairBench=false;
             NearbyDiningTable = -1;
             if (shop.RetailKind != "secondhand" || _usedBuyDesk == null) ClearUsedSellerFigures();
             if(!session.IsSpecialBusiness(shop)&&_specialFigures.Count==0&&_specialGoods.Count==0)return;
@@ -228,8 +231,20 @@ namespace PCShopSell.Game.Runtime
                         if (seller != null)
                             Good("offer:" + seller.Id, center + Vector3.up * .95f, new Color(.68f, .5f, .32f));
                     }
+                    var repairBenches=shop.Layout.Where(p=>p.Id=="used_repairbench").ToArray();
+                    var repairs=state.Used.Where(i=>i.Owned&&!i.Sold&&i.RepairWorkRemaining>0).ToArray();
+                    for(int index=0;index<repairBenches.Length;index++)
+                    {
+                        var bench=repairBenches[index];
+                        var bounds=RoomPlanner.Footprint(session.ShopRoom,FurnitureCatalog.Get(bench.Id),bench);
+                        var player=_owner.transform.localPosition;
+                        var edge=new Vector2(Mathf.Clamp(player.x,(float)bounds.MinX,(float)bounds.MaxX),Mathf.Clamp(player.z,(float)bounds.MinZ,(float)bounds.MaxZ));
+                        if(Vector2.Distance(edge,new Vector2(player.x,player.z))<1.15f)
+                        {NearUsedRepairBench=true;UsedRepairBenchWorld=_root.TransformPoint(UsedDeskCenter(bench)+Vector3.up*1.35f);}
+                        if(index<repairs.Length)Good("repair:"+repairs[index].Id,UsedDeskCenter(bench)+Vector3.up*.95f,new Color(.7f,.6f,.25f));
+                    }
                     var displays=shop.Layout.Where(p=>p.Id=="used_display").ToArray();int slot=0;
-                    foreach(var item in state.Used.Where(i=>i.Owned&&!i.Listed&&!i.Sold))
+                    foreach(var item in state.Used.Where(i=>i.Owned&&!i.Listed&&!i.Sold&&i.RepairWorkRemaining<=0))
                     {
                         if(slot/4>=displays.Length)break;var display=displays[slot/4];int offset=slot++%4;
                         Good("used:"+item.Id,new Vector3((float)display.X+(offset%2==0?-.22f:.22f),1.2f,(float)display.Z+(offset<2?-.16f:.16f)),item.Condition==UsedCondition.Broken?Color.gray:new Color(.7f,.55f,.35f));

@@ -49,6 +49,7 @@ namespace PCShopSell.Game.UI
         private float _overviewSize;
         private Bounds _cityBounds;
         private Bounds? _districtFrame;
+        private Vector2[] _districtOutline;
         private HashSet<string> _placeIds;
         private HashSet<string> _selectableIds;
         private bool _dragged;
@@ -69,6 +70,7 @@ namespace PCShopSell.Game.UI
             _overviewSize = radius * 1.15f;
             _cityBounds = new Bounds(center, new Vector3(radius * 3, 20, radius * 3));
             _districtFrame = null;
+            _districtOutline = null;
             _state.Zoom = 1; _state.Offset = Vector2.zero;
             RequestMapRender();
         }
@@ -107,8 +109,7 @@ namespace PCShopSell.Game.UI
                 if (!hasBounds) { bounds = buildingBounds; hasBounds = true; }
                 else bounds.Encapsulate(buildingBounds);
                 bounds.Encapsulate(game.World.NodeWorld(unit.NodeId));
-                // Housing changes the selectable properties, not the district's framing.
-                // Both tabs use the same local street overview and keep distant homes reachable by pan/focus.
+                // Both tabs share the same district framing and navigation boundary.
                 if (IsDistrictOverviewPlace(unit)) shopBounds.Add(buildingBounds);
             }
             if (!hasBounds) bounds = new Bounds(Vector3.zero, new Vector3(40, 20, 40));
@@ -127,6 +128,27 @@ namespace PCShopSell.Game.UI
             districtFrame.Encapsulate(new Bounds(projected.center, new Vector3(
                 2 * _overviewSize * _camera.aspect, 2 * _overviewSize, 0)));
             _districtFrame = districtFrame;
+            // A screen-aligned AABB includes large empty corners beside diagonal streets.
+            // Keep the actual footprint, with frontage padding and room for the initial overview.
+            var outlinePoints = new List<Vector2>();
+            var inverseRotation = Quaternion.Inverse(_camera.transform.rotation);
+            foreach (var building in localBounds)
+            foreach (var corner in Corners(building))
+            {
+                var point = inverseRotation * corner;
+                AddRectangle(new Vector2(point.x, point.y), new Vector2(16 * _camera.aspect, 16));
+            }
+            AddRectangle(new Vector2(projected.center.x, projected.center.y),
+                new Vector2(_overviewSize * _camera.aspect, _overviewSize));
+            _districtOutline = ConvexOutline(outlinePoints);
+
+            void AddRectangle(Vector2 center, Vector2 extent)
+            {
+                outlinePoints.Add(center + new Vector2(-extent.x, -extent.y));
+                outlinePoints.Add(center + new Vector2(extent.x, -extent.y));
+                outlinePoints.Add(center + extent);
+                outlinePoints.Add(center + new Vector2(-extent.x, extent.y));
+            }
             _texture = new RenderTexture(Mathf.RoundToInt(width), Mathf.RoundToInt(height), 24)
             { name = "AgencyStreetOverview", filterMode = FilterMode.Bilinear };
             _camera.targetTexture = _texture;
@@ -230,6 +252,10 @@ namespace PCShopSell.Game.UI
                 float panY = Mathf.Max(0, frame.extents.y - halfHeight);
                 float clampedX = Mathf.Clamp(x, frame.center.x - panX, frame.center.x + panX);
                 float clampedY = Mathf.Clamp(y, frame.center.y - panY, frame.center.y + panY);
+                var bounded = ConstrainDistrictView(new Vector2(clampedX, clampedY),
+                    new Vector2(halfHeight * _camera.aspect, halfHeight));
+                clampedX = bounded.x;
+                clampedY = bounded.y;
                 target += right * (clampedX - x) + groundUp * ((clampedY - y) / groundUp.sqrMagnitude);
             }
             else
@@ -240,6 +266,81 @@ namespace PCShopSell.Game.UI
             _state.Offset = new Vector2(target.x - _overview.x, target.z - _overview.z);
             _camera.orthographicSize = halfHeight;
             cameraTransform.position = target - cameraTransform.forward * 240;
+        }
+
+        private static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
+
+        private static Vector2[] ConvexOutline(List<Vector2> points)
+        {
+            var sorted = points.Distinct().OrderBy(p => p.x).ThenBy(p => p.y).ToArray();
+            if (sorted.Length < 3) return sorted;
+            var hull = new List<Vector2>();
+            foreach (var p in sorted)
+            {
+                while (hull.Count >= 2 && Cross(hull[hull.Count - 1] - hull[hull.Count - 2], p - hull[hull.Count - 1]) <= 0)
+                    hull.RemoveAt(hull.Count - 1);
+                hull.Add(p);
+            }
+            int lowerCount = hull.Count;
+            for (int i = sorted.Length - 2; i >= 0; i--)
+            {
+                var p = sorted[i];
+                while (hull.Count > lowerCount && Cross(hull[hull.Count - 1] - hull[hull.Count - 2], p - hull[hull.Count - 1]) <= 0)
+                    hull.RemoveAt(hull.Count - 1);
+                hull.Add(p);
+            }
+            hull.RemoveAt(hull.Count - 1);
+            return hull.ToArray();
+        }
+
+        private Vector2 ConstrainDistrictView(Vector2 target, Vector2 viewportExtent)
+        {
+            if (_districtOutline == null || _districtOutline.Length < 3) return target;
+            // Inset every edge by the viewport's support distance. This constrains
+            // all four visible corners, rather than just the camera's centre.
+            var allowed = new List<Vector2>(_districtOutline);
+            for (int i = 0; i < _districtOutline.Length && allowed.Count > 0; i++)
+            {
+                var a = _districtOutline[i];
+                var edge = _districtOutline[(i + 1) % _districtOutline.Length] - a;
+                var normal = new Vector2(-edge.y, edge.x).normalized;
+                float limit = Vector2.Dot(normal, a) + Mathf.Abs(normal.x) * viewportExtent.x
+                    + Mathf.Abs(normal.y) * viewportExtent.y;
+                var clipped = new List<Vector2>();
+                var previous = allowed[allowed.Count - 1];
+                float previousDistance = Vector2.Dot(normal, previous) - limit;
+                foreach (var current in allowed)
+                {
+                    float distance = Vector2.Dot(normal, current) - limit;
+                    if ((distance >= 0) != (previousDistance >= 0))
+                        clipped.Add(Vector2.LerpUnclamped(previous, current,
+                            previousDistance / (previousDistance - distance)));
+                    if (distance >= 0) clipped.Add(current);
+                    previous = current;
+                    previousDistance = distance;
+                }
+                allowed = clipped;
+            }
+            var overview = Quaternion.Inverse(_camera.transform.rotation) * _overview;
+            // At minimum zoom the valid area may collapse to a point.
+            if (allowed.Count == 0) return new Vector2(overview.x, overview.y);
+            bool inside = true;
+            var closest = allowed[0];
+            float bestDistance = float.PositiveInfinity;
+            float area = 0;
+            for (int i = 0; i < allowed.Count; i++)
+            {
+                var a = allowed[i];
+                var b = allowed[(i + 1) % allowed.Count];
+                var edge = b - a;
+                area += Cross(a - allowed[0], b - allowed[0]);
+                if (Cross(edge, target - a) < -.001f) inside = false;
+                float t = edge.sqrMagnitude > .000001f ? Mathf.Clamp01(Vector2.Dot(target - a, edge) / edge.sqrMagnitude) : 0;
+                var candidate = a + edge * t;
+                float distance = (candidate - target).sqrMagnitude;
+                if (distance < bestDistance) { closest = candidate; bestDistance = distance; }
+            }
+            return inside && area > .001f ? target : closest;
         }
 
         private void RequestMapRender(bool notify = true)

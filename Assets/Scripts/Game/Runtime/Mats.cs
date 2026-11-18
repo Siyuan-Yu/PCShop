@@ -86,6 +86,8 @@ namespace PCShopSell.Game.Runtime
         {
             if (NightGlowMaterials.Add(material)) NightGlow.Add((material,emission,daylight));
         }
+        public static void RestoreBakedGlow(Material material,Color emission,float daylight)
+        { if(material!=null)RegisterGlow(material,emission,daylight); }
         public static void ClearNightGlow()
         {
             NightGlowMaterials.Clear();
@@ -229,13 +231,29 @@ namespace PCShopSell.Game.Runtime
 
     public static class Prims
     {
+        private static readonly Dictionary<PrimitiveType,Mesh> DecorativeMeshes=new Dictionary<PrimitiveType,Mesh>();
+        private static GameObject CreateGeometry(PrimitiveType type,bool collider)
+        {
+            // Keep Unity's original collider construction for interactive/solid objects.
+            // Decorations only need the built-in shared mesh, not transient physics shapes.
+            if(collider)return GameObject.CreatePrimitive(type);
+            if(!DecorativeMeshes.TryGetValue(type,out var mesh)||mesh==null)
+            {
+                var source=GameObject.CreatePrimitive(type);
+                mesh=source.GetComponent<MeshFilter>().sharedMesh;
+                DecorativeMeshes[type]=mesh;
+                Object.DestroyImmediate(source);
+            }
+            var go=new GameObject(type.ToString(),typeof(MeshFilter),typeof(MeshRenderer));
+            go.GetComponent<MeshFilter>().sharedMesh=mesh;
+            return go;
+        }
         public static GameObject Box(Transform parent, string name, Vector3 center, Vector3 size, Material mat, bool collider = false)
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            GameObject go = CreateGeometry(PrimitiveType.Cube,collider);
             if (Mathf.Min(size.x, Mathf.Min(size.y, size.z)) >= 0.035f && Mathf.Max(size.x, Mathf.Max(size.y, size.z)) <= 3.5f)
                 go.GetComponent<MeshFilter>().sharedMesh = ArtDirection.BeveledBox(size);
             go.name = name;
-            if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>());
             go.transform.SetParent(parent, false);
             go.transform.localPosition = center;
             go.transform.localScale = size;
@@ -245,9 +263,8 @@ namespace PCShopSell.Game.Runtime
 
         public static GameObject Shape(PrimitiveType type, Transform parent, string name, Vector3 center, Vector3 size, Material mat, bool collider = false)
         {
-            GameObject go = GameObject.CreatePrimitive(type);
+            GameObject go = CreateGeometry(type,collider);
             go.name = name;
-            if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>());
             go.transform.SetParent(parent, false);
             go.transform.localPosition = center;
             go.transform.localScale = size;

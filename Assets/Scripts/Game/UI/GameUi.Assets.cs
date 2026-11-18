@@ -21,13 +21,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenAssetWorkspace(int page = 0, string storeId = null, string propertyId = null)
         {
-            if (_assetSession != S)
-            {
-                _assetSession = S; _assetStreet = _assetKind = _assetStoreId = _assetPropertyId = null;
-                _assetMapView.Initialized = false;
-                _assetCollapsedStreets.Clear(); _assetCollapsedKinds.Clear();
-                _assetPropertyListTab = 0;
-            }
+            EnsureAssetSession();
             _assetPage = page;
             if (storeId != null)
             {
@@ -36,17 +30,31 @@ namespace PCShopSell.Game.UI
                 _assetStreet = report?.StreetId; _assetKind = report?.Kind;
             }
             if (propertyId != null) { _assetPropertyId = propertyId; _assetFocusProperty = true; }
-            OpenWorkspace("assets", "overview", "资产", 1280, 900, w =>
+            OpenMyPanel(MyPage.Assets);
+        }
+
+        private void EnsureAssetSession()
+        {
+            if (_assetSession != S)
             {
-                var tabs = Ui.Row(w.Content, 42, 8);
-                for (int i = 0; i < 3; i++)
-                {
-                    int choice = i;
-                    Ui.Tab(tabs, new[]{"门店","物业","车产"}[i], () => { _assetPage = choice; w.Rebuild(); },
-                        _assetPage == i).name = "AssetPage_" + i;
-                }
-                if (_assetPage == 0) BuildAssetStores(w); else if(_assetPage==1) BuildAssetProperties(w);else BuildAssetVehicles(w);
-            });
+                _assetSession = S; _assetStreet = _assetKind = _assetStoreId = _assetPropertyId = null;
+                _assetMapView.Initialized = false;
+                _assetCollapsedStreets.Clear(); _assetCollapsedKinds.Clear();
+                _assetPropertyListTab = 0;
+            }
+        }
+
+        private void BuildMyAssets(Window w)
+        {
+            EnsureAssetSession();
+            var tabs = Ui.Row(w.Content, 42, 8);
+            for (int i = 0; i < 3; i++)
+            {
+                int choice = i;
+                Ui.Tab(tabs, new[]{"门店","物业","车产"}[i], () => { _assetPage = choice; w.Rebuild(); },
+                    _assetPage == i).name = "AssetPage_" + i;
+            }
+            if (_assetPage == 0) BuildAssetStores(w); else if(_assetPage==1) BuildAssetProperties(w);else BuildAssetVehicles(w);
         }
 
         private void BuildAssetStores(Window w)

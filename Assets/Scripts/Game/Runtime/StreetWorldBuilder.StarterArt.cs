@@ -65,7 +65,7 @@ namespace PCShopSell.Game.Runtime
                         Mats.Lit(ArtDirection.Hex(j%2==0 ? "B4B457" : "78914B")));
                 }
             }
-            StaticBatchingUtility.Combine(grove.gameObject);
+            BatchStatic(grove.gameObject);
         }
 
         private static GameObject StarterPart(Transform root, string name, Vector3 position, Vector3 size,

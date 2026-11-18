@@ -633,6 +633,8 @@ namespace PCShopSell.Game.UI
         public void OpenCookerWindow()
         {
             if (OpeningMealPreludePending) { RemindOpeningMeal(); return; }
+            if (S.OpeningMealTutorialPending && S.OpeningMealStep == 0)
+                _cookKg = OpeningMealRiceKg;
             OpenRoomWindow("电饭锅", 760, 740, BuildCooker, true);
         }
 
@@ -716,23 +718,42 @@ namespace PCShopSell.Game.UI
         {
             S.RefreshCooking();
             Pantry pan = S.Pantry;
+            // Recipe selection and taking food pause as usual. Cooking itself uses
+            // the running world clock, including while this window remains open.
+            bool holdClock=pan.Cooking==null;
+            if(w.Holds!=holdClock)
+            {
+                if(holdClock)S.Time.Hold();
+                else if(S.Time.IsHeld)S.Time.Release();
+                w.Holds=holdClock;
+            }
             PlayerStats st = S.Player;
             double rice = S.HomeCookingRiceKg;
             Line(w.Content, $"饱腹 {st.Hunger:0}  健康 {st.Health:0}   可用大米：{rice:0.##} 千克   背包里的饭盒：{S.Backpack.Lunchboxes} 盒", 17);
 
             if (pan.Cooking != null)
             {
-                long left = pan.CookMinutesLeft(S.Clock.Now.TotalMinutes);
                 int readyMinuteOfDay = (int)(pan.Cooking.ReadyMinute % (24 * 60));
                 Line(w.Content, $"<color=#80551F>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
-                Line(w.Content, $"还剩 {left} 分钟（{readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 好）。焖好之前锅盖打不开。", 17);
-                if (S.OpeningMealTutorialPending)
+                var status=Ui.Rect(w.Content,"CookerCookingStatus");Ui.Size(status,-1,72);
+                var countdown=Ui.Label(status,"",17,TextAnchor.MiddleLeft,Ui.Dim);
+                countdown.rectTransform.Anchor(0,.42f,1,1);
+                var track=Ui.Panel(status,"CookingProgressTrack",Ui.PanelBg2);
+                track.raycastTarget=false;track.rectTransform.Anchor(0,.12f,1,.30f);
+                var fill=Ui.Panel(track.transform,"CookingProgressFill",Ui.Accent);
+                fill.raycastTarget=false;
+                long shownLeft=-1;
+                w.RefreshContent=()=>
                 {
-                    var wait = Ui.Button(w.Content, $"等到饭好 · {left} 分钟", () => { S.AdvanceClock((int)left); w.Rebuild(); }, 18, Ui.ButtonHot);
-                    Ui.Size(wait, -1, 44);
-                    wait.name = "OpeningMealWait";
-
-                }
+                    if(pan.Cooking==null){w.RequestRebuild();return;}
+                    long remaining=pan.CookMinutesLeft(S.Clock.Now.TotalMinutes);
+                    if(remaining==shownLeft)return;
+                    shownLeft=remaining;
+                    countdown.text=$"还剩 {remaining} 分钟 · 预计 {readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 煮好";
+                    fill.rectTransform.Anchor(0,0,Mathf.Clamp01(1-remaining/(float)Pantry.CookMinutes),1);
+                };
+                w.RefreshContent();
+                Line(w.Content,"可以关窗等候，饭好后再回来取。",16,Ui.Dim);
                 BindOpeningMealCooker(w);
                 return;
             }
@@ -765,7 +786,7 @@ namespace PCShopSell.Game.UI
                     if (tutorial && !S.OpeningMealTutorialPending)
                     {
                         w.Close();
-                        Popup("饭盒已经带好了", "放进背包的食物会在饭点或饿了时自动吃，不用每顿手动操作。\n\n注意饭盒的重量和保质期；放进冰箱可以暂停到期计时。\n\n现在吃饱了，也带好了午饭，可以出门看看了。");
+                        Popup("饭盒带好了", $"背包里的饭盒会在饭点或饿了时{Ui.Emphasize("自动吃")}。\n放进{Ui.Emphasize("冰箱")}可{Ui.Emphasize("暂停保质期倒计时")}。");
                     }
                     else w.Rebuild();
                 }, 18, Ui.ButtonBg, pan.CookedBowls > 0);
@@ -890,7 +911,7 @@ namespace PCShopSell.Game.UI
                 return !_ctrl.InHome ? "回家后可用" : S.IsWorking ? "下班后可用" : "结束当前活动或行程后可用";
             }
         }
-        private enum MyPage { Profile, Food, Residence, Contacts, Relations }
+        private enum MyPage { Profile, Food, Residence, Contacts, Relations, Assets }
         private MyPage _myPage;
         private Window _myWindow;
         private bool _myLeaseExpanded;
@@ -911,7 +932,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             if (OpeningMealRestricted) { RemindOpeningMeal(); return; }
-            _myWindow = OpenWindow("我的", 1240, 760, BuildMyPanel, scrollContent: false, onClosed: () =>
+            _myWindow = OpenWindow("我的", 1280, 960, BuildMyPanel, scrollContent: false, onClosed: () =>
             {
                 _myWindow = null;
                 _myPortrait?.Destroy();
@@ -924,15 +945,16 @@ namespace PCShopSell.Game.UI
         private void BuildMyPanel(Window w)
         {
             var nav = Ui.Row(w.Content, 42, 6);
-            string[] names = { "个人资料", "饮食", "住处", "通讯录", "人际关系图" };
+            string[] names = { "个人资料", "饮食", "住处", "我的资产", "通讯录", "人际关系图" };
+            var pages = new[] { MyPage.Profile, MyPage.Food, MyPage.Residence, MyPage.Assets, MyPage.Contacts, MyPage.Relations };
             for (int i = 0; i < names.Length; i++)
             {
-                MyPage tab = (MyPage)i;
+                MyPage tab = pages[i];
                 var button = Ui.Size(Ui.Button(nav, names[i], () =>
                 {
                     if (_myPage != tab) OpenMyPanel(tab);
                 }, 18, Ui.SelectedButton(_myPage == tab)), 0, 42, 1);
-                button.name = "MyTab_" + i;
+                button.name = "MyTab_" + (int)tab;
             }
 
             if (_myPage == MyPage.Contacts)
@@ -946,6 +968,15 @@ namespace PCShopSell.Game.UI
                 return;
             }
 
+            if (_myPage == MyPage.Assets)
+            {
+                var assets = PhoneFlexibleScroll(w.Content, "MyAssetsContent");
+                var parent = w.Content;
+                w.Content = assets;
+                try { BuildMyAssets(w); }
+                finally { w.Content = parent; }
+                return;
+            }
             var body = PhoneFlexibleScroll(w.Content, "MyPageContent");
             body.parent.parent.GetComponent<Image>().color = Color.clear;
             switch (_myPage)

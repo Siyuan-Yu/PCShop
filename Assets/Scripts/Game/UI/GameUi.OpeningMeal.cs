@@ -32,6 +32,7 @@ namespace PCShopSell.Game.UI
         private Window _openingMealCooker;
         private GameSession _openingMealSession;
         private Navigation _questActionNavigation;
+        private const double OpeningMealRiceKg = 1.5;
         private int _openingMealCookStage;
         private string _openingMealFocus;
         private bool _openingMealIntroHeld;
@@ -58,8 +59,8 @@ namespace PCShopSell.Game.UI
         private void BindOpeningMealCooker(Window w)
         {
             if (!S.OpeningMealTutorialPending) return;
+            RestoreOpeningMealButtons();
             _openingMealCooker = w;
-            _openingMealButtons.Clear();
             foreach (var b in w.Root.GetComponentsInChildren<Button>()) _openingMealButtons[b] = b.interactable;
         }
 
@@ -77,7 +78,7 @@ namespace PCShopSell.Game.UI
             : "先做饭。" + OpeningMealNextAction);
 
         private string OpeningMealNextAction => S.OpeningMealStep == 1
-            ? "打开电饭锅，点“等到饭好”，再吃一碗并打包剩饭。"
+            ? "等饭自然煮好，再打开电饭锅吃一碗、打包剩饭。"
             : S.OpeningMealStep >= 2 ? (S.OpeningMealEaten ? "已经吃过饭了，打开电饭锅，把剩饭全部装进背包。" : "饭好了，打开电饭锅，先吃一碗。")
             : "走近高亮的电饭锅，按 F，选好米量和做法后开始焖饭。";
 
@@ -298,6 +299,15 @@ namespace PCShopSell.Game.UI
                 && !S.IsGameOver && !_ctrl.Placing && !PopupOpen;
             if (show && intro && !_openingMealIntroHeld) { S.Time.Hold(); _openingMealIntroHeld = true; }
             else if ((!show || !intro) && _openingMealIntroHeld) { S.Time.Release(); _openingMealIntroHeld = false; }
+            // Waiting uses the ordinary cooker UI and world clock. A teaching
+            // spotlight would obscure the close button and the time controls.
+            if(step==1)
+            {
+                RestoreOpeningMealButtons();
+                _openingMealFocus=null;
+                _guideRoot.gameObject.SetActive(false);
+                return;
+            }
             _guideRoot.gameObject.SetActive(show);
             if (!show) { if (step < 0) RestoreOpeningMealButtons(); return; }
             _guideCard.gameObject.SetActive(true);
@@ -339,7 +349,7 @@ namespace PCShopSell.Game.UI
             }
             else if (cookerOpen)
             {
-                string targetName = step == 1 ? "OpeningMealWait" : step == 2 ? "OpeningMealEat" : step == 3 ? "OpeningMealPackAll" :
+                string targetName = step == 1 ? "CookerCookingStatus" : step == 2 ? "OpeningMealEat" : step == 3 ? "OpeningMealPackAll" :
                     _openingMealCookStage == 0 ? "OpeningMealRice" : _openingMealCookStage == 1 ? "OpeningMealRecipe" : "OpeningMealStart";
                 var target = _openingMealCooker.Root.GetComponentsInChildren<RectTransform>().FirstOrDefault(r => r.name == targetName);
                 if (_openingMealFocus != targetName)
@@ -468,10 +478,10 @@ namespace PCShopSell.Game.UI
 
         private (string title, string body) OpeningMealControlText(int step)
         {
-            if (step == 1) return ("第 4 步 · 等饭焖好", $"饭正在焖，还剩约 {Ui.Emphasize($"{S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟")}。\n点高亮的 {Ui.Emphasize("“等到饭好”")}，推进到这锅饭煮好。\n食材已经下锅，不需要再放一次。");
+            if (step == 1) return ("第 4 步 · 等饭焖好", $"饭正在焖，还剩约 {Ui.Emphasize($"{S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟")}。\n随游戏时间自动煮好，也可以关闭窗口等候。");
             if (step == 2) return ("第 5 步 · 先吃一碗", $"饭煮好了，先照顾好自己。\n点 {Ui.Emphasize("“现在吃一碗”")}，恢复饱腹。\n吃完后，再把剩饭带上。");
             if (step == 3) return ("第 6 步 · 带上剩饭", $"肚子不饿了，带上剩饭作午饭。\n点 {Ui.Emphasize("“全部装进背包”")}。\n饭点或饿了会自动吃，不用手动操作。");
-            if (_openingMealCookStage == 0) return ("第 1 步 · 选米量", $"点击高亮区域里的米量。\n第一次推荐 {Ui.Emphasize("0.5 千克")}，大约能做 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.BowlsPerKg / 2} 碗饭")}。\n大米自动从背包和家中后仓取用，现在选择不会扣食材。");
+            if (_openingMealCookStage == 0) return ("第 1 步 · 选米量", $"点击高亮区域里的米量。\n第一次推荐 {Ui.Emphasize($"{OpeningMealRiceKg:0.##} 千克")}，大约能做 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.BowlsPerKg * OpeningMealRiceKg:0} 碗饭")}。\n大米自动从背包和家中后仓取用，现在选择不会扣食材。");
             if (_openingMealCookStage == 1) return ("第 2 步 · 选做法", $"点击高亮区域里的做法。\n先学做 {Ui.Emphasize("白饭")} 就可以，不需要额外配菜。\n有食材时也能选择焖饭；灰色选项表示食材不足。");
             return ("第 3 步 · 开始焖饭", $"确认选好 {Ui.Emphasize($"{_cookKg:0.##} 千克大米")}和做法后，点击高亮的 {Ui.Emphasize("“开始焖饭”")}。\n这时才会消耗所选食材，约 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.CookMinutes} 分钟")}后做好。");
         }
@@ -487,7 +497,7 @@ namespace PCShopSell.Game.UI
                 case 1:
                     long left = S.Pantry.Cooking != null ? S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes) : 0;
                     return ("第 2 步 · 等饭焖好",
-                        $"饭正在焖，还要约 {Ui.Emphasize($"{left} 分钟")}，焖好之前锅盖打不开。\n在电饭锅窗口点 {Ui.Emphasize("“等到饭好”")}，只推进剩余时间，不会提前获得熟饭。\n也可以关窗等候；这段教学先不做其他事情。");
+                        $"饭正在焖，还要约 {Ui.Emphasize($"{left} 分钟")}，焖好之前锅盖打不开。\n随游戏时间自动煮好，开着或关闭电饭锅窗口都可以等候。");
                 case 2:
                     return ("饭好了 · 先吃一碗",
                         $"饭好了！打开电饭锅，点 {Ui.Emphasize("“现在吃一碗”")}，消耗一碗并恢复饱腹。\n吃完后还要把剩饭全部装进背包，留作午饭。");

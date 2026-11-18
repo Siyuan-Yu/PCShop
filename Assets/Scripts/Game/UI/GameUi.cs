@@ -37,6 +37,8 @@ namespace PCShopSell.Game.UI
         internal WindowFit Fitter;
         internal GameUi Owner;
         internal bool OpeningMealSystem;
+        // Owned by the loading coroutine, not by session/menu window cleanup.
+        internal bool PreserveDuringTransition;
 
         public void Rebuild()
         {
@@ -119,6 +121,7 @@ namespace PCShopSell.Game.UI
             new Dictionary<string, (RectTransform, Text, Button, Outline)>();
         private readonly List<(RectTransform rt, Text text, Button button)> _queueLabels = new List<(RectTransform, Text, Button)>();
         private RectTransform _toastList;
+        private readonly Vector3[] _toastQuestCorners=new Vector3[4];
 
         private Button _storageWarning;
         private Text _noticeButtonText;
@@ -178,6 +181,13 @@ namespace PCShopSell.Game.UI
             UpdateLoanReminderHud();
             PositionRightHudCards();
             RefreshWorkbenchAccess();
+            ApplyHudFunctionLayout();
+            var selectedControl = EventSystem.current?.currentSelectedGameObject;
+            var selectedInput = selectedControl != null ? selectedControl.GetComponent<InputField>() : null;
+            if (Input.GetKeyDown(KeyCode.Tab) && !AnyModalOpen && !_ctrl.Placing
+                && (selectedInput == null || !selectedInput.isFocused)
+                && !FishingInputActive && !OnsiteInputActive && !MainMenuOpen)
+                ToggleHudFunctions();
             HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
             bool pointerBusy = Input.GetMouseButton(0) || Input.GetMouseButtonUp(0);
             foreach (var window in _windows.ToArray())
@@ -232,6 +242,7 @@ namespace PCShopSell.Game.UI
                 UpdateQuestTracker();
                 if (!pointerBusy) { RefreshDock(); RefreshHomeDock(); }
             }
+            RefreshToastPlacement();
         }
 
         partial void UpdateEventBatch();
@@ -276,7 +287,8 @@ namespace PCShopSell.Game.UI
             _placeText.resizeTextMaxSize = 17;
             _statsText = Ui.Size(Ui.Label(row, "", 15, TextAnchor.MiddleLeft, Ui.Dim), 248);
             _statsText.Tip(StatsTip);
-            BuildHudShortcuts(row);
+            BuildHudSystemControls(row);
+            BuildHudShortcuts(root);
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.Chrome);
             _travelBar = bottom.gameObject;
@@ -344,7 +356,7 @@ namespace PCShopSell.Game.UI
         private void UpdateHud()
         {
             GameTimestamp now = S.Clock.Now;
-            string noticeTitle = $"通知 {HotkeyLabel(NoticeHotkey)}";
+            string noticeTitle = "通知";
             _noticeButtonText.text = _unreadNotices > 0
                 ? $"{noticeTitle} <color=#F0C979>{Math.Min(99, _unreadNotices)}</color>"
                 : noticeTitle;
@@ -734,6 +746,7 @@ namespace PCShopSell.Game.UI
         /// <summary>Esc：关掉最上面一层窗口。返回有没有关。</summary>
         public bool CloseTopWindow()
         {
+            if(_windows.Any(window=>window.PreserveDuringTransition&&!window.Closed))return true;
             if(ChoiceDropdown.CancelFrame==UnityEngine.Time.frameCount)return true;
             foreach(var canvas in Canvases)foreach(var choice in canvas.GetComponentsInChildren<ChoiceDropdown>())if(choice.CloseChoice())return true;
             if (_windows.Count == 0) return false;
@@ -800,6 +813,28 @@ namespace PCShopSell.Game.UI
             v.childControlWidth = true;
             v.childForceExpandHeight = false;
             v.childAlignment = TextAnchor.UpperLeft;
+            RefreshToastPlacement();
+        }
+
+        private void RefreshToastPlacement()
+        {
+            if(_toastList==null)return;
+            var canvas=(RectTransform)_toastCanvas.transform;
+            float top=82+HudFunctionOffset+12;
+            if(_questPanel!=null&&_questPanel.gameObject.activeInHierarchy)
+            {
+                // Read the visible card's real bottom, including changing progress text
+                // and HUD folding. Convert coordinates across the two canvases.
+                _questPanel.rectTransform.GetWorldCorners(_toastQuestCorners);
+                float cardBottom=canvas.InverseTransformPoint(_toastQuestCorners[0]).y;
+                top=Mathf.Max(top,canvas.rect.yMax-cardBottom+12);
+            }
+            float width=Mathf.Max(160,Mathf.Min(460,canvas.rect.width-32));
+            float height=Mathf.Max(60,Mathf.Min(400,canvas.rect.height-top-124));
+            var bottomLeft=new Vector2(16,-top-height);
+            var topRight=new Vector2(16+width,-top);
+            if((_toastList.offsetMin-bottomLeft).sqrMagnitude>.01f)_toastList.offsetMin=bottomLeft;
+            if((_toastList.offsetMax-topRight).sqrMagnitude>.01f)_toastList.offsetMax=topRight;
         }
 
         private readonly List<string> _noticeHistory = new List<string>();
@@ -828,6 +863,7 @@ namespace PCShopSell.Game.UI
             }
             if (_lastToast == message && _uiTime - _lastToastAt < 8) return;
             _lastToast = message; _lastToastAt = _uiTime;
+            RefreshToastPlacement();
             _unreadNotices++;
             _noticeHistory.Add((S == null ? "" : S.Clock.Now + "　") + message);
             if (_noticeHistory.Count > 150) _noticeHistory.RemoveAt(0);
@@ -982,7 +1018,8 @@ namespace PCShopSell.Game.UI
 
         public void CloseModalWindows()
         {
-            for (int i = _windows.Count - 1; i >= 0; i--) CloseWindow(_windows[i]);
+            for (int i = _windows.Count - 1; i >= 0; i--)
+                if(!_windows[i].PreserveDuringTransition)CloseWindow(_windows[i]);
         }
 
         private readonly System.Collections.Generic.List<Window> _popups = new System.Collections.Generic.List<Window>();

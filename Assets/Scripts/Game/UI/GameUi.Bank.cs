@@ -90,6 +90,7 @@ namespace PCShopSell.Game.UI
             Tab(BankPage.Transfers, "存取款", "BankTransfersTab");
             Tab(BankPage.Borrow, "借款", "BankBorrowTab");
             Tab(BankPage.Loans, "我的贷款", "BankLoansTab");
+            Ui.Tab(tabs, "证券交易", OpenBankSecurities, false).name = "BankSecuritiesTab";
             switch (draft.Page)
             {
                 case BankPage.Borrow: BuildBankBorrow(w, draft); break;

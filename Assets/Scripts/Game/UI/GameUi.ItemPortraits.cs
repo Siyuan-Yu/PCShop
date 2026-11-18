@@ -62,6 +62,7 @@ namespace PCShopSell.Game.UI
                     if (fish >= 0) return "meal:fish";
                     return "cooked:" + (id == "rice" ? "plain" : id);
                 case "oldmarket": return key.EndsWith(":faulty", StringComparison.Ordinal) ? key.Substring(0, key.Length - 7) : key;
+                case "used": return id == "5" ? "oldmarket:camera" : id == "7" ? "oldmarket:speaker" : key;
                 default: return key;
             }
         }
@@ -82,6 +83,16 @@ namespace PCShopSell.Game.UI
             var image = rect.gameObject.AddComponent<RawImage>();
             image.raycastTarget = false;
             string id = ItemArtId(key);
+            if (id == "used:6")
+            {
+                image.enabled = false;
+                // Reuse the UI palette for a compact console/controller silhouette.
+                var console = Ui.Panel(rect, "UsedGameConsole", Ui.PanelBg).rectTransform.Anchor(.1f, .18f, .9f, .82f);
+                Ui.Panel(console, "ConsoleScreen", Ui.ButtonBg).rectTransform.Anchor(.2f, .28f, .8f, .88f);
+                var controller = Ui.Panel(rect, "Controller", Ui.ButtonBg).rectTransform.Anchor(.06f, .12f, .94f, .45f);
+                Ui.Label(controller, "+   ••", 15, TextAnchor.MiddleCenter, Ui.Accent).rectTransform.Fill();
+                return rect;
+            }
             if (id.StartsWith("vehicle:", StringComparison.Ordinal))
             {
                 string model = id.Substring("vehicle:".Length);

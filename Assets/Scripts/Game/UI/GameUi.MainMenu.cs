@@ -46,10 +46,55 @@ namespace PCShopSell.Game.UI
             }, scrollContent: false, allowDuringOpeningMeal: true, showTitleBar: false, fullScreen: true);
         }
 
-        internal Window ShowTrialWorldLoading() => OpenWindow(L("loading_trial_world"), 1920, 1080, w =>
+        private Text _worldLoadingStatus, _worldLoadingProgressText;
+        private RectTransform _worldLoadingFill;
+        private float _worldLoadingProgress, _worldLoadingStarted, _worldLoadingNextRefresh;
+
+        internal void SetWorldLoadingProgress(float progress)
         {
-            Ui.Label(w.Content, L("loading_trial_world"), 32, TextAnchor.MiddleCenter, Ui.Accent)
-                .rectTransform.Fill();
+            _worldLoadingProgress=Mathf.Max(_worldLoadingProgress,Mathf.Clamp01(progress));
+            if(_worldLoadingFill!=null)_worldLoadingFill.anchorMax=new Vector2(_worldLoadingProgress,1);
+            RefreshWorldLoading(true);
+        }
+        internal void RefreshWorldLoading(bool force=false)
+        {
+            if(_worldLoadingProgressText==null||(!force&&Time.realtimeSinceStartup<_worldLoadingNextRefresh))return;
+            _worldLoadingNextRefresh=Time.realtimeSinceStartup+.2f;
+            int seconds=Mathf.FloorToInt(Time.realtimeSinceStartup-_worldLoadingStarted);
+            _worldLoadingProgressText.text=$"{Mathf.FloorToInt(_worldLoadingProgress*100)}%  ·  {string.Format(L("loading_elapsed"),seconds)}";
+        }
+
+        internal void SetWorldLoadingStage(string key)
+        {
+            if (_worldLoadingStatus != null) _worldLoadingStatus.text = L(key);
+        }
+
+        internal Window ShowWorldLoading() => OpenWindow(L("loading_world"), 1920, 1080, w =>
+        {
+            w.PreserveDuringTransition=true;
+            // Intro windows and tutorial canvases may be created while the session
+            // starts. Keep the opaque loading cover above all of them until ready.
+            var canvas=w.Root.gameObject.AddComponent<Canvas>();
+            canvas.overrideSorting=true;canvas.sortingOrder=1000;
+            w.Root.gameObject.AddComponent<GraphicRaycaster>();
+            _worldLoadingProgress=0;
+            _worldLoadingStarted=Time.realtimeSinceStartup;
+            Ui.Label(w.Content, L("loading_world"), 36, TextAnchor.MiddleCenter, Ui.ChromeInk)
+                .rectTransform.Anchor(.1f, .50f, .9f, .60f);
+            _worldLoadingStatus = Ui.Label(w.Content, L("loading_ground"), 24, TextAnchor.MiddleCenter, Ui.ChromeDim);
+            _worldLoadingStatus.rectTransform.Anchor(.1f, .44f, .9f, .51f);
+            var track=Ui.Panel(w.Content,"WorldLoadingTrack",Ui.ChromeDim);
+            track.raycastTarget=false;
+            track.rectTransform.Anchor(.30f,.415f,.70f,.427f);
+            var fill=Ui.Panel(track.transform,"WorldLoadingFill",Ui.ChromeGold);
+            fill.raycastTarget=false;
+            _worldLoadingFill=fill.rectTransform;
+            _worldLoadingFill.Anchor(0,0,0,1);
+            _worldLoadingProgressText=Ui.Label(w.Content,"",22,TextAnchor.MiddleCenter,Ui.ChromeDim);
+            _worldLoadingProgressText.rectTransform.Anchor(.20f,.35f,.80f,.40f);
+            Ui.Label(w.Content,L("loading_background_hint"),20,TextAnchor.MiddleCenter,Ui.ChromeDim)
+                .rectTransform.Anchor(.15f,.29f,.85f,.34f);
+            RefreshWorldLoading(true);
         }, holds: false, closable: false, scrollContent: false, allowDuringOpeningMeal: true,
             showTitleBar: false, fullScreen: true);
 

@@ -119,8 +119,7 @@ namespace PCShopSell.Game.UI
                     error.text = !long.TryParse(input, out long units) || units < 1 || units > GameSession.StockOrderLimit
                         ? $"请输入 1–{GameSession.StockOrderLimit:N0} 的整数"
                         : !opening && units > position ? $"数量超过实际{(shortMode ? "做空股数" : "持股")}"
-                        : id != "hardware" && units % GameSession.StockLotSize != 0 && (opening || units != position)
-                            ? $"每手 {GameSession.StockLotSize} 股，请按整手调整" : "";
+                        : "";
                     if (error.text.Length == 0) Apply(opening ? units : -units);
                 }
                 if (id != "hardware")

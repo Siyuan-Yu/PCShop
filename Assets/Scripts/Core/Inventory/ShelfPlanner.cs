@@ -12,6 +12,7 @@ namespace PCShopSell.Core.Inventory
         public string Name;
         public double Kg;
         public long Price,ReferencePrice;
+        public long ListedAt;
     }
     /// <summary>货架能摆的一种货：6 类配件，或一组杂货（烟、酒、饮料、点心、水果）。</summary>
     public sealed class ShelfKind

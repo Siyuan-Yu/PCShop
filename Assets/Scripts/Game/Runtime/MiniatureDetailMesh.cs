@@ -13,6 +13,55 @@ namespace PCShopSell.Game.Runtime
             internal readonly List<int> T = new List<int>();
         }
         private readonly Dictionary<Material, Buffer> _parts = new Dictionary<Material, Buffer>();
+        internal static System.Action<Transform,Material,List<BakedDetailLayout.Part>> BakeModelSink;
+        private static readonly Dictionary<int,Mesh> SharedDetails=new Dictionary<int,Mesh>();
+        private static readonly Dictionary<string,Mesh[]> SharedDetailTrees=new Dictionary<string,Mesh[]>();
+        private readonly Dictionary<Material,List<BakedDetailLayout.Part>> _instances=new Dictionary<Material,List<BakedDetailLayout.Part>>();
+        private void Instance(Material material,Mesh mesh,Vector3 at,Vector3 scale,Quaternion rotation)
+        {
+            if(!_instances.TryGetValue(material,out var parts))_instances.Add(material,parts=new List<BakedDetailLayout.Part>());
+            parts.Add(new BakedDetailLayout.Part {Mesh=mesh,Position=at,Scale=scale,Rotation=BakedDetailLayout.ValidRotation(rotation)});
+        }
+        private static Mesh DetailMesh(Buffer buffer)
+        {
+            var mesh=new Mesh {name="共用建筑细节",indexFormat=IndexFormat.UInt32};
+            mesh.SetVertices(buffer.V);mesh.SetTriangles(buffer.T,0);mesh.RecalculateNormals();return mesh;
+        }
+        private static Mesh DetailTemplate(int kind,int seed,Material material)
+        {
+            seed=(seed&int.MaxValue)%1024;
+            int key=kind*1024+seed;
+            if(SharedDetails.TryGetValue(key,out var mesh)&&mesh!=null)return mesh;
+            var sink=BakeModelSink;BakeModelSink=null;
+            try
+            {
+                var detail=new MiniatureDetailMesh();
+                if(kind==0)detail.Box(Vector3.zero,Vector3.one,material);
+                else if(kind==1)detail.RoofTile(Vector3.zero,Vector3.one,material,Quaternion.identity);
+                else detail.Lobe(Vector3.zero,Vector3.one,material,seed);
+                mesh=DetailMesh(detail.Part(material));SharedDetails[key]=mesh;return mesh;
+            }
+            finally {BakeModelSink=sink;}
+        }
+        internal void Tree(Vector3 at,float height,int seed,Material leaf,Material tip,Material bark)
+        {
+            if(BakeModelSink==null)
+            {
+                var a=Part(leaf);var b=Part(tip);var c=Part(bark);
+                CityVegetation.AppendTree(a.V,a.T,b.V,b.T,c.V,c.T,at,height,false,seed);return;
+            }
+            string key=height+":"+seed;
+            if(!SharedDetailTrees.TryGetValue(key,out var meshes)||meshes[0]==null)
+            {
+                var buffers=new[]{new Buffer(),new Buffer(),new Buffer()};
+                CityVegetation.AppendTree(buffers[0].V,buffers[0].T,buffers[1].V,buffers[1].T,buffers[2].V,buffers[2].T,Vector3.zero,height,false,seed);
+                meshes=new[]{DetailMesh(buffers[0]),DetailMesh(buffers[1]),DetailMesh(buffers[2])};SharedDetailTrees[key]=meshes;
+            }
+            Instance(leaf,meshes[0],at,Vector3.one,Quaternion.identity);
+            Instance(tip,meshes[1],at,Vector3.one,Quaternion.identity);
+            Instance(bark,meshes[2],at,Vector3.one,Quaternion.identity);
+        }
+
         internal Buffer Part(Material material)
         {
             if (!_parts.TryGetValue(material, out var part)) { part = new Buffer(); _parts.Add(material, part); }
@@ -20,11 +69,12 @@ namespace PCShopSell.Game.Runtime
         }
         internal void Box(Vector3 at, Vector3 size, Material mat, Quaternion rotation = default)
         {
-            if (rotation == default) rotation = Quaternion.identity;
+            rotation = BakedDetailLayout.ValidRotation(rotation);
+            if(BakeModelSink!=null){Instance(mat,DetailTemplate(0,0,mat),at,size,rotation);return;}
             var b = Part(mat);
             Vector3 P(float x,float y,float z) => at + rotation * Vector3.Scale(new Vector3(x,y,z)*.5f,size);
             void Face(Vector3 a,Vector3 c,Vector3 d,Vector3 e)
-            { int n=b.V.Count;b.V.Add(a);b.V.Add(c);b.V.Add(d);b.V.Add(e);b.T.AddRange(new[]{n,n+1,n+2,n,n+2,n+3}); }
+            { int n=b.V.Count;b.V.Add(a);b.V.Add(c);b.V.Add(d);b.V.Add(e);b.T.Add(n);b.T.Add(n+1);b.T.Add(n+2);b.T.Add(n);b.T.Add(n+2);b.T.Add(n+3); }
             Face(P(-1,-1,-1),P(-1,1,-1),P(1,1,-1),P(1,-1,-1));
             Face(P(1,-1,1),P(1,1,1),P(-1,1,1),P(-1,-1,1));
             Face(P(-1,-1,1),P(-1,1,1),P(-1,1,-1),P(-1,-1,-1));
@@ -33,10 +83,15 @@ namespace PCShopSell.Game.Runtime
             Face(P(-1,-1,1),P(-1,-1,-1),P(1,-1,-1),P(1,-1,1));
         }
         internal void Lobe(Vector3 at,Vector3 radius,Material mat,int seed=0)
-        { var b=Part(mat);Lobe(b.V,b.T,at,radius,seed); }
+        {
+            if(BakeModelSink!=null){Instance(mat,DetailTemplate(2,seed,mat),at,radius,Quaternion.identity);return;}
+            var b=Part(mat);Lobe(b.V,b.T,at,radius,seed);
+        }
         internal void RoofTile(Vector3 at,Vector3 size,Material material,Quaternion rotation)
         {
+            rotation = BakedDetailLayout.ValidRotation(rotation);
             // The solid roof below closes the volume. Only expose the tile top and its lip.
+            if(BakeModelSink!=null){Instance(material,DetailTemplate(1,0,material),at,size,rotation);return;}
             var b=Part(material);
             Vector3 P(float x,float y,float z)=>at+rotation*Vector3.Scale(new Vector3(x,y,z)*.5f,size);
             int n=b.V.Count;
@@ -44,25 +99,34 @@ namespace PCShopSell.Game.Runtime
                 P(-1,-1,-1),P(-1,1,-1),P(1,1,-1),P(1,-1,-1)});
             b.T.AddRange(new[]{n,n+1,n+2,n,n+2,n+3,n+4,n+5,n+6,n+4,n+6,n+7});
         }
+        private static readonly Dictionary<int,Vector3[]> SharedLobeShapes = new Dictionary<int,Vector3[]>();
         internal static void Lobe(List<Vector3> v,List<int> t,Vector3 at,Vector3 radius,int seed=0,bool shared=false)
         {
             // World IDs may hash to billions; keep angular increments representable as floats.
             seed = (seed & int.MaxValue) % 1024;
             // Small flattened polygonal leaf masses, not a few oversized smooth spheres.
             const int sides=7,rings=4;
-            Vector3 Point(int y,int x)
+            // Shared and faceted foliage use identical unit points. Compute their
+            // trigonometry once per seed, including flowers on every balcony.
+            if(!SharedLobeShapes.TryGetValue(seed,out var shape))
             {
-                float phi=Mathf.PI*y/rings,a=x*Mathf.PI*2/sides+(y%2)*.18f+seed*.43f;
-                float r=1+.07f*Mathf.Sin(a*3+seed);
-                return at+Vector3.Scale(new Vector3(Mathf.Cos(a)*Mathf.Sin(phi)*r,Mathf.Cos(phi),Mathf.Sin(a)*Mathf.Sin(phi)*r),radius);
+                shape=new Vector3[(rings+1)*(sides+1)];
+                for(int y=0;y<=rings;y++)for(int x=0;x<=sides;x++)
+                {
+                    float phi=Mathf.PI*y/rings,a=x*Mathf.PI*2/sides+(y%2)*.18f+seed*.43f;
+                    float r=1+.07f*Mathf.Sin(a*3+seed);
+                    shape[y*(sides+1)+x]=new Vector3(Mathf.Cos(a)*Mathf.Sin(phi)*r,Mathf.Cos(phi),Mathf.Sin(a)*Mathf.Sin(phi)*r);
+                }
+                SharedLobeShapes.Add(seed,shape);
             }
+            Vector3 Point(int y,int x)=>at+Vector3.Scale(shape[y*(sides+1)+x],radius);
             if(shared)
             {
                 int start=v.Count;
-                for(int y=0;y<=rings;y++)for(int x=0;x<=sides;x++)v.Add(Point(y,x));
+                foreach(var point in shape)v.Add(at+Vector3.Scale(point,radius));
                 for(int y=0;y<rings;y++)for(int x=0;x<sides;x++)
                 { int a=start+y*(sides+1)+x,b=a+sides+1;
-                  if(y>0)t.AddRange(new[]{a,a+1,b});if(y<rings-1)t.AddRange(new[]{b,a+1,b+1}); }
+                  if(y>0){t.Add(a);t.Add(a+1);t.Add(b);}if(y<rings-1){t.Add(b);t.Add(a+1);t.Add(b+1);} }
                 return;
             }
             void Tri(Vector3 a,Vector3 b,Vector3 c)
@@ -91,6 +155,12 @@ namespace PCShopSell.Game.Runtime
         {
             var root=new GameObject(name).transform;root.SetParent(parent,false);
             var owner=root.gameObject.AddComponent<CityLandscapeResources>();
+            foreach(var pair in _instances)
+            {
+                var target=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));target.transform.SetParent(root,false);
+                target.GetComponent<MeshRenderer>().sharedMaterial=pair.Key;
+                BakeModelSink(target.transform,pair.Key,pair.Value);
+            }
             foreach(var pair in _parts)
             {
                 var b=pair.Value;if(b.V.Count==0)continue;
@@ -103,7 +173,11 @@ namespace PCShopSell.Game.Runtime
                     var n=normals[i];var p=b.V[i];
                     uv[i]=Mathf.Abs(n.y)>.6f?new Vector2(p.x,p.z):Mathf.Abs(n.x)>.6f?new Vector2(p.z,p.y):new Vector2(p.x,p.y);
                 }
-                mesh.uv=uv;mesh.RecalculateTangents();mesh.RecalculateBounds();owner.Owned.Add(mesh);
+                mesh.uv=uv;
+                // Only normal-mapped surfaces consume tangents. Leaf, rail and flower
+                // materials have no normal map and need no tangent reconstruction.
+                if(pair.Key.IsKeywordEnabled("_NORMALMAP"))mesh.RecalculateTangents();
+                mesh.RecalculateBounds();owner.Owned.Add(mesh);
                 var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(root,false);
                 go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=pair.Key;
             }

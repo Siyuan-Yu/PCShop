@@ -67,8 +67,8 @@ namespace PCShopSell.Game.UI
             }
             else
             {
-                icon.rectTransform.Anchor(0, .5f, 0, .5f, 7, -6.5f, -20, -6.5f);
-                label.rectTransform.Anchor(0, 0, 1, 1, 24, 1, 4, 1);
+                icon.rectTransform.Anchor(0, .5f, 0, .5f, 10, -10, -30, -10);
+                label.rectTransform.Anchor(0, 0, 1, 1, 36, 1, 8, 1);
             }
             label.alignment = stacked ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
             label.verticalOverflow = VerticalWrapMode.Truncate;

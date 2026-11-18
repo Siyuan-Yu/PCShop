@@ -84,9 +84,9 @@ namespace PCShopSell.Game.UI
         private Button HudPanelButton(Transform row, string title, KeyCode key, Action open, string description, Color? bg = null)
         {
             string shortcut = HotkeyLabel(key);
-            var button = Ui.Size(Ui.Button(row, $"{title} {shortcut}", open, 13, bg), 0, -1, 1)
+            var button = Ui.Size(Ui.Button(row, title, open, 20, bg), 0, -1, 1)
                 .Tip($"<b>{title}</b>　快捷键：{shortcut}\n{description}");
-            Ui.HudNavigationArt(button, title, key == KeyCode.Escape);
+            Ui.HudNavigationArt(button, title, false);
             _hudPanelButtons.Add(key, button);
             return button;
         }
@@ -103,8 +103,18 @@ namespace PCShopSell.Game.UI
         {
             if (S == null || S.IsGameOver || S.IsWorking) return false;
             if (AnyModalOpen && (key != KeyCode.B || _backpackWin == null || _backpackWin.Closed)) return false;
+            if (!_hudCanvas.gameObject.activeInHierarchy || !_expoHudGate.interactable) return false;
+            if (key == KeyCode.O || key == KeyCode.G)
+            {
+                if (S.OpeningAgencyGuidePending) return true;
+                if (OpeningMealRestricted) { RemindOpeningMeal(); return true; }
+                if (key == KeyCode.O) OpenAssetWorkspace();
+                else OpenCityProcurement();
+                return true;
+            }
             _hudPanelButtons.TryGetValue(key, out var button);
-            if (button == null || !button.isActiveAndEnabled || !button.IsInteractable()) return false;
+            if (button == null || !button.gameObject.activeSelf || !_hudCanvas.gameObject.activeInHierarchy
+                || !button.IsInteractable()) return false;
             if (S.OpeningAgencyGuidePending && key != KeyCode.Escape) return true;
             if (OpeningMealRestricted && key != KeyCode.Escape)
             { RemindOpeningMeal(); return true; }

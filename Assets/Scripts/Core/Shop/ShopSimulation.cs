@@ -499,7 +499,7 @@ namespace PCShopSell.Core.Shop
             double promotion = TemporaryPriceFactorOf?.Invoke(id) ?? 1;
             if(_fixedSalePrices.TryGetValue("g:"+id,out var fixedPrice))return Money.FromYuan(fixedPrice).Scale(promotion);
             double markup = _partMarkups.TryGetValue(GoodsKey(id), out double individual) ? individual : globalMarkup;
-            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays,_market.CommoditySeed) * markup))).Scale(promotion);
+            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Cents / 100.0 * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays,_market.CommoditySeed) * markup))).Scale(promotion);
         }
 
         public void RestorePartMarkups(IEnumerable<KeyValuePair<string, double>> items)

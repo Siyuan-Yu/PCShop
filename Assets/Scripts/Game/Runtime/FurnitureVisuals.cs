@@ -116,6 +116,13 @@ namespace PCShopSell.Game.Runtime
             }
             else if(def.Id=="used_display")
                 Prims.Box(root,"SalesGlass",new Vector3(0,1.03f,0),new Vector3(w,.25f,d),Mats.Lit(new Color(.55f,.72f,.7f),.3f));
+            else if(def.Id=="used_repairbench")
+            {
+                Prims.Box(root,"RepairMat",new Vector3(0,.88f,0),new Vector3(w*.8f,.025f,d*.75f),Mats.Lit(ArtDirection.Sage));
+                Prims.Box(root,"ToolRack",new Vector3(0,1.07f,d*.35f),new Vector3(w*.8f,.35f,.06f),Mats.Lit(ArtDirection.Wood));
+                for(int i=-1;i<=1;i++)Prims.Box(root,"HandTool",new Vector3(i*w*.22f,1.1f,d*.3f),new Vector3(.045f,.24f,.045f),Mats.Lit(Metal));
+                Prims.Box(root,"PartsTray",new Vector3(w*.28f,.92f,-d*.12f),new Vector3(.25f,.07f,.2f),Mats.Lit(ArtDirection.Brass));
+            }
         }
 
         private static void Fridge(Transform root, FurnitureDef def, bool collider)

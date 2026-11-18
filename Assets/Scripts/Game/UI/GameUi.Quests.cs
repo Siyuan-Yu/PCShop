@@ -187,7 +187,7 @@ namespace PCShopSell.Game.UI
             _questText.rectTransform.offsetMax = new Vector2(-16, -textTop);
             _questText.text = "<b><color=#386047>下一步</color></b>　" + QuestPaperInk(next)
                 + (string.IsNullOrEmpty(status) ? "" : "\n<size=15><color=#655E52>" + status + "</color></size>");
-            _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + textTop + 118));
+            _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + HudFunctionOffset + textTop + 118));
             _questAction = action;
             _questActionText.text = actionLabel ?? "";
             bool hasAction = action != null;
@@ -196,6 +196,7 @@ namespace PCShopSell.Game.UI
                 _questActionButton.gameObject.SetActive(hasAction);
                 _questDetails.Anchor(hasAction ? .74f : 0, 0, 1, 0, hasAction ? 4 : 14, 12, 14, -49);
             }
+            RefreshToastPlacement();
         }
 
         private static string QuestPaperInk(string text) => Ui.EmphasizeReading(text?.Replace("<color=#FFC966>", "<color=#80551F>"));
@@ -324,6 +325,9 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Ventures: return QuestPlaceAction("前往中介", S.City.HasPlace("agency") ? S.City.GetPlace("agency") : null);
                 case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
+                case QuestTarget.BankSecurities:
+                    return S.AtBank ? ("查看证券教学", OpenBankSecurities)
+                        : QuestPlaceAction("前往银行", S.BankPlace);
                 case QuestTarget.ScooterDealer: return QuestPlaceAction("前往顺丰车行", ScooterDealer);
                 case QuestTarget.RacingEnrollment:
                     if (S.RacingUnlocked || S.RacingQualificationBlocker != null) return (null, null);
@@ -555,6 +559,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Counter: return "位置：自己的店 · 收银台";
                 case QuestTarget.Staff: return "位置：自己的店 → 右侧“员工”页";
                 case QuestTarget.PhoneShop: return "地点：商业街 · <color=#80551F>手机店</color>";
+                case QuestTarget.BankSecurities: return "地点：城郊银行 → 证券交易";
                 case QuestTarget.CommunityGoal: return "片区：城郊";
                 case QuestTarget.RacingEnrollment: return "地点：城郊赛场车库";
                 case QuestTarget.ScooterDealer:

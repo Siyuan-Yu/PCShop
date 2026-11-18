@@ -12,7 +12,7 @@ using PCShopSell.Core.World;
 namespace PCShopSell.Core.Session
 {
     public enum PurchaseFrequency { Daily, MondayWednesdayFriday, Wednesday }
-    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned, Salesperson, Chef, Waiter, Appraiser, PetKeeper }
+    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned, Salesperson, Chef, Waiter, Appraiser, PetKeeper, Repairer }
 
     [Serializable]
     public sealed class PurchaseLine
@@ -143,7 +143,7 @@ namespace PCShopSell.Core.Session
         private readonly List<EmployeePurchaseTrip> _employeeTrips = new List<EmployeePurchaseTrip>();
         public IReadOnlyList<EmployeePurchaseTrip> EmployeePurchaseTrips => _employeeTrips;
 
-        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : role == EmployeeRole.Chef ? "厨师" : role == EmployeeRole.Waiter ? "服务员" : role == EmployeeRole.Appraiser ? "收购师" : role == EmployeeRole.PetKeeper ? "饲养员" : "待安排";
+        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : role == EmployeeRole.Chef ? "厨师" : role == EmployeeRole.Waiter ? "服务员" : role == EmployeeRole.Appraiser ? "收购师" : role == EmployeeRole.PetKeeper ? "饲养员" : role == EmployeeRole.Repairer ? "修复师" : "待安排";
         public static string PurchaseTransportName(VehicleKind kind) =>
             kind == VehicleKind.Walk ? "步行去，叫货车送回" : kind == VehicleKind.Taxi ? "打车去，叫货车送回"
             : "开" + Vehicles.Get(kind).Name + "去，自己运回";
@@ -156,7 +156,7 @@ namespace PCShopSell.Core.Session
             {
                 var rows = new List<EmployeeAssignment>();
                 foreach (var shop in _shops.Where(x => x.Rented))
-                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer, EmployeeRole.Salesperson, EmployeeRole.Chef, EmployeeRole.Waiter, EmployeeRole.Appraiser, EmployeeRole.PetKeeper })
+                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer, EmployeeRole.Salesperson, EmployeeRole.Chef, EmployeeRole.Waiter, EmployeeRole.Appraiser, EmployeeRole.PetKeeper, EmployeeRole.Repairer })
                     {
                         foreach(Employee e in ShopStaff(shop,role))
                         {

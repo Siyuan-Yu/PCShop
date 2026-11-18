@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -15,7 +16,7 @@ namespace PCShopSell.Game.Runtime
             Mathf.Max(.25f, LakeWaterLevel * city.LakeSceneScale + .06f);
         private Vector3 LakeNode(string id)=>NodeWorld(id)/LakeScale;
         // Physical scenery and navigation share the same layout; closed bridges are scenery only.
-        private void BuildLakeLandscape()
+        private IEnumerator BuildLakeLandscape()
         {
             var root=new GameObject("LakeCityLandscape").transform;root.SetParent(_root,false);
             root.localScale=Vector3.one*LakeScale;
@@ -27,13 +28,29 @@ namespace PCShopSell.Game.Runtime
             var water=shader!=null?new Material(shader):Mats.Lit(ArtDirection.Hex("385E72"),.8f);
             if(shader!=null)resources.Owned.Add(water);
             LakeSurface(root,"CentralLake",shore,.995f,LakeWaterLevel,water);
+            yield return null;
             BuildMountainGround(root);
-            BuildLakeForest(root,shore);
-            foreach(var bridge in _city.LakeBridges)BuildClosedLakeBridge(root,bridge);
+            ReportBuildProgress(.37f);
+            ReportBuildStage("loading_forest_layout");
+            yield return BuildLakeForest(root,shore);
+            ReportBuildStage("loading_shore_details");
+            int bridgesDone=0;
+            foreach(var bridge in _city.LakeBridges)
+            {
+                BuildClosedLakeBridge(root,bridge);
+                ReportBuildProgress(.89f+.025f*++bridgesDone/Mathf.Max(1,_city.LakeBridges.Count()));
+                yield return null;
+            }
             // Preserve the neighbourhood fountain in its translated courtyard.
             BuildLakeCourtyards(root);
+            ReportBuildProgress(.925f);
+            yield return null;
             BuildShoreFurniture(root,shore);
+            ReportBuildProgress(.94f);
+            yield return null;
             BuildLakeIslands(root);
+            ReportBuildProgress(.95f);
+            yield return null;
             BuildRaceCauseways();
             _streetRoadEnvelopes = null;
             _streetPavementEnvelopes = null;
@@ -109,7 +126,7 @@ namespace PCShopSell.Game.Runtime
         }
         private static float SegmentDistance(Vector3 p,Vector3 a,Vector3 b)
         {var d=b-a;return Vector3.Distance(p,a+d*Mathf.Clamp01(Vector3.Dot(p-a,d)/Mathf.Max(.0001f,d.sqrMagnitude)));}
-        private void BuildLakeForest(Transform root,List<Vector3> shore)
+        private IEnumerator BuildLakeForest(Transform root,List<Vector3> shore)
         {
             var occupied=new List<Rect>();
             void Reserve(Vector3 at,float width,float depth,float heading)
@@ -128,20 +145,52 @@ namespace PCShopSell.Game.Runtime
                 roads.Add((new Vector3((float)bridge.points[i-1].x,0,(float)bridge.points[i-1].y)/LakeScale,new Vector3((float)bridge.points[i].x,0,(float)bridge.points[i].y)/LakeScale));
             // Keep batches spatially bounded: a city-wide mesh forces every tree through
             // every visible/shadow pass even when only a street corner is on screen.
+            var occupiedGrid = new ForestSpatialIndex<Rect>();
+            foreach (var rect in occupied)
+                occupiedGrid.Add(Rect.MinMaxRect(rect.xMin-25,rect.yMin-25,rect.xMax+25,rect.yMax+25),rect);
+            var roadGrid = new ForestSpatialIndex<(Vector3 a,Vector3 b)>();
+            foreach (var road in roads)
+                roadGrid.Add(Rect.MinMaxRect(Mathf.Min(road.a.x,road.b.x)-26,Mathf.Min(road.a.z,road.b.z)-26,
+                    Mathf.Max(road.a.x,road.b.x)+26,Mathf.Max(road.a.z,road.b.z)+26),road);
+            // Cache only for this build; no persistent duplicate of the complete woodland.
+            var treeTemplates = new Dictionary<int,ForestTreeTemplate>();
             var chunks=new Dictionary<Vector2Int,ForestChunk>();
+            var captureChunks=new Dictionary<Vector2Int,BakedCityMap.ForestChunk>();
+            if(Baking)_bakedForestRoot=root;
+            float deadline = Time.realtimeSinceStartup + .016f;
             for(int z=-850;z<1750;z+=12)for(int x=-1400;x<1500;x+=12)
             {
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    ReportBuildProgress(.37f+.32f*((z+850)/12f*242f+(x+1400)/12f)/(217f*242f));
+                    yield return null;
+                    deadline = Time.realtimeSinceStartup + .016f;
+                }
                 uint mixed=unchecked((uint)StableCityHash(x+":"+z));
                 mixed^=mixed>>16;mixed=unchecked(mixed*0x7feb352dU);mixed^=mixed>>15;mixed=unchecked(mixed*0x846ca68bU);mixed^=mixed>>16;
                 int hash=(int)(mixed&int.MaxValue);
                 if((Mathf.Abs(x)>1150||z>1350||z< -700)&&hash%3!=0)continue;
                 var p=new Vector3(x+(hash%97)/12f,0,z+((hash/97)%97)/12f);
-                if(!BuildsLakeSceneryAt(p)||WithinLake(p,shore)||occupied.Any(r=>r.Contains(new Vector2(p.x,p.z))))continue;
-                if(roads.Any(r=>SegmentDistance(p,r.a,r.b)<10))continue;
-                bool roadVerge=roads.Any(r=>SegmentDistance(p,r.a,r.b)<26);
+                if(!BuildsLakeSceneryAt(p)||WithinLake(p,shore))continue;
+                bool blocked=false, nearBuildings=false;
+                var nearbyPlots=occupiedGrid.At(p);
+                if(nearbyPlots!=null)foreach(var rect in nearbyPlots)
+                {
+                    if(rect.Contains(new Vector2(p.x,p.z))) { blocked=true;break; }
+                    if(p.x>rect.xMin-25&&p.x<rect.xMax+25&&p.z>rect.yMin-25&&p.z<rect.yMax+25)nearBuildings=true;
+                }
+                if(blocked)continue;
+                bool roadVerge=false;
+                var nearbyRoads=roadGrid.At(p);
+                if(nearbyRoads!=null)foreach(var road in nearbyRoads)
+                {
+                    float distance=SegmentDistanceSquared(p,road.a,road.b);
+                    if(distance<100) { blocked=true;break; }
+                    if(distance<676)roadVerge=true;
+                }
+                if(blocked)continue;
                 float height=MountainHeight(p.x,p.z);p.y=height;
                 // Flat interdistrict land is woodland too. Small park trees only belong around urban plots.
-                bool nearBuildings=occupied.Any(r=>p.x>r.xMin-25&&p.x<r.xMax+25&&p.z>r.yMin-25&&p.z<r.yMax+25);
                 bool urban=height<1&&(nearBuildings||roadVerge);
                 float clustering=Mathf.PerlinNoise(p.x*.028f+13,p.z*.028f+27);
                 if(urban&&clustering<.33f)continue;
@@ -149,11 +198,25 @@ namespace PCShopSell.Game.Runtime
                 float size=urban?7+hash%4:height<1?10+hash%6:12+hash%9;
                 int color=hash%4;if(urban&&hash%4==0)color=4;
                 var cell=new Vector2Int(Mathf.FloorToInt(p.x/192),Mathf.FloorToInt(p.z/192));
+                if(Baking)
+                {
+                    if(!captureChunks.TryGetValue(cell,out var capture))
+                    {capture=new BakedCityMap.ForestChunk {Name="Forest_"+cell.x+"_"+cell.y};captureChunks.Add(cell,capture);_forestCapture.Add(capture);}
+                    int shade=color==4?6:color==0?1:Mathf.Min(color+1,3);
+                    CaptureForestTree(capture,p,size,height>1&&hash%5==0&&color!=4,hash%31,color,shade,hash,urban);
+                    continue;
+                }
                 if(!chunks.TryGetValue(cell,out var chunk)){chunk=new ForestChunk();chunks.Add(cell,chunk);}
                 var verts=chunk.Vertices;var tris=chunk.Triangles;
                 int tip=color==4?6:color==0?1:Mathf.Min(color+1,3);
-                AddTreeMesh(verts[color],tris[color],verts[tip],tris[tip],verts[5],tris[5],p,size,
-                    height>1&&hash%5==0&&color!=4,hash%31);
+                bool conifer=height>1&&hash%5==0&&color!=4;
+                int treeKey=hash%31+((int)size<<5)+(conifer?1<<10:0);
+                if(!treeTemplates.TryGetValue(treeKey,out var template))
+                {
+                    template=new ForestTreeTemplate(size,conifer,hash%31);
+                    treeTemplates.Add(treeKey,template);
+                }
+                template.Append(verts[color],tris[color],verts[tip],tris[tip],verts[5],tris[5],p);
                 // A separate understorey fills the bare grass between crowns and along the coast.
                 if(urban||hash%2==0)
                 {
@@ -169,12 +232,76 @@ namespace PCShopSell.Game.Runtime
                         for(int j=0;j<3;j++) AddGrassTuft(verts[3],tris[3],p,hash%47+j*7);
                 }
             }
+            if(Baking)yield break;
+            ReportBuildProgress(.69f);
+            ReportBuildStage("loading_forest_meshes");
+            treeTemplates.Clear();
+            int meshPartsDone=0,meshPartsTotal=chunks.Count*7;
             string[] colors={"3F683C","608437","7C9938","A8B643","B87594","866342","E5A9BE"};
             foreach(var pair in chunks)
+            {
                 for(int i=0;i<colors.Length;i++)
+                {
                     if(pair.Value.Vertices[i].Count>0)
                         LandscapeMesh(root,(i==5?"ForestTrunks":"ForestCanopies_"+i)+"_"+pair.Key.x+"_"+pair.Key.y,
                             pair.Value.Vertices[i],pair.Value.Triangles[i],Mats.Lit(ArtDirection.Hex(colors[i])));
+                    // Mesh owns the uploaded data; release the temporary CPU lists per part.
+                    pair.Value.Vertices[i]=null;
+                    pair.Value.Triangles[i]=null;
+                    ReportBuildProgress(.69f+.20f*++meshPartsDone/Mathf.Max(1,meshPartsTotal));
+                    if(Time.realtimeSinceStartup>=deadline)
+                    { yield return null;deadline=Time.realtimeSinceStartup+.016f; }
+                }
+            }
+        }
+        private static float SegmentDistanceSquared(Vector3 p,Vector3 a,Vector3 b)
+        {
+            var d=b-a;
+            return (p-a-d*Mathf.Clamp01(Vector3.Dot(p-a,d)/Mathf.Max(.0001f,d.sqrMagnitude))).sqrMagnitude;
+        }
+        // Each query visits only geometry whose expanded bounds intersect its cell.
+        private sealed class ForestSpatialIndex<T>
+        {
+            private const float CellSize=64;
+            private readonly Dictionary<Vector2Int,List<T>> _cells=new Dictionary<Vector2Int,List<T>>();
+            public void Add(Rect bounds,T item)
+            {
+                for(int z=Mathf.FloorToInt(bounds.yMin/CellSize);z<=Mathf.FloorToInt(bounds.yMax/CellSize);z++)
+                    for(int x=Mathf.FloorToInt(bounds.xMin/CellSize);x<=Mathf.FloorToInt(bounds.xMax/CellSize);x++)
+                    {
+                        var key=new Vector2Int(x,z);
+                        if(!_cells.TryGetValue(key,out var items))_cells.Add(key,items=new List<T>());
+                        items.Add(item);
+                    }
+            }
+            public List<T> At(Vector3 p)
+            {
+                _cells.TryGetValue(new Vector2Int(Mathf.FloorToInt(p.x/CellSize),Mathf.FloorToInt(p.z/CellSize)),out var items);
+                return items;
+            }
+        }
+        private sealed class ForestTreeTemplate
+        {
+            private readonly List<Vector3>[] _vertices={new List<Vector3>(),new List<Vector3>(),new List<Vector3>()};
+            private readonly List<int>[] _triangles={new List<int>(),new List<int>(),new List<int>()};
+            public ForestTreeTemplate(float height,bool conifer,int seed)
+            {
+                CityVegetation.AppendTree(_vertices[0],_triangles[0],_vertices[1],_triangles[1],
+                    _vertices[2],_triangles[2],Vector3.zero,height,conifer,seed,true);
+            }
+            public Mesh[] ExportMeshes()=>new[]{ForestTemplateMesh(_vertices[0],_triangles[0]),
+                ForestTemplateMesh(_vertices[1],_triangles[1]),ForestTemplateMesh(_vertices[2],_triangles[2])};
+            public void Append(List<Vector3> v,List<int> t,List<Vector3> tips,List<int> tipIndices,
+                List<Vector3> trunks,List<int> trunkIndices,Vector3 position)
+            {
+                Copy(0,v,t,position);Copy(1,tips,tipIndices,position);Copy(2,trunks,trunkIndices,position);
+            }
+            private void Copy(int part,List<Vector3> vertices,List<int> triangles,Vector3 position)
+            {
+                int offset=vertices.Count;
+                foreach(var vertex in _vertices[part])vertices.Add(vertex+position);
+                foreach(int index in _triangles[part])triangles.Add(offset+index);
+            }
         }
         private sealed class ForestChunk
         {
@@ -358,7 +485,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(gate,"BridgeSign",new Vector3(0,3.4f,0),new Vector3(10,1.5f,.3f),Mats.Lit(ArtDirection.Ink));
                 Prims.SignText(gate,bridge.name+" · 暂未开放",new Vector3(0,3.4f,-.18f),9.5f,1.2f,ArtDirection.Cream);
             }
-            StaticBatchingUtility.Combine(root.gameObject);
+            BatchStatic(root.gameObject);
         }
 
         private sealed class BridgeMesh
@@ -485,7 +612,7 @@ namespace PCShopSell.Game.Runtime
             }
             foreach(var n in _city.Map.Nodes.Where(n=>n.Id.StartsWith("lake_park_")&&StableCityHash(n.Id)%5==0 && BuildsLakeSceneryAt(LakeNode(n.Id))))
             {Vector3 p=LakeNode(n.Id);LakeLamp(detail,p+new Vector3(7,0,0));}
-            StaticBatchingUtility.Combine(detail.gameObject);
+            BatchStatic(detail.gameObject);
         }
         private void BuildLakeIslands(Transform root)
         {
@@ -511,7 +638,7 @@ namespace PCShopSell.Game.Runtime
                     CityVegetation.Build(tree,Vector3.zero,i+8);
                 }
             }
-            StaticBatchingUtility.Combine(islands.gameObject);
+            BatchStatic(islands.gameObject);
         }
         private void BuildLakeCourtyards(Transform parent)
         {
@@ -574,9 +701,9 @@ namespace PCShopSell.Game.Runtime
                 }
                 index++;
             }
-            StaticBatchingUtility.Combine(gardens.gameObject);
+            BatchStatic(gardens.gameObject);
         }
-        private static void BuildLakeExhibitionHall(Transform parent)
+        private void BuildLakeExhibitionHall(Transform parent)
         {
             // Landmark backdrop for the existing convention district, not another gameplay shop.
             var root=new GameObject("ConventionDistrictExhibitionHall").transform;root.SetParent(parent,false);root.localPosition=new Vector3(525,0,310);
@@ -594,7 +721,7 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root,"EntranceCanopy",new Vector3(0,5,-2),new Vector3(20,.4f,8),white);
             Prims.SignText(root,"会展中心",new Vector3(0,8,1.4f),18,2,ArtDirection.Cream);
             foreach(int side in new[]{-1,1})for(int i=0;i<4;i++)CityVegetation.Build(root,new Vector3(side*29,0,6+i*10),i);
-            StaticBatchingUtility.Combine(root.gameObject);
+            BatchStatic(root.gameObject);
         }
     }
     // Runtime-created meshes/materials must leave with the scene when a save is reloaded.

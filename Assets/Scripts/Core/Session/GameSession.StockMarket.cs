@@ -36,7 +36,7 @@ namespace PCShopSell.Core.Session
         private const double LaterStockSentimentMultiplier = 4;
         private const double EarlyStockAnnouncementMultiplier = 1.5;
         private const double LaterStockAnnouncementMultiplier = 2.25;
-        public const int StockLotSize = 100;
+        public const int StockLotSize = 1;
         public const int StockOrderLimit = 1_000_000;
         public const double StockBorrowDailyRate = .0003;
         public const double StockMaintenanceRatio = 1.3;
@@ -326,12 +326,14 @@ namespace PCShopSell.Core.Session
             if(e.ShortUnits<=0)return;
             if(StockMarginRatio(e.Id)<=StockMaintenanceRatio)CloseStockShort(e,e.ShortUnits,true,minute);
         }
+        public string SecuritiesAccessBlocker => AtBank ? BankBlocker() : AppBlocker(PhoneApps.Securities);
+
         public string StockTradeBlocker(string id,long units,string action) =>
             StockTradeBlocker(id,units,action,checkCash:true);
 
         private string StockTradeBlocker(string id,long units,string action,bool checkCash)
         {
-            string app=AppBlocker(PhoneApps.Securities);if(app!=null)return app;
+            string app=SecuritiesAccessBlocker;if(app!=null)return app;
             var e=StockState(id);
             if(id!="hardware"&&e==null)return "没有这只股票";
             if(IsGameOver)return "当前不能交易";
@@ -339,11 +341,6 @@ namespace PCShopSell.Core.Session
             if(units<=0||units>StockOrderLimit)return "数量须为1—1,000,000的整数";
             if(action!="buy"&&action!="sell"&&action!="short"&&action!="cover")return "未知交易类型";
             if(id=="hardware"&&action=="buy")return "硬件景气指数仅供查看，已有持仓可以卖出";
-            // Existing positions can contain odd lots. Allow closing the entire position.
-            if (e != null && units % StockLotSize != 0
-                && !(action == "sell" && units == e.Units)
-                && !(action == "cover" && units == e.ShortUnits))
-                return "股票每手100股，请按整手下单";
             if(units>StockAvailable(id))return "本次报价还可成交"+StockAvailable(id)+"股，请减少数量或等待下一次报价";
             if(action=="short"||action=="cover")
             {
@@ -496,7 +493,7 @@ namespace PCShopSell.Core.Session
         public bool AddStockShortMargin(string id,Money amount)
         {
             var e=StockState(id);if(e==null||e.ShortUnits<=0||!amount.IsPositive||IsGameOver)return false;
-            string blocker=AppBlocker(PhoneApps.Securities);if(blocker!=null)return Fail(blocker);
+            string blocker=SecuritiesAccessBlocker;if(blocker!=null)return Fail(blocker);
             string key=StockEffect(id,"add-margin",Clock.Now.TotalMinutes);
             if(!Ledger.TryDebit(Clock.Today,"补充做空保证金",amount,StockName(id),new LedgerAttribution(LedgerBusinessKind.InternalTransfer,propertyId:id,sourceEventId:key)))return Fail("可用现金不足。");
             e.ShortMarginCents+=amount.Cents;e.ShortCollateralCents+=amount.Cents;_cityAssetEffects.Add(key);return true;

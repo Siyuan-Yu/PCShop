@@ -21,6 +21,7 @@ public static class WindowsPlayerBuild
             PlayerSettings.defaultIsNativeResolution=false;
             PlayerSettings.fullScreenMode=FullScreenMode.Windowed;
             PlayerSettings.resizableWindow=true;
+            CityMapBaker.SelectEdition(false);
             var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes=new[]{"Assets/Scenes/Main.unity"},locationPathName=output,

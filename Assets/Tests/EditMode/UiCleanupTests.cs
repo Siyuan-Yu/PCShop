@@ -159,7 +159,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void CompactHudFitsTwoRowsAndPriceButtonSharesItsHotkey()
+        public void HudUsesOneFunctionRowAndKeepsSystemButtonsAboveIt()
         {
             using var rig = new Rig();
             var top = (RectTransform)rig.Components<Transform>().Single(t => t.name == "TopBar");
@@ -168,18 +168,17 @@ namespace PCShopSell.Tests
             canvas.renderMode = RenderMode.WorldSpace;
             var viewport = (RectTransform)canvas.transform;
             var row = (RectTransform)top.Find("Row");
-            var shortcuts = (RectTransform)row.Find("HudShortcuts");
-            var daily = (RectTransform)shortcuts.Find("HudShortcutRows/HudDailyShortcuts");
-            var business = (RectTransform)shortcuts.Find("HudShortcutRows/HudBusinessShortcuts");
-            var purchase = (RectTransform)rig.Button("HudProcurement").transform;
+            var shortcuts = (RectTransform)rig.Components<Transform>().Single(t => t.name == "HudFunctionBar");
+            shortcuts.gameObject.SetActive(true);
+            var functions = (RectTransform)rig.Button("HudManagement").transform.parent;
             var price = (RectTransform)rig.Button("HudPrices").transform;
             var menu = (RectTransform)rig.Button("HudMenu").transform;
             var timeControls = (RectTransform)row.Find("HudTimeControls");
             var speeds = TimeController.Speeds.Select(speed => rig.Button("HudSpeed_" + speed)).ToArray();
             var pause = rig.Button("HudPauseTime");
-            Assert.AreSame(business, price.parent);
-            Assert.AreEqual(purchase.GetSiblingIndex() + 1, price.GetSiblingIndex());
-            Assert.AreEqual("物价 I", price.GetComponentInChildren<Text>().text);
+            Assert.AreSame(functions, price.parent);
+            Assert.AreSame(row, menu.parent);
+            Assert.AreEqual("物价", price.GetComponentInChildren<Text>().text);
             Assert.AreEqual(Ui.ButtonHot, rig.Button("ShortcutGo_0").image.color);
 
             speeds[0].onClick.Invoke();
@@ -208,15 +207,14 @@ namespace PCShopSell.Tests
                 rig.Call("FitHudTopRow");
                 LayoutRebuilder.ForceRebuildLayoutImmediate(row);
                 Assert.AreEqual(64, top.rect.height, .1);
-                Rect upper = Bounds(daily), lower = Bounds(business), menuRect = Bounds(menu);
-                Assert.Greater(upper.yMin, lower.yMax);
-                Assert.AreEqual(upper.yMax, menuRect.yMax, .1);
-                Assert.AreEqual(lower.yMin, menuRect.yMin, .1);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(shortcuts);
+                Rect menuRect = Bounds(menu);
                 Assert.LessOrEqual(menuRect.xMax, top.rect.xMax);
                 Assert.That(menuRect.yMin, Is.GreaterThanOrEqualTo(top.rect.yMin));
                 Assert.That(menuRect.yMax, Is.LessThanOrEqualTo(top.rect.yMax));
-                Assert.That(Bounds(price).width, Is.GreaterThan(0));
-                if (width == 1920) Assert.AreEqual(.365, Bounds(shortcuts).width / width, .005);
+                Assert.That(Bounds(price).yMax, Is.LessThan(top.rect.yMin));
+                foreach (Button button in functions.GetComponentsInChildren<Button>())
+                    Assert.AreEqual(Bounds(price).center.y, Bounds((RectTransform)button.transform).center.y, .1);
 
                 var firstSpeedRect = (RectTransform)speeds[0].transform;
                 foreach (var button in speeds)
@@ -497,7 +495,7 @@ namespace PCShopSell.Tests
                 else
                 {
                     var racing = r.Button("HudRacing");
-                    Assert.AreEqual("赛车 T", racing.GetComponentInChildren<Text>().text);
+                    Assert.AreEqual("赛车", racing.GetComponentInChildren<Text>().text);
                     Assert.NotNull(racing.GetComponentInChildren<HorizontalLayoutGroup>().transform.Find("NavigationIcon").GetComponent<Image>().sprite);
                     Assert.True(r.Ui.TryHotkey(KeyCode.T));
                     Assert.True(r.Components<Transform>().Any(t => t.name == "Window_湖区赛车"));
@@ -657,11 +655,11 @@ namespace PCShopSell.Tests
                 var cash = r.S.Ledger.Balance;
 
                 Assert.False(r.Button("StockDraftMinus_city_chip").interactable);
-                foreach (var lots in new[] { 5, 25, 100, 1 })
+                foreach (var lots in new[] { 5, 25, 100, 200, 500, 1 })
                 {
                     var cycle = r.Button("StockLotCycle");
                     cycle.onClick.Invoke();
-                    Assert.AreEqual($"×{lots} 手", cycle.GetComponentInChildren<Text>().text);
+                    Assert.AreEqual($"×{lots} 股", cycle.GetComponentInChildren<Text>().text);
                     r.Button("StockDraftPlus_city_chip").onClick.Invoke();
                     var draft = r.Components<Text>().Single(t => t.name == "StockDraft_city_chip");
                     Assert.AreEqual($"+{lots * GameSession.StockLotSize:N0} 股", draft.text);
@@ -673,7 +671,7 @@ namespace PCShopSell.Tests
                 r.Button("StockChartSeries_city_chip").onClick.Invoke();
                 Assert.That(r.Button("StockChartSeries_city_chip").transform.Find("SeriesHidden"), Is.Not.Null);
                 r.Button("StockPage_Exchange").onClick.Invoke();
-                Assert.That(r.Components<Text>().Single(t => t.name == "StockDraft_city_chip").text, Is.EqualTo("+100 股"));
+                Assert.That(r.Components<Text>().Single(t => t.name == "StockDraft_city_chip").text, Is.EqualTo("+1 股"));
                 Assert.AreEqual(cash, r.S.Ledger.Balance);
                 r.Button("StockBatchExecute").onClick.Invoke();
                 StringAssert.Contains("成交会动用预留资金", r.Text);
