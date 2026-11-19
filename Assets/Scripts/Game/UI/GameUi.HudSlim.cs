@@ -14,10 +14,13 @@ namespace PCShopSell.Game.UI
         private RectTransform _hudFunctionBar;
         private Button _hudFoldButton;
         private bool _hudFunctionsCollapsed;
-        private float HudFunctionOffset => _hudFunctionsCollapsed ? 0 : 54;
+        private bool HudFunctionsVisible => !_hudFunctionsCollapsed
+            || (S?.HasSmartphone == true && S.SecuritiesTutorialPaused && !AnyModalOpen);
+        private float HudFunctionOffset => HudFunctionsVisible ? 54 : 0;
         private float _appliedHudFunctionOffset = -1;
         private RectTransform _appliedShopDock, _appliedHomeDock;
         private Button _brandButton;
+        private Button _stockMarketButton;
         private float _fittedHudWidth;
         private Button _pauseButton;
         private Text _pauseLabel;
@@ -58,10 +61,11 @@ namespace PCShopSell.Game.UI
 
         private void RefreshHudTimeControls()
         {
-            bool paused = !S.Time.IsRunning || S.OpeningClockFrozen || S.ManualActivityClockPaused;
+            bool tutorialPaused = S.OpeningClockFrozen || S.RequiredTutorialPaused;
+            bool paused = !S.Time.IsRunning || tutorialPaused || S.ManualActivityClockPaused;
             Ui.SetButtonFill(_pauseButton, paused ? Ui.FlatRow : Ui.ButtonBg);
             _pauseLabel.text = S.ManualActivityClockPaused ? "活动暂停" : S.Time.IsHeld ? "窗口暂停"
-                : S.Time.IsUserPaused ? "继续" : S.OpeningClockFrozen ? "教学暂停" : "暂停";
+                : tutorialPaused ? "教学暂停" : S.Time.IsUserPaused ? "继续" : "暂停";
             foreach (var (button, speed) in _speedButtons)
                 Ui.SetButtonFill(button, S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg);
         }
@@ -92,11 +96,18 @@ namespace PCShopSell.Game.UI
             HudPanelButton(row, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
             HudPanelButton(row, "经营", KeyCode.H, OpenEmployeesPanel, "各门店的员工、岗位、排班、采购与补货。").name = "HudManagement";
             HudPanelButton(row, "物价", KeyCode.I, OpenMarketPanel, "查看本期物价、历史涨跌和报价走势。").name = "HudPrices";
+            _stockMarketButton = Ui.Size(Ui.Button(row, "股市", () =>
+            {
+                if (S?.HasSmartphone == true) OpenCityInvestments();
+            }, 20, interactable: S?.HasSmartphone == true), 0, -1, 1);
+            _stockMarketButton.name = "HudStockMarket";
+            _stockMarketButton.Tip(() => S?.HasSmartphone == true ? "打开手机里的「证券」。" : "购买智能手机后可用。");
+            Ui.HudNavigationArt(_stockMarketButton, "股市", false);
             _brandButton = HudPanelButton(row, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
             _brandButton.name = "HudBrand";
             if (!GameSession.FirstChapterTrial)
                 HudPanelButton(row, "赛车", KeyCode.T, OpenRacingDestinations, "赛场开放条件与比赛安排。").name = "HudRacing";
-            _hudFunctionBar.gameObject.SetActive(!_hudFunctionsCollapsed);
+            _hudFunctionBar.gameObject.SetActive(HudFunctionsVisible);
         }
 
         private void ToggleHudFunctions()
@@ -113,8 +124,8 @@ namespace PCShopSell.Game.UI
             _appliedHudFunctionOffset = HudFunctionOffset;
             _appliedShopDock = _dock;
             _appliedHomeDock = _homeDock;
-            _hudFunctionBar.gameObject.SetActive(!_hudFunctionsCollapsed);
-            _hudFoldButton.GetComponentInChildren<Text>().text = _hudFunctionsCollapsed ? "展开功能栏 ▾" : "收起功能栏 ▴";
+            _hudFunctionBar.gameObject.SetActive(HudFunctionsVisible);
+            _hudFoldButton.GetComponentInChildren<Text>().text = HudFunctionsVisible ? "收起功能栏 ▴" : "展开功能栏 ▾";
             float shift = HudFunctionOffset;
             if (_questPanel != null)
             {

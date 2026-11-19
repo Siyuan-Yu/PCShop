@@ -56,11 +56,15 @@ namespace PCShopSell.Core.Session
         private static bool WeeklyRentDue(int day, int signedDay) =>
             day > signedDay && (day - signedDay) % GameDate.DaysPerWeek == 0;
 
+        private static int SundayOnOrAfter(int day) =>
+            day + ((int)GameWeekday.Sunday - day % GameDate.DaysPerWeek);
+
         public int? NextResidentialRentDay(Place place)
         {
             if (!HasResidentialLease(place)) return null;
-            int signed = ResidentialLeaseSignedDay(place);
-            return signed + ((Clock.Today.TotalDays - signed) / GameDate.DaysPerWeek + 1) * GameDate.DaysPerWeek;
+            int day = SundayOnOrAfter(Math.Max(Clock.Today.TotalDays + 1, ResidentialLeaseSignedDay(place) + GameDate.DaysPerWeek));
+            while (!ResidentialRentDue(place, day)) day += GameDate.DaysPerWeek;
+            return day;
         }
 
         public bool CanSleepAt(Place place)
@@ -100,7 +104,7 @@ namespace PCShopSell.Core.Session
             var attribution = new LedgerAttribution(LedgerBusinessKind.Personal, propertyId: place.Id, transactionKind: "住宅租金");
             if (!Ledger.TryDebit(Clock.Today, "房租", rent, place.Name + "首周租金", attribution)) return false;
             _additionalResidentialLeases.Add(place.Id, (rent, day));
-            Say($"已租下{place.Name}，可随时前往休息。");
+            Say($"已租下{place.Name}，可随时前往休息。首周结束后每周日扣租。");
             return true;
         }
 
@@ -160,21 +164,41 @@ namespace PCShopSell.Core.Session
             {
                 var rent = SignedResidentialRent(place);
                 var attribution = ResidentialRentAttribution(place.Id, today.TotalDays);
-                if (!rent.IsPositive || Ledger.HasSource(attribution.SourceEventId)) continue;
+                if (!rent.IsPositive || Ledger.HasSource(attribution.SourceEventId)
+                    || _eventBills.Any(b => b.Id == attribution.SourceEventId)) continue;
                 string name = place == Home ? HomeTitle : place.Name;
                 var paid = ChargeRecordedBill("rent-home", place.Id, ResidentialLeaseSignedDay(place), attribution.SourceEventId, rent, "房租", name + "周租", attribution);
                 total += paid;
                 charges.Add($"{name} {paid}");
             }
-            if (charges.Count > 0) Popup?.Invoke("住宅周租已扣款", string.Join("\n", charges) + $"\n合计 {total}");
+            if (charges.Count > 0) Popup?.Invoke("周日住宅租金已扣款", string.Join("\n", charges) + $"\n合计 {total}");
         }
 
         private IEnumerable<Place> ResidentialRentsDue(int day) =>
-            RentedResidences.Where(place => WeeklyRentDue(day, ResidentialLeaseSignedDay(place)));
+            new GameDate(day).Weekday == GameWeekday.Sunday
+                ? RentedResidences.Where(place => ResidentialRentDue(place, day))
+                : Enumerable.Empty<Place>();
+
+        private bool ResidentialRentDue(Place place, int sunday)
+        {
+            int signedDay = ResidentialLeaseSignedDay(place);
+            int coveredSince = sunday - GameDate.DaysPerWeek;
+            if (signedDay > coveredSince) return false;
+
+            // A bill paid on the previous schedule still covers its full week.
+            if (_eventBills.Any(b => b.Kind == "rent-home" && b.PropertyId == place.Id
+                && b.SignedDay == signedDay && b.Day > coveredSince && b.Day < sunday))
+                return false;
+            for (int day = coveredSince + 1; day < sunday; day++)
+                if (Ledger.HasSource(ResidentialRentSource(place.Id, day))) return false;
+            return true;
+        }
+
+        private static string ResidentialRentSource(string placeId, int day) => "residential:" + placeId + ":rent:" + day;
 
         private static LedgerAttribution ResidentialRentAttribution(string placeId, int day) =>
             new LedgerAttribution(LedgerBusinessKind.Personal, propertyId: placeId,
-                sourceEventId: "residential:" + placeId + ":rent:" + day, transactionKind: "住宅租金");
+                sourceEventId: ResidentialRentSource(placeId, day), transactionKind: "住宅租金");
 
         private SaveResidentialLease[] SaveResidentialLeases() => _additionalResidentialLeases
             .Select(lease => new SaveResidentialLease { placeId = lease.Key, weeklyRentCents = lease.Value.rent.Cents, signedDay = lease.Value.signedDay }).ToArray();
@@ -245,7 +269,8 @@ namespace PCShopSell.Core.Session
                 HomePriceCents=owned.PriceCents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
                 _properties.Remove(owned);
             }
-            Say("已搬入"+HomeTitle+"，家具、食品和储物保留。");return true;
+            Say("已搬入"+HomeTitle+"，家具、食品和储物保留。" +
+                (owned == null ? "首周结束后每周日扣租。" : ""));return true;
         }
         public bool BuyResidentialHome(string id,bool mortgage,bool selfUse,bool keepCurrentResidence=false)
         {

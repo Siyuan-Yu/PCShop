@@ -185,7 +185,7 @@ namespace PCShopSell.Core.Session
             }
             if (!Time.IsRunning) return 0;
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
-            if (OpeningClockFrozen) return 0;
+            if (OpeningClockFrozen || RequiredTutorialPaused) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
                 && (TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace()
                     || TryShowRacingBatchFollowup() || TryOfferLeisureInvitation() || TryRollDeferredDailyEvent())) return 0;
@@ -513,7 +513,7 @@ namespace PCShopSell.Core.Session
             if (r.Lost > 0)
             {
                 var why = new System.Collections.Generic.List<string>();
-                if (r.LostTooExpensive > 0) why.Add($"嫌贵 {r.LostTooExpensive}");
+                if (r.LostTooExpensive > 0) why.Add($"价格或预算 {r.LostTooExpensive}");
                 if (r.LostImpatient > 0) why.Add($"等太久 {r.LostImpatient}");
                 if (r.LostNoStock > 0) why.Add($"没货 {r.LostNoStock}");
                 if (r.LostNoCash > 0) why.Add($"没带现金 {r.LostNoCash}");
@@ -523,7 +523,7 @@ namespace PCShopSell.Core.Session
             s += "。";
             if (r.LostNoStock >= 1) s += "有人因为缺货空手走了，该进货了。";
             else if (r.LostImpatient >= 2) s += "排队的人等烦了，记得及时结账或者雇个人。";
-            else if (r.LostTooExpensive >= 2 && r.LostTooExpensive >= r.Paid) s += "嫌贵的人不少，可以降一点加价。";
+            else if (r.LostTooExpensive >= 2 && r.LostTooExpensive >= r.Paid) s += "不少顾客因价格或预算离开，可以调低售价。";
             return s;
         }
 

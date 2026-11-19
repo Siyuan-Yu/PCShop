@@ -36,7 +36,15 @@ namespace PCShopSell.Game.UI
                 foreach (var move in moves)
                 {
                     var row = Ui.Row(w.Content, 34, 10);
-                    Ui.Size(Ui.Label(row, move.Name, 18), -1, -1, 1);
+                    int seriesIndex = Array.FindIndex(ModelProducts.SeriesIds,
+                        series => GameSession.ModelPriceReportName(series) == move.Name);
+                    if (seriesIndex >= 0)
+                        Ui.Size(Ui.Button(row, move.Name + "  ›", () =>
+                        {
+                            w.Close();
+                            OpenMarketView(0, ModelPriceGroupStart + seriesIndex, day.TotalDays);
+                        }, 16), 0, 34, 1);
+                    else Ui.Size(Ui.Label(row, move.Name, 18), -1, -1, 1);
                     var label = Ui.Label(row, PriceMovement(move.Change * 100),
                         19, TextAnchor.MiddleRight, Ui.ChangeColor(move.Change));
                     label.fontStyle = FontStyle.Bold;

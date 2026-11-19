@@ -47,6 +47,15 @@ namespace PCShopSell.Game.UI
                     Line(14, 17, 19, 14);
                     Line(19, 14, 27, 24);
                 }
+                else if (title == "股市")
+                {
+                    Line(7, 5, 7, 20);
+                    Box(4, 9, 6, 7);
+                    Line(16, 9, 16, 24);
+                    Box(13, 13, 6, 7);
+                    Line(25, 14, 25, 28);
+                    Box(22, 17, 6, 8);
+                }
                 else {Box(6,4,20,23);Line(10,29,10,24);Line(22,29,22,24);Line(10,18,22,18);Line(10,12,22,12);}
                 tex.SetPixels32(pixels);
                 tex.Apply();

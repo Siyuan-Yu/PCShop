@@ -7,10 +7,15 @@ namespace PCShopSell.Game.UI
     {
         public void OpenMarketPanel() => OpenMarketView(0);
 
-        private void OpenMarketView(int tab)
+        private void OpenMarketView(int tab, int modelPriceGroup = -1, int? alertDay = null)
         {
             S.ReadNews();
-            var prices = new ReportPriceViewState();
+            var prices = new ReportPriceViewState
+            {
+                Filter = modelPriceGroup >= ModelPriceGroupStart ? ModelPriceFilter : 0,
+                Selected = modelPriceGroup,
+                AlertDay = alertDay
+            };
             SwitchTab(tab);
 
             void SwitchTab(int next)

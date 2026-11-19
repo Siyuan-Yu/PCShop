@@ -14,6 +14,7 @@ namespace PCShopSell.Game.UI
     {
         private enum BankPage { Transfers, Borrow, Loans }
         private Window _bankWindow;
+        private Button _bankSecuritiesTab;
         private BankDeskDraft _bankDraft;
 
         private sealed class BankDeskDraft
@@ -90,7 +91,8 @@ namespace PCShopSell.Game.UI
             Tab(BankPage.Transfers, "存取款", "BankTransfersTab");
             Tab(BankPage.Borrow, "借款", "BankBorrowTab");
             Tab(BankPage.Loans, "我的贷款", "BankLoansTab");
-            Ui.Tab(tabs, "证券交易", OpenBankSecurities, false).name = "BankSecuritiesTab";
+            _bankSecuritiesTab = Ui.Tab(tabs, "证券交易", OpenBankSecurities, false);
+            _bankSecuritiesTab.name = "BankSecuritiesTab";
             switch (draft.Page)
             {
                 case BankPage.Borrow: BuildBankBorrow(w, draft); break;

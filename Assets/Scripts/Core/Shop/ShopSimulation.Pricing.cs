@@ -1,11 +1,45 @@
 ﻿using System;
 using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Shop
 {
     public sealed partial class ShopSimulation
     {
+        private static readonly long[] ModelRetailBudgets = { 8000, 15000, 30000, 60000 };
+        private static readonly (int Share, long Cents)[] ClothingRetailBudgets =
+        {
+            (65, 60000), (25, 180000), (9, 600000), (1, 5000000)
+        };
+
+        private static uint RetailBudgetHash(string identity)
+        {
+            uint hash = 2166136261;
+            foreach (char c in identity) hash = unchecked((hash ^ c) * 16777619);
+            return hash;
+        }
+
+        internal static long ModelRetailBudgetFor(string identity) =>
+            ModelRetailBudgets[RetailBudgetHash(identity ?? "visitor") % (uint)ModelRetailBudgets.Length];
+
+        private static long ClothingRetailBudgetFor(string identity)
+        {
+            int segment = (int)(RetailBudgetHash(identity) % 100);
+            foreach (var (share, cents) in ClothingRetailBudgets)
+            {
+                if (segment < share) return cents;
+                segment -= share;
+            }
+            return ClothingRetailBudgets[ClothingRetailBudgets.Length - 1].Cents;
+        }
+
+        private double ModelBudgetFactor(string id) =>
+            IndustryCycles.GoodsFactor(Gifts.Get(id), _clock.Today.TotalDays, _market.CommoditySeed);
+
+        private static bool RetailBudgetCovers(Money price, long budgetCents, double factor = 1) =>
+            price.Cents <= budgetCents * factor;
+
         private readonly System.Collections.Generic.Dictionary<string,long> _fixedSalePrices=new System.Collections.Generic.Dictionary<string,long>();
         public System.Collections.Generic.IReadOnlyDictionary<string,long> FixedSalePrices=>_fixedSalePrices;
         public void RestoreFixedSalePrice(string key, long price)
@@ -45,10 +79,37 @@ namespace PCShopSell.Core.Shop
             return basis > 0 ? PartPurchaseChance(yuan / basis,boxed) : 0;
         }
 
-        public double GoodsPurchaseIntentAtPrice(string id, long yuan)
+        public double GoodsPurchaseIntentAtPrice(string id, long yuan) =>
+            GoodsPurchaseIntentAtPrice(id, Money.FromYuan(yuan));
+
+        private double GoodsPurchaseIntentAtPrice(string id, Money price)
         {
             double basis = GoodsReferencePrice(id);
-            return basis > 0 ? GoodsPurchaseChance(id,yuan / basis) : 0;
+            return basis > 0 ? GoodsPurchaseChance(id, price.Cents / 100.0 / basis) : 0;
+        }
+
+        public double GoodsPurchaseEstimateAtPrice(string id, long yuan) =>
+            GoodsPurchaseEstimateAtPrice(id, Money.FromYuan(yuan));
+
+        public double GoodsPurchaseEstimateAtPrice(string id, Money price)
+        {
+            double intent = GoodsPurchaseIntentAtPrice(id, price);
+            if (ModelProducts.IsModel(id))
+            {
+                double factor = ModelBudgetFactor(id);
+                int affordable = 0;
+                foreach (long budget in ModelRetailBudgets)
+                    if (RetailBudgetCovers(price, budget, factor)) affordable++;
+                return intent * affordable / ModelRetailBudgets.Length;
+            }
+            if (ClothingProducts.IsClothing(id))
+            {
+                int affordable = 0;
+                foreach (var (share, cents) in ClothingRetailBudgets)
+                    if (RetailBudgetCovers(price, cents)) affordable += share;
+                return intent * affordable / 100;
+            }
+            return intent;
         }
 
         public bool SetPartSalePrice(PartDef part, bool boxed, long yuan)

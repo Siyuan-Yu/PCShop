@@ -34,8 +34,10 @@ namespace PCShopSell.Game.UI
             return label;
         }
 
-        private static string ProductLabel(string name, double kg, string detail = null, string unit = "每件") =>
+        private static string ProductLabel(string name, double kg, string detail = null, string unit = "每件",
+            string weightSuffix = null) =>
             name + "\n<size=13><color=#655E52>" + unit + " " + kg.ToString("0.###") + " 千克</color></size>"
+            + weightSuffix
             + (string.IsNullOrEmpty(detail) ? "" : "\n<size=13><color=#655E52>" + detail + "</color></size>");
     }
 }

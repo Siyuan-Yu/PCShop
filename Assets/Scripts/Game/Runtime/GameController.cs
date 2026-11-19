@@ -479,7 +479,7 @@ namespace PCShopSell.Game
             HandleKeys();
             HandleMovement(dt);
             UpdatePlacement();
-            if (!Ui.AnyModalOpen && !Placing && !PetFocusActive && !Session.OpeningAgencyGuidePending) HandleClicks();
+            if (!Ui.AnyModalOpen && !Placing && !PetFocusActive && !Session.OpeningAgencyGuidePending && !Session.RequiredTutorialPaused) HandleClicks();
 
             using (SimulationMarker.Auto()) Session.Tick(dt);
             if (_wasPlayerWorking != Session.IsWorking) { _wasPlayerWorking = Session.IsWorking; _autosaveDue = true; }
@@ -665,6 +665,13 @@ namespace PCShopSell.Game
                 if (Input.GetKeyDown(KeyCode.Escape)) Ui.CloseTopWindow();
                 return;
             }
+            if (Session.RequiredTutorialPaused)
+            {
+                _orbiting = false;
+                if (Input.GetKeyDown(KeyCode.Escape) && (!Ui.AnyModalOpen || !Ui.RequiredTutorialControlVisible)
+                    && !Ui.CloseTopWindow()) Ui.TryHotkey(KeyCode.Escape);
+                return;
+            }
             if (Session.OpeningAgencyGuidePending)
             {
                 _orbiting = false;
@@ -779,7 +786,7 @@ namespace PCShopSell.Game
         private void ApplyMovement(float dt, float h, float v, bool newMovement)
         {
             if (PetFocusActive || Session.IsWorking || Session.CityActivityExclusive || Ui.AnyModalOpen || Session.IsGameOver
-                || Session.OpeningAgencyGuidePending || Session.Time.IsHeld || Placing ||
+                || Session.OpeningAgencyGuidePending || Session.RequiredTutorialPaused || Session.Time.IsHeld || Placing ||
                 (Session.Time.IsUserPaused && !newMovement) || (h == 0 && v == 0))
             {
                 Session.SetSteer(0, 0);

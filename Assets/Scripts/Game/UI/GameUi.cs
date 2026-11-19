@@ -208,16 +208,23 @@ namespace PCShopSell.Game.UI
             UpdateDisplayPreview();
             UpdateOpeningMealGuide();
             UpdateFirstUseGuide();
-            CheckCookTasting();
+            bool tutorialPaused = S.RequiredTutorialPaused;
+            if (!tutorialPaused) CheckCookTasting();
             if (MainMenuOpen) return;
-            UpdateEventBatch();
-            ShowPendingPropertyContractPopup();
+            if (!tutorialPaused)
+            {
+                UpdateEventBatch();
+                ShowPendingPropertyContractPopup();
+            }
             RefreshOpeningKindChoice();
             UpdateWorkScreen();
             if (S.IsWorking) return;
-            CheckNegativeCashBankReminder();
-            CheckCustomerEventFeedback();
-            CheckEconomicReport();
+            if (!tutorialPaused)
+            {
+                CheckNegativeCashBankReminder();
+                CheckCustomerEventFeedback();
+                CheckEconomicReport();
+            }
             _uiTime += dt;
             _hudRefreshTimer -= dt;
             if (_hudRefreshTimer <= 0 || dt <= 0) { _hudRefreshTimer = .1f; UpdateHud(); }
@@ -307,7 +314,10 @@ namespace PCShopSell.Game.UI
                 var button = Ui.Size(Ui.Button(brow, vehicle.Name, () =>
                 {
                     if (S.SetVehicle(kind) && kind == VehicleKind.EBike && S.Flags.Remove(GameSession.ScooterGuidePending))
+                    {
                         S.Flags.Add(GameSession.ScooterGuideCompleted);
+                        UpdateQuestTracker();
+                    }
                 }, 17), 72);
                 button.Tip(() => VehicleTip(S.CommuteVehicle(kind)));
                 _vehicleButtons.Add((button, kind));
@@ -362,6 +372,7 @@ namespace PCShopSell.Game.UI
                 : noticeTitle;
             UpdateSleepBanner();
             _brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
+            _stockMarketButton.interactable = S.HasSmartphone;
             FitHudTopRow();
             _dateText.text = (S.IsCityLifeTest ? "测试 " : "") +
                 $"<size=15>{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)}</size>\n" +
@@ -987,7 +998,7 @@ namespace PCShopSell.Game.UI
         {
             if (w.TimeStatusText == null) return;
             w.TimeStatusText.text = w.TimeStatusOverride
-                ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
+                ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.RequiredTutorialPaused && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
         }
 
         private static void FitWindowToContent(Window w)

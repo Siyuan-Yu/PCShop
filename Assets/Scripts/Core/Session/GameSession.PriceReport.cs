@@ -37,6 +37,7 @@ namespace PCShopSell.Core.Session
         public static readonly string[] PriceGroups = PartCatalog.Categories.Select(PartCatalog.CategoryName)
             .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅周租", "商铺售价", "商铺周租" }).ToArray();
         public static int PropertyPriceGroupStart => PriceGroups.Length - 4;
+        public static string ModelPriceReportName(string series) => ModelProducts.SeriesName(series) + "（模型行情）";
         private readonly List<PriceDay> _priceDays = new List<PriceDay>();
         public const double MarketPriceAlertThreshold = .05;
         public int MarketPriceAlertDay { get; private set; }
@@ -123,7 +124,7 @@ namespace PCShopSell.Core.Session
 
             // Wholesale and retail prices share the model series multiplier.
             foreach (string series in ModelProducts.SeriesIds)
-                Compare(ModelProducts.SeriesName(series) + "（模型行情）",
+                Compare(ModelPriceReportName(series),
                     IndustryCycles.ModelFactor(series, day - 1, Market.CommoditySeed),
                     IndustryCycles.ModelFactor(series, day, Market.CommoditySeed));
 

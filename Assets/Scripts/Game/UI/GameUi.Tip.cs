@@ -104,6 +104,7 @@ namespace PCShopSell.Game.UI
             if (S == null || S.IsGameOver || S.IsWorking) return false;
             if (AnyModalOpen && (key != KeyCode.B || _backpackWin == null || _backpackWin.Closed)) return false;
             if (!_hudCanvas.gameObject.activeInHierarchy || !_expoHudGate.interactable) return false;
+            if (S.RequiredTutorialPaused && key != KeyCode.Escape) return true;
             if (key == KeyCode.O || key == KeyCode.G)
             {
                 if (S.OpeningAgencyGuidePending) return true;

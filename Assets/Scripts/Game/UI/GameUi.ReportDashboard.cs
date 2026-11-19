@@ -12,7 +12,14 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private sealed class ReportPriceViewState { public int Filter; public int Selected = -1; }
+        private sealed class ReportPriceViewState { public int Filter; public int Selected = -1; public int? AlertDay; }
+        private const int ModelPriceFilter = 4;
+        private static int ModelPriceGroupStart => GameSession.PriceGroups.Length;
+        private static bool IsModelPriceGroup(int group) => group >= ModelPriceGroupStart;
+        private static bool IsPropertyPriceGroup(int group) => group >= GameSession.PropertyPriceGroupStart && !IsModelPriceGroup(group);
+        private static string ModelPriceSeries(int group) => ModelProducts.SeriesIds[group - ModelPriceGroupStart];
+        private static string ReportPriceGroupName(int group) => IsModelPriceGroup(group)
+            ? GameSession.ModelPriceReportName(ModelPriceSeries(group)) : GameSession.PriceGroups[group];
         private static string PriceMovement(double change) => Math.Abs(change) < .005 ? "—"
             : (change > 0 ? "↑ " : "↓ ") + Math.Abs(change).ToString("0.00") + "%";
         private static Color PriceMovementColor(double change) => Ui.ChangeColor(change, .004999999);
@@ -108,44 +115,70 @@ namespace PCShopSell.Game.UI
             ReportText(parent, "现金差额包含进货、资产交易与借还款，不等于经营利润。门店明细保留各项成本分类。", 15, Ui.Dim, 28);
         }
 
-        private static bool ValidPrice(PriceDay day, int group) => day != null && (group != 7 || day.SchemaVersion >= 1);
-        private static double? ComparePrice(PriceDay current, PriceDay baseline, int group)
-            => ValidPrice(current, group) && ValidPrice(baseline, group) ? (current.Prices[group] / baseline.Prices[group] - 1) * 100 : (double?)null;
-        private static string PriceQuote(PriceDay day, int group) => !ValidPrice(day, group) ? "—"
-            : group >= GameSession.PropertyPriceGroupStart ? (day.Prices[group] / 100).ToString("0.00")
-            : "¥" + (day.Prices[group] / 100).ToString("#,0.##");
+        private double? ReportPriceValue(PriceDay day, int group)
+        {
+            if (day == null || (group == 7 && day.SchemaVersion < 1)) return null;
+            // Series indices are reproducible from the day and the saved commodity seed.
+            if (IsModelPriceGroup(group))
+                return IndustryCycles.ModelFactor(ModelPriceSeries(group), day.Day, S.Market.CommoditySeed) * 100;
+            return day.Prices[group] / 100;
+        }
+
+        private double? ComparePrice(PriceDay current, PriceDay baseline, int group)
+        {
+            double? before = ReportPriceValue(baseline, group);
+            return before > 0 ? (ReportPriceValue(current, group) / before - 1) * 100 : null;
+        }
+
+        private string PriceQuote(PriceDay day, int group)
+        {
+            double? value = ReportPriceValue(day, group);
+            if (!value.HasValue) return "—";
+            return IsPropertyPriceGroup(group) || IsModelPriceGroup(group) ? value.Value.ToString("0.00")
+                : "¥" + value.Value.ToString("#,0.##");
+        }
         private void BuildPriceDashboard(Transform parent, int start, int end, ReportPriceViewState state, Action rebuild, bool live)
         {
             var history = S.PriceDays;
-            var current = live ? S.CurrentMarketPriceSnapshot : history.LastOrDefault(d => d.Day >= start && d.Day <= end);
+            var alertSnapshot = live && state.AlertDay.HasValue && state.AlertDay.Value < S.Clock.Today.TotalDays
+                ? history.FirstOrDefault(d => d.Day == state.AlertDay.Value) : null;
+            var current = live ? alertSnapshot ?? S.CurrentMarketPriceSnapshot : history.LastOrDefault(d => d.Day >= start && d.Day <= end);
             if (current == null) { ReportText(parent, "本期暂无价格记录。", 18, Ui.Dim); return; }
             // Do not substitute an arbitrarily old observation for a missing previous close.
             var baseline = history.FirstOrDefault(d => d.Day == (live ? current.Day - 1 : start - 1));
             if (!live && start == 0) baseline = history.FirstOrDefault(d => d.Day == 0);
             var week = history.FirstOrDefault(d => d.Day == current.Day - 7);
-            var groups = Enumerable.Range(0, GameSession.PriceGroups.Length).ToArray();
+            var groups = Enumerable.Range(0, ModelPriceGroupStart + ModelProducts.SeriesIds.Length).ToArray();
             var changes = groups.Select(g => ComparePrice(current, baseline, g)).ToArray();
-            var comparable = groups.Where(g => g < GameSession.PropertyPriceGroupStart && changes[g].HasValue).ToArray();
+            var comparable = groups.Where(g => !IsPropertyPriceGroup(g) && changes[g].HasValue).ToArray();
             int[] up = comparable.Where(g => changes[g] >= .005).OrderByDescending(g => changes[g]).ToArray();
             int[] down = comparable.Where(g => changes[g] <= -.005).OrderBy(g => changes[g]).ToArray();
-            if (live) ReportText(parent, $"实时报价 · {S.Clock.Today}  {S.Clock.Now.Hour:00}:{S.Clock.Now.Minute:00}    |    对比昨日 / 7 日前", 17, Ui.Dim, 32);
+            string dailyChangeLabel = alertSnapshot == null ? "今日变化" : "当日变化";
+            if (alertSnapshot != null)
+            {
+                var date = Ui.Row(parent, 32);
+                Ui.Size(Ui.Label(date, $"异动当日 · {new GameDate(current.Day)}    |    对比前一日 / 7 日前", 17, color: Ui.Dim), 0, 32, 1);
+                Ui.Size(Ui.Button(date, "查看今日", () => { state.AlertDay = null; rebuild(); }, 15), 112, 32);
+            }
+            else if (live) ReportText(parent, $"实时报价 · {S.Clock.Today}  {S.Clock.Now.Hour:00}:{S.Clock.Now.Minute:00}    |    对比昨日 / 7 日前", 17, Ui.Dim, 32);
             var cards = Ui.Row(parent, 106, 8);
-            ReportCard(cards, live ? "今日变化" : "本期变化", $"<color=#{ColorUtility.ToHtmlStringRGB(Ui.Good)}>↑ {up.Length}</color>     <color=#{ColorUtility.ToHtmlStringRGB(Ui.Warn)}>↓ {down.Length}</color>     — {comparable.Length - up.Length - down.Length}",
+            ReportCard(cards, live ? dailyChangeLabel : "本期变化", $"<color=#{ColorUtility.ToHtmlStringRGB(Ui.Good)}>↑ {up.Length}</color>     <color=#{ColorUtility.ToHtmlStringRGB(Ui.Warn)}>↓ {down.Length}</color>     — {comparable.Length - up.Length - down.Length}",
                 comparable.Length == 0 ? "暂无相邻基准日记录" : "同口径品类数量 · 房产单列", Ui.Accent);
             void Extreme(int[] indices, string title, Color tint)
             {
                 int g = indices.FirstOrDefault();
-                ReportCard(cards, title + (indices.Length == 0 ? "" : " · " + GameSession.PriceGroups[g]), indices.Length == 0 ? "—" : PriceMovement(changes[g].Value),
+                ReportCard(cards, title + (indices.Length == 0 ? "" : " · " + ReportPriceGroupName(g)), indices.Length == 0 ? "—" : PriceMovement(changes[g].Value),
                     indices.Length == 0 ? "暂无符合条件的品类" : PriceQuote(baseline, g) + " → " + PriceQuote(current, g), tint);
             }
             Extreme(up, "↑ 最大变化", Ui.Good); Extreme(down, "↓ 最大变化", Ui.Warn);
             ReportText(parent, baseline == null ? "缺少相邻基准日记录，变化显示 —；仍可查看已有报价与历史走势。"
                 : $"对比基准：{new GameDate(baseline.Day)}。点击品类可查看实际报价走势、公开消息和报价口径。", 16, Ui.Accent, 34);
-            var body = Ui.Row(parent, 402, 10);
-            var left = ReportPanel(body, "PriceTable", 402, 1.65f);
-            var right = ReportPanel(body, "PriceDetail", 402);
+            int bodyHeight = live ? 472 : 402;
+            var body = Ui.Row(parent, bodyHeight, 10);
+            var left = ReportPanel(body, "PriceTable", bodyHeight, 1.65f);
+            var right = ReportPanel(body, "PriceDetail", bodyHeight);
             var filters = Ui.Row(left, 32, 4);
-            string[] names = { live ? "今日变化" : "本期变化", "商品与生活", "电脑配件", "房产与租金" };
+            string[] names = { live ? dailyChangeLabel : "本期变化", "商品与生活", "电脑配件", "房产与租金", "模型行情" };
             for (int i = 0; i < names.Length; i++)
             {
                 int f = i;
@@ -153,21 +186,27 @@ namespace PCShopSell.Game.UI
                     Ui.SelectedButton(state.Filter == f)), 0, 32, 1);
             }
             int property = GameSession.PropertyPriceGroupStart;
-            var visible = groups.Where(g => state.Filter == 1 ? g >= 6 && g < property : state.Filter == 2 ? g < 6
-                : state.Filter == 3 ? g >= property : g < property && changes[g].HasValue && Math.Abs(changes[g].Value) >= .005)
+            var visible = groups.Where(g => state.Filter switch
+                {
+                    1 => g >= 6 && g < property,
+                    2 => g < 6,
+                    3 => IsPropertyPriceGroup(g),
+                    ModelPriceFilter => IsModelPriceGroup(g),
+                    _ => !IsPropertyPriceGroup(g) && changes[g].HasValue && Math.Abs(changes[g].Value) >= .005
+                })
                 .OrderByDescending(g => state.Filter == 0 ? Math.Abs(changes[g] ?? 0) : 0).ToArray();
             var header = Ui.Row(left, 28, 4);
             Ui.Size(Ui.Label(header, "品类", 15, color: Ui.Dim), 0, 28, 1);
-            ReportCell(header, "参考均价", 112, Ui.Dim);
-            ReportCell(header, live ? "较昨日" : "较期初", 96, Ui.Dim);
+            ReportCell(header, state.Filter == ModelPriceFilter ? "系列指数" : "参考报价", 112, Ui.Dim);
+            ReportCell(header, live ? alertSnapshot == null ? "较昨日" : "较前一日" : "较期初", 96, Ui.Dim);
             if (live) ReportCell(header, "较 7 日前", 96, Ui.Dim);
             else ReportCell(header, "基准报价", 112, Ui.Dim);
             if (!visible.Contains(state.Selected)) state.Selected = (visible.Length == 0 ? -1 : visible[0]);
-            Transform list = visible.Length > 8 ? Ui.Scroll(left, 277) : left;
+            Transform list = visible.Length > (live ? 10 : 8) ? Ui.Scroll(left, bodyHeight - 94) : left;
             foreach (int g in visible)
             {
                 var row = Ui.Row(list, 32, 4);
-                Ui.Size(Ui.Button(row, GameSession.PriceGroups[g] + "  ›", () => { state.Selected = g; rebuild(); }, 16,
+                Ui.Size(Ui.Button(row, ReportPriceGroupName(g) + "  ›", () => { state.Selected = g; rebuild(); }, 16,
                     Ui.SelectedButton(state.Selected == g)), 0, 32, 1).name = "EconomicPriceGroup_" + g;
                 ReportCell(row, PriceQuote(current, g), 112);
                 ReportCell(row, changes[g].HasValue ? PriceMovement(changes[g].Value) : "—", 96,
@@ -184,25 +223,42 @@ namespace PCShopSell.Game.UI
             int selected = state.Selected;
             if (selected >= 0)
             {
-                bool isProperty = selected >= property;
-                ReportText(right, GameSession.PriceGroups[selected], 21, Ui.Accent, 26);
+                bool isModel = IsModelPriceGroup(selected);
+                string series = isModel ? ModelPriceSeries(selected) : null;
+                ReportText(right, ReportPriceGroupName(selected), 21, Ui.Accent, 26);
                 ReportText(right, PriceQuote(current, selected), 28, Ui.Accent, 30).fontStyle = FontStyle.Bold;
-                ReportText(right, isProperty ? "挂牌指数 · 100 = 基准水平" : "品类参考均价 · 非单件商品成交价", 14, Ui.Dim, 20);
-                var points = history.Where(d => d.Day >= (live ? Math.Max(0, end - 29) : start - 1) && d.Day <= current.Day
-                    && d.Day != current.Day && ValidPrice(d, selected)).Concat(ValidPrice(current, selected) ? new[] { current } : Array.Empty<PriceDay>()).ToArray();
+                ReportText(right, isModel ? "系列价格指数 · 100 = 基准价 · 同系列一起涨跌"
+                    : IsPropertyPriceGroup(selected) ? "挂牌指数 · 100 = 基准水平" : "品类参考均价 · 非单件商品成交价", 14, Ui.Dim, 20);
+                var points = history.Where(d => d.Day >= (live ? Math.Max(0, current.Day - 29) : start - 1) && d.Day <= current.Day
+                    && d.Day != current.Day).Append(current)
+                    .Select(d => (d.Day, Value: ReportPriceValue(d, selected)))
+                    .Where(p => p.Value.HasValue).ToArray();
                 var trend = Ui.Size(Ui.Rect(right, "SelectedPriceTrend"), -1, 94).gameObject.AddComponent<ReportPriceTrendGraphic>();
-                trend.Initialize(points.Select(p => p.Day).ToArray(), points.Select(p => p.Prices[selected] / 100).ToArray());
+                trend.Initialize(points.Select(p => p.Day).ToArray(), points.Select(p => p.Value.Value).ToArray());
                 var news = IndustryCycles.CommodityEventOn(current.Day, S.Market.CommoditySeed);
-                bool relevant = news.IsActive(current.Day) && news.Name == GameSession.PriceGroups[selected];
+                bool relevant = news.IsActive(current.Day) && (isModel ? news.Key == series : news.Name == ReportPriceGroupName(selected));
                 ReportText(right, "相关公开消息", 17, Ui.Accent, 22);
-                ReportText(right, relevant ? news.Headline : "暂无已确认的相关公开消息。", 15, Ui.Dim, 32);
+                ReportText(right, relevant ? news.Headline : isModel ? IndustryCycles.ModelNews(series, current.Day)
+                    : "暂无已确认的相关公开消息。", 15, Ui.Dim, 32);
                 ReportText(right, changes[selected].HasValue ? "基准 " + PriceQuote(baseline, selected) + " → " + PriceQuote(current, selected)
                     + "  " + PriceMovement(changes[selected].Value) : "—  缺少同口径基准报价", 15, Ui.Dim, 24);
+                if (isModel)
+                {
+                    var models = ModelProducts.All.Where(p => p.ModelSeries == series).Select(p => p.Name);
+                    ReportText(right, "系列款式", 17, Ui.Accent, 22);
+                    ReportText(right, string.Join("、", models), 15, Ui.Dim, 46);
+                }
             }
             else ReportText(right, "选择左侧品类查看详情。", 17, Ui.Dim);
             var actions = Ui.Row(parent, 34);
-            Ui.Size(Ui.Label(actions, "房产显示指数；商品显示元。缺少历史或报价口径变化时显示 —。", 14, color: Ui.Dim), 0, 34, 1);
-            Ui.Size(Ui.Button(actions, "查看具体商品", OpenCityProcurement, 15), 132, 32);
+            Ui.Size(Ui.Label(actions, "模型系列与房产显示指数，其他商品显示元。", 14, color: Ui.Dim), 0, 34, 1);
+            if (selected >= 0 && IsModelPriceGroup(selected))
+                Ui.Size(Ui.Button(actions, "查看系列商品", () =>
+                {
+                    _modelSeries = ModelPriceSeries(selected);
+                    OpenCityModelCatalog();
+                }, 15), 132, 32);
+            else Ui.Size(Ui.Button(actions, "查看具体商品", OpenCityProcurement, 15), 132, 32);
             Ui.Size(Ui.Button(actions, "查看我的资产", () => OpenAssetWorkspace(), 15), 132, 32);
         }
     }

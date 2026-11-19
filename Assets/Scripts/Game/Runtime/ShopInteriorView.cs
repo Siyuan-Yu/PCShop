@@ -118,6 +118,7 @@ namespace PCShopSell.Game.Runtime
             {
                 case LeaveReason.Impatient: return "等太久了！";
                 case LeaveReason.TooExpensive: return "太贵了……";
+                case LeaveReason.OverBudget: return "超出预算了……";
                 case LeaveReason.NoStock: return "怎么没货？";
                 case LeaveReason.NoCash: return "没带现金";
                 case LeaveReason.ShopClosed: return "关门了？";

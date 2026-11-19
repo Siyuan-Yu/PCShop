@@ -97,12 +97,14 @@ namespace PCShopSell.Game.UI
         {
             EmployeeRole role = EmployeeRole.Cashier;
             string shopId = S.CurrentShop.Place.Id;
-            OpenWindow("聘用与工作安排 · " + candidate.Name, 900, 650, w =>
+            OpenWindow("聘用与工作安排 · " + candidate.Name, 1040, 680, w =>
             {
-                PersonSummary(w.Content, S.PersonIdOf(candidate), candidate.Name, "日薪 " + candidate.DailyWage);
+                BuildEmployeeWorkHeader(w.Content, candidate);
                 Line(w.Content, S.CandidateWaitText(candidate), 17, Ui.Warn);
-                BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); });
-                BuildRecruitRolePreview(w.Content, candidate, role, S.ShopAt(shopId));
+                var shop = S.ShopAt(shopId);
+                BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); },
+                    venue: S.IsDedicatedVenue(shop?.Place));
+                BuildEmployeeRolePreview(w.Content, candidate, role, shop);
                 BuildEmployeeDestinationChoices(w.Content, role, shopId, target => { shopId = target; w.Rebuild(); });
                 string why = S.RecruitAssignmentBlocker(candidate.Id, shopId, role);
                 if (why != null) Ui.Notice(w.Content, why);
@@ -113,78 +115,82 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        private void BuildEmployeeWorkHeader(Transform parent, Employee employee)
+        {
+            var header = PersonSummary(parent, S.PersonIdOf(employee), employee.Name, "日薪 " + employee.DailyWage);
+            Ui.Size(BuildWorkAttributeRow(header,
+                (employee.Intelligence, GameSession.EmployeeCharm(employee), employee.Dexterity, employee.Stamina)), 600, 48);
+        }
+
         private void BuildEmployeeDestinationChoices(Transform parent, EmployeeRole role, string selected, Action<string> select)
         {
             if (role == EmployeeRole.Unassigned) return;
             var shops = S.MyShops.Select(shop => (shop, reason: S.EmployeeRoleShopBlocker(shop, role)))
                 .OrderBy(row => row.reason != null).ToArray();
-            Line(parent, "工作门店", 18);
-            var list = Ui.Scroll(parent, 155);
-            if (!shops.Any(row => row.reason == null)) Para(list, "目前没有适合该岗位的门店。", 17, Ui.Warn);
-            foreach (var (shop, reason) in shops)
+            Line(parent, GameSession.EmployeeRoleShopHint(role), 16, Ui.Dim);
+            if (shops.Length == 0)
+                Line(parent, "目前没有可安排的门店。", 17, Ui.Warn);
+            Transform list = shops.Length > 8 ? Ui.Scroll(parent, 204) : parent;
+            for (int start = 0; start < shops.Length; start += 2)
             {
-                string target = shop.Place.Id;
-                string label = S.ShopTitle(shop) + " · " + S.City.StreetName(shop.Place.StreetId);
-                if (reason != null) label += " · " + reason;
-                Ui.Size(Ui.Button(list, label, () => select(target), 17,
-                    Ui.SelectedButton(target == selected && reason == null), reason == null), -1, 44);
+                var row = Ui.Row(list, 44, 8);
+                for (int index = start; index < Math.Min(start + 2, shops.Length); index++)
+                {
+                    var (shop, reason) = shops[index];
+                    string target = shop.Place.Id;
+                    string label = S.ShopTitle(shop) + " · " + S.City.StreetName(shop.Place.StreetId);
+                    if (reason != null) label += "\n<size=14>" + reason + "</size>";
+                    Ui.Size(Ui.Button(row, label, () => select(target), 16,
+                        Ui.SelectedButton(target == selected && reason == null), reason == null), 0, 44, 1);
+                }
+                if (start + 1 == shops.Length && start > 0)
+                    Ui.Size(Ui.Rect(row, "EmptySpace"), 0, -1, 1);
             }
         }
 
-        private void BuildRecruitRolePreview(Transform parent, Employee candidate, EmployeeRole role, OwnedShop shop)
+        private void BuildEmployeeRolePreview(Transform parent, Employee employee, EmployeeRole role, OwnedShop shop)
         {
-            var (duties, metric, detail) = EmployeeRolePreview(candidate, role, shop);
-            var panel = Ui.Panel(parent, "RecruitRolePreview", Ui.PanelBg2).rectTransform;
+            var (_, effect, attributes) = EmployeeRolePreview(employee, role, shop);
+            var panel = Ui.Panel(parent, "EmployeeRolePreview", Ui.PanelBg2).rectTransform;
             Ui.VList(panel, 3, 10);
-            Line(panel, metric, 20, Ui.Accent);
-            Line(panel, GameSession.EmployeeRoleShopHint(role), 17, Ui.Accent);
-            Para(panel, $"{duties}。{detail}", 16, Ui.Dim);
+            if (attributes != null) Line(panel, "相关 · " + attributes, 16, Ui.Dim);
+            Line(panel, "效果 · " + effect, 19, Ui.Accent).fontStyle = FontStyle.Bold;
         }
 
         private string EmployeeRoleLabel(EmployeeRole role, OwnedShop shop) =>
             role == EmployeeRole.Cashier && S.IsDedicatedVenue(shop?.Place) ? "场馆值守员" : GameSession.RoleName(role);
 
-        private (string duties, string metric, string detail) EmployeeRolePreview(Employee employee, EmployeeRole role, OwnedShop shop) =>
+        private (string duties, string effect, string attributes) EmployeeRolePreview(Employee employee, EmployeeRole role, OwnedShop shop) =>
             role switch
             {
                 EmployeeRole.Cashier when S.IsDedicatedVenue(shop?.Place) =>
-                    ("接待到场顾客", "场馆值守 · 按班次到岗", "按时到岗即可维持营业，目前无个人能力修正。"),
+                    ("接待到场顾客", "到岗值守，维持场馆营业", "出勤"),
                 EmployeeRole.Cashier =>
-                    ("给顾客结账", $"零售收银 · {GameSession.EmployeeCheckoutCycleMinutes(employee)} 分钟 / 单",
-                        WorkDurationDetail("动手能力", employee.Dexterity, GameSession.EmployeeCheckoutCycleMinutes(employee), Math.Max(1, employee.CheckoutMinutes) + 1)),
+                    ("给顾客结账", $"收银 {GameSession.EmployeeCheckoutCycleMinutes(employee)} 分钟 / 单", "动手能力"),
                 EmployeeRole.Assembler =>
-                    ("组装订单电脑", $"装机 · {GameSession.AssemblyMinutesOf(employee)} 分钟 / 台",
-                        WorkDurationDetail("动手与智力综合", GameSession.AssemblyAptitude(employee), GameSession.AssemblyMinutesOf(employee), Math.Max(45, employee.AssemblyMinutes - employee.BuildsCompleted / 2))
-                        + $" 动手能力 {employee.Dexterity} · 智力 {employee.Intelligence}，各占一半。"
-                        + $" 已装机 {employee.BuildsCompleted} 台，经验会缩短用时。"),
+                    ("组装订单电脑", $"装机 {GameSession.AssemblyMinutesOf(employee)} 分钟 / 台",
+                        $"动手能力、智力、装机经验（已装 {employee.BuildsCompleted} 台）"),
                 EmployeeRole.Buyer =>
-                    ("按计划外出进货", $"采购货价优惠 {GameSession.EmployeePurchaseDiscount(employee):P0}",
-                        $"智力 {employee.Intelligence} · 最高优惠10%。统一每型号 {GameSession.EmployeePurchaseMinutes(employee)} 分钟，往返另计。"),
+                    ("按计划外出进货", $"进货价优惠 {GameSession.EmployeePurchaseDiscount(employee):0.#%} · 每款 {GameSession.EmployeePurchaseMinutes(employee)} 分钟（路程另计）",
+                        "智力影响进货价"),
                 EmployeeRole.Salesperson =>
-                    ("向顾客推介商品", $"购买意愿 +{GameSession.EmployeeSalesBonus(employee) * 100:0.#} 个百分点", $"魅力 {GameSession.EmployeeCharm(employee)} · 在店上班时生效。"),
+                    ("向顾客推介商品", $"在店上班时，购买意愿个人加成 +{GameSession.EmployeeSalesBonus(employee) * 100:0.##} 个百分点",
+                        "魅力"),
                 EmployeeRole.Chef =>
-                    ("备料、下锅、出锅和清锅", $"厨师 · 每步操作 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟",
-                        WorkDurationDetail("动手能力", employee.Dexterity, GameSession.RestaurantEmployeeOperationMinutes(employee, role), GameSession.RestaurantOperationMinutes) + " 走动和等菜另计。"),
+                    ("备料、下锅、出锅和清锅", $"每步厨房操作 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟", "动手能力"),
                 EmployeeRole.Waiter =>
-                    ("上菜、桌边收款和收桌", $"服务员 · 每步操作 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟",
-                        WorkDurationDetail("动手能力", employee.Dexterity, GameSession.RestaurantEmployeeOperationMinutes(employee, role), GameSession.RestaurantOperationMinutes)
-                        + $" 魅力 {GameSession.EmployeeCharm(employee)} · 小费概率 {GameSession.WaiterTipChance(GameSession.EmployeeCharm(employee)):P0}，每次¥1起，最高为菜价的 {GameSession.WaiterTipUpperRate(GameSession.EmployeeCharm(employee)):P0}。"),
+                    ("上菜、桌边收款和收桌", $"每步服务 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟 · 小费概率 {GameSession.WaiterTipChance(GameSession.EmployeeCharm(employee)):0.#%}（最高为菜价的 {GameSession.WaiterTipUpperRate(GameSession.EmployeeCharm(employee)):0.#%}）",
+                        "动手能力影响服务速度，魅力影响小费"),
                 EmployeeRole.Appraiser =>
-                    ("判断成色并收购旧物", $"识别真实成色 {GameSession.AppraiserAccuracy(employee.Intelligence) * 100:0.#}%", $"智力 {employee.Intelligence} · 未能识别时按卖家说法估价。"),
+                    ("判断成色并收购旧物", $"识别真实成色概率 {GameSession.AppraiserAccuracy(employee.Intelligence):0.#%}", "智力"),
                 EmployeeRole.Repairer =>
-                    ("在二手修复台修复旧物", $"工作速度 {GameSession.UsedRepairSpeed(employee):0.##}倍 · 成功率 {GameSession.UsedRepairSuccessChance(employee):P0}",
-                        $"动手能力 {employee.Dexterity}、智力 {employee.Intelligence}共同影响。需要修复台和耗材，每件仅一次尝试。"),
+                    ("在二手修复台修复旧物", $"修复速度 ×{GameSession.UsedRepairSpeed(employee):0.##} · 成功率 {GameSession.UsedRepairSuccessChance(employee):0.#%}",
+                        "动手能力、智力"),
                 EmployeeRole.PetKeeper =>
-                    ("给宠物喂食、换水、清理和陪玩", $"照顾 {GameSession.PetsPerKeeper} 只宠物 · 每只状态每天 +{GameSession.PetKeeperCareBonus(employee)}",
-                        $"魅力 {GameSession.EmployeeCharm(employee)} · 动手能力 {employee.Dexterity}，各占一半。到岗后开始照料，补粮和换猫砂需要库存。"),
-                _ => ("暂未分配工作", "待安排", "待安排期间照常发薪。")
+                    ("给宠物喂食、换水、清理和陪玩", $"最多照顾 {GameSession.PetsPerKeeper} 只宠物 · 每只状态每天 +{GameSession.PetKeeperCareBonus(employee)}",
+                        "魅力、动手能力"),
+                _ => ("暂未分配工作", "待安排期间照常发薪", null)
             };
-
-        private static string WorkDurationDetail(string attribute, int score, int minutes, int baseline)
-        {
-            string effect = minutes == baseline ? "用时无变化" : $"用时 {minutes - baseline:+0;-0} 分钟（常规 {baseline} 分钟）";
-            return $"{attribute} {score} · {effect}。";
-        }
 
 
 

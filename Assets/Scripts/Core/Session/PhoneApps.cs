@@ -45,7 +45,7 @@ namespace PCShopSell.Core.Session
         };
 
         /// <summary>刚买手机时自带的。</summary>
-        public static readonly IReadOnlyList<string> Preinstalled = new[] { Store, Contacts, Schedule, FoodDelivery, Settings };
+        public static readonly IReadOnlyList<string> Preinstalled = new[] { Store, Contacts, Schedule, FoodDelivery, Settings, Securities };
 
         public static string Normalize(string id) => id == Wholesale ? Shop : id;
         public static PhoneAppDef Get(string id) => All.FirstOrDefault(a => a.Id == Normalize(id));

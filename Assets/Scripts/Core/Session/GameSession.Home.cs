@@ -817,6 +817,7 @@ namespace PCShopSell.Core.Session
                 _apps.Clear();
                 foreach (string id in d.apps)
                     if (PhoneApps.Get(id) != null) _apps.Add(PhoneApps.Normalize(id));
+                _apps.UnionWith(PhoneApps.Preinstalled);
             }
             Backpack.Food.RiceKg = 0;
             Backpack.Food.Ingredient.Clear();

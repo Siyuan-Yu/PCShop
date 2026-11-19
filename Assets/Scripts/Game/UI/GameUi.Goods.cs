@@ -28,6 +28,8 @@ namespace PCShopSell.Game.UI
             int pages = (products.Length + pageSize - 1) / pageSize;
             page = Mathf.Clamp(page, 0, pages - 1);
             int boards = (Mathf.Min(pageSize, products.Length) + columns - 1) / columns;
+            int today = S.Clock.Today.TotalDays;
+            bool hasYesterday = S.PriceDays.Any(day => day.Day == today - 1);
             var frame = Ui.FlatPanel(w.Content, "GoodsShelf", Ui.FlatBand);
             Ui.Size(frame, -1, padding * 2 + boards * (slotHeight + railHeight) + (boards * 2 - 1) * gap);
             Ui.VList(frame.rectTransform, gap, padding);
@@ -43,13 +45,18 @@ namespace PCShopSell.Game.UI
                         continue;
                     }
                     var slot = Ui.Size(Ui.FlatPanel(row, "GoodsSlot_" + index, Ui.PanelBg), 0, slotHeight, 1);
-                    BuildGoodsShelfSlot(w, slot.rectTransform, products[index], fill);
+                    var product = products[index];
+                    double? change = hasYesterday
+                        ? (IndustryCycles.GoodsFactor(product, today, S.Market.CommoditySeed)
+                            / IndustryCycles.GoodsFactor(product, today - 1, S.Market.CommoditySeed) - 1) * 100
+                        : (double?)null;
+                    BuildGoodsShelfSlot(w, slot.rectTransform, product, fill, change);
                 }
                 Ui.Size(Ui.Panel(frame.transform, "ShelfRail", ShelfRailColor), -1, railHeight);
             }
             BuildCompactPageControls(w.Content, page, pages, changePage);
         }
-        private void BuildGoodsShelfSlot(Window w,RectTransform rt,GiftDef goods,ShelfFill fill)
+        private void BuildGoodsShelfSlot(Window w,RectTransform rt,GiftDef goods,ShelfFill fill,double? change)
         {
             string id=goods.Id;var shop=S.PlayerShop;
             int count=fill.GoodsCount(id),stock=shop.Stock.GoodsCount(id),handy=S.GoodsAvailableToList(id);
@@ -59,13 +66,14 @@ namespace PCShopSell.Game.UI
 
             string shelfCount = count > 0 ? $"架上 {count} 件" : "尚未上架";
             string detail = $"{shelfCount} · 后仓共 {stock} 件" + (handy > 0 ? $" · 手边 {handy} 件" : "");
-            string text = ProductLabel("<b>" + goods.Name + "</b>", goods.WeightKg, detail);
+            string text = ProductLabel("<b>" + goods.Name + "</b>", goods.WeightKg, detail,
+                weightSuffix: ShelfMarketMovement(change));
             if (goods.ShelfDays > 0 && stock > 0)
                 text += $"\n<size=12><color=#{ColorUtility.ToHtmlStringRGB(Ui.Accent)}>最早到期：{S.GoodsExpiryText(id)}</color></size>";
             var name = Ui.Label(rt, text, 15, TextAnchor.UpperLeft);
             name.rectTransform.Anchor(0, .51f, 1, 1, 94, 0, 10, 12);
             ShelfSaleTag(w,rt,"goods_"+id,shop.GoodsPriceOf(id).Yuan,shop.GoodsPriceRange(id),
-                value=>shop.GoodsPurchaseIntentAtPrice(id,value),value=>shop.SetGoodsSalePrice(id,value))
+                value=>shop.GoodsPurchaseEstimateAtPrice(id,value),value=>shop.SetGoodsSalePrice(id,value))
                 .Anchor(.035f,.206f,.965f,.48f);
             var actions=Ui.Rect(rt,"GoodsActions_"+id).Anchor(.02f,.015f,.98f,.155f);
             var row=Ui.Row(actions,30,3);row.Fill();

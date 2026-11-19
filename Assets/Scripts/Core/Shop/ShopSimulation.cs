@@ -61,6 +61,7 @@ namespace PCShopSell.Core.Shop
         OrderPlaced,
         MealWaitTimeout,
         MenuUnavailable,
+        OverBudget,
     }
 
     /// <summary>一天营业结束时的小结（给“昨日营业”提示用）。</summary>
@@ -995,13 +996,15 @@ namespace PCShopSell.Core.Shop
             bool reserved = customer.ReferralReserved;
             Money price = goodsId == null ? PriceOf(part, boxed) : GoodsPriceOf(goodsId);
             double intent = goodsId == null ? PartPurchaseIntentAtPrice(part, boxed, price.Yuan)
-                : GoodsPurchaseIntentAtPrice(goodsId, price.Yuan);
+                : GoodsPurchaseIntentAtPrice(goodsId, price);
             bool available = reserved || (goodsId == null
                 ? ShelfFillOf(part.Category).Parts.Any(line => line.Part == part && line.Boxed == boxed && line.Count > 0)
                 : OnShelfGoods(goodsId) > 0);
-            if (!available || price.Cents > customer.RetailBudgetCents || !Random.Chance(Math.Min(1, intent + (reserved ? .18 : .08))))
+            bool withinBudget = RetailBudgetCovers(price, customer.RetailBudgetCents);
+            if (!available || !withinBudget || !Random.Chance(Math.Min(1, intent + (reserved ? .18 : .08))))
             {
-                Leave(customer, available ? LeaveReason.TooExpensive : LeaveReason.NoStock);
+                Leave(customer, !available ? LeaveReason.NoStock
+                    : !withinBudget ? LeaveReason.OverBudget : LeaveReason.TooExpensive);
                 return;
             }
             if (goodsId != null)
@@ -1156,10 +1159,10 @@ namespace PCShopSell.Core.Shop
                     c.RetailInterestSeries = RetailInterestOf?.Invoke(c);
                     if (!ModelProducts.SeriesIds.Contains(c.RetailInterestSeries)) c.RetailInterestSeries = ModelProducts.SeriesIds[Random.Next(0, ModelProducts.SeriesIds.Length)];
                     c.RetailBudgetCents = RetailBudgetOf?.Invoke(c) ?? 0;
-                    if (c.RetailBudgetCents <= 0) c.RetailBudgetCents = new long[] { 8000, 15000, 30000, 60000 }[Random.Next(0, 4)];
+                    if (c.RetailBudgetCents <= 0) c.RetailBudgetCents = ModelRetailBudgets[Random.Next(0, ModelRetailBudgets.Length)];
                 }
-                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents*IndustryCycles.GoodsFactor(Gifts.Get(l.Key),_clock.Today.TotalDays,_market.CommoditySeed));
-                if (lines.Count == 0) { Leave(c, LeaveReason.TooExpensive); return true; }
+                lines = lines.FindAll(l => RetailBudgetCovers(GoodsPriceOf(l.Key), c.RetailBudgetCents, ModelBudgetFactor(l.Key)));
+                if (lines.Count == 0) { Leave(c, LeaveReason.OverBudget); return true; }
                 var preferred = lines.FindAll(l => Gifts.Get(l.Key)?.ModelSeries == c.RetailInterestSeries);
                 if (preferred.Count > 0) lines = preferred;
             }
@@ -1168,13 +1171,10 @@ namespace PCShopSell.Core.Shop
                 if (!c.RetailPreferenceAssigned)
                 {
                     c.RetailPreferenceAssigned = true;
-                    uint identity = 2166136261;
-                    foreach (char ch in c.PersonId ?? ("visit:" + c.Id)) identity = unchecked((identity ^ ch) * 16777619);
-                    int segment = (int)(identity % 100);
-                    c.RetailBudgetCents = segment < 65 ? 60000 : segment < 90 ? 180000 : segment < 99 ? 600000 : 5000000;
+                    c.RetailBudgetCents = ClothingRetailBudgetFor(c.PersonId ?? ("visit:" + c.Id));
                 }
-                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents);
-                if (lines.Count == 0) { Leave(c, LeaveReason.TooExpensive); return true; }
+                lines = lines.FindAll(l => RetailBudgetCovers(GoodsPriceOf(l.Key), c.RetailBudgetCents));
+                if (lines.Count == 0) { Leave(c, LeaveReason.OverBudget); return true; }
             }
             string id;
             if (clothing)
@@ -1191,7 +1191,8 @@ namespace PCShopSell.Core.Shop
                 foreach (var l in lines) { pick -= ClothingProducts.SeasonDemandAt(l.Key, temp); if (pick < 0) { id = l.Key; break; } }
             }
             else id = lines[Random.Next(0, lines.Count)].Key;
-            if (!Random.Chance(GoodsPurchaseChance(id,MarkupOfGoods(id) * (TemporaryPriceFactorOf?.Invoke(id) ?? 1)))) return false;
+            var price = GoodsPriceOf(id);
+            if (!Random.Chance(GoodsPurchaseIntentAtPrice(id, price))) return false;
             if (!CanPay(c))
             {
                 Leave(c, LeaveReason.NoCash);
@@ -1201,7 +1202,7 @@ namespace PCShopSell.Core.Shop
             c.GoodsChilled = Stock.GoodsChilled(id);
             Stock.TryRemoveGoods(id, 1);
             c.GoodsId = id;
-            c.Spend = GoodsPriceOf(id);
+            c.Spend = price;
             c.State = CustomerState.WaitingCheckout;
             c.WaitingSince = now;
             c.CheckoutStartedSeconds=CheckoutClock?.Invoke()??double.NaN;
@@ -1350,7 +1351,8 @@ namespace PCShopSell.Core.Shop
             _completedVisits.Add(VisitDetail(c, countAsLost));
             switch (reason)
             {
-                case LeaveReason.TooExpensive: _day.LostTooExpensive++; break;
+                case LeaveReason.TooExpensive:
+                case LeaveReason.OverBudget: _day.LostTooExpensive++; break;
                 case LeaveReason.Impatient: _day.LostImpatient++; break;
                 case LeaveReason.NoStock: _day.LostNoStock++; break;
                 case LeaveReason.NoCash: _day.LostNoCash++; break;

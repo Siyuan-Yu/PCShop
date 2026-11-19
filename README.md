@@ -1,8 +1,10 @@
 # PETSHOP · PCShopSell
 
+**当前玩法与主分支交接（2026-11-19）** · [完整现状、本轮规则与构建记录](docs/136-current-game-content-2026-11-19.md)。本轮更新涵盖家中衣柜的分季试穿、员工四项属性与岗位效果、顶栏股市和强制教学、模型系列行情与货架涨跌、预算纳入购买意愿，以及住宅周日扣租。现有 Windows 包对应较早提交 `cdfe81e`。
+
 **最新源码交接（2026-11-18）** · [当前内容、最终规则与验证边界](docs/133-current-project-handoff-2026-11-18.md)。包含固定地图预生成和旋转错误修正、首次加载遮罩、单排可折叠功能栏、银行证券教学与1股交易、自然等待做饭、中介地图边界、门店价格平衡、二手高价货源、自动议价、修复台与修复师。模型喷漆仅记录规划。
 
-**本次增补**：[经济／物价报表改版](docs/134-economic-and-price-dashboards-2026-11-18.md)已接入实际账目与报价，使用彩色箭头及百分比；[Mac 通用构建与加载相机修正](docs/135-macos-build-and-loading-camera-2026-11-18.md)已完成本地构建，支持Intel与Apple Silicon。本次未运行测试套件，未进行Mac真机验收；构建产物不上传，不创建GitHub Release。
+**11 月 18 日增补** · [经济／物价报表改版](docs/134-economic-and-price-dashboards-2026-11-18.md)已接入实际账目与报价，使用彩色箭头及百分比。[Mac 通用构建与加载相机修正](docs/135-macos-build-and-loading-camera-2026-11-18.md)已完成本地构建，支持 Intel 与 Apple Silicon，尚未进行 Mac 真机验收。
 
 [此前累计试玩修正](docs/127-playtest-fixes-and-handoff-2026-11-18.md)记录餐厅与寄养、员工属性、小费、物价报告和事件等既有调整。
 

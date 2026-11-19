@@ -147,7 +147,8 @@ namespace PCShopSell.Game.UI
             }
             // Signing and the first shop's type choice both precede the task announcement.
             if (_popupPending && !PropertyContractOpen && _propertyContractPopups.Count == 0
-                && S.PendingShopKindPlaceId == null && !PopupOpen && (_questPopup == null || _questPopup.Closed) && !S.IsGameOver)
+                && S.PendingShopKindPlaceId == null && !PopupOpen && (_questPopup == null || _questPopup.Closed)
+                && !S.IsGameOver && !S.RequiredTutorialPaused)
             {
                 OpenQuestPopup(_pendingDone, _pendingNext);
                 _popupPending = false;
@@ -326,7 +327,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
                 case QuestTarget.BankSecurities:
-                    return S.AtBank ? ("查看证券教学", OpenBankSecurities)
+                    return S.HasSmartphone ? ("打开股市", OpenCityInvestments) : S.AtBank ? ("查看证券教学", OpenBankSecurities)
                         : QuestPlaceAction("前往银行", S.BankPlace);
                 case QuestTarget.ScooterDealer: return QuestPlaceAction("前往顺丰车行", ScooterDealer);
                 case QuestTarget.RacingEnrollment:
@@ -559,7 +560,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Counter: return "位置：自己的店 · 收银台";
                 case QuestTarget.Staff: return "位置：自己的店 → 右侧“员工”页";
                 case QuestTarget.PhoneShop: return "地点：商业街 · <color=#80551F>手机店</color>";
-                case QuestTarget.BankSecurities: return "地点：城郊银行 → 证券交易";
+                case QuestTarget.BankSecurities: return S.HasSmartphone ? "入口 · 顶栏「股市」" : "地点：城郊银行 → 证券交易";
                 case QuestTarget.CommunityGoal: return "片区：城郊";
                 case QuestTarget.RacingEnrollment: return "地点：城郊赛场车库";
                 case QuestTarget.ScooterDealer:

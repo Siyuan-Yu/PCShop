@@ -297,7 +297,14 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, withdraw ? "确认转为自用" : "确认购买 · ¥" + model.Price.ToString("N0"), () =>
                 {
                     bool ok = withdraw ? S.WithdrawUsedMotor(usedId, forCommute, garageId) : S.BuyMotor(modelId, forCommute, garageId);
-                    if (ok) { w.Close(); parent?.Rebuild(); }
+                    if (!ok) return;
+                    w.Close();
+                    if (!withdraw && model.Kind == VehicleKind.EBike && S.ScooterTutorialPaused)
+                    {
+                        parent?.Close();
+                        UpdateVehicleButtons();
+                    }
+                    else parent?.Rebuild();
                 }, 20, Ui.ButtonHot, why == null), -1, 46);
             });
         }

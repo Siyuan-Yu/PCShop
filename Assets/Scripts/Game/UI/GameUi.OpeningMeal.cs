@@ -199,6 +199,11 @@ namespace PCShopSell.Game.UI
         private RectTransform _firstUseGuideRoot, _firstUseGuideCard;
         private Text _firstUseGuideText, _firstUseGuideArrow;
         private readonly Image[] _firstUseGuideFrame = new Image[4];
+        private readonly Image[] _firstUseGuideDim = new Image[4];
+        private OpeningGuideInputBlock _firstUseInputBlock;
+        private Button _requiredGuideTarget;
+        private Navigation _requiredGuideNavigation;
+        public bool RequiredTutorialControlVisible => _requiredGuideTarget != null;
 
         private void UpdateFirstUseGuide()
         {
@@ -207,30 +212,71 @@ namespace PCShopSell.Game.UI
                 _firstUseGuideSession = S;
                 _mealDeliveryGuideButton = null;
             }
+            bool scooter = S.ScooterTutorialPaused;
+            bool securities = !scooter && S.SecuritiesTutorialPaused;
+            bool required = scooter || securities;
             Button target = null;
             bool meal = _mealDeliveryGuideButton != null && _mealDeliveryGuideButton.gameObject.activeInHierarchy
                 && _windows.Count > 0 && _mealDeliveryGuideButton.transform.IsChildOf(_windows[_windows.Count - 1].Root);
             string text = null;
-            if (meal)
+            Window top = AnyModalOpen ? _windows[_windows.Count - 1] : null;
+            bool showLesson = false;
+            if (scooter && top == null)
+            {
+                target = _vehicleButtons.FirstOrDefault(entry => entry.kind == VehicleKind.EBike).b;
+                text = "教学暂停 · 点「小电驴」\n切换出行方式后继续";
+            }
+            else if (securities)
+            {
+                if (top != null && top == _stockWindow)
+                {
+                    target = _securitiesLessonButton;
+                    showLesson = true;
+                    text = "看完说明，点「已了解，继续开店」";
+                }
+                else if (top != null && top == _bankWindow && S.BankBlocker() == null)
+                {
+                    target = _bankSecuritiesTab;
+                    text = "教学暂停 · 点「证券交易」";
+                }
+                else if (top == null && S.HasSmartphone)
+                {
+                    target = _stockMarketButton;
+                    text = "教学暂停 · 点顶栏「股市」";
+                }
+                else if (top == null && S.AtBank && !MainMenuOpen && !PopupOpen && !_ctrl.Placing)
+                {
+                    OpenBank(S.CurrentPlace);
+                    return;
+                }
+            }
+            else if (!required && meal)
             {
                 target = _mealDeliveryGuideButton;
                 text = S.MealDeliveryEnabled ? "这里可以开关自动订餐\n缺饭时会按选定餐档下单"
                     : "在这里开启自动订餐\n缺饭时会按选定餐档下单";
             }
-            else if (!AnyModalOpen && S.Flags.Contains(GameSession.ScooterGuidePending) && S.CanUse(VehicleKind.EBike))
-            {
-                target = _vehicleButtons.FirstOrDefault(entry => entry.kind == VehicleKind.EBike).b;
-                text = "点「小电驴」切换出行方式\n之后就能骑它通勤";
-            }
-            bool show = target != null && target.interactable && target.gameObject.activeInHierarchy
+            bool show = target != null && target.IsInteractable() && target.gameObject.activeInHierarchy
+                && (top == null || target.transform.IsChildOf(top.Root))
                 && !MainMenuOpen && !S.IsGameOver && !S.IsWorking && !S.Racing && !_ctrl.Placing
                 && !_ctrl.PetFocusActive && !PopupOpen && S.Trip == null
                 && (_guideRoot == null || !_guideRoot.gameObject.activeSelf);
+            SetRequiredGuideTarget(show && required ? target : null);
             if (_firstUseGuideRoot != null) _firstUseGuideRoot.gameObject.SetActive(show);
             if (!show || _tutorialCanvas == null) return;
             if (_firstUseGuideRoot == null)
             {
                 _firstUseGuideRoot = Ui.Rect(_tutorialCanvas.transform, "FirstUseGuide").Fill();
+                _firstUseInputBlock = Ui.Rect(_firstUseGuideRoot, "FirstUseInputBlock").gameObject.AddComponent<OpeningGuideInputBlock>();
+                _firstUseInputBlock.color = Color.clear;
+                _firstUseInputBlock.rectTransform.Fill();
+                for (int i = 0; i < _firstUseGuideFrame.Length; i++)
+                {
+                    var dim = _firstUseGuideDim[i] = Ui.Panel(_firstUseGuideRoot, "FirstUseDim" + i, GuideDimColor);
+                    dim.raycastTarget = false;
+                    dim.rectTransform.anchorMin = dim.rectTransform.anchorMax = Vector2.zero;
+                    dim.rectTransform.pivot = Vector2.zero;
+                }
                 for (int i = 0; i < _firstUseGuideFrame.Length; i++)
                 {
                     var frame = _firstUseGuideFrame[i] = Ui.Panel(_firstUseGuideRoot, "FirstUseFrame" + i, Ui.FlatHotEdge);
@@ -253,8 +299,20 @@ namespace PCShopSell.Game.UI
                 arrow.pivot = Vector2.zero;
             }
             _firstUseGuideRoot.SetAsLastSibling();
+            _firstUseInputBlock.PassThrough = required ? target : null;
+            _firstUseInputBlock.gameObject.SetActive(required);
             var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
             Rect hole = GuideTargetBounds((RectTransform)target.transform, size, 5);
+            foreach (var dim in _firstUseGuideDim) dim.gameObject.SetActive(required);
+            if (required)
+            {
+                // The whole lesson stays legible, while only its confirmation button accepts clicks.
+                Rect spotlight = showLesson ? GuideTargetBounds((RectTransform)target.transform.parent, size, 6) : hole;
+                GuideRect(_firstUseGuideDim[0].rectTransform, 0, spotlight.yMax, size.x, size.y - spotlight.yMax);
+                GuideRect(_firstUseGuideDim[1].rectTransform, 0, 0, size.x, spotlight.yMin);
+                GuideRect(_firstUseGuideDim[2].rectTransform, 0, spotlight.yMin, spotlight.xMin, spotlight.height);
+                GuideRect(_firstUseGuideDim[3].rectTransform, spotlight.xMax, spotlight.yMin, size.x - spotlight.xMax, spotlight.height);
+            }
             const float edge = 3;
             GuideRect(_firstUseGuideFrame[0].rectTransform, hole.xMin, hole.yMax, hole.width, edge);
             GuideRect(_firstUseGuideFrame[1].rectTransform, hole.xMin, hole.yMin - edge, hole.width, edge);
@@ -265,13 +323,25 @@ namespace PCShopSell.Game.UI
             foreach (var frame in _firstUseGuideFrame) frame.color = color;
             float width = Mathf.Min(330, size.x - 24);
             float x = Mathf.Clamp(hole.center.x - width * .5f, 12, size.x - width - 12);
-            bool above = hole.yMax + 116 < size.y;
+            bool above = !showLesson && hole.yMax + 116 < size.y;
             float y = above ? hole.yMax + 28 : hole.yMin - 104;
             GuideRect(_firstUseGuideCard, x, Mathf.Clamp(y, 12, size.y - 92), width, 80);
             _firstUseGuideText.text = text;
             _firstUseGuideArrow.text = above ? "▼" : "▲";
             GuideRect(_firstUseGuideArrow.rectTransform, hole.center.x - 16,
                 above ? hole.yMax + 2 : hole.yMin - 28, 32, 26);
+        }
+
+        private void SetRequiredGuideTarget(Button target)
+        {
+            if (ReferenceEquals(_requiredGuideTarget, target)) return;
+            if (_requiredGuideTarget != null) _requiredGuideTarget.navigation = _requiredGuideNavigation;
+            _requiredGuideTarget = target;
+            if (target == null) return;
+            _requiredGuideNavigation = target.navigation;
+            target.navigation = new Navigation { mode = Navigation.Mode.None };
+            var events = EventSystem.current;
+            if (events != null && !events.alreadySelecting) events.SetSelectedGameObject(target.gameObject);
         }
 
         private void UpdateOpeningMealGuide()

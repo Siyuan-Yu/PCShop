@@ -80,7 +80,7 @@ namespace PCShopSell.Core.Session
             _homeLeaseRentCents=rent.Cents;
             _homeLeaseSignedDay=Clock.Today.TotalDays;
             _residentialHomeId=null;
-            Say("已换为"+HomeTitle+"。家具与储物保留；此后每七天扣一次住宅周租。"); return true;
+            Say("已换为"+HomeTitle+"。家具与储物保留，首周结束后每周日扣租。"); return true;
         }
         public bool BuyHome(bool mortgage)
         {
@@ -99,7 +99,7 @@ namespace PCShopSell.Core.Session
             HomePriceCents=HomeMortgageCents=HomeMonthlyPrincipalCents=0;
             _homeLeaseRentCents=(City.HasPlace(_residentialHomeId) ? ResidentialRent(Home) : HomeTierRentQuote(HomeTier)).Cents;
             _homeLeaseSignedDay=Clock.Today.TotalDays;
-            Say("住宅已出售，继续租住，七天后开始缴周租。"); return true;
+            Say("住宅已出售，继续租住，满七天起逢周日扣租。"); return true;
         }
         private void SettleHomeMaintenance(GameDate today)
         {

@@ -140,9 +140,9 @@ namespace PCShopSell.Game.UI
             if (row.Shop != null) Line(card, "工作地点 · " + S.ShopTitle(row.Shop), 16);
             Line(card, "工作能力", 16, Ui.Dim);
             BuildWorkAttributeRow(card, (e.Intelligence, GameSession.EmployeeCharm(e), e.Dexterity, e.Stamina));
-            var (_, metric, detail) = EmployeeRolePreview(e, row.Role, row.Shop);
-            if (row.Role != EmployeeRole.Unassigned) Line(card, metric, 17, Ui.Accent);
-            Para(card, detail, 15, Ui.Dim);
+            var (_, effect, attributes) = EmployeeRolePreview(e, row.Role, row.Shop);
+            if (attributes != null) Line(card, "相关 · " + attributes, 15, Ui.Dim);
+            Para(card, "效果 · " + effect, 17, Ui.Accent);
             Para(card, S.EmployeePaySummary(e), 16, Ui.Dim);
             var destination = S.ShopAt(e.TransferShopId);
             if (destination != null)
@@ -162,7 +162,7 @@ namespace PCShopSell.Game.UI
             if (!string.IsNullOrEmpty(e.LastPurchaseNote)) Para(card, e.LastPurchaseNote, 15, Ui.Dim);
         }
 
-        private static void BuildWorkAttributeRow(Transform parent, (int Intelligence, int Charm, int Dexterity, int Stamina) ratings)
+        private static RectTransform BuildWorkAttributeRow(Transform parent, (int Intelligence, int Charm, int Dexterity, int Stamina) ratings)
         {
             var attributes = Ui.Row(parent, 48, 6);
             void Attribute(string label, int score)
@@ -178,6 +178,7 @@ namespace PCShopSell.Game.UI
             Attribute("魅力", ratings.Charm);
             Attribute("动手能力", ratings.Dexterity);
             Attribute("体能", ratings.Stamina);
+            return attributes;
         }
 
         public void OpenEmployeeWork(string employeeId, Window parent = null)
@@ -186,13 +187,13 @@ namespace PCShopSell.Game.UI
             if (row == null) return;
             EmployeeRole role = row.Role == EmployeeRole.Unassigned ? EmployeeRole.Cashier : row.Role;
             string destination = (row.Shop ?? S.CurrentShop)?.Place.Id;
-            OpenWindow("安排工作 · " + row.Person.Name, 940, 660, w =>
+            OpenWindow("安排工作 · " + row.Person.Name, 1040, 680, w =>
             {
-                PersonSummary(w.Content, S.PersonIdOf(row.Person), row.Person.Name, "日薪 " + row.Person.DailyWage);
-                Line(w.Content, "1. 做什么工作", 20);
+                BuildEmployeeWorkHeader(w.Content, row.Person);
+                var shop = S.ShopAt(destination);
                 BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); },
-                    venue: S.IsDedicatedVenue(S.ShopAt(destination)?.Place));
-                BuildRecruitRolePreview(w.Content, row.Person, role, S.ShopAt(destination));
+                    venue: S.IsDedicatedVenue(shop?.Place));
+                BuildEmployeeRolePreview(w.Content, row.Person, role, shop);
                 BuildEmployeeDestinationChoices(w.Content, role, destination, target => { destination = target; w.Rebuild(); });
                 bool tomorrow = role != EmployeeRole.Unassigned && row.Shop != null && row.Shop.Place.Id != destination;
                 string blocker = S.EmployeeAssignmentBlocker(employeeId, destination, role);

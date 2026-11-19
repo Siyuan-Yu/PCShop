@@ -278,8 +278,8 @@ namespace PCShopSell.Game.UI
                 foreach (var line in fill.Goods)
                 {
                     string id = line.Key; var price = sim.GoodsPriceOf(id);
-                    int intent = (int)Math.Round(sim.GoodsPurchaseIntentAtPrice(id, price.Yuan) * 100);
-                    var row = WbTable(right, new[] { Gifts.Get(id).Name, line.Value + " / " + (shelfStock.TryGetValue(id, out int back) ? back : line.Value), price.ToString(), intent + "%" }, widths, itemKey: id);
+                    string intent = PurchaseEstimateText(sim.GoodsPurchaseEstimateAtPrice(id, price));
+                    var row = WbTable(right, new[] { Gifts.Get(id).Name, line.Value + " / " + (shelfStock.TryGetValue(id, out int back) ? back : line.Value), price.ToString(), intent }, widths, itemKey: id);
                     Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchGoodsPrice(shop, id), 14, Ui.ButtonBg), 54, 28, 0).name = "WorkbenchGoods_" + id;
                 }
                 foreach (var line in fill.Parts)

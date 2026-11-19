@@ -64,11 +64,6 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        public void OpenWardrobeWindow() => OpenRoomWindow("衣柜", 700, 640, BuildWardrobe);
-
-        private AvatarPreview _avatarPreview;
-
-
         public void OpenStorageWindow()
         {
             if(S.CurrentPlace!=S.Home||!S.HasWarehouseHere){Toast("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");return;}
@@ -708,8 +703,6 @@ namespace PCShopSell.Game.UI
                 .rectTransform.Anchor(0, 0, 1, 1, 8, 7, 8, 38);
         }
 
-        private void BuildWardrobe(Window w) { if (_cityClothingPreview == null) _cityClothingPreview = S.EquippedOutfit; BuildCityWardrobe(w); }
-
         private double _cookKg = 0.5;
         private string _cookIngredient;
         private string _cookFish;
@@ -1111,9 +1104,9 @@ namespace PCShopSell.Game.UI
                 expand.name = "MyLeaseDetails";
                 if (_myLeaseExpanded)
                 {
-                    Line(body, $"签约周租 {S.CurrentHomeRent} · 每周扣款", 17);
+                    Line(body, $"签约周租 {S.CurrentHomeRent} · 每周日扣款", 17);
                     if (S.NextResidentialRentDay(S.Home) is int day)
-                        Line(body, "下次扣租 · " + new GameDate(day), 16, Ui.Dim);
+                        Line(body, "下次扣租 · " + new GameDate(day) + " 周日", 16, Ui.Dim);
                 }
             }
 
@@ -1123,7 +1116,7 @@ namespace PCShopSell.Game.UI
                 Line(body, "其他租约", 19, Ui.Accent);
                 foreach (var place in otherLeases)
                 {
-                    string due = S.NextResidentialRentDay(place) is int day ? $" · 下次扣租 {new GameDate(day)}" : "";
+                    string due = S.NextResidentialRentDay(place) is int day ? $" · 下次扣租 {new GameDate(day)} 周日" : "";
                     Line(body, $"{place.Name} · 周租 {S.SignedResidentialRent(place)}{due}", 17);
                 }
             }

@@ -15,6 +15,14 @@ namespace PCShopSell.Game.UI
     {
         private static Color ShelfRailColor => Color.Lerp(Ui.FlatCardEdge, Ui.ButtonHot, .35f);
 
+        private static string ShelfMarketMovement(double? change)
+        {
+            string movement = change.HasValue ? PriceMovement(change.Value) : "—";
+            string text = change.HasValue && movement == "—" ? "行情持平" : $"行情 {movement}";
+            Color color = change.HasValue ? PriceMovementColor(change.Value) : Ui.Dim;
+            return $"<size=13><color=#{ColorUtility.ToHtmlStringRGB(color)}> · {text}</color></size>";
+        }
+
         private static Sprite _circle;
 
         private static Sprite CircleSprite()
@@ -53,7 +61,7 @@ namespace PCShopSell.Game.UI
                 var fill = kind == null ? null : shop.ShelfFillAt(layoutIndex, kind) ?? new ShelfFill(kind, shelf.ShelfKg, shelf.ShelfItems);
                 string title = kind == null
                     ? $"<b>这个货架还空着</b>\n<size=15>最多 {shelf.ShelfItems} 件 · {shelf.ShelfKg:0} 千克</size>"
-                    : $"<b>{kind.Name}</b>\n<size=15>本架 {fill.UsedKg:0.##}/{fill.CapacityKg:0} 千克 · {fill.Total}/{fill.CapacityItems} 件{(fill.Full ? " · 已满" : "")}</size>";
+                    : $"<b>{kind.Name}</b>\n<size=15>本架 {fill.UsedKg:0.##}/{fill.CapacityKg:0} 千克 · {fill.Total}/{fill.CapacityItems} 件{(fill.Full ? " · 已满" : "")}{(kind.Id == "secondhand" ? "" : "　|　行情较昨日")}</size>";
                 Ui.Size(Ui.Label(head, title, 19, TextAnchor.MiddleLeft), 0, -1, 1);
                 if (kind != null && kind.Id != "secondhand")
                     Ui.Size(HelpLink(head, "调价说明", "长按加减号可加速。调价时可预览购买意愿，确认后生效；同型号盒装和散件的售价联动。"), 152, 36);
@@ -145,6 +153,10 @@ namespace PCShopSell.Game.UI
         {
             ShopSimulation shop = S.PlayerShop;
             var parts = PartCatalog.InCategory(kind.Category).OrderBy(p => p.Tier).ToArray();
+            var today = S.CurrentMarketPriceSnapshot;
+            var yesterday = S.PriceDays.FirstOrDefault(day => day.Day == today.Day - 1);
+            int group = System.Array.IndexOf(PartCatalog.Categories, kind.Category);
+            double? change = group >= 0 ? ComparePrice(today, yesterday, group) : null;
             Transform list = w.Content;
             for (int board = 0; board < 2; board++)
             {
@@ -156,11 +168,11 @@ namespace PCShopSell.Game.UI
                 if (stocked.Length == 0)
                     Line(list, "暂无陈列", 16, Ui.Dim);
                 foreach (PartDef part in stocked)
-                    BuildShelfSlot(w, list, part, boxed, shop, fill.PartCount(part, boxed));
+                    BuildShelfSlot(w, list, part, boxed, shop, fill.PartCount(part, boxed), change);
             }
         }
 
-        private void BuildShelfSlot(Window w, Transform parent, PartDef part, bool boxed, ShopSimulation shop, int count)
+        private void BuildShelfSlot(Window w, Transform parent, PartDef part, bool boxed, ShopSimulation shop, int count, double? change)
         {
             var card = Ui.Size(Ui.FlatPanel(parent, "PartShelfSlot", Ui.PanelBg2), -1, 70);
             RectTransform row = Ui.Row(card.transform, 70, 12).Fill();
@@ -171,7 +183,8 @@ namespace PCShopSell.Game.UI
             ItemPortrait(row, part.Id, 54).name = "PartArtwork";
 
             string details = $"{PartCatalog.TierName(part.Tier)} · {(boxed ? "盒装" : "散件")} · 架上 {count} 件 · 每件 {PartUnitKg(part, boxed):0.##} 千克";
-            Ui.Size(Ui.Label(row, $"<b>{part.Name}</b>\n<size=15>{details}</size>", 19, TextAnchor.MiddleLeft), 0, -1, 1);
+            Ui.Size(Ui.Label(row, $"<b>{part.Name}</b>\n<size=15>{details}</size>{ShelfMarketMovement(change)}",
+                19, TextAnchor.MiddleLeft), 0, -1, 1);
             var tag = ShelfSaleTag(w, row, part.Id + (boxed ? "_boxed" : "_loose"), shop.PriceOf(part, boxed).Yuan,
                 shop.PartPriceRange(part, boxed), value => shop.PartPurchaseIntentAtPrice(part, boxed, value),
                 value => shop.SetPartSalePrice(part, boxed, value));

@@ -139,15 +139,16 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
-                Id = "bank_securities", Title = "去银行了解股票", Target = QuestTarget.BankSecurities,
-                Short = $"到{K("银行")}，了解证券交易",
-                Hint = $"在银行选择{K("证券交易")}，看报价、持仓与手续费。最少可以买 1 股，点数量按钮切换加减股数，选好后统一成交。留足进货和租金，可先看教学再决定是否投资。安装手机证券应用后，也能随时查看账户。",
+                Id = "bank_securities", Title = "了解股市", Target = QuestTarget.BankSecurities,
+                Short = $"打开{K("证券")}，了解股价、持仓与手续费",
+                Hint = $"点顶栏{K("股市")}打开手机证券，也可到银行柜台打开{K("证券交易")}。看完后点{K("已了解，继续开店")}。",
                 Lesson = true,
-                LessonReady = s => s.AtBank && s.BankBlocker() == null,
+                LessonReady = s => s.HasApp(PhoneApps.Securities) || (s.AtBank && s.BankBlocker() == null),
+                QuietTransition = true,
                 Done = s => s.QuestLessonRead("bank_securities") || s.QuestCompleted("second_shop")
                     || s.OperatingStorefrontCount >= 2 || s.RacingUnlocked,
                 Progress = s => s.Flags.Contains("tutorial:visited:bank_securities")
-                    ? "已查看银行证券页面 · 确认教学后继续" : "前往银行 · 打开证券交易",
+                    ? "已打开证券 · 确认教学后继续" : "打开证券，查看入门说明",
             },
             new QuestDef
             {
@@ -309,6 +310,23 @@ namespace PCShopSell.Core.Session
         public bool OpeningMealTutorialPending => Flags.Contains(OpeningMealTutorialFlag);
         public bool OpeningAgencyGuidePending => CurrentPlace == null && !IsGameOver && LookingForFirstShop
             && Flags.Contains(OpeningAgencyGuideFlag) && City.HasPlace("agency");
+
+        private bool CanPauseForTutorial => !IsGameOver && !IsWorking && !Racing && !_sleeping
+            && !CityActivityExclusive && PendingEvent == null && PendingShopKindPlaceId == null && Trip == null;
+        public bool ScooterTutorialPaused => Flags.Contains(ScooterGuidePending) && CanPauseForTutorial
+            && CanUse(VehicleKind.EBike) && (Vehicle == VehicleKind.EBike
+                || CarriedKg <= CommuteVehicle(VehicleKind.EBike).CargoCapacity * Backpack.KgPerSpace + 1e-9);
+        public bool SecuritiesTutorialPaused
+        {
+            get
+            {
+                if (!QuestCompleted("scooter") || QuestCompleted("bank_securities") || !CanPauseForTutorial)
+                    return false;
+                var lesson = Quests.Get("bank_securities");
+                return lesson.LessonReady(this) && !lesson.Done(this) && QuestStageReady(lesson);
+            }
+        }
+        public bool RequiredTutorialPaused => ScooterTutorialPaused || SecuritiesTutorialPaused;
 
         public const string OpeningMealLeaveBlock = "先做饭，吃一碗，再把剩下的饭全部装进背包，才能出门。";
         public bool OpeningMealEaten => Flags.Contains("tutorial:opening-meal-eaten");

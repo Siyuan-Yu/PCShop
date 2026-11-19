@@ -29,6 +29,7 @@ namespace PCShopSell.Game.UI
         private readonly HashSet<string> _stockHiddenChartSeries = new HashSet<string>();
         private GameSession _stockSession;
         private Window _stockWindow;
+        private Button _securitiesLessonButton;
         private bool _stockAtBank;
         private StockPage _stockPage = StockPage.Exchange;
         private string _stockExpanded, _stockTradeFeedback;
@@ -75,7 +76,7 @@ namespace PCShopSell.Game.UI
             string blocker = S.AppBlocker(PhoneApps.Securities);
             if (blocker != null)
             {
-                Ui.Notice(host, blocker + "\n证券账户在手机「证券」应用里开通后，这里才能看盘交易。");
+                Ui.Notice(host, blocker);
                 return;
             }
             EnsureStockSessionState();
@@ -88,8 +89,9 @@ namespace PCShopSell.Game.UI
         public void OpenCityInvestments()
         {
             string blocker = S.AppBlocker(PhoneApps.Securities);
-            if (blocker != null) { Toast(blocker); if (S.HasSmartphone) OpenPhoneStore(); return; }
+            if (blocker != null) { Toast(blocker); return; }
             _stockAtBank = false;
+            S.VisitQuestTarget(QuestTarget.BankSecurities);
             EnsureStockSessionState();
             // 仅在主动进入应用时清空，界面刷新及本次浏览期间切页保留当前操作。
             ResetStockOrderDrafts();
@@ -210,16 +212,17 @@ namespace PCShopSell.Game.UI
                     else OpenPhone();
                 }, 16), 124, 36);
             }
-            if (_stockAtBank && !_stockEmbedded && S.CurrentQuest()?.Id == "bank_securities")
+            if (!_stockEmbedded && S.CurrentQuest()?.Id == "bank_securities")
             {
                 var lesson = Ui.Row(root, 88, 12);
-                Ui.Size(Ui.Label(lesson, "证券入门\n先看股价和涨跌，点 + 或 − 选择待成交股数，再点「成交」。最低 1 股，买卖收取 0.2% 手续费。\n可以先买 1 股体验；股价会波动，请为门店留足周转资金。手机安装证券应用后可使用同一持仓。", 17), 0, 88, 1);
-                Ui.Size(Ui.Button(lesson, "已了解，继续开店", () =>
+                Ui.Size(Ui.Label(lesson, "证券入门\n先看股价和涨跌，点 + 或 − 选择待成交股数，再点「成交」。最低 1 股，买卖收取 0.2% 手续费。\n可以先买 1 股体验；股价会波动，请为门店留足周转资金。智能手机自带的「证券」可以查看同一持仓。", 17), 0, 88, 1);
+                _securitiesLessonButton = Ui.Size(Ui.Button(lesson, "已了解，继续开店", () =>
                 {
                     if (!S.CompleteQuestLesson("bank_securities")) return;
-                    w.Rebuild();
+                    w.Close();
                     UpdateQuestTracker();
-                }, 18, Ui.ButtonHot, S.CanCompleteQuestLesson("bank_securities")), 190, 60).name = "BankSecuritiesLessonComplete";
+                }, 18, Ui.ButtonHot, S.CanCompleteQuestLesson("bank_securities")), 190, 60);
+                _securitiesLessonButton.name = "BankSecuritiesLessonComplete";
             }
 
             var (navigation, refreshNavigation) = BuildStockPageTabs(w, root);

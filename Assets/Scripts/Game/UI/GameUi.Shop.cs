@@ -676,6 +676,7 @@ namespace PCShopSell.Game.UI
             LeaveReason.ShopClosed => "店铺停止营业",
             LeaveReason.NoStock => "没有合适的现货",
             LeaveReason.TooExpensive => "价格太高",
+            LeaveReason.OverBudget => "超出顾客预算",
             _ => "未成交",
         };
 
@@ -853,7 +854,7 @@ namespace PCShopSell.Game.UI
             Line(C,"可逐件调价，点“确定”生效；未单独定价的商品跟随统一加价。",15,Ui.Dim);
             var global=Line(C,"",19,Ui.Good);
             global.name="PricingPurchaseIntentSummary";
-            global.Tip("按已陈列的商品件数汇总购买意愿，计入当前预览价格、销售员和镜子加成。确认后新价格才用于交易。");
+            global.Tip("按陈列件数汇总愿意且买得起的比例。单品估算针对正在考虑这款商品的顾客。");
             var rows = new Dictionary<string, PricingRow>();
             double draftMarkup = shop.Markup;
             void RefreshAll(double markup)
@@ -862,13 +863,13 @@ namespace PCShopSell.Game.UI
                 double total = rows.Values.Sum(row => row.Refresh(markup));
                 long displayedCount = rows.Values.Sum(row => (long)row.Count);
                 string label = System.Math.Abs(markup - shop.Markup) > .001 ? "预览购买意愿" : "参考购买意愿";
-                global.text = displayedCount > 0 ? $"{label} {total / displayedCount * 100:0}%" : "购买意愿：暂无商品";
+                global.text = displayedCount > 0 ? $"{label} {PurchaseEstimateText(total / displayedCount)}" : "购买意愿：暂无商品";
             }
             var editor = Ui.Rect(C, "PricingMarkupEditor");
             Ui.VList(editor, 4, 0);
             var list=Ui.Rect(C,"PricingProducts");Ui.VList(list,4,0);
             var empty = Line(list, "货架上暂无商品，陈列后可在这里调价。", 17, Ui.Dim);
-            PricingRow CreateRow(string key,string itemId,string name,double kg,System.Func<double, Money> price,System.Func<long, double> intent,
+            PricingRow CreateRow(string key,string itemId,string name,double kg,System.Func<double, Money> price,System.Func<Money, double> intent,
                 System.Action edit,System.Func<bool> own,System.Action follow)
             {
                 var view = new PricingRow { Root = Ui.Row(list, 86, 6) };
@@ -882,8 +883,8 @@ namespace PCShopSell.Game.UI
                 {
                     caption.text = ProductLabel(name, kg, $"已陈列 {view.Count} 件").Replace("<size=13>", "<size=14>");
                     Money shownPrice = price(markup);
-                    double chance = intent(shownPrice.Yuan);
-                    current.text = shownPrice + $"\n<size=14>购买意愿 {chance * 100:0}%</size>";
+                    double chance = intent(shownPrice);
+                    current.text = shownPrice + $"\n<size=14>购买意愿 {PurchaseEstimateText(chance)}</size>";
                     followButton.interactable = own();
                     return view.Count * chance;
                 };
@@ -910,11 +911,11 @@ namespace PCShopSell.Game.UI
                     {
                         var product = Gifts.Get(id);
                         rows[key] = row = CreateRow(key, id, product.Name, product.WeightKg, markup => shop.GoodsPriceOf(id, markup),
-                            yuan => shop.GoodsPurchaseIntentAtPrice(id, yuan), () => OpenWindow("调价 · " + product.Name, 600, 300, w =>
+                            price => shop.GoodsPurchaseEstimateAtPrice(id, price), () => OpenWindow("调价 · " + product.Name, 600, 300, w =>
                             {
                                 Para(w.Content, product.Name + " · 调整时预览购买意愿，确定后保存售价。", 17);
                                 Ui.Size(ShelfSaleTag(w, w.Content, key, shop.GoodsPriceOf(id).Yuan, shop.GoodsPriceRange(id),
-                                    value => shop.GoodsPurchaseIntentAtPrice(id, value), value => { S.ConfirmGoodsSalePrice(id, value); RefreshAll(draftMarkup); }), -1, 100);
+                                    value => shop.GoodsPurchaseEstimateAtPrice(id, value), value => { S.ConfirmGoodsSalePrice(id, value); RefreshAll(draftMarkup); }), -1, 100);
                             }), () => shop.HasGoodsMarkup(id), () => shop.SetGoodsMarkup(id, null));
                     }
                     Show(key, row, item.Value);
@@ -927,7 +928,7 @@ namespace PCShopSell.Game.UI
                     if (!rows.TryGetValue(key, out var row))
                     {
                         rows[key] = row = CreateRow(key, part.Id, part.Name + (boxed ? " · 盒装" : " · 散件"), PartUnitKg(part, boxed),
-                            markup => shop.PriceOf(part, boxed, markup), yuan => shop.PartPurchaseIntentAtPrice(part, boxed, yuan),
+                            markup => shop.PriceOf(part, boxed, markup), price => shop.PartPurchaseIntentAtPrice(part, boxed, price.Yuan),
                             () => OpenWindow("调价 · " + part.Name, 600, 300, w =>
                             {
                                 Para(w.Content, part.Name + " · " + (boxed ? "盒装" : "散件"), 17);

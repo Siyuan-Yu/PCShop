@@ -6,6 +6,14 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private static string PurchaseEstimateText(double chance)
+        {
+            if (chance >= 1) return "100%";
+            if (chance > .99) return "99%+";
+            if (chance > 0 && chance < .01) return "不足1%";
+            return chance.ToString("0%");
+        }
+
         private RectTransform ShelfSaleTag(Window w, Transform parent, string key, long price, (long min, long max) range,
             Func<long, double> intentAtPrice, Action<long> setPrice, PCShopSell.Core.Shop.ShopSimulation pricingShop=null)
         {
@@ -27,14 +35,14 @@ namespace PCShopSell.Game.UI
                 valueLabel.text = "¥" + value;
                 if (demand != null)
                 {
-                    double chance=Math.Max(0,Math.Min(1,intentAtPrice(value)))*100;
+                    string estimate = PurchaseEstimateText(intentAtPrice(value));
                     double bonus=shop.SalesPurchaseIntentBonus*100;
                     double mirror=MirrorBonus();
                     double restaurant=RestaurantBonus();
-                    demand.text=restaurant>0?$"购买意愿 {chance:0}% · 餐馆+{restaurant:0}"
+                    demand.text=restaurant>0?$"购买意愿 {estimate} · 餐馆+{restaurant:0}"
                         :mirror>0
-                        ?$"购买意愿 {chance:0}% · {(bonus>0?"加成":"镜子")}+{bonus+mirror:0.#}"
-                        :bonus>0?$"购买意愿 {chance:0}% · 销售+{bonus:0.#}":$"购买意愿约 {chance:0}%";
+                        ?$"购买意愿 {estimate} · {(bonus>0?"加成":"镜子")}+{bonus+mirror:0.#}"
+                        :bonus>0?$"购买意愿 {estimate} · 销售+{bonus:0.#}":$"购买意愿约 {estimate}";
                 }
                 if (confirm != null) confirm.interactable = value != price;
             }
@@ -68,7 +76,7 @@ namespace PCShopSell.Game.UI
             ((RectTransform)confirm.transform).Anchor(.8f, .43f, .99f, .98f);
             demand = Ui.Label(tag.transform, "", 13, TextAnchor.MiddleCenter, Ui.Dim);
             demand.name = "PurchaseIntent_" + key;
-            tag.Tip(()=>"购买意愿已计入当前有效加成。\n"+
+            tag.Tip(()=>"购买意愿计入当前有效加成，手办和服装还会考虑顾客预算。\n"+
                 $"在岗销售员：+{shop.SalesPurchaseIntentBonus*100:0.#}个百分点。"+
                 (MirrorBonus()>0?"\n全身镜：服装购买意愿 +5个百分点，多面不叠加。":"")+
                 (RestaurantBonus()>0?"\n餐馆：饮料购买意愿 +20个百分点，总意愿最高100%。\n堂食顾客结账时有机会加购一份已陈列饮料，按当前售价成交。":""));

@@ -119,7 +119,7 @@ namespace PCShopSell.Game.UI
             {
                 Money proceeds = selfOwned ? S.HomePurchasePrice.Scale(.9) : S.PropertySaleNet(property);
                 string action = selfOwned ? "出售自住房" : "出售住宅产权";
-                string terms = selfOwned ? "按当前估值九折出售，继续租住，七天后开始缴周租。"
+                string terms = selfOwned ? "按当前估值九折出售，继续租住，满七天起逢周日扣租。"
                     : "包含估值折价与交易成本，原住户保留。";
                 AgencyPaymentSummary(settlement, -proceeds, action, () => ConfirmHousing(parent, p, action,
                     -proceeds, terms, () => selfOwned ? S.SellHome() : S.SellResidentialInvestment(id)));
@@ -139,7 +139,7 @@ namespace PCShopSell.Game.UI
             {
                 AgencyFeeLine(settlement, "签约周租", S.SignedResidentialRent(p).ToString());
                 if (S.NextResidentialRentDay(p) is int nextRentDay)
-                    Line(settlement, "下次扣租 · " + new PCShopSell.Core.Time.GameDate(nextRentDay), 16, Ui.Dim);
+                    Line(settlement, "下次扣租 · " + new PCShopSell.Core.Time.GameDate(nextRentDay) + " 周日", 16, Ui.Dim);
                 var next = S.NextResidenceAfterEndingLease(p);
                 AgencyPaymentSummary(settlement, Money.Zero, "退租住宅", () => ConfirmHousing(parent, p, "确认退租", Money.Zero,
                     "本次退租后停止缴纳这套住宅的周租。" + (p == S.Home && next != null ? "\n默认住处将改为" + next.Name + "。" : ""),
@@ -151,7 +151,7 @@ namespace PCShopSell.Game.UI
             AgencyPaymentSummary(settlement, rent, "确认租赁", () =>
                 OpenPropertyContract("住宅租赁合同", p.Name, "签约后可入住", rent,
                     fees => AgencyFeeLine(fees, "首周租金", rent.ToString()),
-                    $"签约后<b>每七天缴纳 {rent}</b>。租下后可入住，原有住处继续保留。", false, () =>
+                    $"签约时付首周租金。首周结束后，<b>每周日扣租 {rent}</b>。签约后可入住，原有住处继续保留。", false, () =>
                     {
                         if (S.ResidentialRent(p) == rent) return S.SignResidentialLease(id);
                         Toast("租金有变化，请重新核对。");
@@ -174,7 +174,7 @@ namespace PCShopSell.Game.UI
                 AgencyFeeLine(w.Content, "参考周租", S.ResidentialRent(place).ToString());
                 if (property != null && tenants.Length == 0)
                     Line(w.Content, "空置住宅暂无租金收入", 16, Ui.Dim);
-                Para(w.Content, "空房可租可买，可同时持有多套。租金按各套住宅的签约价每七天扣款。退租后必须保留至少一处可入住的住宅。带住户购买产权收取 2% 交易费，原住户保留，购入七天后开始收周租。月维护费为购入价的 0.1%。", 17);
+                Para(w.Content, "空房可租可买，可同时持有多套。首周结束后，每周日按签约价扣租。退租后须保留至少一处可入住住宅。带住户买入收取 2% 交易费，原住户保留，购入七天后开始收周租。月维护费为购入价的 0.1%。", 17);
             });
         }
 

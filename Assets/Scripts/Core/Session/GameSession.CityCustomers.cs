@@ -65,10 +65,6 @@ namespace PCShopSell.Core.Session
             string interest=person.Interest??"";
             return interest.Contains("模型")||interest.Contains("机械")?"rainbot":interest.Contains("河")||interest.Contains("户外")?"harbor":interest.Contains("植物")||interest.Contains("生态")||interest.Contains("园艺")?"garden":"starlight";
         }
-        private long CityRetailBudgetFor(string personId)
-        {
-            uint hash=2166136261;foreach(char c in personId??"visitor")hash=(hash^c)*16777619;
-            return new long[]{8000,15000,30000,60000}[hash%4];
-        }
+        private long CityRetailBudgetFor(string personId) => ShopSimulation.ModelRetailBudgetFor(personId);
     }
 }

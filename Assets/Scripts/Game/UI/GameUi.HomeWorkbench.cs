@@ -216,7 +216,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("调价 · "+Gifts.Get(id).Name,650,280,w=>
             {
                 if(!S.CanUseHomeWorkbench||shop.Rented!=true||shop.Sim.OnShelfGoods(id)<=0){w.Close();return;}
-                var sim=shop.Sim;Ui.Size(ShelfSaleTag(w,w.Content,"goods_"+id,sim.GoodsPriceOf(id).Yuan,sim.GoodsPriceRange(id),v=>sim.GoodsPurchaseIntentAtPrice(id,v),
+                var sim=shop.Sim;Ui.Size(ShelfSaleTag(w,w.Content,"goods_"+id,sim.GoodsPriceOf(id).Yuan,sim.GoodsPriceRange(id),v=>sim.GoodsPurchaseEstimateAtPrice(id,v),
                     v=>{if(!S.SetWorkbenchGoodsPrice(shop.Place.Id,id,v))Toast("商品已取消陈列或当前不能远程调价。");_homeWorkbench?.RequestRebuild();},sim),-1,140);
             });
         }
