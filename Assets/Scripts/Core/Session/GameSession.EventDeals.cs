@@ -86,7 +86,7 @@ namespace PCShopSell.Core.Session
             var product = products[Random.Next(0, products.Length)];
             var price = EventPrice(shop, product).Scale(1.10);
             string label = product.Name + (product.Boxed ? "（盒装）" : "（散件）");
-            return EventScene(template, $"唐俊杰想从{ShopTitle(shop)}收一件{label}，报价 {price}（当前零售价的 110%）。",
+            return ShopEventScene(template, shop, $"唐俊杰想从{ShopTitle(shop)}收一件{label}，报价 {price}（当前零售价的 110%）。",
                 Choose($"卖给他 · {price}", s =>
                 {
                     if (s.ShopAt(shop.Place.Id) != shop || shop.RetailKind != "computer"

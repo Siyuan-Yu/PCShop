@@ -1093,7 +1093,7 @@ namespace PCShopSell.Game.UI
             var choices = def.Choices.Select((choice, index) => (Choice: choice, Index: index))
                 .ToLookup(entry => entry.Choice.Selection?.Key);
             var selections = choices.Where(group => group.Key != null).ToArray();
-            bool appointment = def.Cg == null && selections.Length > 0
+            bool appointment = selections.Length > 0
                 && selections.All(group => group.All(entry => entry.Choice.Appointment.HasValue));
             int selected = 0;
             string selectedPayment = null;
@@ -1105,7 +1105,12 @@ namespace PCShopSell.Game.UI
 #if UNITY_EDITOR
             if (_eventBatchCurrent > 0) title = $"#{_eventBatchCurrent:00} · {title}";
 #endif
-            if (def.Cg != null) h = 494 + def.Choices.Count * 59;
+            float illustrationHeight = 0;
+            if (def.Cg != null)
+            {
+                illustrationHeight = selections.Length > 0 ? 228 : 350;
+                h = selections.Length > 0 ? h + illustrationHeight : 494 + def.Choices.Count * 59;
+            }
             OpenWindow(title, def.Cg == null ? 720 : 900, h, w =>
             {
                 if (S == null || S.PendingEvent != def)
@@ -1124,7 +1129,7 @@ namespace PCShopSell.Game.UI
                     }, 18, Ui.ButtonHot), -1, 42);
                     return;
                 }
-                if (def.Cg != null) BuildEventCg(w.Content, def.Cg, 350);
+                if (def.Cg != null) BuildEventCg(w.Content, def.Cg, illustrationHeight);
                 if (appointment)
                 {
                     BuildAppointment(w);
@@ -1150,7 +1155,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(w.Content, label, () => SelectChoice(w, idx), 19,
                         interactable: ok), -1, ok ? 46 : 58);
                 }
-            }, true, false, scrollContent: !appointment);
+            }, true, false, scrollContent: !appointment || def.Cg != null);
 
             void SelectChoice(Window w, int index)
             {

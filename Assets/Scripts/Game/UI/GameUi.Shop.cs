@@ -405,6 +405,8 @@ namespace PCShopSell.Game.UI
             BuildCounterTotals(S.CurrentShop);
             BuildShopStanding(S.PlayerShop);
             if (specialBusiness) { BuildSpecialCounter(); return; }
+            if (S.RetailKind == "models")
+                Ui.Size(Ui.Button(C, "模型委托 · 改胶与喷漆", OpenModelCommissions, 16), -1, 36);
             BuildIndustryBrief(C);
             ShopSimulation shop = S.PlayerShop;
             bool fitBanner = !S.ShopFitted || S.IsRenovating;

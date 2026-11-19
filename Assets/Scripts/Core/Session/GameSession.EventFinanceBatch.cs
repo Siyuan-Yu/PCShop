@@ -79,7 +79,8 @@ namespace PCShopSell.Core.Session
                     CityPersonState(r.PersonId).VisitId = t.Id;
                     return "已邀请这位老顾客回店，按实际到店、挑选和结账处理。";
                 }
-                return EventScene(template, (CityPerson(r.PersonId)?.Name ?? r.PersonId) + "曾买过" + r.Product + "，想再来看看。",
+                return ShopIllustratedEvent(template, shop, (CityPerson(r.PersonId)?.Name ?? r.PersonId) + "曾买过" + r.Product + "，想再来看看。",
+                    new EventCgFrame("regulars_visit", personId: r.PersonId),
                     Choose("推荐现货 · " + product.Name, _ => Invite(true)), Choose("请他到店慢慢选", _ => Invite(false)), Choose("下次再来", _ => { r.ReturnInvited = true; return "这次没有安排到店。"; }));
             }
             if (n == 92) return BindFlashSale(template);
@@ -93,13 +94,13 @@ namespace PCShopSell.Core.Session
                     if (a == null) return "骑手当前无法前来，未安排。";
                     a.ServiceConfirmed = true; a.ServiceChoice = 0; return water ? "已约骑手来店门边歇脚喝水，实际相处20分钟后增加交情。" : "已约骑手来歇脚20分钟；没有充电或额外收入。";
                 }
-                return EventScene(template, "骑手想在" + ShopTitle(shop) + "门边歇脚20分钟。", Choose("让他歇会儿", _ => Invite(false)), Choose("招呼他喝水休息", _ => Invite(true)), Choose("这次不方便", _ => "你婉拒了，不扣交情。"));
+                return ShopEventScene(template, shop, "骑手想在" + ShopTitle(shop) + "门边歇脚20分钟。", Choose("让他歇会儿", _ => Invite(false)), Choose("招呼他喝水休息", _ => Invite(true)), Choose("这次不方便", _ => "你婉拒了，不扣交情。"));
             }
             if (n == 94)
             {
                 var check = _inspectionFollowups.First(x => ShopAt(x.Key) != null); var shop = ShopAt(check.Key);
                 bool fitted = IsSpecialBusiness(shop) ? SpecialFitGap(shop) == null : !shop.Sim.NotFitted;
-                return EventScene(template, ShopTitle(shop) + "此前有整改记录，将于" + new GameDate(check.Value) + "复查。按实际设施和进货单据核验。",
+                return ShopEventScene(template, shop, ShopTitle(shop) + "此前有整改记录，将于" + new GameDate(check.Value) + "复查。按实际设施和进货单据核验。",
                     Choose("查看待整改项", _ => "设施：" + (fitted ? "已配齐" : "尚未配齐") + "；进货单据：" + (shop.Sim.Stock.IsEmpty || HasPurchaseReceipt(shop) ? "无需补充" : "待补充") + "。原复查时间不变。"),
                     Choose("按原定日期复查", _ => "沿用原复查记录，不重复结算。"));
             }
@@ -107,13 +108,13 @@ namespace PCShopSell.Core.Session
             {
                 var shop = ShopBatchShop(); var part = PartCatalog.Get("gpu1"); var price = OnlinePrice(Online1788.Shopping, part);
                 string Buy(int count) => PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (part, count) }, shop) ? "已按实时采购价下单，次日到货；涨价传闻不保证收益。" : "未下单，请检查现金、容量和采购条件。";
-                return EventScene(template, "听说" + part.Name + "可能涨价。当前网购单价" + price + "，另计实际运费；传闻没有保本承诺。",
+                return ShopEventScene(template, shop, "听说" + part.Name + "可能涨价。当前网购单价" + price + "，另计实际运费；传闻没有保本承诺。",
                     Choose("少量试单 · 1件", _ => Buy(1)), Choose("备货 · 3件", _ => Buy(3)), Choose("自选采购数量", _ => { Flags.Add("shop-event:procure:" + shop.Place.Id); return "已加入经营待办，打开采购后自行选数量并确认付款。"; }), Choose("先不囤货", _ => "未采购，也没有额外收益。"));
             }
             if (n == 96)
             {
                 var shop = EventRetailShops().First(s => !HasEventMembership(s));
-                return EventScene(template, ShopTitle(shop) + "可开通会员积分：会员实付累计满¥100积1分，50分抵后续一单¥100。不开储值。",
+                return ShopEventScene(template, shop, ShopTitle(shop) + "可开通会员积分：会员实付累计满¥100积1分，50分抵后续一单¥100。不开储值。",
                     Choose("开通会员 · ¥600", _ => {
                         if (HasEventMembership(shop) || ShopAt(shop.Place.Id) != shop) return "门店状态已变化或已开通。";
                         if (!Ledger.TryDebit(Clock.Today, "会员开通", Money.FromYuan(600), ShopTitle(shop), LedgerAttribution.ForShop(shop.Place.Id))) return "现金不足，未开通。";
@@ -127,7 +128,7 @@ namespace PCShopSell.Core.Session
             if (n == 98)
             {
                 var shop = MyShops.First(SubsidyEligible); string flag = SubsidyFlag(shop);
-                return EventScene(template, ShopTitle(shop) + "开店已满30天且有实际成交，可申请本年度¥3,000经营补贴，审核3天。",
+                return ShopEventScene(template, shop, ShopTitle(shop) + "开店已满30天且有实际成交，可申请本年度¥3,000经营补贴，审核3天。",
                     Choose("申请经营补贴", _ => { if (!SubsidyEligible(shop)) return "本年度已申请或条件已变化。"; Flags.Add(flag); var t = AddShopTask("subsidy", shop); t.Started = true; t.At = Clock.Now.TotalMinutes + 3 * 1440L; t.Status = "审核中"; return "已申请，三天后按门店状态审核到账。"; }),
                     Choose("暂不申请", _ => "未提交申请。"));
             }
@@ -162,7 +163,7 @@ namespace PCShopSell.Core.Session
                 }
             }
             choices.Add(Choose("暂不促销", _ => "未调整价格。"));
-            var scene = EventScene(template, ShopTitle(shop) + " · 所选商品九折 2 小时，限 5 笔成交。", choices.ToArray());
+            var scene = ShopEventScene(template, shop, ShopTitle(shop) + " · 所选商品九折 2 小时，限 5 笔成交。", choices.ToArray());
             scene.SelectionPrompt = "促销商品";
             return scene;
         }

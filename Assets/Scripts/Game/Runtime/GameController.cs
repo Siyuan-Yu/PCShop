@@ -710,6 +710,7 @@ namespace PCShopSell.Game
                 else if (InInterior)
                 {
                     if (Interior.NearbyPetOwner(out _) is PetStay pet) Ui.OpenPetOwnerVisit(pet.Id);
+                    else if (Interior.NearModelPaintBench) Ui.OpenModelCommissions();
                     else if (Interior.NearUsedRepairBench) Ui.OpenUsedRepairDesk();
                     else if (Interior.NearUsedBuyDesk) Ui.OpenUsedDesk();
                     else if (NearbyRestaurantTableToClear() is DiningOrder meal)
@@ -942,6 +943,10 @@ namespace PCShopSell.Game
                     bool dropOff = Session.PetBoarding(Session.CurrentShop)?.Offer?.Id == pet.Id;
                     label = (person?.Name ?? "宠物主人") + (dropOff ? " · 送养" : " · 探望结算") + "（按 F）";
                     return true;
+                }
+                if (Interior.NearModelPaintBench)
+                {
+                    world = Interior.ModelPaintBenchWorld; label = "喷漆台 · 按 F 查看模型委托"; return true;
                 }
                 if (Interior.NearUsedRepairBench)
                 {

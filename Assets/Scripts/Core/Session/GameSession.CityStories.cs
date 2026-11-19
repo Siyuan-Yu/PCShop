@@ -501,7 +501,7 @@ namespace PCShopSell.Core.Session
             quote.Discount = false;
             string terms = $"确认后 {IndustryReferralDays(shop, count)} 天内交付"
                 + (count == 1 ? "。" : "，保证金 5%，全数交付奖励 3%。");
-            return EventScene(template, $"{quote.Client}想向{ShopTitle(shop)}订购{quote.ProductName} ×{count}。{terms}",
+            return ShopEventScene(template, shop, $"{quote.Client}想向{ShopTitle(shop)}订购{quote.ProductName} ×{count}。{terms}",
                 Choose($"报{(count == 1 ? "七折熟客价" : "九五折合作价")} · {discounted}", _ => Record(true)),
                 Choose($"按正常价 · {quote.Total}", _ => Record(false)),
                 Choose("这单暂时接不了", _ => "你婉拒了这笔订单。"));

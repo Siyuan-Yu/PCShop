@@ -81,18 +81,18 @@ namespace PCShopSell.Core.Session
             if (number == 83)
             {
                 _shopCat = new ShopCatVisit { ShopId = shop.Place.Id, Until = Clock.Now.TotalMinutes + 20 };
-                return EventScene(template, "一只小猫来到" + ShopTitle(shop) + "门边，暂时趴着歇脚。",
+                return ShopEventScene(template, shop, "一只小猫来到" + ShopTitle(shop) + "门边，暂时趴着歇脚。",
                     Choose("放碗水", _ => { _shopCat.Water = true; _shopCat.Until = Clock.Now.TotalMinutes + 45; return "小猫喝了水，歇一会儿便会离开。"; }),
                     Choose("轻轻引到门外", _ => { _shopCat.Until = Clock.Now.TotalMinutes + 3; return "你把小猫引到门边，等它自己离开。"; }),
                     Choose("先不打扰", _ => "小猫暂时歇脚，没有成为店里的宠物。"));
             }
             if (number == 88)
-                return EventScene(template, ShopTitle(shop) + "的陈列可以换个摆法。调整摆设沿用当天歇业装修规则。",
+                return ShopEventScene(template, shop, ShopTitle(shop) + "的陈列可以换个摆法。调整摆设沿用当天歇业装修规则。",
                     Choose("自己调整", _ => { var t = AddShopTask("self-display", shop); t.Before = LayoutStamp(shop); return "已记下当前陈列。到店从经营待办打开装修，实际调整后才算完成。"; }),
                     Choose("请设计师 · ¥1,500 / 30分钟", _ => { AddShopTask("design", shop, 30); return "已预约，到店从经营待办开始，届时歇业装修并支付¥1,500。"; }),
                     Choose("暂不改", _ => "保持当前陈列。"));
             if (number == 89)
-                return EventScene(template, ShopTitle(shop) + "有库存变动待复核。盘点会核对实物、顾客预留和在途货，不随机扣款。",
+                return ShopEventScene(template, shop, ShopTitle(shop) + "有库存变动待复核。盘点会核对实物、顾客预留和在途货，不随机扣款。",
                     Choose("现在盘点 · 30分钟", _ => { AddShopTask("audit", shop, 30); return "到店从经营待办开始；盘点期间暂停接待，完成后出核对结果。"; }),
                     Choose("打烊后盘点", _ => { var t = AddShopTask("audit", shop, 30); long end = Clock.Today.TotalDays * 1440L + shop.Sim.CloseMinute; t.At = end > Clock.Now.TotalMinutes ? end : end + 1440; return "已加入经营待办，打烊后到店开始。"; }));
             var choices = new List<EventChoice>();
@@ -107,7 +107,7 @@ namespace PCShopSell.Core.Session
                 return "已安排晚间宣传，18点后营业时带来潜在顾客，成交仍取决于实际商品。";
             }, s => eveningHours && s.Ledger.CanAfford(Money.FromYuan(1000)), "需要晚间营业时段和¥1,000预算"));
             choices.Add(Choose("照常营业", _ => "保持当前营业安排，不额外扣费。"));
-            return EventScene(template, ShopTitle(shop) + "所在街区气温达到" + CityAirTemperature.ToString("0") + "℃。空调按实际设施生效，不另收一笔虚构电费。", choices.ToArray());
+            return ShopEventScene(template, shop, ShopTitle(shop) + "所在街区气温达到" + CityAirTemperature.ToString("0") + "℃。空调按实际设施生效，不另收一笔虚构电费。", choices.ToArray());
         }
         private EventDef BindDeliveryException(EventDef template)
         {
@@ -131,7 +131,7 @@ namespace PCShopSell.Core.Session
                 if (record != null) { record.DeliveryAt = at; record.State = "查件中"; }
                 return mode == "search" ? "已申请查件，原预计到货时间延后三小时，仍按原订单收货。" : "已等待物流处理，原预计到货时间延后两天。";
             }
-            return EventScene(template, "网购订单#" + order.Id + "的包裹在转运中失联，实付" + Money.FromCents(order.TotalCents) + "。请选择查件或取消投递索赔。",
+            return ShopEventScene(template, ShopAt(order.ShopId), "网购订单#" + order.Id + "的包裹在转运中失联，实付" + Money.FromCents(order.TotalCents) + "。请选择查件或取消投递索赔。",
                 Choose("等物流处理 · 延后两天", _ => Process("wait")), Choose("申请查件 · 延后三小时", _ => Process("search")), Choose("取消投递并索赔", _ => Process("claim")));
         }
         private EventDef BindSupplierSample(EventDef template)
@@ -224,7 +224,8 @@ namespace PCShopSell.Core.Session
                 t.Status = "等待顾客回复";
                 return mode == "pay" ? "已支付" + compensation + "并提交处理说明，明天查看反馈。" : "已联系顾客，明天查看反馈。";
             }
-            return EventScene(template, "一位购买过" + receipt.Product + "的顾客评价体验一般，本单实付" + paid + "。",
+            return ShopIllustratedEvent(template, shop, "一位购买过" + receipt.Product + "的顾客评价体验一般，本单实付" + paid + "。",
+                new EventCgFrame("event_online_review", personId: receipt.PersonId),
                 Choose("了解具体问题", _ => Reply("ask")), Choose("按实付双倍赔偿 · " + compensation, _ => Reply("pay"), s => s.Ledger.CanAfford(compensation), "现金不足"), Choose("公开回复", _ => Reply("reply")));
         }
 
@@ -412,7 +413,7 @@ namespace PCShopSell.Core.Session
             }
             Offer("学生价九五折", 1, 9500); Offer("三件起九折", 3, 9000); Offer("按原价", 1, 10000);
             choices.Add(Choose("这次不接", _ => "本次没有订单或钱款变动。"));
-            return EventScene(template, "几位学生向" + ShopTitle(shop) + "询价。按实际商品和数量报价，交付后才收款。", choices.ToArray());
+            return ShopEventScene(template, shop, "几位学生向" + ShopTitle(shop) + "询价。按实际商品和数量报价，交付后才收款。", choices.ToArray());
         }
         private static string LayoutStamp(OwnedShop shop) => string.Join(";", shop.Layout.Where(p => IsDisplayDecoration(p.Id)).OrderBy(p => p.Id).ThenBy(p => p.X).ThenBy(p => p.Z).ThenBy(p => p.Rot)
             .Select(p => p.Id + ":" + p.X.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + ":" + p.Z.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + ":" + p.Rot));

@@ -112,7 +112,9 @@ namespace PCShopSell.Core.Session
             if (Flags.Contains(BailoutUsedFlag) || Relation(Npcs.Lin) < NpcPerks.LinBailout) return false;
             Flags.Add(BailoutUsedFlag);
             Ledger.Credit(Clock.Today, "人情", NpcPerks.BailoutAmount, "林远航救急");
-            Popup?.Invoke("林远航来了", $"林远航听说你的账上告急，二话没说转了 {NpcPerks.BailoutAmount} 过来：\"先拿着，别跟我客气，以后赚了再还。\"\n（这个人情只能用一次）");
+            ShowEventCg("林远航来了", VisualResult(
+                $"林远航听说你的账上告急，二话没说转了 {NpcPerks.BailoutAmount} 过来：\"先拿着，别跟我客气，以后赚了再还。\"\n（这个人情只能用一次）",
+                "event_phone_message", personId: Npcs.Lin));
             return true;
         }
 

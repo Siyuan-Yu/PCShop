@@ -468,6 +468,7 @@ namespace PCShopSell.Core.Session
             TickCityStories(to.TotalMinutes);
             TickCityRetail();
             TickSpecialBusinesses(from,to);
+            TickModelCommissions(from, to);
             TickEventFollowups(to);
             TickCityClimate(from.TotalMinutes,to.TotalMinutes);
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);

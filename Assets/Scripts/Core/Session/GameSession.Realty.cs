@@ -296,6 +296,7 @@ namespace PCShopSell.Core.Session
             foreach(var id in _employeeHireShops.Where(p=>p.Value==PlayerShopPlace.Id).Select(p=>p.Key).ToArray())_employeeHireShops[id]=place.Id;
             foreach(var row in Employees.Where(e=>e.Person.TransferShopId==PlayerShopPlace.Id))row.Person.TransferShopId=place.Id;
             MoveSpecialBusinessState(PlayerShopPlace.Id,place.Id);
+            MoveModelCommissionBook(PlayerShopPlace.Id, place.Id);
             PlayerShopPlace = place;
             PlayerShop.TradingEnabled=!IsDedicatedVenue(place)&&RetailKind!="restaurant";
             _vacant.Remove(place.Id);

@@ -69,7 +69,7 @@ namespace PCShopSell.Core.Session
                 return VisualResult($"维持原价，门店人气减少 {lostAwareness:0.##}。促销结束后解除临时客流影响。",
                     "rival", caption: $"维持原价 · 人气 −{lostAwareness:0.##}");
             }
-            return IllustratedEvent(template, $"{promotion.RivalName}正在给{product}做九折促销，持续至 {new GameDate(promotion.EndDay)} 00:00。"
+            return ShopIllustratedEvent(template, shop, $"{promotion.RivalName}正在给{product}做九折促销，持续至 {new GameDate(promotion.EndDay)} 00:00。"
                 + $"\n受影响门店：{ShopTitle(shop)}。",
                 new EventCgFrame("rival", EventCgProp.Sale, caption: promotion.RivalName),
                 ChooseCg($"只对{product}限时跟价", _ => Respond("match")),

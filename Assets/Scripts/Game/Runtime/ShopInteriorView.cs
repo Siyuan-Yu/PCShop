@@ -1104,7 +1104,8 @@ namespace PCShopSell.Game.Runtime
                 var occupied = new List<Vector3>();
                 var usedDesk = session.CurrentShop.RetailKind == "secondhand" ? _usedBuyDesk : null;
                 var repairBenches = session.CurrentShop.Layout.Where(p=>p.Id=="used_repairbench").ToArray();
-                int repairerIndex = 0;
+                var paintBenches = session.CurrentShop.Layout.Where(p => p.Id == FurnitureCatalog.ModelPaintBench).ToArray();
+                int repairerIndex = 0, painterIndex = 0;
                 if (usedDesk != null) occupied.AddRange(_usedSellerStands);
                 foreach (var employee in staff.OrderBy(e => e.Role == EmployeeRole.Cashier ? 0
                     : usedDesk != null && e.Role == EmployeeRole.Appraiser ? 1 : 2))
@@ -1120,7 +1121,9 @@ namespace PCShopSell.Game.Runtime
                     }
                     bool atUsedDesk = employee.Role == EmployeeRole.Appraiser && usedDesk != null;
                     var repairBench = employee.Role == EmployeeRole.Repairer && repairBenches.Length > 0
-                        ? repairBenches[repairerIndex++ % repairBenches.Length] : null;
+                        ? repairBenches[repairerIndex++ % repairBenches.Length]
+                        : employee.Role == EmployeeRole.ModelPainter && paintBenches.Length > 0
+                            ? paintBenches[painterIndex++ % paintBenches.Length] : null;
                     var preferred = repairBench != null ? UsedDeskStand(repairBench, seller: false)
                         : atUsedDesk ? UsedDeskStand(usedDesk, seller: false)
                         : employee.Role == EmployeeRole.Cashier ? _clerkStand

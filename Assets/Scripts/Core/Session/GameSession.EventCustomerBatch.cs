@@ -67,7 +67,8 @@ namespace PCShopSell.Core.Session
                 return mode == 2 ? "已征得这位顾客同意转发，明天起有两位潜在顾客在营业时到店；是否成交仍看真实库存和服务。"
                     : mode == 1 ? "你问了具体使用感受，反馈记在这家门店，口碑 +1。" : "你感谢了这位真实成交顾客，门店口碑 +1。";
             }
-            return EventScene(template, $"一位在{ShopTitle(shop)}买过{r.Product}、实付 ¥{r.PaidCents / 100.0:0.00} 的顾客发布了店铺推荐。",
+            return ShopIllustratedEvent(template, shop, $"一位在{ShopTitle(shop)}买过{r.Product}、实付 ¥{r.PaidCents / 100.0:0.00} 的顾客发布了店铺推荐。",
+                new EventCgFrame("event_phone_message", personId: r.PersonId),
                 Choose("发消息感谢", _ => Reply(0)), Choose("询问具体使用意见", _ => Reply(1)),
                 Choose("征求同意后转发", _ => Reply(2)), Choose("暂不回复", _ => { r.Reviewed = true; return "本次没有回复，不发奖励。"; }));
         }
@@ -82,8 +83,9 @@ namespace PCShopSell.Core.Session
                 Ledger.Credit(Clock.Today, "收银待退差额", Money.FromCents(r.ChangeCents), "盘点确认现金少找 · " + r.Product,
                     LedgerAttribution.ForShop(shop.Place.Id, r.Key + ":change", "待退款"));
             }
-            return EventScene(template, $"复核{ShopTitle(shop)}的一笔真实现金交易：{r.Product}，商品价款 ¥{r.PaidCents / 100.0:0.00}。"
+            return ShopIllustratedEvent(template, shop, $"复核{ShopTitle(shop)}的一笔真实现金交易：{r.Product}，商品价款 ¥{r.PaidCents / 100.0:0.00}。"
                 + $"你确认少找了 ¥{r.ChangeCents / 100.0:0.00}，盘点差额已单独记为待退款；这不是商品利润。",
+                new EventCgFrame("regulars", EventCgProp.Banknotes, r.PersonId),
                 Choose("立即联系并补还", s => s.RefundEventChange(r.Key) ? "差额已补还，待退款已结清。" : "暂未补还，待退款仍保留，请到对应店铺处理。"),
                 Choose("联系顾客，约一小时后来取", _ => { r.RefundAt = Clock.Now.TotalMinutes + 60; return "已约顾客回来取款；请在这家门店等候并留足现金，到时结清差额。"; }),
                 Choose("暂不处理", _ => "待退款继续保留，未成为商品收入；拖延两天会影响该店口碑。"));
@@ -133,7 +135,7 @@ namespace PCShopSell.Core.Session
                 _cityReferrals.Add(quote);
                 return "已记录真实十件订单，报价 " + quote.Total + "。请在门店订单／城市履历确认接单，再实际备货交付；当前没有收入。";
             }
-            return EventScene(template, $"社区团长向{ShopTitle(shop)}询价：{quote.ProductName} ×10，原价合计 {quote.Total}。"
+            return ShopEventScene(template, shop, $"社区团长向{ShopTitle(shop)}询价：{quote.ProductName} ×10，原价合计 {quote.Total}。"
                 + "按店型备货、装机或制作，全量交付后才入账；价格按真实商品和折扣计算。",
                 Choose("报九五折 · " + Money.FromCents(quote.FullPriceCents).Scale(.95), _ => Record(9500)),
                 Choose("报九折 · " + Money.FromCents(quote.FullPriceCents).Scale(.9), _ => Record(9000)),

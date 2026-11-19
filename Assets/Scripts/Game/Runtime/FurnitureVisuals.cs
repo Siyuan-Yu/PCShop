@@ -32,7 +32,7 @@ namespace PCShopSell.Game.Runtime
                 ShopFixtures.BuildFixture(root, def, c, shelfKind);
                 return root.gameObject;
             }
-            if(def.Id.StartsWith("restaurant_")||def.Id.StartsWith("used_")){SpecialFurniture(root,def,c);return root.gameObject;}
+            if(def.Id.StartsWith("restaurant_")||def.Id.StartsWith("used_")||def.Id==FurnitureCatalog.ModelPaintBench){SpecialFurniture(root,def,c);return root.gameObject;}
             if(PetShopCatalog.HouseCapacity(def.Id)>0 || PetShopCatalog.IsToyFixture(def.Id))
             {
                 PetSceneModels.BuildFurniture(root,def,c);
@@ -116,6 +116,15 @@ namespace PCShopSell.Game.Runtime
             }
             else if(def.Id=="used_display")
                 Prims.Box(root,"SalesGlass",new Vector3(0,1.03f,0),new Vector3(w,.25f,d),Mats.Lit(new Color(.55f,.72f,.7f),.3f));
+            else if (def.Id == FurnitureCatalog.ModelPaintBench)
+            {
+                Prims.Box(root, "SprayBooth", new Vector3(0, 1.08f, d * .34f), new Vector3(w * .78f, .46f, .12f), Mats.Lit(ArtDirection.Sage));
+                Prims.Box(root, "Turntable", new Vector3(0, .9f, -.04f), new Vector3(.3f, .06f, .3f), Mats.Lit(Metal));
+                Prims.Box(root, "Model", new Vector3(0, 1f, -.04f), new Vector3(.14f, .14f, .13f), Mats.Lit(ArtDirection.Brass));
+                for (int i = 0; i < 3; i++)
+                    Prims.Box(root, "PaintCup", new Vector3(w * .25f, .93f, (i - 1) * .12f), new Vector3(.065f, .12f, .065f),
+                        Mats.Lit(i == 0 ? ArtDirection.Sage : i == 1 ? ArtDirection.Brass : ArtDirection.Wood));
+            }
             else if(def.Id=="used_repairbench")
             {
                 Prims.Box(root,"RepairMat",new Vector3(0,.88f,0),new Vector3(w*.8f,.025f,d*.75f),Mats.Lit(ArtDirection.Sage));

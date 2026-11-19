@@ -95,7 +95,7 @@ namespace PCShopSell.Core.Session
             if(n==123)
             {
                 var shop=ShopBatchShop();_leak=new RoofLeakState{Shop=shop.Place.Id,SignedDay=shop.Lease.SignedDay,Kind=shop.RetailKind,LastWet=Clock.Now.TotalMinutes,Message="雨水从门店一角滴落，尚未修补。"};
-                return EventScene(template,shop.Place.Name+"的一角开始漏水。可以到店放桶，或请师傅上门修补。",
+                return ShopEventScene(template, shop, shop.Place.Name+"的一角开始漏水。可以到店放桶，或请师傅上门修补。",
                     Choose("请师傅 · ¥2,000",_=>RequestLeakRepair()?"已付维修费，师傅正赶来；到店后维修60分钟。":"暂时无法叫修，未扣款。"),
                     Choose("到店放桶",_=>"到漏水的门店，从社区生活选择放桶，实际操作5分钟。"),Choose("稍后处理",_=>"漏点保留，雨天会积水；不会随机销毁库存。"));
             }

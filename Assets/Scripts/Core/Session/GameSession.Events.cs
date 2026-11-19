@@ -14,8 +14,11 @@ namespace PCShopSell.Core.Session
 {
     public enum EventCgProp
     {
-        None, Passed, Notice, Fine, Boxes, Camera, Sale, Wallet, Banknotes, Calendar, Takeout, Envelope, Meal, Stew
+        None, Passed, Notice, Fine, Boxes, Camera, Sale, Wallet, Banknotes, Calendar, Takeout, Envelope, Meal, Stew,
+        Battery, SponsorSticker, RaceSuit, RaceHelmet, StrayCat, StrayDog, Thermometer, EmergencyLamp, Candle, BurntCarton, LeakBucket, MessagePhone
     }
+
+    public enum EventCgLighting { Normal, Blackout, Emergency, Candle, Evening, Rain }
 
     public enum InvitationMode { Standard, More, DoNotDisturb }
 
@@ -24,15 +27,17 @@ namespace PCShopSell.Core.Session
         public readonly string Background, PersonId, Caption;
         public readonly EventCgProp Prop;
         public readonly bool Seated;
+        public readonly EventCgLighting Lighting;
 
         public EventCgFrame(string background, EventCgProp prop = EventCgProp.None, string personId = null,
-            string caption = null, bool seated = false)
+            string caption = null, bool seated = false, EventCgLighting lighting = EventCgLighting.Normal)
         {
             Background = background;
             Prop = prop;
             PersonId = personId;
             Caption = caption;
             Seated = seated;
+            Lighting = lighting;
         }
     }
 
@@ -73,6 +78,7 @@ namespace PCShopSell.Core.Session
         public string Body;
         public string SelectionPrompt;
         public EventCgFrame Cg;
+        internal OwnedShop IllustrationShop;
         public int MinDay;
         /// <summary>最晚触发的游戏天数；-1 = 没有上限。</summary>
         public int MaxDay = -1;
@@ -338,6 +344,7 @@ namespace PCShopSell.Core.Session
                 _ => def,
             };
             if (def == null) return;
+            def.Cg = ShopIllustration(def.IllustrationShop, def.Cg ?? VisitEventIllustration(def.Id));
             PendingEvent = def;
             _eventLastDay[def.Id] = today.TotalDays;
             _eventCount[def.Id] = EventCountOf(def.Id) + 1;
@@ -379,10 +386,26 @@ namespace PCShopSell.Core.Session
             if (CityActivityBlocker(activity.Id, people, start) != null) return null;
             var time = new GameTimestamp(start);
             string venue = City.GetPlace(activity.VenueId).Name;
+            string background = activity.VenueId switch
+            {
+                "life_restaurant" => time.Hour is >= 18 or < 6 ? "event_restaurant_evening" : "friend_meal",
+                "life_ktv" => "event_karaoke",
+                "life_bar" => "event_lighthouse_bar",
+                "life_court" => "event_basketball_court",
+                "life_golf" => "event_golf_range",
+                FishingVenueId => "event_fishing_pond",
+                "life_hike" or "life_park" => "event_park_trail",
+                "stall_cpu" when activity.Id == "old_market" => "event_oldmarket",
+                "stall_cpu" => "event_electronics_market",
+                OldMarketVenueId => "event_oldmarket",
+                "life_expo" => "event_model_expo",
+                _ => "event_phone_message"
+            };
             return new EventDef
             {
                 Id = LeisureInvitationId,
                 Title = friend.Name + "约你出去走走",
+                Cg = new EventCgFrame(background, personId: friend.Id),
                 Body = $"「最近店里忙得过来了吗？有空一起去{venue}吧。」\n{activity.Name} · {time}",
                 Choices =
                 {
@@ -411,20 +434,20 @@ namespace PCShopSell.Core.Session
         public event Action<string, string, EventCgFrame> EventCgPopup;
         public event Action<string, EventCgFrame> EventCgNotice;
 
-        private void ShowEventCg(string title, EventCgResult result)
+        private void ShowEventCg(string title, EventCgResult result, OwnedShop shop = null)
         {
             if (string.IsNullOrEmpty(result?.Body)) return;
-            if (result.Frame != null && EventCgPopup != null) EventCgPopup(title, result.Body, result.Frame);
+            if (result.Frame != null && EventCgPopup != null) EventCgPopup(title, result.Body, ShopIllustration(shop, result.Frame));
             else Show(title, result.Body);
         }
 
         private static EventCgResult VisualResult(string body, string background, EventCgProp prop = EventCgProp.None,
             string personId = null, string caption = null) => new EventCgResult(body, new EventCgFrame(background, prop, personId, caption));
 
-        private void SayEventCg(string body, EventCgFrame frame)
+        private void SayEventCg(string body, EventCgFrame frame, OwnedShop shop = null)
         {
             if (EventCgNotice == null) Say(body);
-            else EventCgNotice(body, frame);
+            else EventCgNotice(body, ShopIllustration(shop, frame));
         }
 
         private static EventChoice ChooseCg(string text, Func<GameSession, EventCgResult> apply,
@@ -440,6 +463,150 @@ namespace PCShopSell.Core.Session
             var scene = EventScene(template, body, choices);
             scene.Cg = frame;
             return scene;
+        }
+
+        private static EventCgFrame VisitEventIllustration(string id) => id switch
+        {
+            "review" => new EventCgFrame("event_online_review"),
+            "flyer" => new EventCgFrame("event_flyer"),
+            "cold" => new EventCgFrame("event_under_weather"),
+            "intro_zhang" or "zhang_visit" => new EventCgFrame("regulars", personId: Npcs.Zhang),
+            "intro_landlady" => new EventCgFrame("regulars", personId: Npcs.Landlady),
+            "intro_lin" => new EventCgFrame("regulars", personId: Npcs.Lin),
+            "zhang_family" => new EventCgFrame("regulars", EventCgProp.Boxes, Npcs.Zhang),
+            "landlady_rent" => new EventCgFrame("regulars", EventCgProp.Calendar, Npcs.Landlady),
+            "landlady_help" => new EventCgFrame("regulars", EventCgProp.Boxes, Npcs.Landlady),
+            "zhou_deal" => new EventCgFrame("students", personId: Npcs.Zhou),
+            "jie_loan" => new EventCgFrame("lend", personId: Npcs.Jie),
+            "jie_trade" => new EventCgFrame("students", personId: Npcs.Jie),
+            "lin_visit" or "lin_loan" => new EventCgFrame("lend", personId: Npcs.Lin),
+            "lin-loan-overdue" => new EventCgFrame("lend", EventCgProp.Calendar, Npcs.Lin),
+            "race_xinglan_invite" => new EventCgFrame("event_race_track", personId: Xinglan),
+            "race_zhixia_club" => new EventCgFrame("lend", personId: Zhixia),
+            "race_jingxing_tuning" => new EventCgFrame("event_race_service", personId: Jingxing),
+            "race_ruoning_rare" => new EventCgFrame("event_race_collector", personId: Ruoning),
+            "race_ming_lunch" => new EventCgFrame("event_race_track", personId: Ming),
+            "ming-race-meal" => new EventCgFrame("lend", personId: Ming),
+            "race_rider_bet" => new EventCgFrame("event_race_track", personId: Rider),
+            "race_battery_old" => new EventCgFrame("event_race_service", EventCgProp.Battery),
+            "race_sponsor_sticker" => new EventCgFrame("event_race_service", EventCgProp.SponsorSticker, "keeper_phone"),
+            "race_spectator" or "race_charity" => new EventCgFrame("event_race_track", personId: Zhixia),
+            "race_maker_gear" => new EventCgFrame("event_race_service", EventCgProp.RaceSuit, "life_maker"),
+            "race_night_ride" => new EventCgFrame("event_race_night", personId: Zhixia),
+            "race_helmet_deal" => new EventCgFrame("event_race_service", EventCgProp.RaceHelmet),
+            "race_track_visit_rain" => new EventCgFrame("event_race_wet"),
+            "race_ning_study" => new EventCgFrame("event_race_track", personId: "life_ning"),
+            "act_dinner_cook" => new EventCgFrame("friend_meal", EventCgProp.Meal, "res_cook", seated: true),
+            "act_dinner_chef" => new EventCgFrame("friend_meal", EventCgProp.Stew, "life_chef", seated: true),
+            "act_dinner_linhe" => new EventCgFrame("event_restaurant_evening", EventCgProp.Meal, "resident_linhe", seated: true),
+            "act_dinner_farm" => new EventCgFrame("event_home_dinner", personId: "keeper_farm"),
+            "act_ktv_singer" => new EventCgFrame("event_karaoke", personId: "life_singer"),
+            "act_ktv_fuzhi" => new EventCgFrame("event_karaoke", personId: "resident_fuzhi"),
+            "act_ktv_luoya" => new EventCgFrame("event_karaoke", personId: "resident_luoya"),
+            "act_bar_bartender" => new EventCgFrame("event_lighthouse_bar", personId: "life_bartender"),
+            "act_bar_taoran" => new EventCgFrame("event_lighthouse_bar", personId: "resident_taoran"),
+            "act_bar_zengyu" => new EventCgFrame("event_lighthouse_bar", personId: "resident_zengyu"),
+            "act_court_coach" => new EventCgFrame("event_basketball_court", personId: "life_coach"),
+            "act_court_dongyu" => new EventCgFrame("event_basketball_court", personId: "resident_dongyu"),
+            "act_court_zhang" => new EventCgFrame("event_basketball_court", personId: Npcs.Zhang),
+            "act_golf_golfer" => new EventCgFrame("event_golf_range", personId: "life_golfer"),
+            "act_golf_enterprise" => new EventCgFrame("event_golf_range", personId: "life_enterprise"),
+            "act_fishing_shaoan" => new EventCgFrame("event_fishing_pond", personId: "resident_shaoan"),
+            "act_fishing_qiaosong" => new EventCgFrame("event_fishing_pond", personId: "resident_qiaosong"),
+            "act_fishing_grandpa" => new EventCgFrame("event_fishing_pond", personId: "res_grandpa"),
+            "act_hike_luqiao" => new EventCgFrame("event_park_trail", personId: "resident_luqiao"),
+            "act_hike_gardener" => new EventCgFrame("event_park_trail", personId: "life_gardener"),
+            "act_hike_shiyang" => new EventCgFrame("event_park_trail", personId: "resident_shiyang"),
+            "act_snack_moxin" => new EventCgFrame("event_restaurant_dawn", EventCgProp.Stew, "resident_moxin", seated: true),
+            "act_snack_maoning" => new EventCgFrame("event_restaurant_evening", EventCgProp.Takeout, "resident_maoning", seated: true),
+            "act_snack_rider" => new EventCgFrame("event_restaurant_evening", EventCgProp.Stew, Rider, seated: true),
+            "act_market_zhou" => new EventCgFrame("event_electronics_market", personId: Npcs.Zhou),
+            "act_market_li" => new EventCgFrame("event_electronics_market", personId: "li"),
+            "act_market_wang" => new EventCgFrame("event_electronics_market", personId: "wang"),
+            "act_oldmarket_guwen" => new EventCgFrame("event_oldmarket", personId: "resident_guwen"),
+            "act_oldmarket_leiming" => new EventCgFrame("event_oldmarket", personId: "resident_leiming"),
+            "act_expo_curator" => new EventCgFrame("event_electronics_expo", personId: "life_curator"),
+            "act_expo_hanzheng" => new EventCgFrame("event_electronics_expo", personId: "resident_hanzheng"),
+            "act_comic_creator" => new EventCgFrame("event_model_expo", personId: "life_creator"),
+            "act_comic_ningxi" => new EventCgFrame("event_model_expo", EventCgProp.Camera, "resident_ningxi"),
+            "act_comic_shenxiao" => new EventCgFrame("event_model_expo", personId: "story_shenxiao"),
+            "shop_bulk_order" or "shop_student_discount" => new EventCgFrame("students", EventCgProp.Boxes),
+            "shop_lost_delivery" => new EventCgFrame("regulars_visit", EventCgProp.Boxes),
+            "shop_cat_visitor" => new EventCgFrame("regulars_visit", EventCgProp.StrayCat),
+            "shop_supplier_gift" => new EventCgFrame("event_electronics_market", EventCgProp.Boxes, Npcs.Zhou),
+            "shop_neighbor_help" => new EventCgFrame("event_shop_phone", personId: Npcs.Jie),
+            "shop_window_dressing" => new EventCgFrame("regulars", EventCgProp.Boxes),
+            "shop_inventory_audit" => new EventCgFrame("thief", EventCgProp.Notice),
+            "shop_summer_heat" => new EventCgFrame("regulars", EventCgProp.Thermometer),
+            "shop_flash_sale" or "money_found_coupon" => new EventCgFrame("event_phone_message", EventCgProp.Sale),
+            "shop_delivery_boy" => new EventCgFrame("regulars_visit", personId: Rider),
+            "shop_inspection_followup" => new EventCgFrame("inspection", EventCgProp.Calendar),
+            "shop_hot_item_rumor" => new EventCgFrame("event_phone_message"),
+            "shop_loyalty_card" or "money_tax_refund" or "money_utility_refund" or "money_overpaid_rent" or "money_insurance_agent"
+                => new EventCgFrame("event_paperwork"),
+            "money_phone_scam" => new EventCgFrame("event_online_review"),
+            "money_bank_manager" => new EventCgFrame("event_bank_counter"),
+            "money_win_lottery" => new EventCgFrame("event_scratch_lottery"),
+            "money_invest_tip" => new EventCgFrame("lend"),
+            "money_second_hand" => new EventCgFrame("event_oldmarket"),
+            "money_charity_box" => new EventCgFrame("event_community_library"),
+            "life_flu_season" => new EventCgFrame("event_under_weather"),
+            "life_pet_adopt" => new EventCgFrame("event_community_door", EventCgProp.StrayDog),
+            "life_street_music" => new EventCgFrame("event_street_music", personId: "life_singer"),
+            "life_gym_trial" => new EventCgFrame("event_outdoor_gym"),
+            "life_book_swap" => new EventCgFrame("event_community_library", personId: "life_librarian"),
+            "life_night_class" => new EventCgFrame("event_night_school", personId: "life_teacher"),
+            "life_street_fair" or "life_lost_child" => new EventCgFrame("event_community_fair"),
+            "life_blood_donation" => new EventCgFrame("event_blood_van"),
+            "life_roof_leak" => new EventCgFrame("event_shop_leak"),
+            "life_festival_lantern" => new EventCgFrame("event_lantern_festival"),
+            "rider-bet-meal" => new EventCgFrame("friend_meal", EventCgProp.Meal, Rider, seated: true),
+            _ => null
+        };
+
+        private static EventDef ShopEventScene(EventDef template, OwnedShop shop, string body, params EventChoice[] choices)
+        {
+            var scene = EventScene(template, body, choices);
+            scene.IllustrationShop = shop;
+            return scene;
+        }
+
+        private static EventDef ShopIllustratedEvent(EventDef template, OwnedShop shop, string body, EventCgFrame frame, params EventChoice[] choices)
+        {
+            var scene = ShopEventScene(template, shop, body, choices);
+            scene.Cg = frame;
+            return scene;
+        }
+
+        private EventCgFrame ShopIllustration(OwnedShop shop, EventCgFrame frame)
+        {
+            if (shop == null || frame == null) return frame;
+            string title = ShopTitle(shop);
+            string caption = frame.Caption == null || frame.Caption == title ? title : title + " · " + frame.Caption;
+            var (prop, light) = frame.Background switch
+            {
+                "blackout" => (frame.Prop, EventCgLighting.Blackout),
+                "blackout_light" => (EventCgProp.EmergencyLamp, EventCgLighting.Emergency),
+                "blackout_candle" => (EventCgProp.Candle, EventCgLighting.Candle),
+                "blackout_fire" => (EventCgProp.BurntCarton, EventCgLighting.Blackout),
+                "blackout_wait" => (frame.Prop, EventCgLighting.Evening),
+                "event_shop_leak" => (EventCgProp.LeakBucket, EventCgLighting.Rain),
+                "event_online_review" or "event_phone_message" when frame.Prop == EventCgProp.None => (EventCgProp.MessagePhone, frame.Lighting),
+                _ => (frame.Prop, frame.Lighting)
+            };
+            string background = shop.RetailKind switch
+            {
+                "computer" => frame.Background,
+                PetShopCatalog.ShopKind => "event_shop_pet",
+                "clothing" => "event_shop_clothing",
+                "models" => "event_shop_models",
+                "secondhand" => "event_shop_secondhand",
+                "restaurant" => "event_shop_restaurant",
+                _ => "event_paperwork"
+            };
+            // Computer-shop outage and leak already have dedicated painted states.
+            if (background == frame.Background) (prop, light) = (frame.Prop, frame.Lighting);
+            return new EventCgFrame(background, prop, frame.PersonId, caption, frame.Seated, light);
         }
 
         private static EventDef EventScene(EventDef template, string body, params EventChoice[] choices) =>
@@ -459,7 +626,7 @@ namespace PCShopSell.Core.Session
             bool receipts = shop.Sim.Stock.IsEmpty || HasPurchaseReceipt(shop);
             string checks = $"开业设施：{(equipment ? "齐全" : "未齐")} · 进货记录：{(receipts ? "可核验" : "待补")}";
             if (equipment && receipts)
-                return IllustratedEvent(template, $"{ShopTitle(shop)}\n{checks}。本次检查通过。",
+                return ShopIllustratedEvent(template, shop, $"{ShopTitle(shop)}\n{checks}。本次检查通过。",
                     new EventCgFrame("inspection", EventCgProp.Passed, caption: ShopTitle(shop)),
                     ChooseCg("确认检查结果", s => { shop.Sim.AdjustShopReputation(1); return VisualResult("检查通过，门店口碑 +1。", "inspection", EventCgProp.Passed, caption: "口碑 +1"); }));
 
@@ -472,7 +639,7 @@ namespace PCShopSell.Core.Session
                 session._inspectionFollowups[shop.Place.Id] = due;
                 return $"请在 {new GameDate(due)} 前备齐开业设施和采购记录，届时复查。";
             }
-            return IllustratedEvent(template, $"{ShopTitle(shop)}\n{checks}。你可以付费整改，或争取 7 天整改宽限。",
+            return ShopIllustratedEvent(template, shop, $"{ShopTitle(shop)}\n{checks}。你可以付费整改，或争取 7 天整改宽限。",
                 new EventCgFrame("inspection", EventCgProp.Notice, caption: ShopTitle(shop)),
                 ChooseCg("现场整改 · ¥300", s =>
                 {
@@ -533,7 +700,7 @@ namespace PCShopSell.Core.Session
                 if (camera) session.EventRest(15);
                 return VisualResult(result, "thief", prop, caption: product.Name);
             }
-            return IllustratedEvent(template, $"{ShopTitle(shop)}盘点发现{product.Name}少了 {missing} 件。可能是记错，也可能真的丢了。",
+            return ShopIllustratedEvent(template, shop, $"{ShopTitle(shop)}盘点发现{product.Name}少了 {missing} 件。可能是记错，也可能真的丢了。",
                 new EventCgFrame("thief", caption: $"{product.Name} · 少 {missing} 件"),
                 ChooseCg("复盘并核查", s => Investigate(s, false, true)),
                 ChooseCg("查看监控，找到线索就报警 · 15 分钟", s => Investigate(s, true, true),
@@ -621,7 +788,7 @@ namespace PCShopSell.Core.Session
             if (shop == null) return null;
             var fee = Money.FromYuan(200);
             string kind = shop.RetailKind;
-            return EventScene(template, $"地推人员愿意在{ShopTitle(shop)}附近发传单。明天起的两天内，预计有 2–4 位顾客在营业时来看。",
+            return ShopEventScene(template, shop, $"地推人员愿意在{ShopTitle(shop)}附近发传单。明天起的两天内，预计有 2–4 位顾客在营业时来看。",
                 Choose($"发传单 · {fee}", s =>
                 {
                     if (s.ShopAt(shop.Place.Id) != shop || shop.RetailKind != kind
@@ -686,7 +853,7 @@ namespace PCShopSell.Core.Session
             void Mark() => Flags.Add("event:intro:" + personId);
             if (personId == Npcs.Zhang)
             {
-                return EventScene(template, $"张绍文走进{ShopTitle(shop)}，问你开店这几天还顺利吗？",
+                return ShopEventScene(template, shop, $"张绍文走进{ShopTitle(shop)}，问你开店这几天还顺利吗？",
                     Choose("坐下聊聊 · 15 分钟", s =>
                     {
                         Mark();
@@ -709,14 +876,14 @@ namespace PCShopSell.Core.Session
                     string address = s.LearnEventHome(personId);
                     return address.Length == 0 ? "你存下了林远航的号码。" : $"你存下了林远航的号码。他说自己住在{address}，住址已记到人物资料。";
                 }
-                return EventScene(template, $"发小林远航听说{ShopTitle(shop)}开张了，特意过来看看。",
+                return ShopEventScene(template, shop, $"发小林远航听说{ShopTitle(shop)}开张了，特意过来看看。",
                     Choose("约顿饭", s => Reconnect(s) + "\n" + s.ScheduleLegacyCityMeeting(personId, "dinner", "legacy-lin-reunion:" + s.Clock.Today.TotalDays)),
                     Choose("在店里聊会儿", s => Reconnect(s) + "你们在店里聊起了小时候的事。"));
             }
 
             shop = LandladyShop();
             if (shop == null) return null;
-            return EventScene(template, $"李秀兰来看看{ShopTitle(shop)}，顺便问你刚接手铺面有没有什么不清楚的。",
+            return ShopEventScene(template, shop, $"李秀兰来看看{ShopTitle(shop)}，顺便问你刚接手铺面有没有什么不清楚的。",
                 Choose("问下次交租日", s =>
                 {
                     Mark();
@@ -746,7 +913,7 @@ namespace PCShopSell.Core.Session
         {
             var shop = ShopAt(CurrentPlace) ?? InspectionShop();
             if (shop == null) return null;
-            return EventScene(template, $"张绍文下班后到{ShopTitle(shop)}歇脚，问你有空聊两句吗？",
+            return ShopEventScene(template, shop, $"张绍文下班后到{ShopTitle(shop)}歇脚，问你有空聊两句吗？",
                 Choose("就在店里坐会儿 · 15 分钟", s =>
                 {
                     s.EventRest(15);
@@ -797,7 +964,11 @@ namespace PCShopSell.Core.Session
                     $"legacy-rent-talk:{shop.Place.Id}:{lease.SignedDay}:{s.Clock.Today.TotalDays}")));
             choices.Add(Choose($"讨价还价 · 成功率 {Chance(this) * 100:0.#}%", s => Resolve(s, true)));
             choices.Add(Choose("接受新周租", s => Resolve(s, false)));
-            return EventScene(template, $"李秀兰想调整{ShopTitle(shop)}的租金。\n现周租 {before}，拟调整为 {proposed}，从{new GameDate(NextShopRentDay(shop))}起缴。", choices.ToArray());
+            string body = $"李秀兰想调整{ShopTitle(shop)}的租金。\n现周租 {before}，拟调整为 {proposed}，从{new GameDate(NextShopRentDay(shop))}起缴。";
+            return canSchedule
+                ? ShopEventScene(template, shop, body, choices.ToArray())
+                : IllustratedEvent(template, body, new EventCgFrame(Clock.Now.Hour >= 18 ? "event_restaurant_evening" : "friend_meal",
+                    EventCgProp.Calendar, Npcs.Landlady, ShopTitle(shop), seated: true), choices.ToArray());
         }
 
         private void CheckRentDinner()
@@ -837,7 +1008,7 @@ namespace PCShopSell.Core.Session
                     Npcs.Zhang, reserved > 0 ? $"已留货 · {product.Name} ×{reserved}" : $"预计到访 · {visitors} 人");
             }
             bool familiar = Relation(Npcs.Zhang) >= 35;
-            return IllustratedEvent(template, $"张绍文想带 {visitors} 位朋友到{ShopTitle(shop)}看看。"
+            return ShopIllustratedEvent(template, shop, $"张绍文想带 {visitors} 位朋友到{ShopTitle(shop)}看看。"
                 + (familiar ? $"他们想看{product.Name}，每人预算约 {budget}。" : "你可以先留出一款货让他们看。"),
                 new EventCgFrame("regulars", personId: Npcs.Zhang, caption: ShopTitle(shop)),
                 ChooseCg($"留货 · {product.Name} ×{visitors}", s => Visit(s, true),
@@ -852,7 +1023,7 @@ namespace PCShopSell.Core.Session
             bool zhangPresent = CitySamePlace(Npcs.Zhang);
             string personId = zhangPresent ? Npcs.Zhang : customer.PersonId;
             string background = zhangPresent || string.IsNullOrEmpty(customer.PersonId) ? "regulars_visit" : "regulars";
-            SayEventCg($"{ShopTitle(shop)} · 熟客介绍的客人已进店。", new EventCgFrame(background, personId: personId));
+            SayEventCg($"{ShopTitle(shop)} · 熟客介绍的客人已进店。", new EventCgFrame(background, personId: personId), shop);
         }
 
         private void ShowReferralOutcome(OwnedShop shop, ShopCustomer customer, bool paid)
@@ -863,7 +1034,7 @@ namespace PCShopSell.Core.Session
                 : customer.ReferralStockReturned ? $"客人未成交 · {name} ×1 已退回库存" : $"客人未成交 · {name}";
             var prop = paid ? EventCgProp.Banknotes : customer.ReferralStockReturned ? EventCgProp.Boxes : EventCgProp.None;
             string personId = CurrentPlace == shop.Place && CityCustomerIsInside(customer, shop.Place.Id) ? customer.PersonId : null;
-            SayEventCg($"{ShopTitle(shop)} · {outcome}", new EventCgFrame("regulars", prop, personId));
+            SayEventCg($"{ShopTitle(shop)} · {outcome}", new EventCgFrame("regulars", prop, personId), shop);
         }
 
         private const int StudentOrderQuantity = 5;
@@ -1013,7 +1184,7 @@ namespace PCShopSell.Core.Session
                     _ => Sell(alternative, total), s => s.ShopSalesBonus(shop) >= .1, "需在岗销售员且购买意愿加成至少 10 个百分点"));
             }
             choices.Add(ChooseCg("留给零售顾客", _ => VisualResult("这批货继续留在店里。", "students", caption: "未接团购")));
-            return IllustratedEvent(template, $"{ShopTitle(shop)} · 有学生想团购{requested.First().Name}，共 {StudentOrderQuantity} 份，总预算 {budget}。",
+            return ShopIllustratedEvent(template, shop, $"{ShopTitle(shop)} · 有学生想团购{requested.First().Name}，共 {StudentOrderQuantity} 份，总预算 {budget}。",
                 new EventCgFrame("students", caption: $"团购预算 · {budget}"), choices.ToArray());
         }
 
@@ -1296,7 +1467,7 @@ namespace PCShopSell.Core.Session
                     {
                         RestoreEventProduct(shop, visit.Product, visit.Reserved);
                         SayEventCg($"{ShopTitle(shop)} · 到访结束，{visit.Product.Name} ×{visit.Reserved} 已退回库存。",
-                            new EventCgFrame("regulars", EventCgProp.Boxes));
+                            new EventCgFrame("regulars", EventCgProp.Boxes), shop);
                     }
                     else if (shop != null) Say($"{ShopTitle(shop)}的介绍到访已结束。");
                     _eventReferrals.RemoveAt(i);
@@ -1351,13 +1522,13 @@ namespace PCShopSell.Core.Session
                 {
                     shop.Sim.AdjustShopReputation(1);
                     ShowEventCg("门店复查通过", VisualResult($"{ShopTitle(shop)}的设施和采购记录已复查通过，口碑 +1。",
-                        "inspection", EventCgProp.Passed, caption: "复查通过 · 口碑 +1"));
+                        "inspection", EventCgProp.Passed, caption: "复查通过 · 口碑 +1"), shop);
                     continue;
                 }
                 Ledger.ForceDebit(today, "罚款", Money.FromYuan(500), "复查未通过 · " + ShopTitle(shop), LedgerAttribution.ForShop(shop.Place.Id));
                 shop.Sim.AdjustShopReputation(-2);
                 ShowEventCg("门店复查未通过", VisualResult($"{ShopTitle(shop)}的设施或单据仍有缺项。罚款 ¥500，口碑 −2。",
-                    "inspection", EventCgProp.Fine, caption: "罚款 ¥500 · 口碑 −2"));
+                    "inspection", EventCgProp.Fine, caption: "罚款 ¥500 · 口碑 −2"), shop);
             }
         }
 
@@ -1381,7 +1552,8 @@ namespace PCShopSell.Core.Session
             var total = price * affected.Length;
             int broken = affected.Count(shop => shop.EmergencyLighting.Installed);
             string details = broken > 0 ? $"其中 {broken} 家的应急灯已损坏。" : "";
-            return IllustratedEvent(new EventDef { Id = "blackout", Title = "停电了" },
+            var illustratedShop = affected.FirstOrDefault(shop => shop.Place == CurrentPlace) ?? affected[0];
+            return ShopIllustratedEvent(new EventDef { Id = "blackout", Title = "停电了" }, illustratedShop,
                 $"电力预计两小时后恢复。你经营的 {shops.Count} 家店里，有 {affected.Length} 家没有可用的应急灯。{details}\n每家安装或更换一盏，单价 {price}，合计 {total}。",
                 new EventCgFrame("blackout", caption: $"{affected.Length} 家店缺少可用应急灯"),
                 ChooseCg($"为 {affected.Length} 家店安装应急灯 · {total}", s =>
@@ -1432,7 +1604,7 @@ namespace PCShopSell.Core.Session
             var target=RetailStoryTarget(template.Id);if(target==null)return null;
             string kind=target.RetailKind;
             var bound=new EventDef{Id=template.Id,Title=template.Title,Body=ShopTitle(target)+"："+template.Body,
-                MinDay=template.MinDay,CooldownDays=template.CooldownDays,Weight=template.Weight};
+                MinDay=template.MinDay,CooldownDays=template.CooldownDays,Weight=template.Weight,IllustrationShop=target};
             if(template.Id=="review")
             {
                 string accusation=kind=="computer"?"配件是翻新的，冒充新品销售":kind=="clothing"?"衣服的吊牌与实际面料不符":kind=="models"?"模型手办是仿品，冒充正版销售":"商品的质量和来源有问题";
@@ -1469,7 +1641,7 @@ namespace PCShopSell.Core.Session
             EventChoice choice = def.Choices[choiceIndex];
             if (choice.Details != null || !IsChoiceEnabled(choice)) return false;
             PendingEvent = null;
-            if (choice.ApplyCg != null) ShowEventCg(def.Title, choice.ApplyCg(this));
+            if (choice.ApplyCg != null) ShowEventCg(def.Title, choice.ApplyCg(this), def.IllustrationShop);
             else
             {
                 string result = choice.Apply(this);

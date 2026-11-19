@@ -128,10 +128,28 @@ namespace PCShopSell.Game.Runtime
 
         private readonly Dictionary<string,GameObject> _specialFigures=new Dictionary<string,GameObject>();
         private readonly Dictionary<string,GameObject> _specialGoods=new Dictionary<string,GameObject>();
+        public bool NearModelPaintBench { get; private set; }
+        public Vector3 ModelPaintBenchWorld { get; private set; }
         public int NearbyDiningTable { get; private set; } = -1;
         private void UpdateSpecialBusinessVisuals(GameSession session, float dt)
         {
             var shop=session.CurrentShop;
+            NearModelPaintBench = false;
+            if (shop.RetailKind == "models")
+            {
+                var player = _owner.transform.localPosition;
+                foreach (var bench in shop.Layout)
+                {
+                    if (bench.Id != FurnitureCatalog.ModelPaintBench) continue;
+                    var bounds = RoomPlanner.Footprint(session.ShopRoom, FurnitureCatalog.Get(bench.Id), bench);
+                    var edge = new Vector2(Mathf.Clamp(player.x, (float)bounds.MinX, (float)bounds.MaxX),
+                        Mathf.Clamp(player.z, (float)bounds.MinZ, (float)bounds.MaxZ));
+                    if (Vector2.Distance(edge, new Vector2(player.x, player.z)) >= 1.15f) continue;
+                    NearModelPaintBench = true;
+                    ModelPaintBenchWorld = _root.TransformPoint(UsedDeskCenter(bench) + Vector3.up * 1.35f);
+                    break;
+                }
+            }
             NearSpecialFurniture=false;
             NearUsedBuyDesk=false;
             NearUsedRepairBench=false;

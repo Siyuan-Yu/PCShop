@@ -97,15 +97,18 @@ namespace PCShopSell.Core.Session
                 case "race_rider_bet": return BindBookedRace(template, Rider, "rider");
                 case "race_charity": return BindBookedRace(template, Zhixia, "charity");
                 case "race_rematch":
+                    string rematchPerson = null;
                     foreach (string person in _lastEventRaceOpponents.Where(IsMet).Distinct())
                     {
                         var offer = FindEventRace(person);
                         if (offer == null) continue;
+                        rematchPerson ??= person;
                         choices.Add(Choose($"与{CityPerson(person)?.Name}再战 · {EventRaceSummary(offer)}", s =>
                             s.AcceptEventRace(offer) ? "复赛已写入日程，按实际名次结算。" : "场次已变化，请重新联系。"));
                     }
-                    body = "上次实际同场的车友约你再比一场。报名费到场支付。";
-                    break;
+                    choices.Add(Choose("这次先不参加", _ => "你婉拒了，交情不变。"));
+                    return IllustratedEvent(template, "上次实际同场的车友约你再比一场。报名费到场支付。",
+                        new EventCgFrame("event_race_track", personId: rematchPerson), choices.ToArray());
                 case "race_battery_old":
                     var batteryVehicle = _garage.First(v => BatteryEventVehicle(v) && !v.EventBatteryWorn);
                     batteryVehicle.EventBatteryWorn = true;
@@ -329,7 +332,8 @@ namespace PCShopSell.Core.Session
                     if (blocker == null && CurrentPlace != hospital) blocker = LeaveBlocker;
                 }
             }
-            return EventScene(template, $"赛后，刚才同场的{CityPerson(person)?.Name}在弯道边摔倒，工作人员正在处理。你可以陪同去医院，或交给工作人员。",
+            return IllustratedEvent(template, $"赛后，刚才同场的{CityPerson(person)?.Name}在弯道边摔倒，工作人员正在处理。你可以陪同去医院，或交给工作人员。",
+                new EventCgFrame("event_race_track", personId: person),
                 Choose("现在去医院 · 到场支付 ¥1,500", s =>
                 {
                     var a = s.ScheduleCityActivity(activityId, new[] { person }, start, sourceId: "race-aid:" + s._nextCityActivity);

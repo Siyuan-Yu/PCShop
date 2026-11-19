@@ -56,6 +56,7 @@ namespace PCShopSell.Core.Session
 
         private static (string kind, string name) EmployeeRequiredShopType(EmployeeRole role) => role switch
         {
+            EmployeeRole.ModelPainter => ("models", "模型手办店"),
             EmployeeRole.Assembler => ("computer", "电脑店"),
             EmployeeRole.Chef or EmployeeRole.Waiter => ("restaurant", "餐馆"),
             EmployeeRole.Appraiser or EmployeeRole.Repairer => ("secondhand", "二手旧物店"),
@@ -82,15 +83,19 @@ namespace PCShopSell.Core.Session
             return null;
         }
 
-        private void MoveIncompatibleAssemblersToStandby(OwnedShop shop, bool notify)
+        private void MoveIncompatibleWorkshopStaffToStandby(OwnedShop shop, bool notify)
         {
-            if (EmployeeRoleShopBlocker(shop, EmployeeRole.Assembler) == null) return;
-            foreach (var assembler in ShopStaff(shop, EmployeeRole.Assembler).ToArray())
+            foreach (var role in new[] { EmployeeRole.Assembler, EmployeeRole.ModelPainter })
             {
-                var row = new EmployeeAssignment { Shop = shop, Person = assembler, Role = EmployeeRole.Assembler };
-                _employeeHireShops[assembler.Id] = shop.Place.Id;
-                MoveEmployeeWork(row, null, EmployeeRole.Unassigned);
-                if (notify) Say($"{assembler.Name}已转为待安排。装机员只能安排到电脑店。");
+                string blocker = EmployeeRoleShopBlocker(shop, role);
+                if (blocker == null) continue;
+                foreach (var person in ShopStaff(shop, role).ToArray())
+                {
+                    var row = new EmployeeAssignment { Shop = shop, Person = person, Role = role };
+                    _employeeHireShops[person.Id] = shop.Place.Id;
+                    MoveEmployeeWork(row, null, EmployeeRole.Unassigned);
+                    if (notify) Say($"{person.Name}已转为待安排。{blocker}");
+                }
             }
         }
 

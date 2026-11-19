@@ -98,7 +98,8 @@ namespace PCShopSell.Core.Session
             {
                 string person=_noisePerson,place=_noisePlace;
                 EventChoice Reply(string text,bool quiet)=>Choose(text,_=>{var result=QueueLifeVisit("neighbor","social_113",person,place,quiet?1:0);if(HasLifeTask("neighbor"))_noiseHandled=true;return result;});
-                return EventScene(template,(CityPerson(person)?.Name??person)+"提到你在"+new GameTimestamp(_noiseAt)+"的夜间搬动或卸货影响休息。",
+                return IllustratedEvent(template,(CityPerson(person)?.Name??person)+"提到你在"+new GameTimestamp(_noiseAt)+"的夜间搬动或卸货影响休息。",
+                    new EventCgFrame("event_neighbor_night", personId: person),
                     Reply("道歉说明情况",false),Reply("协商以后白天处理",true),Choose("不理会",_=>{_noiseHandled=true;AddRelation(person,-2);return "你没有回应，对方交情−2。";}));
             }
             if(n==114)
@@ -131,7 +132,8 @@ namespace PCShopSell.Core.Session
                 if (meetingPlace != null)
                     choices.Add(Choose("约见面 · " + City.GetPlace(meetingPlace).Name, _ => QueueLifeVisit("friend", definition, friend, meetingPlace)));
                 choices.Add(Choose("稍后回复", _ => "没有强制推进时间，也不加魅力。"));
-                return EventScene(template, (CityPerson(friend)?.Name ?? friend) + "发来消息，问你最近过得怎样。", choices.ToArray());
+                return IllustratedEvent(template, (CityPerson(friend)?.Name ?? friend) + "发来消息，问你最近过得怎样。",
+                    new EventCgFrame("event_phone_message", personId: friend), choices.ToArray());
             }
             if(n==117)return EventScene(template,"公园健身场欢迎体验，按实际完成的训练量结算。",
                 Choose("去体验",_=>{_gymReady=true;_gymRounds=0;return "到公园健身场选择快走、器械或拉伸，完成三轮约30分钟。";}),Choose("暂时不去",_=>"没有即时健康奖励。"));

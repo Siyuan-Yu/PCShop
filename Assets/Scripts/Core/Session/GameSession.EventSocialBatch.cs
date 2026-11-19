@@ -97,7 +97,9 @@ namespace PCShopSell.Core.Session
                 s => start >= 0 && s.Ledger.CanAfford(Money.FromYuan(FamilyGiftPrice)), "需要可赴约时间和 ¥1,000 伴手礼预算"));
             choices.Add(Choose("改天再约", _ => "本次未预约，也没有费用或交情损失。"));
             choices.Add(Choose("这次不参加", _ => "你婉拒了，交情不变，今后仍有机会再邀约。"));
-            return EventScene(template, body, choices.ToArray());
+            return number == 41
+                ? IllustratedEvent(template, body, new EventCgFrame("friend_meal", EventCgProp.Meal, guests.FirstOrDefault(), seated: true), choices.ToArray())
+                : EventScene(template, body, choices.ToArray());
         }
 
         private string BookSocialBatchActivity(int number, string venueId, string[] guests, long start, bool treat, bool gift)

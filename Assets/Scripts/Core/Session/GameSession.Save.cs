@@ -40,6 +40,7 @@ namespace PCShopSell.Core.Session
                 d.venueBusinesses=MyShops.Where(s=>IsDedicatedVenue(s.Place)).Select(s=>VenueOperation(s.Place.Id).Copy()).ToArray();
                 SaveAdditionalStaff(d);
                 SaveSpecialBusinesses(d);
+                d.modelCommissions = _modelCommissions.Values.Select(book => book.Copy()).ToArray();
                 SavePetBoarding(d);
                 SaveRacing(d);
                 SaveFishing(d);
@@ -360,12 +361,13 @@ namespace PCShopSell.Core.Session
             foreach (var restaurant in _shops.Where(shop => shop.Rented && RestaurantIngredientsOnly(shop)))
                 NormalizeRestaurantIngredientStorage(restaurant);
             foreach (var shop in _shops.Where(shop => shop.Rented))
-                MoveIncompatibleAssemblersToStandby(shop, notify: false);
+                MoveIncompatibleWorkshopStaffToStandby(shop, notify: false);
             MigrateCityGeometry(d);
             NormalizeCityWalkingRoutes();
             NormalizeWarehouses();
             MigrateWarehouseBoxAccess(d);
             LoadSpecialBusinesses(d);
+            LoadModelCommissions(d);
             LoadPetBoarding(d);
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);

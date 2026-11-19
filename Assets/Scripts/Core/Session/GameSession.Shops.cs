@@ -115,7 +115,11 @@ namespace PCShopSell.Core.Session
             sim.CustomerCanBrowse = c =>
             {
                 bool inside = RecordBrandShopVisit(shop, c);
-                if (inside) ShowReferralVisit(shop, c);
+                if (inside)
+                {
+                    OfferModelCommission(shop, c);
+                    ShowReferralVisit(shop, c);
+                }
                 return inside;
             };
             sim.RetailTemperature=()=>CityOutdoorTemperature(Clock.Now.TotalMinutes);
@@ -209,6 +213,7 @@ namespace PCShopSell.Core.Session
             if (_employeeTrips.Any(t => t.ShopId == s.Place.Id)) return "进货员或采购货物还在路上";
             if (Employees.Any(x => x.Person.TransferShopId == s.Place.Id)) return "已有员工安排明天调入，先取消调店安排";
             if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
+            if (ModelCommissionsBusy(s)) return "还有客带模型在店，请先交付或归还再退租。";
             if (_cityReferrals.Any(offer => offer.ShopId == s.Place.Id && offer.ContractId != null && !offer.Settled))
                 return "还有没交付的转介绍订单";
             if (s.Sim.Queue.Count > 0) return "还有顾客等待结账，请先处理完再退租";
@@ -251,6 +256,7 @@ namespace PCShopSell.Core.Session
             bool wasOwned = s.OwnsProperty;
             _shops.Remove(s);
             _petBoarding.Remove(placeId);
+            _modelCommissions.Remove(placeId);
             foreach(var idle in _idleEmployees.Where(e=>_employeeHireShops.TryGetValue(e.Id,out var hired)&&hired==placeId).ToArray())_idleEmployees.Remove(idle);
             foreach(var id in _employeeHireShops.Where(p=>p.Value==placeId).Select(p=>p.Key).ToArray())_employeeHireShops.Remove(id);
             ResetVenueLease(placeId);

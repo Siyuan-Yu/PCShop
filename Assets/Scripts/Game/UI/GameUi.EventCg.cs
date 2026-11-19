@@ -27,7 +27,16 @@ namespace PCShopSell.Game.UI
             if (background == null) return;
             var canvas = Ui.Size(Ui.Rect(parent, "EventIllustration"), -1, height);
             canvas.gameObject.AddComponent<RectMask2D>();
-            EventCgImage(canvas, "Location", background, true);
+            var location = EventCgImage(canvas, "Location", background, true);
+            location.color = frame.Lighting switch
+            {
+                EventCgLighting.Blackout => new Color(.34f, .38f, .49f),
+                EventCgLighting.Emergency => new Color(.67f, .65f, .55f),
+                EventCgLighting.Candle => new Color(.49f, .40f, .36f),
+                EventCgLighting.Evening => new Color(.94f, .84f, .79f),
+                EventCgLighting.Rain => new Color(.72f, .79f, .89f),
+                _ => Color.white
+            };
 
             var person = string.IsNullOrEmpty(frame.PersonId) ? null : S.CityPerson(frame.PersonId);
             if (frame.Prop != EventCgProp.None)
@@ -35,28 +44,39 @@ namespace PCShopSell.Game.UI
                 var prop = Resources.Load<Texture2D>("EventCg/prop_" + frame.Prop.ToString().ToLowerInvariant());
                 if (prop != null)
                 {
-                    float edge = frame.Seated ? .55f : person == null ? .97f : .69f;
-                    var propFrame = Ui.Rect(canvas, "OutcomeProp").Anchor(edge - .20f, .08f, edge, .49f, 0, 0, 0, 0);
+                    float edge = person == null ? .97f : .69f;
+                    var propFrame = Ui.Rect(canvas, "OutcomeProp");
+                    if (frame.Prop == EventCgProp.EmergencyLamp)
+                        propFrame.Anchor(.69f, .71f, .93f, .94f, 0, 0, 0, 0);
+                    else if (frame.Seated)
+                        propFrame.Anchor(.47f, .055f, .69f, .24f, 0, 0, 0, 0);
+                    else
+                        propFrame.Anchor(edge - .20f, .08f, edge, .49f, 0, 0, 0, 0);
                     EventCgImage(propFrame, frame.Prop.ToString(), prop);
                 }
             }
 
             if (person != null)
             {
-                var character = frame.Seated ? Resources.Load<Texture2D>("EventCg/person_" + person.Id + "_seated") : null;
-                character = character != null ? character : Resources.Load<Texture2D>("EventCg/person_" + person.Id);
+                var seatedCharacter = frame.Seated ? Resources.Load<Texture2D>("EventCg/person_" + person.Id + "_seated") : null;
+                var character = seatedCharacter != null ? seatedCharacter : Resources.Load<Texture2D>("EventCg/person_" + person.Id);
                 if (character != null)
                 {
-                    var holder = Ui.Rect(canvas, "SceneParticipant").Anchor(.71f, .03f, 1f, frame.Seated ? .77f : .98f);
+                    var holder = Ui.Rect(canvas, "SceneParticipant");
+                    if (seatedCharacter != null)
+                        holder.Anchor(.63f, .28f, .98f, .86f, 0, 0, 0, 0); // The dining tabletop begins at this lower edge.
+                    else
+                        holder.Anchor(.71f, 0f, 1f, .98f, 0, 0, 0, 0);
                     EventCgImage(holder, person.Id, character);
                 }
                 else
                 {
-                    var holder = Ui.Panel(canvas, "ParticipantPortrait", Ui.Chrome);
-                    holder.raycastTarget = false;
-                    holder.rectTransform.Anchor(.77f, .08f, .975f, .90f, 0, 0, 0, 0);
-                    var portrait = FitPortrait(holder.rectTransform, person.Id, 6);
+                    var holder = Ui.Rect(canvas, "ParticipantPortrait").Anchor(.73f, .08f, .975f, .90f, 0, 0, 0, 0);
+                    var portrait = FitPortrait(holder, person.Id);
                     portrait.raycastTarget = false;
+                    var border = portrait.gameObject.AddComponent<Outline>();
+                    border.effectColor = Ui.Chrome;
+                    border.effectDistance = new Vector2(2, -2);
                 }
                 EventCgCaption(canvas, person.Name, .73f, .98f, TextAnchor.MiddleCenter);
             }

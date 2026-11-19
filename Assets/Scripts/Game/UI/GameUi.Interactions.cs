@@ -183,6 +183,9 @@ namespace PCShopSell.Game.UI
                         "动手能力影响服务速度，魅力影响小费"),
                 EmployeeRole.Appraiser =>
                     ("判断成色并收购旧物", $"识别真实成色概率 {GameSession.AppraiserAccuracy(employee.Intelligence):0.#%}", "智力"),
+                EmployeeRole.ModelPainter =>
+                    ("在喷漆台处理客带模型", $"加工速度 ×{GameSession.ModelPainterSpeed(employee):0.##} · 品质 {GameSession.ModelPainterQuality(employee):0.#}/10",
+                        "动手能力"),
                 EmployeeRole.Repairer =>
                     ("在二手修复台修复旧物", $"修复速度 ×{GameSession.UsedRepairSpeed(employee):0.##} · 成功率 {GameSession.UsedRepairSuccessChance(employee):0.#%}",
                         "动手能力、智力"),

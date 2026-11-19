@@ -30,7 +30,7 @@ namespace PCShopSell.Core.Home
             {
                 PetShopCatalog.ShopKind => PetShopCatalog.IsToyFixture(item.Id),
                 "computer" => item.Id == FurnitureCatalog.ShopBench || item.Id == FurnitureCatalog.ShopDisplay,
-                "models" => item.Id == FurnitureCatalog.ShopDisplay,
+                "models" => item.Id == FurnitureCatalog.ShopDisplay || item.Id == FurnitureCatalog.ModelPaintBench,
                 "secondhand" => item.Id == "used_repairbench",
                 "clothing" => item.Id == FurnitureCatalog.ShopDisplay || item.Id == FurnitureCatalog.FittingMirror,
                 "restaurant" => GameSession.MatchesOpeningFurniture(FurnitureCatalog.Shelf, item),

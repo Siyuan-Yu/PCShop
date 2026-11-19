@@ -37,7 +37,7 @@ namespace PCShopSell.Core.Session
         }
         private static void AddShopEmployee(OwnedShop shop,EmployeeRole role,Employee person)
         {
-            if(role==EmployeeRole.Chef||role==EmployeeRole.Waiter||role==EmployeeRole.Appraiser||role==EmployeeRole.PetKeeper||role==EmployeeRole.Repairer)shop.AdditionalEmployees.Add(new AdditionalShopEmployee{Role=role,Person=person});
+            if(role==EmployeeRole.Chef||role==EmployeeRole.Waiter||role==EmployeeRole.Appraiser||role==EmployeeRole.PetKeeper||role==EmployeeRole.Repairer||role==EmployeeRole.ModelPainter)shop.AdditionalEmployees.Add(new AdditionalShopEmployee{Role=role,Person=person});
             else if(EmployeeAt(shop,role)==null)PutEmployee(shop,role,person);
             else shop.AdditionalEmployees.Add(new AdditionalShopEmployee{Role=role,Person=person});
         }
