@@ -71,7 +71,7 @@ namespace PCShopSell.Game.UI
                         Line(card, $"月维护 {Money.FromCents(property.PriceCents).Scale(.001)} · 周租 {Money.FromCents(property.WeeklyRentCents)}（自营不收租）", 17, Ui.Dim);
                         if (S.ShopAt(p.Id) != null)
                         {
-                            Para(card, "结束自营：先搬走库存、食物与在途货物，再在该店内办理。家具收回，产权保留。", 16, Ui.Dim);
+                            Para(card, "结束自营：请先处理库存、食物和未收货的采购，再在该店内办理。家具收回，产权保留。", 16, Ui.Dim);
                             Ui.Size(Ui.Button(card, "结束自营并保留空置产权", () => CityAssetConfirm("结束自营", "按清店校验结束经营，现有产权保留。", () => S.CloseShop(p.Id), w), 17), -1, 42);
                         }
                         BuildCommercialPropertyActions(card,p,property,w);

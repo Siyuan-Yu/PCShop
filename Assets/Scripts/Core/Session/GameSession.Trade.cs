@@ -252,6 +252,7 @@ namespace PCShopSell.Core.Session
                         }
                     }
                 }
+                RecordShopPurchaseReceipt(dest, now.TotalMinutes, "网购");
                 rec.ItemsReceived += good + bad;
                 rec.Defects += bad;
                 string delivery = dest != null ? $"已放入{CourierDestName(dest)}后仓"

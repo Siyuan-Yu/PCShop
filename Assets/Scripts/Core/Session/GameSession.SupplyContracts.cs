@@ -68,7 +68,7 @@ namespace PCShopSell.Core.Session
             if (!PartCatalog.Exists(partId) || count < 3 || count > 30) return "每个型号每批 3–30 件";
             if (HasOverdueDebt) return "有到期未付货款，先还清再进货";
             var p = PartCatalog.Get(partId);
-            if (PlayerShop.Stock.FreeSpace - IncomingShopSpace + 1e-9 < Stock.SpaceOf(p, true, count)) return "仓位不足（已计入所有在途货物）";
+            if (PlayerShop.Stock.FreeSpace - IncomingShopSpace + 1e-9 < Stock.SpaceOf(p, true, count)) return "可用仓位不足";
             Money total = DirectPrice(p) * count;
             Money now = credit ? total.Scale(.3) : total;
             if (credit && SupplierDebtTotal + total - now > CreditLimit) return "超出直供信用额度";
@@ -109,6 +109,9 @@ namespace PCShopSell.Core.Session
             {
                 OwnedShop dest = DeliveryShop(string.IsNullOrEmpty(x.ShopId) ? null : x.ShopId);
                 dest.Sim.Stock.ForceAdd(PartCatalog.Get(x.PartId), true, x.Count);
+                var record = _cityProcurementOrders.FirstOrDefault(order => order.Id == x.OrderId);
+                RecordShopPurchaseReceipt(dest, now.TotalMinutes, record?.Channel ?? "直供");
+                if (record != null) record.State = "已交付";
                 _directShipments.Remove(x);
                 Say($"直供到货：{PartCatalog.Get(x.PartId).Name} ×{x.Count}，已入{(MyShopCount > 1 ? ShopTitle(dest) : "店里")}后仓。");
             }

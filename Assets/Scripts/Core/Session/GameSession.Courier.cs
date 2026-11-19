@@ -384,16 +384,19 @@ namespace PCShopSell.Core.Session
                 arrived.Add((dest, toShop, where, run.FromName, run.Items));
             }
             // 同一趟到的几辆车（比如一次买的东西装了两三辆）合并成一个弹窗，按送到哪分组，同种货先合成一条
-            foreach (var group in arrived.GroupBy(a => a.Where))
+            foreach (var group in arrived.GroupBy(a => (a.Dest, a.Where)))
             {
                 var first = group.First();
                 var what = new List<string>();
                 var items = group.SelectMany(a => a.Items).ToList();
                 WithShop(first.Dest, () => { foreach (CourierItem it in MergeItems(items)) what.Add(Unpack(it, first.ToShop)); });
+                if (first.ToShop && items.Any(item => item.Kind is CourierItemKind.Part or CourierItemKind.Goods
+                        or CourierItemKind.Ingredient or CourierItemKind.Rice))
+                    RecordShopPurchaseReceipt(first.Dest, now.TotalMinutes, "货车送达");
                 var sources = group.Select(a => a.From).Distinct().ToList();
                 string head = sources.Count == 1
-                    ? $"从{sources[0]}叫的车把东西送到{group.Key}了："
-                    : $"叫的车把东西送到{group.Key}了：";
+                    ? $"从{sources[0]}叫的车把东西送到{first.Where}了："
+                    : $"叫的车把东西送到{first.Where}了：";
                 string tail = what.Any(x => x.Contains("临时存放")) ? $"\n\n临时存放的东西能放 {TempKeepDays} 天，到期前打开纸箱清掉（放进纸箱、摆出来、叫货车搬走或扔掉）。" : "";
                 Show("货送到了", head + "\n" + string.Join("\n", what) + "。" + tail);
             }

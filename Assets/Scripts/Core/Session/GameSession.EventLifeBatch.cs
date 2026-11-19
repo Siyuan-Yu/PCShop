@@ -253,7 +253,7 @@ namespace PCShopSell.Core.Session
             Say("暂无共同空闲晚课，学费已记录，可在生活面板重新约课。");return true;
         }
         private int LifeLessonIndex => _lifeCourse==null?0:_lifeCourse.Course*4+Math.Min(3,_lifeCourse.Lessons);
-        private static readonly string[] LifeQuestions={"借款到账应记为？","营业额和利润相同吗？","顾客退款怎样记账？","月末应核对什么？","采购应优先核对？","在途货是现货吗？","过低的报价怎样处理？","备货数量根据什么？","顾客提出异议先做什么？","交货会迟怎么办？","不清楚需求时？","应该怎样承诺？"};
+        private static readonly string[] LifeQuestions={"借款到账应记为？","营业额和利润相同吗？","顾客退款怎样记账？","月末应核对什么？","采购应优先核对？","未到货的商品算现货吗？","过低的报价怎样处理？","备货数量根据什么？","顾客提出异议先做什么？","交货会迟怎么办？","不清楚需求时？","应该怎样承诺？"};
         private static readonly string[][] LifeAnswers={
             new[]{"销售收入","借款及债务","利润"},new[]{"不同，利润要扣成本","完全相同","都是现金"},new[]{"忽略","当作新收入","按原支付调整销售"},new[]{"只看收入","账实、应收应付","只看口头说明"},
             new[]{"型号、数量、到货条件","包装颜色","只看卖家承诺"},new[]{"立即当现货卖","不用管","到店入库才是现货"},new[]{"不检查直接买","核查真伪和保修","加倍买"},new[]{"需求、库存与现金","仅看宣传","越多越好"},

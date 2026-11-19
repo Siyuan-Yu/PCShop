@@ -102,7 +102,7 @@ namespace PCShopSell.Game.UI
                     var details = order ?? session.QuoteFurnitureBuyback(pickup, draft, out blocker);
                     bool sent = order != null;
                     bool delivered = order?.Delivered == true;
-                    string title = delivered ? "回收已完成" : sent ? "货车在途" : "回收单";
+                    string title = delivered ? "回收已完成" : sent ? "等待回收" : "回收单";
                     var head = Ui.Row(summary, 36, 8);
                     Ui.Size(Ui.Label(head, title, 22, color: Ui.Accent), -1, 36, 1);
                     Ui.Size(Ui.Label(head, $"{details?.Count ?? 0} 件", 16, TextAnchor.MiddleRight, Ui.Dim), 78, 36);

@@ -5,7 +5,6 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
-using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using UnityEngine;
 
@@ -113,7 +112,7 @@ namespace PCShopSell.Game.UI
         private void BuildBusinessFinance(Window w)
         {
             var c=BusinessCard(w.Content,"每一笔钱放在哪里");
-            Line(c,$"全店库存及在途（市价九折） {S.InventoryValue()}    载具残值（购价六折） {S.VehicleValue}",17);
+            Line(c,$"全店商品资产（市价九折） {S.InventoryValue()}    载具残值（购价六折） {S.VehicleValue}",17);
             Line(c,$"铺面押金 {Money.FromCents(S.MyShops.Sum(shop=>shop.Lease?.Deposit.Cents??0))+(S.PendingLease?.Deposit??Money.Zero)}    企业合同保证金 {S.ContractDeposits}",17);
             Line(c,$"托管门店资产 {S.VentureValue}（含周转金 {S.VentureReserve}）    指数 {S.FundValue} · 企业持仓 {S.CityEquityValue}",17);
             Line(c,$"商用物业账面值 {S.PropertyValue}    自住房账面值 {Money.FromCents(S.HomePriceCents)}",17);
@@ -149,9 +148,8 @@ namespace PCShopSell.Game.UI
                 Line(w.Content,why??"条件已满足，签约无需费用。",17,why==null ? Ui.Good : Ui.Dim);
                 BusinessAction(w.Content,"签订直供协议",S.SignDirectAgreement,w,why==null);return;
             }
-            Line(w.Content,$"信用额度 {S.CreditLimit}    已用 {S.SupplierDebtTotal}    仓位已预留在途 {S.IncomingShopSpace:0.#} 格",17);
+            Line(w.Content,$"信用额度 {S.CreditLimit}    已用 {S.SupplierDebtTotal}",17);
             Ui.Size(Ui.Button(w.Content, "直供下单", () => OpenDirectSupplyOrder(w), 18, Ui.ButtonHot), -1, 42);
-            foreach(var x in S.DirectShipments) Line(w.Content,$"在途：{PartCatalog.Get(x.PartId).Name} ×{x.Count} · {new GameTimestamp(x.Arrival)}",15,Ui.Dim);
             if(S.SupplierDebts.Count>0) BuildDebtList(w);
         }
 

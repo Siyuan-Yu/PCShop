@@ -87,7 +87,7 @@ namespace PCShopSell.Game.UI
                 bool covered = destination != null && lines.Any(l =>
                     S.PendingProcurementCount(destination, PurchaseGoodsKind.Part, l.Item1.Id)
                     + S.ClaimedProcurementCount(destination.Place.Id, PurchaseGoodsKind.Part, l.Item1.Id) > 0);
-                if (covered) ConfirmAction("额外采购确认", "这些商品已有在途或已认领供给。本次属于额外囤货，仍要再下这一单吗？", "确认额外下单", Place);
+                if (covered) ConfirmAction("额外采购确认", "这些商品已安排采购。仍要额外下单吗？", "确认额外下单", Place);
                 else Place();
             }, 22, Ui.ButtonHot, _cart.Values.Any(v => v > 0));
             order.name = "OnlineOrder";

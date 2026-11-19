@@ -137,7 +137,7 @@ namespace PCShopSell.Core.Session
                     : e.Response == "position" ? $"已加强服务，预计保留 {(e.RetainedDemand > 0 ? e.RetainedDemand : .95):P0} 客流。"
                     : e.Response == "maintain" ? "已维持原价，促销期间保留 85% 客流。"
                     : "暂时保留 85% 客流，可选择应对方式。");
-            if (e.Kind == "quota") return $"{(City.HasPlace(e.SupplierId) ? City.GetPlace(e.SupplierId).Name : e.SupplierId)} 的 {Gifts.Get(e.ProductId)?.Name ?? (PartCatalog.Exists(e.ProductId) ? PartCatalog.Get(e.ProductId).Name : e.ProductId)} 每日最多供应4件。可选其他来源，不影响已有在途订单。";
+            if (e.Kind == "quota") return $"{(City.HasPlace(e.SupplierId) ? City.GetPlace(e.SupplierId).Name : e.SupplierId)} 的 {Gifts.Get(e.ProductId)?.Name ?? (PartCatalog.Exists(e.ProductId) ? PartCatalog.Get(e.ProductId).Name : e.ProductId)} 每日最多供应4件。可选其他来源。";
             return (City.HasPlace(e.SupplierId)?City.GetPlace(e.SupplierId).Name:"对应供应商")+"这轮将常规起订量提高到3倍。可选择小批次合作：恢复常规起订量、批发价提高8%。兼营零售的店铺仍须满足零售数量10倍的批发门槛。仅影响本货源和事件期间的后续订单。";
         }
         public bool RespondCityCompetition(string id, string response)

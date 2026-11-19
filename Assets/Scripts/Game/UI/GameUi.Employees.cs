@@ -15,13 +15,19 @@ namespace PCShopSell.Game.UI
 
         private Window _managementWindow;
         private GameSession _managementSession;
-        private bool _managementProcurement;
+        private bool _managementEmployees;
         private readonly HashSet<string> _managementExpandedShops = new HashSet<string>();
         private readonly HashSet<string> _managementExpandedEmployees = new HashSet<string>();
 
-        public void OpenEmployeesPanel() => OpenManagementPanel(false);
+        public void OpenEmployeesPanel() => OpenManagementPanel(true);
 
-        private void OpenManagementPanel(bool procurement)
+        public void OpenStoreManagement()
+        {
+            if (_managementWindow == null || _managementWindow.Closed) _managementShops.Select(null);
+            OpenManagementPanel(false);
+        }
+
+        private void OpenManagementPanel(bool employees)
         {
             if (_managementSession != S)
             {
@@ -30,8 +36,8 @@ namespace PCShopSell.Game.UI
                 _managementExpandedEmployees.Clear();
                 _managementExpandedShops.Add((S.ShopAt(S.CurrentPlace) ?? S.MyShops.FirstOrDefault())?.Place.Id);
             }
-            bool changed = _managementProcurement != procurement;
-            _managementProcurement = procurement;
+            bool changed = _managementEmployees != employees;
+            _managementEmployees = employees;
             if (_managementWindow != null && !_managementWindow.Closed)
             {
                 _managementWindow.Root.SetAsLastSibling();
@@ -47,24 +53,22 @@ namespace PCShopSell.Game.UI
         private void BuildManagementPanel(Window w)
         {
             var tabs = Ui.Row(w.Content, 42, 8);
-            foreach (bool procurement in new[] { false, true })
+            void Tab(string label, bool employees, string name)
             {
-                bool page = procurement;
-                Ui.Tab(tabs, page ? "采购" : "员工", () =>
-                {
-                    _managementProcurement = page;
-                    w.ResetScrollOnRebuild = true;
-                    w.Rebuild();
-                }, _managementProcurement == page).name = page ? "ManagementProcurement" : "ManagementEmployees";
+                Ui.Tab(tabs, label, () => OpenManagementPanel(employees), _managementEmployees == employees).name = name;
             }
-            var content = PhoneFlexibleScroll(w.Content, "ManagementContent");
+            Tab("店", false, "ManagementShops");
+            Tab("员工", true, "ManagementEmployees");
+            if (!_managementEmployees)
+            {
+                BuildShopManagementTools(tabs);
+                BuildManagedShops(w.Content, w, _managementShops);
+                return;
+            }
+
             var parent = w.Content;
-            w.Content = content;
-            try
-            {
-                if (_managementProcurement) BuildProcurementContent(w);
-                else BuildEmployeesContent(w, _managementExpandedShops, _managementExpandedEmployees);
-            }
+            w.Content = PhoneFlexibleScroll(parent, "ManagementEmployeesContent");
+            try { BuildEmployeesContent(w, _managementExpandedShops, _managementExpandedEmployees); }
             finally { w.Content = parent; }
         }
 
@@ -417,7 +421,7 @@ namespace PCShopSell.Game.UI
                         if (count > 0) line.gameObject.AddComponent<Image>().color = Ui.FlatRow;
                         string details = offer.SupplierName + (minimum > 1 ? " · 起订 " + minimum + " 件" : "");
                         if (offer.Kind == PurchaseGoodsKind.Part)
-                            details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))} · 在途 {S.PendingPurchaseCount(worker.Shop, offer.Id)}";
+                            details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))}";
                         else if (offer.Kind == PurchaseGoodsKind.Gift)
                             details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
                         var label = CompactProduct(line, offer.Id, offer.Name, offer.UnitKg, details, false);

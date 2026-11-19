@@ -18,7 +18,7 @@ namespace PCShopSell.Game.UI
                 var state=S.VenueOperation(place.Id);
                 Line(w.Content,"专用场地 · "+S.VenueBusinessName(place)+" · "+(S.VenueOpen(place)?"营业中":state.Accepting?"等待营业时间或值守到岗":"暂停接客"),22,Ui.Accent);
                 Line(w.Content,"今日顾客 "+state.Customers+" 人 · 收入 "+Money.FromCents(state.RevenueCents)+" · 累计收入 "+Money.FromCents(state.TotalRevenueCents),20,Ui.Good);
-                Line(w.Content,"场地占用（含在途预约） "+state.CustomersHere.Length+" / "+S.VenueCapacity(place)+" 人 · 周租 "+shop.Lease.Rent+" · 维护 ¥"+S.VenueMaintenanceYuan(place)+"/天",18);
+                Line(w.Content,"场地占用（含预约） "+state.CustomersHere.Length+" / "+S.VenueCapacity(place)+" 人 · 周租 "+shop.Lease.Rent+" · 维护 ¥"+S.VenueMaintenanceYuan(place)+"/天",18);
                 var hours=Ui.Row(w.Content,42,8);
                 Ui.Size(Ui.Label(hours,"营业时间",18),100);
                 var options=Enumerable.Range(0,24).Select(h=>h.ToString("00")+":00").ToArray();
@@ -47,11 +47,11 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Button(row,"雇佣值守员",()=>{S.Hire(c.index);w.Rebuild();},17,Ui.ButtonBg,S.CandidateAvailable(c.person)),135,36);
                     }
                 }
-                Line(w.Content,"在场顾客 / 在途预约",18,Ui.Accent);
+                Line(w.Content,"在场顾客 / 预约",18,Ui.Accent);
                 var customers=GoodsList(w.Content,120);
                 foreach(var customer in state.CustomersHere)
                     PersonSummary(customers, customer.PersonId, S.CityPerson(customer.PersonId)?.Name ?? customer.PersonId,
-                        (customer.Started < 0 ? "在途" : "使用中 · 剩余 " + System.Math.Max(0, customer.Until - S.Clock.Now.TotalMinutes) + " 分钟") + " · " + Money.FromCents(customer.PriceCents), 46);
+                        (customer.Started < 0 ? "尚未到场" : "使用中 · 剩余 " + System.Math.Max(0, customer.Until - S.Clock.Now.TotalMinutes) + " 分钟") + " · " + Money.FromCents(customer.PriceCents), 46);
                 if(state.CustomersHere.Length==0)Line(customers,"暂无顾客",17,Ui.Dim);
                 var actions=Ui.Row(w.Content,44,8);
                 Ui.Size(Ui.Button(actions,"自己使用场地（免费）",()=>{w.Close();OpenCityVenue(place);},17,Ui.ButtonHot),-1,44,1).name="VenueOwnerUse";

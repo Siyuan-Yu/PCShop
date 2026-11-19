@@ -92,7 +92,7 @@ namespace PCShopSell.Core.Session
                     Choose("请设计师 · ¥1,500 / 30分钟", _ => { AddShopTask("design", shop, 30); return "已预约，到店从经营待办开始，届时歇业装修并支付¥1,500。"; }),
                     Choose("暂不改", _ => "保持当前陈列。"));
             if (number == 89)
-                return ShopEventScene(template, shop, ShopTitle(shop) + "有库存变动待复核。盘点会核对实物、顾客预留和在途货，不随机扣款。",
+                return ShopEventScene(template, shop, ShopTitle(shop) + "有库存变动待复核。盘点会核对实物和顾客预留，不随机扣款。",
                     Choose("现在盘点 · 30分钟", _ => { AddShopTask("audit", shop, 30); return "到店从经营待办开始；盘点期间暂停接待，完成后出核对结果。"; }),
                     Choose("打烊后盘点", _ => { var t = AddShopTask("audit", shop, 30); long end = Clock.Today.TotalDays * 1440L + shop.Sim.CloseMinute; t.At = end > Clock.Now.TotalMinutes ? end : end + 1440; return "已加入经营待办，打烊后到店开始。"; }));
             var choices = new List<EventChoice>();
@@ -419,14 +419,11 @@ namespace PCShopSell.Core.Session
             .Select(p => p.Id + ":" + p.X.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + ":" + p.Z.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + ":" + p.Rot));
         private string AuditStamp(OwnedShop shop)
         {
-            int transit = Online.Pending.Where(o => !o.ToHome && OnlineOrderDestination(o) == shop).Sum(o => o.Lines.Sum(l => l.Count))
-                + _directShipments.Where(d => d.ShopId == shop.Place.Id).Sum(d => d.Count)
-                + _couriers.Where(c => c.ToShop && DeliveryShop(c.ShopId) == shop).Sum(c => c.Items.Sum(i => i.Count));
             var receipts = _eventPaidReceipts.Where(r => ReceiptShop(r) == shop && r.Day == Clock.Today.TotalDays).ToArray();
             string special = shop.RetailKind == "secondhand" ? "，二手实物" + SpecialBusiness(shop.Place.Id).Used.Count(i => i.Owned && !i.Sold) + "件"
                 : shop.RetailKind == "restaurant" ? "，大米" + KitchenRice(shop).ToString("0.##") + "kg" : "";
             return "后仓配件" + shop.Sim.Stock.Lines().Sum(l => l.Count) + "件，零售商品" + shop.Sim.Stock.GoodsLines().Sum(l => l.Value) + "件" + special
-                + "，待结账" + shop.Sim.Queue.Count + "位，在途" + transit + "件，今日成交" + receipts.Length + "笔/" + Money.FromCents(receipts.Sum(r => r.PaidCents));
+                + "，待结账" + shop.Sim.Queue.Count + "位，今日成交" + receipts.Length + "笔/" + Money.FromCents(receipts.Sum(r => r.PaidCents));
         }
         public bool StartShopEventTask(string id)
         {
@@ -462,7 +459,7 @@ namespace PCShopSell.Core.Session
             if (buy)
             {
                 double incoming = 0; WithShop(shop, () => incoming = IncomingShopSpace);
-                if (shop.Sim.Stock.FreeSpace - incoming < Stock.SpaceOf(part, true, 1)) return Fail("后仓空间不足，已计入在途货物。");
+                if (shop.Sim.Stock.FreeSpace - incoming < Stock.SpaceOf(part, true, 1)) return Fail("后仓可用空间不足。");
                 if (!Ledger.TryDebit(Clock.Today, "样品买断", Money.FromCents(t.Paid), part.Name, LedgerAttribution.ForShop(shop.Place.Id))) return Fail("现金不足。");
                 shop.Sim.Stock.ForceAdd(part, true, 1);
             }
@@ -570,7 +567,25 @@ namespace PCShopSell.Core.Session
         private void SaveShopEventBatch(SaveData d)
         { d.shopEventTasks = _shopEventTasks.Select(t => t.Copy()).ToArray(); d.eventDelayedOrders = _eventDelayedOrders.ToArray(); d.shopEventCat = _shopCat?.Copy(); d.shopEventSequence = _shopEventSequence; }
         private void RestoreShopEventBatch(SaveData d)
-        { _shopEventTasks.Clear(); _shopEventTasks.AddRange((d.shopEventTasks ?? Array.Empty<ShopEventTask>()).Select(t => t.Copy())); _eventDelayedOrders.Clear(); foreach (int id in d.eventDelayedOrders ?? Array.Empty<int>()) _eventDelayedOrders.Add(id); _shopCat = d.shopEventCat?.Copy(); _shopEventSequence = d.shopEventSequence; }
+        {
+            _shopEventTasks.Clear();
+            foreach (var saved in d.shopEventTasks ?? Array.Empty<ShopEventTask>())
+            {
+                var task = saved.Copy();
+                if (task.Kind == "audit")
+                {
+                    const string oldCount = @"，在途[0-9]+件";
+                    if (task.Before != null) task.Before = System.Text.RegularExpressions.Regex.Replace(task.Before, oldCount, "");
+                    if (task.Message != null) task.Message = System.Text.RegularExpressions.Regex.Replace(task.Message, oldCount, "");
+                }
+                _shopEventTasks.Add(task);
+            }
+
+            _eventDelayedOrders.Clear();
+            foreach (int id in d.eventDelayedOrders ?? Array.Empty<int>()) _eventDelayedOrders.Add(id);
+            _shopCat = d.shopEventCat?.Copy();
+            _shopEventSequence = d.shopEventSequence;
+        }
     }
     public sealed partial class SaveData
     { public ShopEventTask[] shopEventTasks; public int[] eventDelayedOrders; public ShopCatVisit shopEventCat; public int shopEventSequence; }

@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
             var o=Outfits.Get(outfitId);
             if(IsGameOver||IsWorking||CityActivityExclusive||CurrentPlace!=shop||!IsCityClothingRetail(shop)||!IsPlaceOpen(shop)||!CityClothingSelection(shop).Contains(o))return Fail("请到营业中的服装店柜台购买。");
             if(_ownedOutfits.Contains(outfitId))return Fail("衣柜已拥有同款，无需再次购买。");
-            if(_parcels.Any(p=>p.Kind==ParcelKind.Outfit&&p.Id==outfitId))return Fail("同款网购衣物已经在途，无需重复购买。");
+            if(_parcels.Any(p=>p.Kind==ParcelKind.Outfit&&p.Id==outfitId))return Fail("已经买过同款衣物，无需重复购买。");
             if(!Ledger.TryDebit(Clock.Today,"个人衣物",o.Price,o.Name,new LedgerAttribution(LedgerBusinessKind.Personal,transactionKind:"服装零售")))return Fail("现金不足，仍可免费试穿。");
             _ownedOutfits.Add(outfitId);Say("买下了"+o.Name+"，已加入个人衣柜。可在试衣镜旁换上。");return true;
         }
@@ -35,7 +35,7 @@ namespace PCShopSell.Core.Session
             var shop=ShopAt(shopId);var o=Outfits.Get(outfitId);
             if(shop==null||o==null||CurrentPlace!=shop.Place||IsWorking||CityActivityExclusive)return Fail("请到自己的店内办理库存转自用。");
             if(_ownedOutfits.Contains(outfitId))return Fail("已拥有同款，没有消耗库存。");
-            if(!shop.Sim.Stock.TryRemoveGoods(o.ProductId,1))return Fail("没有未预留现货；顾客手上和在途的衣服不可转自用。");
+            if(!shop.Sim.Stock.TryRemoveGoods(o.ProductId,1))return Fail("没有可转自用的现货。");
             var costs=Ledger.Entries.Where(e=>e.ShopId==shopId&&e.Amount.IsNegative&&(e.Attribution?.ProductId==o.ProductId||e.Attribution?.ProductId=="g:"+o.ProductId)&&e.Attribution.Quantity>0&&e.Attribution.UnitCostCents>0).ToArray();
             long qty=costs.Sum(e=>(long)e.Attribution.Quantity);
             long unitCost=qty>0?costs.Sum(e=>e.Attribution.UnitCostCents*e.Attribution.Quantity)/qty:0;

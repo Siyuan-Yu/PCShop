@@ -112,7 +112,7 @@ namespace PCShopSell.Game.UI
             var targetShop = S.ShopAt(t.ShopId);
             Line(w.Content, title + " · " + (targetShop != null ? S.ShopTitle(targetShop) : place?.Name ?? "原门店"), 20, Ui.Accent);
             if (t.Kind == "sample") Line(w.Content, PartCatalog.Get(t.PartId).Name + " · 借用中", 18);
-            string status = t.Status;
+            string status = t.Kind == "sample" && t.Status == "在途" ? "尚未到店" : t.Status;
             if (t.Started && t.Remaining > 0) status = "进行中 · 还需" + t.Remaining + "分钟";
             if (t.At > S.Clock.Now.TotalMinutes) status += " · " + new GameTimestamp(t.At);
             Line(w.Content, status, 17);

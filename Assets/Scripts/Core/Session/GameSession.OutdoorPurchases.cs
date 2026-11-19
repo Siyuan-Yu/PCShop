@@ -81,7 +81,7 @@ namespace PCShopSell.Core.Session
                 Money total = StallPrice(place, part) * count, paid = total.Scale(.3), debt = total - paid;
                 if (HasOverdueDebt || SupplierDebtTotal + debt > CreditLimit) return Fail("有逾期货款或超出当前授信额度。");
                 double room = 0; WithShop(shop, () => room = shop.Sim.Stock.FreeSpace - IncomingShopSpace);
-                if (room + 1e-9 < Stock.SpaceOf(part, true, count)) return Fail("目的店仓位不足，已计入在途货物。");
+                if (room + 1e-9 < Stock.SpaceOf(part, true, count)) return Fail("收货门店的可用仓位不足。");
                 string orderId = "wang-visit:" + _cityProcurementSequence++;
                 if (!Ledger.TryDebit(Clock.Today, "显卡采购首付", paid, place.Name + " " + part.Name + " ×" + count,
                     LedgerAttribution.ForShop(shop.Place.Id, orderId + ":goods", "采购").Product(part.Id, count, StallPrice(place, part).Cents))) return Fail("现金不足以支付30%首款。");

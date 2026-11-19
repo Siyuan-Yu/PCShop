@@ -143,8 +143,6 @@ namespace PCShopSell.Game.UI
         private IEnumerable<OwnedShop> WbVisibleShops() =>
             S.MyShops.Where(s => _workbenchStreet == null || s.Place.StreetId == _workbenchStreet);
 
-        private Money WbSalesToday(OwnedShop shop) => S.GetCityFinance(S.Clock.Today, S.Clock.Today, shop.Place.Id).Sales;
-
         private void BuildWorkbenchBusiness(Transform parent, Window w)
         {
             var nav = Ui.Row(parent, 32, 6); string[] names = { "报表", "门店", "人员采购", "订单合作", "资产" };
@@ -220,26 +218,11 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private (string head, string value)[] WbShopCells(OwnedShop shop)
-        {
-            if (S.IsOwnedVenue(shop.Place)) return new[] { ("今日收入", WbSalesToday(shop).ToString()) };
-            int stock = WbStockCount(shop);
-            return new[]
-            {
-                ("今日销售", WbSalesToday(shop).ToString()),
-                ("客流 / 流失", shop.Sim.TodayCustomers + " / " + shop.Sim.TodayLost),
-                ("库存", stock == 0 ? "已空" : stock + " 件"),
-                ("员工", S.Employees.Count(e => e.Shop == shop) + " 人"),
-            };
-        }
-
         private void BuildWorkbenchShops(Transform parent, Window w)
         {
-            if (S.MyShops.Count == 0) { WbText(parent, "还没有经营中的门店。", 20); return; }
-            BuildWorkbenchStreetFilter(parent, w);
-            BuildWorkbenchShopGroups(parent, w, WbShopCells,
-                g => "今日销售 " + Money.FromCents(g.Sum(s => WbSalesToday(s).Cents)) + " · 流失 " + g.Where(s => !S.IsOwnedVenue(s.Place)).Sum(s => s.Sim.TodayLost) + " 人",
-                (body, shop) => BuildWorkbenchShopDetail(body, w, shop));
+            var tools = Ui.Row(parent, 36);
+            BuildShopManagementTools(tools);
+            BuildManagedShops(parent, w, _workbenchShops);
         }
 
         private void BuildWorkbenchShopDetail(Transform parent, Window w, OwnedShop shop)

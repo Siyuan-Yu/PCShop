@@ -269,6 +269,8 @@ namespace PCShopSell.Core.Session
                         what = $"大米 {kg:0} 千克" + (toShop ? "（已放进门店后仓）" : "（已放进家中后仓）");
                         break;
                 }
+                if (p.Kind is ParcelKind.Gift or ParcelKind.Rice)
+                    RecordShopPurchaseReceipt(destination, Clock.Now.TotalMinutes, "网购");
                 Popup?.Invoke("快递到了", $"送达{destinationName}：{what}");
             }
         }

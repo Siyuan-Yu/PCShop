@@ -94,7 +94,7 @@ namespace PCShopSell.Game.UI
             HudPanelButton(row, "手机", KeyCode.P, OpenPhone, "通讯录与智能手机应用。");
             HudPanelButton(row, "任务", QuestHotkey, OpenQuests, "当前任务与待办。");
             HudPanelButton(row, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
-            HudPanelButton(row, "经营", KeyCode.H, OpenEmployeesPanel, "各门店的员工、岗位、排班、采购与补货。").name = "HudManagement";
+            HudPanelButton(row, "经营", KeyCode.H, OpenStoreManagement, "各门店的经营、员工、采购与补货。").name = "HudManagement";
             HudPanelButton(row, "物价", KeyCode.I, OpenMarketPanel, "查看本期物价、历史涨跌和报价走势。").name = "HudPrices";
             _stockMarketButton = Ui.Size(Ui.Button(row, "股市", () =>
             {

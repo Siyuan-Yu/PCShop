@@ -344,13 +344,16 @@ namespace PCShopSell.Game.UI
         // ---------- 柜台 ----------
 
         /// <summary>柜台内直接选择开门、关门时间；不限时单独切换，不再打开设置弹窗。</summary>
-        private void ShopHoursRow(ShopSimulation shop)
+        private void ShopHoursRow(ShopSimulation shop) =>
+            BuildShopHoursControls(C, shop, S.CurrentShop, RebuildDock);
+
+        private void BuildShopHoursControls(Transform parent, ShopSimulation shop, OwnedShop owner, System.Action refresh)
         {
             const int day=24*60;
             bool allDay=shop.AllDay;
             int open=allDay?ShopSimulation.DefaultOpenMinute:shop.OpenMinute;
             int close=allDay?ShopSimulation.DefaultCloseMinute:shop.CloseMinute%day;
-            RectTransform row=Ui.Row(C,36,6);
+            RectTransform row=Ui.Row(parent,36,6);
             Ui.Size(Ui.Label(row,"营业时间",16),76,36);
             void TimeChoice(bool opening)
             {
@@ -367,9 +370,9 @@ namespace PCShopSell.Game.UI
                     if(placeholder&&index==0)return;
                     int value=minutes[index-(placeholder?1:0)];
                     int start=opening?value:open,end=opening?close:value;
-                    if(start==end){Toast("开门和关门不能相同；全天营业请选择“不限时”。");RebuildDock();return;}
+                    if(start==end){Toast("开门和关门不能相同；全天营业请选择“不限时”。");refresh();return;}
                     shop.SetHours(start,end==0?day:end);
-                    RebuildDock();
+                    refresh();
                 });
                 dropdown.name=opening?"ShopOpeningTime":"ShopClosingTime";
                 Ui.Size(dropdown,145,36);
@@ -380,12 +383,12 @@ namespace PCShopSell.Game.UI
             {
                 if(shop.AllDay)shop.SetHours(ShopSimulation.DefaultOpenMinute,ShopSimulation.DefaultCloseMinute);
                 else shop.SetHours(0,day);
-                RebuildDock();
+                refresh();
             },15,Ui.SelectedButton(allDay));
             unlimited.name="ShopUnlimitedHours";Ui.Size(unlimited,90,36);
             if(!allDay&&close<open&&close!=0)Line(C,"跨午夜营业，次日 "+Ui.Hm(close)+" 关门。",14,Ui.Dim);
             if(!allDay&&!shop.InHours(S.Clock.Now))
-                Ui.Notice(C, S.ShopFinishingService(S.CurrentShop) ? "打烊收尾 · 暂停接待新客，继续服务店内顾客"
+                Ui.Notice(parent, S.ShopFinishingService(owner) ? "打烊收尾 · 暂停接待新客，继续服务店内顾客"
                     : $"已关门 · {Ui.Hm(shop.OpenMinute)} 开门");
         }
 

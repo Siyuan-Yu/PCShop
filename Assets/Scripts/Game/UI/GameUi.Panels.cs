@@ -382,7 +382,7 @@ namespace PCShopSell.Game.UI
             Line(w.Content, $"{Factor(MacroFactor.Crypto)} · {Factor(MacroFactor.AiDemand)}", 16, Ui.Dim);
             var header = Ui.Row(w.Content, 28);
             Ui.Size(Ui.Label(header, "配件", 16, color: Ui.Dim), -1, 28, 1);
-            foreach (string label in new[] { "较常态报价", "库存", "在途" }) EconomicStoreCell(header, label, Ui.Dim);
+            foreach (string label in new[] { "较常态报价", "库存" }) EconomicStoreCell(header, label, Ui.Dim);
             foreach (PartCategory category in PartCatalog.Categories)
             {
                 var row = Ui.Row(w.Content, 30);
@@ -391,7 +391,6 @@ namespace PCShopSell.Game.UI
                 var parts = PartCatalog.All.Where(part => part.Category == category).ToArray();
                 EconomicStoreCell(row, PriceMovement(change), PriceMovementColor(change));
                 EconomicStoreCell(row, parts.Sum(part => S.PlayerShop.Stock.CountAll(part)).ToString(), Ui.TextColor);
-                EconomicStoreCell(row, parts.Sum(part => S.PendingOnlineCount(part.Id)).ToString(), Ui.TextColor);
             }
             if (S.Player.Intelligence >= 30)
                 Line(w.Content, "币圈主要影响显卡，AI 需求影响内存与显卡，新品上市压低旧 CPU 和主板。", 15, Ui.Dim);

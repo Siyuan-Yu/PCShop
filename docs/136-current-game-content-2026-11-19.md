@@ -1,5 +1,7 @@
 # PETSHOP 当前玩法与主分支交接（2026-11-19）
 
+> 后续的多店经营与采购改版、最新 Windows 包基线和完整系统索引已汇总至[当前完整交接](145-current-game-and-store-management-2026-11-19.md)。
+
 当前工程为 **PCShopSell**，开发分支为 `main`，使用 Unity **2022.3.6f1**。本文汇总现有玩法、本轮实际接入的规则、旧存档行为与本地构建边界。各系统的操作细节、事件清单和历史验证见[完整玩法索引](124-current-game-content-2026-11-17.md)和[11 月 18 日交接](133-current-project-handoff-2026-11-18.md)，同一功能以本文及[模型改胶与事件 CG 本轮交接](144-model-commissions-and-event-cg-handoff-2026-11-19.md)的更新为准。
 
 ## 城市、操作与主线

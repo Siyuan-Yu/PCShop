@@ -574,7 +574,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Restock: return "入口：手机 → 网购";
                 case QuestTarget.Finance: return "入口：资产 → 经营中的店铺。";
                 case QuestTarget.Enterprise: return "入口：电脑店 → 订单 → 企业采购订单。";
-                case QuestTarget.Direct: return "入口：采购 → 直供协议与账款。";
+                case QuestTarget.Direct: return "入口：经营 → 店 → 直供协议与账款。";
                 case QuestTarget.Ventures: return "地点：安居房产中介";
                 case QuestTarget.Park: return "入口：前往园区 → 园区管理";
                 case QuestTarget.Creators: return "入口：品牌 → “代言人（KOL）”。";

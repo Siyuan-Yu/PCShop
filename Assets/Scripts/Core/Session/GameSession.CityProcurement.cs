@@ -408,11 +408,16 @@ namespace PCShopSell.Core.Session
             d.cityProcurementVersion = 1; d.cityProcurementNextId = _cityProcurementSequence;
             d.cityProcurementPolicies = _cityProcurementPolicies.Values.Select(p => p.Copy()).ToArray();
             d.cityProcurementClaims = _cityProcurementClaims.Select(c => c.Copy()).ToArray();
+            d.shopPurchaseReceipts = _latestShopReceipts.Values.ToArray();
             d.cityProcurementOrders = _cityProcurementOrders.Skip(Math.Max(0, _cityProcurementOrders.Count - 300)).Select(o => o.Copy()).ToArray();
         }
         private void LoadCityProcurement(SaveData d)
         {
             _cityProcurementPolicies.Clear(); _cityProcurementClaims.Clear(); _cityProcurementSequence = Math.Max(1, d.cityProcurementNextId);
+            _latestShopReceipts.Clear();
+            foreach (var receipt in d.shopPurchaseReceipts ?? Array.Empty<ShopPurchaseReceipt>())
+                if (!string.IsNullOrEmpty(receipt?.ShopId) && receipt.Minute >= 0 && receipt.Minute <= Clock.Now.TotalMinutes)
+                    RecordShopPurchaseReceipt(ShopAt(receipt.ShopId), receipt.Minute, receipt.Channel);
             _cityProcurementOrders.Clear();
             foreach (var o in d.cityProcurementOrders ?? Array.Empty<ProcurementOrderRecord>())
                 if (o != null && !string.IsNullOrEmpty(o.Id) && !_cityProcurementOrders.Any(x => x.Id == o.Id)) _cityProcurementOrders.Add(o.Copy());

@@ -307,12 +307,9 @@ namespace PCShopSell.Core.Session
         {
             var row = FindEmployee(employeeId);
             if (row?.Shop == null) return "";
-            double incoming = 0;
-            WithShop(row.Shop, () => incoming = IncomingShopSpace);
             var stock = row.Shop.Sim.Stock;
-            double available = Math.Max(0, stock.FreeSpace - incoming);
             double kg = Backpack.KgPerSpace;
-            return $"店内后仓容量不限 · 已存 {stock.UsedSpace * kg:0.##} 千克 · 在途 {incoming * kg:0.##} 千克；自运超载会分趟";
+            return $"店内后仓容量不限 · 已存 {stock.UsedSpace * kg:0.##} 千克 · 自运超载会分趟";
         }
 
         private static bool UsesPurchaseCourier(VehicleKind transport) => transport == VehicleKind.Walk || transport == VehicleKind.Taxi;
@@ -332,7 +329,7 @@ namespace PCShopSell.Core.Session
                 : !row.Person.OnDuty(Clock.Now) ? "还没到该员工的上班时间"
                 : !CityEmployeeAvailable(row.Person, row.Shop) ? "员工尚未实际到岗，或正在赴约/参加其他活动"
                 : null;
-            if (plan == null || (plan.Items?.Length ?? 0) == 0) q.Error = plan?.InventoryThreshold == true ? "当前没有未覆盖的阈值缺口（含现货、在途和已认领）" : row.Person.PurchasePlan.Items.Any(i=>i.BuyMaximum)?"该采购日暂无可用的店家份额或实货":"先在采购清单里添加商品";
+            if (plan == null || (plan.Items?.Length ?? 0) == 0) q.Error = plan?.InventoryThreshold == true ? "补货缺口已覆盖，无需再采购" : row.Person.PurchasePlan.Items.Any(i=>i.BuyMaximum)?"该采购日暂无可用的店家份额或实货":"先在采购清单里添加商品";
             else if (!IsPurchaseTransport(plan.Transport)) q.Error = "请选择有效运输方式";
             if (q.Error != null) return q;
             q.Transport = plan.Transport;
@@ -616,6 +613,7 @@ namespace PCShopSell.Core.Session
                     });
                     TrackTempClocks();
                     trip.Delivered = true;
+                    if (trip.Items?.Length > 0) RecordShopPurchaseReceipt(dest, to.TotalMinutes, "员工代采");
                     var person = FindEmployee(trip.EmployeeId)?.Person;
                     string note = $"{trip.EmployeeName}采购到货（{CourierDestName(dest)}）：" + string.Join("、", received) + "。";
                     bool more = trip.RemainingItems?.Length > 0;

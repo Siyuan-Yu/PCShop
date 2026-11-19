@@ -109,7 +109,7 @@ namespace PCShopSell.Game.UI
         private string WorkbenchViewKey()
         {
             if (!S.CanUseHomeWorkbench) return "closed";
-            string key = $"{S.Clock.Now.TotalMinutes / 30}:{S.Time.IsRunning}:{S.Time.Speed}:{S.StockNextQuote}:{S.Ledger.Revision}:{S.WorkbenchAlerts.Count}";
+            string key = $"{S.Clock.Now.TotalMinutes / 30}:{S.Time.IsRunning}:{S.Time.Speed}:{S.StockNextQuote}:{S.Ledger.Revision}:{S.WorkbenchAlerts.Count}:{S.ShopPurchaseReceiptRevision}";
             return _workbenchTab == 0 ? $"{key}:{S.Player.Health:0}:{S.Player.Hunger:0}" : key;
         }
 
