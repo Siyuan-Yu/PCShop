@@ -17,11 +17,11 @@ namespace PCShopSell.Game.UI
             if (e == null) return;
             if (_quarterlyExpoWindow != null && !_quarterlyExpoWindow.Closed) _quarterlyExpoWindow.Close();
             bool animateOnOpen = true;
-            OpenWindow("本届展会结算", 960, 800, w =>
+            OpenWindow("本届展会结算", 1020, 800, w =>
             {
                 var reveal = animateOnOpen ? NewUiReveal() : null;
                 animateOnOpen = false;
-                var body = Ui.Scroll(w.Content, 610);
+                var body = w.Content;
                 var peers = S.BrandBusiness.Exhibits.Where(x => x.Format == 2 && x.Day == e.Day && (x.Finished || x.Missed)).ToArray();
                 if (peers.Length > 1)
                 {
@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
                 if (S.CurrentPlace?.Id == "life_expo")
                     Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonBg), -1, 44, 1);
                 PlayUiReveal(reveal);
-            });
+            }, fitContent: true);
         }
 
         private void ExpoRewardMetric(Transform parent, string label, int before, int after)
@@ -96,7 +96,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("本届展会 · 采购订单", 880, 690, w =>
             {
-                var list = Ui.Scroll(w.Content, 500);
+                var list = w.Content;
                 var orders = ExpoResultOrders(id);
                 if (orders.Length == 0) Para(list, "本届没有采购订单。现场销售已在展会结算中记录。", 19);
                 foreach (var order in orders)
@@ -117,7 +117,7 @@ namespace PCShopSell.Game.UI
                     }
                 }
                 Ui.Size(Ui.Button(w.Content, "返回本届结算", () => { w.Close(); OpenExpoSettlement(id); }, 18), -1, 42);
-            });
+            }, fitContent: true);
         }
     }
 }

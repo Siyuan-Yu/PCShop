@@ -33,7 +33,7 @@ namespace PCShopSell.Game.UI
                 if (state.Pending == null && state.Visited > 0) BuildOutdoorBatchProcurement(w, activity);
                 BuildManualActivityFinish(w, activity);
                 Ui.Size(Ui.Button(w.Content, "提前离开", () => ConfirmEndCityActivity(activity, false), 18, Ui.Warn), -1, 44);
-            });
+            }, fitContent: true);
             if (window == null) return;
             window.LiveConversation = true;
             window.LiveKey = () =>
@@ -58,7 +58,7 @@ namespace PCShopSell.Game.UI
                 if (state.Number == 69 && index == 5) available &= !state.Negotiated;
                 if (state.Number == 70 && index == 2) available &= !state.Tested;
                 if (state.Number == 70 && index == 3) available &= state.Tested && !state.Negotiated;
-                Ui.Size(Ui.Button(w.Content, definition.Choices[index], () =>
+                Ui.Size(Ui.Button(w.Content, S.EventActivityChoiceLabel(definition, index), () =>
                 {
                     S.ChooseCityActivity(activity.Id, index);
                     w.RequestRebuild();

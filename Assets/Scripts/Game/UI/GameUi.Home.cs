@@ -344,7 +344,6 @@ namespace PCShopSell.Game.UI
             return name.Length > 5 ? name.Substring(0, 5) : name;
         }
 
-        private static readonly Color BagBadgeSurface = new Color32(35, 43, 38, 255);
 
         /// <summary>一格一格的背包格子：8 列，一叠东西占几格就画几格。</summary>
         private RectTransform BagGrid(Transform parent, System.Collections.Generic.List<BagStack> stacks, int capacity, string selKey, System.Action<string> onPick, float height,bool compact=false)
@@ -401,11 +400,11 @@ namespace PCShopSell.Game.UI
                         title.rectTransform.Anchor(0, band, 1, band + .21f, 2, 0, 2, 0);
                         FillItemPortrait(cell.transform, st.Key).Anchor(.18f, band + .21f, .82f, .98f);
                         string amount = st.Key == "rice" ? $"{st.Kg * count / st.Count:0.##}kg" : count > 0 ? $"×{count}" : "…";
-                        var quantity = Ui.Panel(cell.transform, "BagQuantity", BagBadgeSurface);
+                        var quantity = Ui.FlatPanel(cell.transform, "BagQuantity", Ui.PanelBg, Ui.FlatWellEdge);
                         quantity.raycastTarget = false;
                         float badgeWidth = Mathf.Clamp(7 * amount.Length + 8, 24, 72);
                         quantity.rectTransform.Anchor(1, 1, 1, 1, -badgeWidth - 2, -21, 2, 2);
-                        var badge = Ui.Label(quantity.transform, amount, 14, TextAnchor.MiddleCenter, Color.white);
+                        var badge = Ui.Label(quantity.transform, amount, 14, TextAnchor.MiddleCenter, Ui.Accent);
                         badge.fontStyle = FontStyle.Bold;
                         badge.resizeTextForBestFit = true;
                         badge.resizeTextMinSize = 10;
@@ -952,7 +951,7 @@ namespace PCShopSell.Game.UI
 
             if (_myPage == MyPage.Contacts)
             {
-                BuildContactsContent(w, flexible: true);
+                BuildContactsContent(w, closeOnDriverCall: false);
                 return;
             }
             if (_myPage == MyPage.Relations)

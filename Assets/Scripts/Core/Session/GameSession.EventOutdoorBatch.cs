@@ -75,7 +75,7 @@ namespace PCShopSell.Core.Session
                     if (hostPays)
                     {
                         double chance = EventScript.ProgressiveChance(.5, (s.Relation(person), 35, .015), (s.EffectiveCharm, 45, .01));
-                        if (!s.Random.Chance(chance)) return $"请客商量成功率 {chance:P0}。对方这次没有答应，本次未预约，不扣钱或交情。";
+                        if (!s.Random.Chance(chance)) return "对方这次没有答应。本次未预约，也没有扣钱或交情。";
                     }
                     var a = s.ScheduleCityActivityAt(definition, new[] { person }, start, false, "outdoor:" + n + ":" + s._nextCityActivity, place);
                     if (a == null) return "日程或条件变化，未预约、未扣款。";
@@ -101,7 +101,9 @@ namespace PCShopSell.Core.Session
                         HostPays = hostPays
                     };
                     Money price = CityActivityEntryPrice(activity, 0, quote);
-                    string note = hostPays ? "魅力 45、交情 35 起有机会。对方同意后才会预约。" : null;
+                    string note = hostPays
+                        ? EventScript.AttributeHint(("魅力", EffectiveCharm), ("交情", Relation(person))) + "。对方同意后才会预约。"
+                        : null;
                     string paymentQuote = hostPays ? "对方同意后免费" : price.ToString();
                     var (choice, start) = Offer($"{package} · {payment} · {paymentQuote}", definition, treat, hostPays, after: true);
                     choice.Selection = (definition, package);
@@ -298,12 +300,6 @@ namespace PCShopSell.Core.Session
                 else { if (state.Answers < state.Visited || state.Visited >= 3) return Fail("请先完成当前辨认，或本次三株已看完。"); QueueOutdoorWalk(a, state, state.Visited); reply = "正在走向下一株。"; }
                 return true;
             }
-            if (n is 65 or 67 || n == 66 && a.ServiceDefinitionId != "social_66_delivery")
-            {
-                if (state.Mode != 0 && state.Mode != choice) return Fail("这次已经选定主要聊天方向。");
-                state.Mode = choice; state.Pending = "talk"; state.ReadyAt = (long)ManualOperationTime(a) + 5;
-                reply = choice == 2 ? "实际聊工作经历与经营；涉及配送合作仍需另下真实订单。" : "坐下来边吃边聊。"; return true;
-            }
             if (n == 66)
             {
                 if (state.Delivered) return Fail("这场已交付餐食，不能重复赠送。");
@@ -339,12 +335,15 @@ namespace PCShopSell.Core.Session
                 bool ok = Random.Chance(chance);
                 if (ok && n == 70) state.CreditGranted = true;
                 if (ok && n == 69) { var market = PurchaseDestination(CurrentPlace); _bargains[market.Id] = (Clock.Today.TotalDays, .04); }
-                reply = $"成功率 {chance:P0}。" + (ok ? (n == 70 ? "已同意30%首款、14天尾款；还需你确认实际订单。" : "本市场今日采购折扣已更新，可核对真实报价后下单。") : "商谈失败，没有订单、费用或债务。属性不足仍可选，但必定失败。"); return true;
+                reply = ok ? (n == 70 ? "已同意30%首款、14天尾款；还需你确认实际订单。" : "本市场今日采购折扣已更新，可核对真实报价后下单。")
+                    : "商谈失败，没有产生订单、费用或债务。";
+                return true;
             }
             reply = "可以在下方选择型号、数量和付款方式；不采购也可以结束走访。"; return true;
         }
         private bool OutdoorCompletionReady(CityActivity a)
         {
+            if (IsAutomaticMeal(a)) return true;
             var s = OutdoorState(a); if (s == null) return true;
             if (s.Number >= 73) return ExhibitionCompletionReady(a, s);
             return s.Pending == null && (s.Number switch { 62 => s.Visited >= 3, 63 => s.Mode == 1 && s.Visited > 0 || a.Choices.Contains("outdoor-work"),
@@ -361,6 +360,7 @@ namespace PCShopSell.Core.Session
             if (s.Number == 63 && s.Mode > 1) { Player.Intelligence = Math.Min(100, Player.Intelligence + 1); AwardCityActivityRelation(a, OutdoorPeople[2], 2); }
             if (s.Number is 65 or 67 && s.Mode == 1) AwardCityActivityRelation(a, OutdoorPeople[s.Number - 61], 2);
             if (s.Number <= 67 && a.PlayerTreat) AwardCityActivityRelation(a, OutdoorPeople[s.Number - 61], 2);
+            if (IsAutomaticMeal(a)) return;
             if (s.Number == 61 && a.Choices.Contains("2")) Flags.Add("outdoor:grandpa-story");
             a.EventSettlementNote = (a.EventSettlementNote ?? "") + $"\n现场节点 {s.Visited}；辨认 {s.Correct}/{s.Answers}；实际采购 {s.OrderCount} 件。";
         }

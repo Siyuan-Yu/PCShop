@@ -105,6 +105,31 @@ namespace PCShopSell.Tests
             Resolve(s, "shop_hot_item_rumor", 0); Assert.AreEqual(1, s.Online.Pending.Count); Assert.Less(s.Ledger.Balance.Cents, cash.Cents);
             Assert.AreEqual(count, s.MainShop.Sim.Stock.CountAll(PartCatalog.Get("gpu1")));
         }
+        [Test] public void RumorCustomQuantityChargesOnlyOnConfirmationAndShipsToTheEventShop()
+        {
+            using var s = Make();
+            s.RaiseEvent("shop_hot_item_rumor");
+            var pending = s.PendingEvent;
+            Assert.NotNull(pending);
+            var cash = s.Ledger.Balance;
+            Assert.IsFalse(s.ResolveEvent(2));
+            Assert.IsFalse(s.ResolveEvent(2, GameSession.OnlinePartOrderLimit + 1));
+            Assert.AreSame(pending, s.PendingEvent);
+            Assert.AreEqual(cash, s.Ledger.Balance);
+            Assert.IsEmpty(s.Online.Pending);
+
+            var quote = s.QuoteOnlinePartOrder(PartCatalog.Get("gpu1"), 2, s.MainShop);
+            Assert.IsNull(quote.Blocker);
+            Assert.IsTrue(s.ResolveEvent(2, 2));
+            Assert.IsNull(s.PendingEvent);
+            var order = s.Online.Pending.Single();
+            Assert.AreEqual(s.MainShop.Place.Id, order.ShopId);
+            Assert.AreEqual("gpu1", order.Lines.Single().PartId);
+            Assert.AreEqual(2, order.Lines.Single().Count);
+            Assert.AreEqual(quote.Total.Cents, order.TotalCents);
+            Assert.AreEqual(cash - quote.Total, s.Ledger.Balance);
+            Assert.IsFalse(s.ResolveEvent(2, 2));
+        }
         [TestCase(0)] [TestCase(1)]
         public void FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(int choice)
         {
@@ -118,7 +143,14 @@ namespace PCShopSell.Tests
             using var s = Make(); s.RaiseEvent("shop_inspection_followup"); Assert.IsNull(s.PendingEvent);
             var save = s.CreateSave(); save.inspectionShops = new[] { s.MainShop.Place.Id }; save.inspectionDays = new[] { 45 };
             using var loaded = GameSession.Load(s.City, save); var cash = loaded.Ledger.Balance; var rep = loaded.PlayerShop.ShopReputation;
-            Resolve(loaded, "shop_inspection_followup", 0); Assert.AreEqual(cash, loaded.Ledger.Balance); Assert.AreEqual(rep, loaded.PlayerShop.ShopReputation);
+            loaded.RaiseEvent("shop_inspection_followup");
+            var pending = loaded.PendingEvent;
+            Assert.NotNull(pending);
+            Assert.IsNotEmpty(pending.Choices[0].Details);
+            Assert.IsFalse(loaded.ResolveEvent(0));
+            Assert.AreSame(pending, loaded.PendingEvent);
+            Assert.IsTrue(loaded.ResolveEvent(1));
+            Assert.AreEqual(cash, loaded.Ledger.Balance); Assert.AreEqual(rep, loaded.PlayerShop.ShopReputation);
             Assert.AreEqual(45, loaded.CreateSave().inspectionDays.Single());
         }
         [Test] public void FlashQuotaIncludesWaitingCustomersAndSurvivesSaveWithoutADoubleDiscount()

@@ -194,7 +194,6 @@ namespace PCShopSell.Game.UI
             r.sizeDelta = new Vector2(Mathf.Max(0, w), Mathf.Max(0, h));
         }
 
-        private GameSession _firstUseGuideSession;
         private Button _mealDeliveryGuideButton;
         private RectTransform _firstUseGuideRoot, _firstUseGuideCard;
         private Text _firstUseGuideText, _firstUseGuideArrow;
@@ -207,28 +206,47 @@ namespace PCShopSell.Game.UI
 
         private void UpdateFirstUseGuide()
         {
-            if (!ReferenceEquals(_firstUseGuideSession, S))
-            {
-                _firstUseGuideSession = S;
-                _mealDeliveryGuideButton = null;
-            }
+            bool meal = S.MealDeliveryTutorialPaused;
             bool scooter = S.ScooterTutorialPaused;
             bool securities = !scooter && S.SecuritiesTutorialPaused;
-            bool required = scooter || securities;
+            bool canShow = !MainMenuOpen && !S.IsGameOver && !S.IsWorking && !S.Racing && !_ctrl.Placing
+                && !_ctrl.PetFocusActive && !PopupOpen && S.Trip == null
+                && (_guideRoot == null || !_guideRoot.gameObject.activeSelf);
+            if (meal && canShow && !OpeningMealRestricted && _mealDeliveryTutorialWindow?.Closed != false)
+            {
+                OpenMealDeliverySettings(null);
+                Canvas.ForceUpdateCanvases();
+            }
             Button target = null;
-            bool meal = _mealDeliveryGuideButton != null && _mealDeliveryGuideButton.gameObject.activeInHierarchy
-                && _windows.Count > 0 && _mealDeliveryGuideButton.transform.IsChildOf(_windows[_windows.Count - 1].Root);
             string text = null;
             Window top = AnyModalOpen ? _windows[_windows.Count - 1] : null;
             bool showLesson = false;
-            if (scooter && top == null)
+            if (meal)
+            {
+                if (top != null && top == _mealDeliveryTutorialWindow) target = _mealDeliveryGuideButton;
+                text = "点「开启自动订餐」继续\n缺饭时按选定餐档下单";
+            }
+            else if (scooter && top == null)
             {
                 target = _vehicleButtons.FirstOrDefault(entry => entry.kind == VehicleKind.EBike).b;
                 text = "教学暂停 · 点「小电驴」\n切换出行方式后继续";
             }
             else if (securities)
             {
-                if (top != null && top == _stockWindow)
+                if (top == null && !S.AtBank && canShow)
+                {
+                    if (_questSeen != "bank_securities" || !_questPanel.gameObject.activeSelf)
+                        UpdateQuestTracker();
+                    if (_questSeen == "bank_securities") target = _questActionButton;
+                    text = "点任务卡上的「前往银行」\n到银行学习证券交易";
+                }
+                else if (top == null && S.AtBank && canShow)
+                {
+                    OpenBank(S.CurrentPlace);
+                    Canvas.ForceUpdateCanvases();
+                    top = _bankWindow;
+                }
+                if (top != null && top == _stockWindow && _stockAtBank)
                 {
                     target = _securitiesLessonButton;
                     showLesson = true;
@@ -239,29 +257,10 @@ namespace PCShopSell.Game.UI
                     target = _bankSecuritiesTab;
                     text = "教学暂停 · 点「证券交易」";
                 }
-                else if (top == null && S.HasSmartphone)
-                {
-                    target = _stockMarketButton;
-                    text = "教学暂停 · 点顶栏「股市」";
-                }
-                else if (top == null && S.AtBank && !MainMenuOpen && !PopupOpen && !_ctrl.Placing)
-                {
-                    OpenBank(S.CurrentPlace);
-                    return;
-                }
             }
-            else if (!required && meal)
-            {
-                target = _mealDeliveryGuideButton;
-                text = S.MealDeliveryEnabled ? "这里可以开关自动订餐\n缺饭时会按选定餐档下单"
-                    : "在这里开启自动订餐\n缺饭时会按选定餐档下单";
-            }
-            bool show = target != null && target.IsInteractable() && target.gameObject.activeInHierarchy
-                && (top == null || target.transform.IsChildOf(top.Root))
-                && !MainMenuOpen && !S.IsGameOver && !S.IsWorking && !S.Racing && !_ctrl.Placing
-                && !_ctrl.PetFocusActive && !PopupOpen && S.Trip == null
-                && (_guideRoot == null || !_guideRoot.gameObject.activeSelf);
-            SetRequiredGuideTarget(show && required ? target : null);
+            bool show = canShow && target != null && target.IsInteractable() && target.gameObject.activeInHierarchy
+                && (top == null || target.transform.IsChildOf(top.Root));
+            SetRequiredGuideTarget(show ? target : null);
             if (_firstUseGuideRoot != null) _firstUseGuideRoot.gameObject.SetActive(show);
             if (!show || _tutorialCanvas == null) return;
             if (_firstUseGuideRoot == null)
@@ -299,20 +298,15 @@ namespace PCShopSell.Game.UI
                 arrow.pivot = Vector2.zero;
             }
             _firstUseGuideRoot.SetAsLastSibling();
-            _firstUseInputBlock.PassThrough = required ? target : null;
-            _firstUseInputBlock.gameObject.SetActive(required);
+            _firstUseInputBlock.PassThrough = target;
             var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
             Rect hole = GuideTargetBounds((RectTransform)target.transform, size, 5);
-            foreach (var dim in _firstUseGuideDim) dim.gameObject.SetActive(required);
-            if (required)
-            {
-                // The whole lesson stays legible, while only its confirmation button accepts clicks.
-                Rect spotlight = showLesson ? GuideTargetBounds((RectTransform)target.transform.parent, size, 6) : hole;
-                GuideRect(_firstUseGuideDim[0].rectTransform, 0, spotlight.yMax, size.x, size.y - spotlight.yMax);
-                GuideRect(_firstUseGuideDim[1].rectTransform, 0, 0, size.x, spotlight.yMin);
-                GuideRect(_firstUseGuideDim[2].rectTransform, 0, spotlight.yMin, spotlight.xMin, spotlight.height);
-                GuideRect(_firstUseGuideDim[3].rectTransform, spotlight.xMax, spotlight.yMin, size.x - spotlight.xMax, spotlight.height);
-            }
+            // The whole securities lesson stays legible, while only its confirmation button accepts clicks.
+            Rect spotlight = showLesson ? GuideTargetBounds((RectTransform)target.transform.parent, size, 6) : hole;
+            GuideRect(_firstUseGuideDim[0].rectTransform, 0, spotlight.yMax, size.x, size.y - spotlight.yMax);
+            GuideRect(_firstUseGuideDim[1].rectTransform, 0, 0, size.x, spotlight.yMin);
+            GuideRect(_firstUseGuideDim[2].rectTransform, 0, spotlight.yMin, spotlight.xMin, spotlight.height);
+            GuideRect(_firstUseGuideDim[3].rectTransform, spotlight.xMax, spotlight.yMin, size.x - spotlight.xMax, spotlight.height);
             const float edge = 3;
             GuideRect(_firstUseGuideFrame[0].rectTransform, hole.xMin, hole.yMax, hole.width, edge);
             GuideRect(_firstUseGuideFrame[1].rectTransform, hole.xMin, hole.yMin - edge, hole.width, edge);
@@ -334,14 +328,20 @@ namespace PCShopSell.Game.UI
 
         private void SetRequiredGuideTarget(Button target)
         {
-            if (ReferenceEquals(_requiredGuideTarget, target)) return;
-            if (_requiredGuideTarget != null) _requiredGuideTarget.navigation = _requiredGuideNavigation;
-            _requiredGuideTarget = target;
+            if (!ReferenceEquals(_requiredGuideTarget, target))
+            {
+                if (_requiredGuideTarget != null) _requiredGuideTarget.navigation = _requiredGuideNavigation;
+                _requiredGuideTarget = target;
+                if (target != null)
+                {
+                    _requiredGuideNavigation = target.navigation;
+                    target.navigation = new Navigation { mode = Navigation.Mode.None };
+                }
+            }
             if (target == null) return;
-            _requiredGuideNavigation = target.navigation;
-            target.navigation = new Navigation { mode = Navigation.Mode.None };
             var events = EventSystem.current;
-            if (events != null && !events.alreadySelecting) events.SetSelectedGameObject(target.gameObject);
+            if (events != null && !events.alreadySelecting && events.currentSelectedGameObject != target.gameObject)
+                events.SetSelectedGameObject(target.gameObject);
         }
 
         private void UpdateOpeningMealGuide()

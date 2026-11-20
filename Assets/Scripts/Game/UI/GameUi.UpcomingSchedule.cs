@@ -134,8 +134,6 @@ namespace PCShopSell.Game.UI
                 var expo = S.BrandBusiness.Exhibits.FirstOrDefault(x => x.Id == e.ExpoId);
                 return expo != null && !expo.Attending && now <= expo.Day * 1440L + 600 && e.Minute <= limit;
             }
-            if (e.Kind == "race_registration" || e.Kind == "race_invite")
-                return now < e.Minute - RacingSchedule.MeetOpenMinute + RacingSchedule.MeetCloseMinute;
             if (!e.HasTime) return e.Minute / 1440 >= now / 1440;
             return e.Minute >= now || e.ActivityId != null && e.Minute >= now - 60;
         }
@@ -158,7 +156,7 @@ namespace PCShopSell.Game.UI
             var date = new GameDate((int)(e.Minute / 1440));
             long days = date.TotalDays - now / 1440;
             string day = days == 0 ? "今天" : days == 1 ? "明天" : date.Month + "月" + date.Day + "日";
-            if (!e.HasTime) return day;
+            if (!e.HasTime) return e.Kind is "race_registration" or "race_invite" ? day + " 全天" : day;
             if (days == 0 && e.Minute < now) return "已到时间";
             if (days == 0 && e.Minute % 1440 >= 1080) day = "今晚";
             return day + " " + GameSession.ClockText((int)(e.Minute % 1440));
@@ -171,8 +169,7 @@ namespace PCShopSell.Game.UI
             OpenWindow(UpcomingScheduleTitle(item), 620, 610, w =>
             {
                 Line(w.Content, new GameDate((int)(item.Entry.Minute / 1440)).ToString(), 20, Ui.Accent);
-                var list = Ui.Scroll(w.Content, 410);
-                BuildCalendarDayItem(list, item, w);
+                BuildCalendarDayItem(w.Content, item, w);
                 var actions = Ui.Row(w.Content, 42, 10);
                 Ui.Size(Ui.Button(actions, "返回", w.Close, 18), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "查看当天日程", () =>
@@ -180,7 +177,7 @@ namespace PCShopSell.Game.UI
                     w.Close();
                     OpenCalendar((int)(item.Entry.Minute / GameTimestamp.MinutesPerDay));
                 }, 18), -1, 42, 1);
-            });
+            }, fitContent: true);
         }
     }
 }

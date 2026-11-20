@@ -131,7 +131,7 @@ namespace PCShopSell.Core.Session
             if(shop.RetailKind=="restaurant")
             {
                 List<string> missing = null;
-                foreach (string id in RestaurantOpeningFurniture)
+                foreach (string id in RestaurantServiceFurniture)
                     if (!OpeningFurniturePlaced(shop, id))
                         (missing ??= new List<string>()).Add(OpeningFurnitureName(id));
                 return missing == null ? null : string.Join("、", missing);
@@ -223,7 +223,9 @@ namespace PCShopSell.Core.Session
             if(item==null||!item.WaitingForPurchase||item.ExpiresAt<=minute||bid<1||bid>1000000)return false;
             if(state.BudgetDay!=(int)(minute/1440)){state.BudgetDay=(int)(minute/1440);state.SpentToday=0;}
             if(bid<item.Minimum)return Fail("卖家没有接受这个报价，可提高报价或放弃。");
-            if(state.Used.Count(i=>i.Owned&&!i.Sold)>=20)return Fail("最多暂存20件旧物，请先卖出或清理库存。");
+            int stock = UsedStockCount(state);
+            int limit = UsedStockLimit(shop);
+            if (stock >= limit) return Fail($"旧物库存已满（{stock}/{limit} 件）。请先卖出旧物，或增加二手转售品货架。");
             var payment=Money.FromYuan(bid);
             if(!Ledger.TryDebit(Clock.Today,"进货",payment,"二手收购 "+UsedNames[item.Product],LedgerAttribution.ForShop(shop.Place.Id,"used:"+item.Id+":buy","采购")))return Fail("现金不足。");
             item.Owned=true;item.Cost=bid;state.SpentToday+=bid;Say("已收购"+UsedNames[item.Product]+"，支付 ¥"+bid+"。请鉴定后确认售价上架。");return true;
@@ -297,7 +299,7 @@ namespace PCShopSell.Core.Session
             if(inHours&&minute>=state.NextVisit)
             {
                 state.NextVisit=minute+(long)Math.Ceiling(SpecialVisitInterval(shop,45)/ShopPowerTraffic(shop,now));
-                if(state.Used.Count(i=>i.WaitingForPurchase)<UsedSellerQueueLimit&&state.Used.Count(i=>i.Owned&&!i.Sold)<20)
+                if (state.Used.Count(i => i.WaitingForPurchase) < UsedSellerQueueLimit && UsedStockCount(state) < UsedStockLimit(shop))
                     state.Used.Add(CreateSeller(state,minute));
             }
             var worker=SpecialWorkers(shop,EmployeeRole.Appraiser,now).OrderByDescending(e=>e.Intelligence).FirstOrDefault();
@@ -393,6 +395,32 @@ namespace PCShopSell.Core.Session
         }
         public int KitchenIngredientCount(OwnedShop shop,string id) => FridgeCapacityOf(shop.Layout) > 0 ? shop.Fridge.Food.IngredientCount(id) : 0;
         public double KitchenRice(OwnedShop shop) => FridgeCapacityOf(shop.Layout) > 0 ? shop.Fridge.Food.RiceKg : 0;
+
+        public IReadOnlyList<(string Name, bool InWarehouse)> RestaurantMissingIngredients(OwnedShop shop, SpecialBusinessState state)
+        {
+            var missing = new List<(string Name, bool InWarehouse)>();
+            long now = Clock.Now.TotalMinutes;
+            var waiting = state.Orders.Where(order => order.Stage == DiningStage.Waiting && !order.TableCleared
+                && (!order.IsFishOrder || now < order.DueAt));
+            int recipes = state.RecipeMask;
+            foreach (var order in waiting) recipes |= 1 << order.Recipe;
+
+            if (recipes != 0 && KitchenRice(shop) < .25 - 1e-9)
+                missing.Add(("大米", shop.Locker.Food.RiceKg > 1e-9));
+            for (int recipe = 0; recipe < RecipeIngredients.Length; recipe++)
+            {
+                string id = RecipeIngredients[recipe];
+                if ((recipes & (1 << recipe)) != 0 && KitchenIngredientCount(shop, id) < 1)
+                    missing.Add((Ingredients.Get(id).Name, shop.Locker.Food.IngredientCount(id) > 0));
+            }
+            foreach (var order in waiting.Where(order => order.IsFishOrder).GroupBy(order => order.FishId).Select(group => group.First()))
+            {
+                if (order.Fish != null && KitchenIngredientCount(shop, order.FishId) < 1)
+                    missing.Add((order.Fish.Name, shop.Locker.Food.IngredientCount(order.FishId) > 0));
+            }
+            return missing;
+        }
+
         private int[] RestaurantMealChoices()
         {
             var shop=CurrentShop;

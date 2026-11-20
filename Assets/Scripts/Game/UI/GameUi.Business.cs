@@ -101,7 +101,7 @@ namespace PCShopSell.Game.UI
                 var row=Ui.Row(confirm.Content,44);
                 Ui.Size(Ui.Button(row,"确定办理",()=>{confirm.Close();action();},18,Ui.Warn),-1,-1,1);
                 Ui.Size(Ui.Button(row,"返回",confirm.Close,18),-1,-1,1);
-            });
+            }, fitContent: true);
         }
         private void AgencyLink(Window w,Place property=null)
         {

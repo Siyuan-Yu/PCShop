@@ -41,13 +41,18 @@ namespace PCShopSell.Tests
             {s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;s.AdvanceClock((int)Math.Min(60,until-s.Clock.Now.TotalMinutes));}
             Assert.GreaterOrEqual(s.Clock.Now.TotalMinutes,until);
         }
-        internal static void CompleteLeadOuting(GameSession s,int index)
+        internal static void CompleteLeadOuting(GameSession s,int index,bool remote=false)
         {
             string id=GameSession.CommunityLeadPerson(index),def=GameSession.CommunityLeadActivity(index);
-            s.Meet(id,35);s.AddRelation(id,Math.Max(0,35-s.Relation(id)));
-            StandWithLead(s,index);
+            s.Meet(id,0);
+            if (remote)
+            {
+                Assert.IsNull(s.RemoteConversationBlocker(id));
+                Assert.IsFalse(s.CitySamePlace(id));
+            }
+            else StandWithLead(s,index);
             long start=s.SuggestCityActivityStart(def,id);
-            var activity=s.ScheduleCityActivity(def,new[]{id},start);
+            var activity=s.ScheduleCityActivityInvitation(def,id,start,false);
             Assert.NotNull(activity,def+": "+s.CityActivityBlocker(def,new[]{id},start));
             // Fixture travel places the player at the venue; scheduling, service selection,
             // elapsed time, participants and settlement use the production activity system.
@@ -59,6 +64,30 @@ namespace PCShopSell.Tests
                 Advance(s,Math.Min(start,s.Clock.Now.TotalMinutes+30));
             }
             At(s,venue);
+            if (index == 1)
+            {
+                s.Tick(.05);
+                Assert.False(activity.EntryPaid, "Arriving must not order the default meal");
+                var price = s.CityActivityEntryPrice(s.CityActivityService(activity), 1, activity);
+                Assert.True(s.SelectVenueService(def, 1, activity.Id), s.VenueServiceBlocker(def, 1, activity.Id));
+                s.Tick(.05);
+                Assert.AreEqual(CityActivityPhase.Completed, activity.State, activity.EndReason);
+                Assert.AreEqual(1, activity.ServiceChoice);
+                Assert.AreEqual(price.Cents, activity.EntryCostCents);
+                Assert.True(s.CommunityHasOuting(index));
+                return;
+            }
+            if (index == 2)
+            {
+                Assert.True(s.StartVenueAppointment(activity.Id), s.VenueAppointmentStartBlocker(activity));
+                Assert.False(s.CommunityHasOuting(index));
+                var gift = OldMarketCatalog.All.OrderBy(item => item.Price).First();
+                Assert.True(s.BuyCommunityMarketGift(gift.Id));
+                Assert.AreEqual(0, s.Backpack.GiftCount(OldMarketCatalog.ItemId(gift)));
+                Assert.AreEqual(CityActivityPhase.Completed, activity.State, activity.EndReason);
+                Assert.True(s.CommunityHasOuting(index));
+                return;
+            }
             Assert.True(s.SelectVenueService(def,0),s.VenueServiceBlocker(def,0));
             Assert.AreEqual(CityActivityPhase.Running,activity.State,def+" start="+start+" now="+s.Clock.Now.TotalMinutes+" hours="+venue.OpenMinute+"-"+venue.CloseMinute+" place="+s.CurrentPlace?.Id+" "+activity.EndReason);
             long end=s.Clock.Now.TotalMinutes+activity.Duration+1;
@@ -503,7 +532,7 @@ namespace PCShopSell.Tests
                     Assert.False(s.SearchCommunityBox(i));Assert.False(s.CommunityBoxAvailable(i));
                     Assert.Zero(s.DistrictTierOf(s.City.GetPlace(GameSession.CommunityBoxPlace(i))));
                 }
-                CompleteLeadOuting(s,0);Assert.True(s.CommunityHasClue(0),"Completed outing reveals the clue without another conversation");
+                CompleteLeadOuting(s,0,remote:true);Assert.True(s.CommunityHasClue(0),"Completed outing reveals the clue without another conversation");
                 var outing=s.CityActivities.Last(a=>a.State==CityActivityPhase.Completed);
                 using(var restored=Reload(s))
                 {

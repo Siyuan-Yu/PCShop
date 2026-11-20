@@ -147,7 +147,8 @@ namespace PCShopSell.Game.UI
                 var music = S.LifeTasks.FirstOrDefault(t => t.Activity == activity.Id && t.Kind == "music");
                 if (music == null) return;
                 var row = Ui.Row(w.Content, 42, 6);
-                Ui.Size(Ui.Button(row, "参与合唱", () => { S.SingLifeMusic(); w.RequestRebuild(); }, 17, Ui.ButtonBg, music.Count == 0), -1, 42, 1);
+                Ui.Size(Ui.Button(row, $"参与合唱 · 看魅力（当前魅力 {S.EffectiveCharm:0.#}）",
+                    () => { S.SingLifeMusic(); w.RequestRebuild(); }, 17, Ui.ButtonBg, music.Count == 0), -1, 42, 1);
                 foreach (var amount in new[] { 200, 1000 })
                     Ui.Size(Ui.Button(row, $"打赏 ¥{amount:N0}", () => { S.TipLifeMusic(amount); w.RequestRebuild(); }, 17, Ui.ButtonBg, music.Mode == 0), -1, 42, 1);
                 if (music.Message != null) Para(w.Content, music.Message, 17);

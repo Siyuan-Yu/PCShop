@@ -155,6 +155,7 @@ namespace PCShopSell.Core.Session
         public bool Reminder, EntryPaid, MealApplied, MidApplied, RewardApplied, NoShowNoticeRead, HostPays;
         public bool PlayerTreat;
         public string EventGiftId, EventSettlementNote;
+        public string CookTastingEffects;
         public bool EventGiftDelivered;
         public string[] Choices = Array.Empty<string>();
         public CityActivityParticipant[] Participants = Array.Empty<CityActivityParticipant>();
@@ -162,6 +163,7 @@ namespace PCShopSell.Core.Session
         public CityActivity Copy() => new CityActivity {Id=Id,DefinitionId=DefinitionId,SourceId=SourceId,VenueId=VenueId,HostId=HostId,
             EndReason=EndReason,ServiceDefinitionId=ServiceDefinitionId,ServiceConfirmed=ServiceConfirmed,ServiceChoice=ServiceChoice,PlayerIntentId=PlayerIntentId,PlayerVenueRoute=PlayerVenueRoute?.Copy(),OccupiedFrom=OccupiedFrom,OccupiedUntil=OccupiedUntil,EmployeeLeaveApproved=EmployeeLeaveApproved,ScheduledStart=ScheduledStart,ActualStart=ActualStart,ActualEnd=ActualEnd,
             EventGiftId=EventGiftId,EventGiftDelivered=EventGiftDelivered,EventSettlementNote=EventSettlementNote,
+            CookTastingEffects=CookTastingEffects,
             Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,ManualOperationMinute=ManualOperationMinute,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,CommunityClueMask=CommunityClueMask,CommunityClueShownMask=CommunityClueShownMask,EntryCostCents=EntryCostCents,EntryCostRecorded=EntryCostRecorded,
             HasPartialSettlement=HasPartialSettlement,PartialSettlementProgress=PartialSettlementProgress,
             PlayerStatsBefore=PlayerStatsBefore?.ToArray(),PlayerStatsAfter=PlayerStatsAfter?.ToArray(),Reminder=Reminder,EntryPaid=EntryPaid,MealApplied=MealApplied,PlayerTreat=PlayerTreat,
@@ -187,6 +189,8 @@ namespace PCShopSell.Core.Session
         public const string BankTellerId = "res_auntie";
         public const string BankNightTellerId = "res_bank_night";
         public const string InvitationTestPersonId = "life_invitation_test";
+        internal const string CousinId = "life_cousin";
+        internal const string CousinName = "周启成";
         private static List<CityPersonDefinition> _people;
         public static IReadOnlyList<CityPersonDefinition> People => _people ?? (_people=BuildPeople());
         private static Dictionary<string,CityPersonDefinition> _personById;
@@ -224,7 +228,7 @@ namespace PCShopSell.Core.Session
                 new CityVenueService(0, "沿平缓步道散步，体力消耗较低。", energy: -5, mood: 9, health: 2, relation: 8),
                 new CityVenueService(0, "走得更远，到观景平台看湖，运动量更大。", energy: -12, mood: 14, health: 4, relation: 6)),
             A("market","市场走访","stall_cpu",60,0,0,-3,5,"约在电子市场门口","实际走访档口，交换供货信息。","结束走访，不自动购买商品。","看新品","比较供货条件","聊经营","聊行业消息"),
-            A("old_market","旧物闲逛","stall_cpu",60,0,0,-3,5,"相约旧电子档口","慢慢看旧收音机和老唱片，听彼此讲旧事。","结束闲逛，各自选择下一站。","看旧收音机","聊评书","找老唱片","听旧设备故事"),
+            A("old_market","旧电子档口闲逛","stall_cpu",60,0,0,-3,5,"相约旧电子档口","慢慢看旧收音机和老唱片，听彼此讲旧事。","结束闲逛，各自选择下一站。","看旧收音机","聊配件沿革","找老唱片","听旧设备故事"),
             A("oldmarket_visit","青湾旧物市场闲逛",GameSession.OldMarketVenueId,60,0,0,-3,5,"相约青湾旧物市场","看钟表、旧电子、唱片和收藏杂货；实物购买与修理另行选择。","结束闲逛，各自选择下一站。","看钟表","聊老物件","找唱片","听旧设备故事"),
             WithServices(A("snack","夜宵小聚","life_restaurant",60,60,40,3,5,"选夜宵","热汤端上来，聊聊一天的收获。","各自离席，约好下次见。","汤面","家常小菜","聊今天","聊共同朋友"),
                 new CityVenueService(60, "一碗热汤面，适合饿着肚子来吃。", hunger: 45, energy: 4, mood: 5, nutrition: 1, relation: 5),
@@ -353,7 +357,8 @@ namespace PCShopSell.Core.Session
             var interests=new[]{"原创模型","唱歌与会计","篮球和路线规划","原创模型与摄影","可靠的交付","当季家常菜","原创旋律","无酒精饮品","社区运动","户外交流","布展设计","老街手艺","邻里教育","河岸生态","机械结构","地方史"};
             var goals=new[]{"攒一套维修工具，先把基本工作做好。","用下班后的时间念完夜校，不想把生活只过成排班表。","搬来城里后想找一份稳定工作，也照顾好一起租房的朋友。","做一个属于这座城市的原创模型系列，作品不借别人的角色。","给小团队找到可靠供货方，试单合格再谈长期合作。","保留一道街坊吃得起的家常菜。","把自己写的旋律留在练歌房里。","让不喝酒的人也能自在参加聚会。","组织一支下班后能打球的队伍。","把练习场做成普通人也敢来的地方。","让展会的新人摊主也能被看见。","续租老铺前，先算清这几年的收支。","把邻里课堂恢复成每周一次。","沿河多留一段可以坐下来的地方。","用简单结构做耐玩的原创模型。","把老居民讲的故事整理成小册子。"};
             for(int j=0;j<ids.Length;j++) result.Add(new CityPersonDefinition{Id=ids[j],Name=names[j],Role=roles[j],HomeId=Home(i++),WorkId=works[j],
-                WorkStart=j==6?840:j==7?1080:540,WorkEnd=j==6||j==7?120:1080,Age=j==3?27:24+j%17,Recruitable=j<3,
+                WorkStart=j==6?840:j==7?1080:540,WorkEnd=j==6||j==7?120:1080,Recruitable=j<3,
+                Age=ids[j] switch { "life_singer" => 23, "life_creator" => 27, _ => 24+j%17 },
                 Interest=interests[j],Goal=goals[j],Experience="我刚开始做"+roles[j]+"时，也经历过搬家和重新适应。",
                 Topics=new[]{"我平时做"+roles[j]+"，最在意把约好的事做完。","工作之外，我喜欢"+interests[j]+"。",goals[j],"我和"+names[(j+1)%names.Length]+"常交流近况，有机会介绍你们认识。"},
                 Stories=new[]{"我来到这里，是想把"+interests[j]+"变成生活中稳定的一部分。",goals[j],"现在比以前踏实些了；我希望身边的人也有重新开始的机会。"}});
@@ -421,6 +426,25 @@ namespace PCShopSell.Core.Session
             var coder = result.First(person => person.Id == "res_coder");
             coder.LeisurePlaces = new[] { "life_park" }.Concat(coder.LeisurePlaces).ToArray();
             AddRacingPeople(result);
+            result.Add(new CityPersonDefinition
+            {
+                Id = CousinId, Name = CousinName, Role = "你的表哥 · 家电维修师", Age = 31,
+                HomeId = "life_home_s_oldhomes", WorkId = "shop13", WorkStart = 540, WorkEnd = 1080,
+                Interest = "修旧家电、沿河散步", LeisurePlaces = new[] { "life_park" },
+                Goal = "攒钱把店里的维修台换一张结实的。",
+                Experience = "小时候你来我家，我总把拆下来的螺丝放进饼干盒。后来我就在数码先锋做维修了。",
+                Topics = new[]
+                {
+                    "今天送来一台老电扇，换个电容就能接着用。客人听到还能修，比我还高兴。",
+                    "我下班要是走得早，就去河边兜一圈。等晚高峰过了再回家。",
+                    "我最近在攒钱换张维修台。现在那张一拧螺丝，桌上的零件就跟着晃。"
+                },
+                Stories = new[]
+                {
+                    "我跟师傅做的第一单是修电饭锅。师傅让我把换下来的零件带给客人看，我到现在也这么做。",
+                    "我们小时候常在外婆家见面。那只装螺丝的饼干盒，还在我工作台最下面一格。"
+                }
+            });
             return result;
         }
         private static string Interest(int i) => new[]{"dinner","court","ktv","fishing","market","hike"}[i%6];

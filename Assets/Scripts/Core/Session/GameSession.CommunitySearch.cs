@@ -10,8 +10,33 @@ namespace PCShopSell.Core.Session
         public const int CommunityLeadRelation = 30;
         public bool CommunitySearchActive => _district.NodeId=="community.search";
         public static string CommunityLeadPerson(int index) => new[]{"landlady","lin","zhou"}[index];
-        public static string CommunityLeadActivity(int index) => new[]{"hike","dinner","old_market"}[index];
-        public static string CommunityLeadVenue(int index) => new[]{"life_hike","life_restaurant","stall_cpu"}[index];
+        public static string CommunityLeadActivity(int index) => new[]{"hike","dinner","oldmarket_visit"}[index];
+        public static string CommunityLeadVenue(int index) => new[]{"life_hike","life_restaurant",OldMarketVenueId}[index];
+        private const string CommunityMarketGift = "community-market-gift";
+        public bool IsCommunityLeadInvitation(string definitionId, string personId) => CommunitySearchActive
+            && Enumerable.Range(0, 3).Any(i => !CommunityHasOuting(i)
+                && CommunityLeadPerson(i) == personId && CommunityLeadActivity(i) == definitionId);
+        public static bool IsCommunityMarketOuting(CityActivity activity) => activity?.DefinitionId == "oldmarket_visit"
+            && activity.SourceId?.StartsWith("community-lead:", StringComparison.Ordinal) == true;
+        public static bool IsCommunityLeadDinner(CityActivity activity) => activity?.DefinitionId == "dinner"
+            && activity.SourceId?.StartsWith("community-lead:", StringComparison.Ordinal) == true;
+        public CityActivity CommunityLeadAppointment(int index) => _cityActivities.FirstOrDefault(a => a.Active
+            && a.VenueId == CommunityLeadVenue(index) && CityActivityService(a)?.Id == CommunityLeadActivity(index)
+            && a.Participants.Any(p => p.PersonId == CommunityLeadPerson(index)));
+
+        public bool BuyCommunityMarketGift(string goodsId)
+        {
+            var activity = RunningCityActivity;
+            if (!IsCommunityMarketOuting(activity) || !AtOldMarket || !CitySamePlace(CommunityLeadPerson(2))
+                || activity.Choices.Contains(CommunityMarketGift)) return Fail("请先与周维成在旧物市场会合。");
+            var goods = OldMarketCatalog.Get(goodsId);
+            if (goods == null || !BuyOldMarketGoods(goodsId)) return false;
+            Backpack.TakeGift(OldMarketCatalog.ItemId(goods));
+            ApplyCargoLimit();
+            activity.Choices = activity.Choices.Append(CommunityMarketGift).ToArray();
+            activity.EventSettlementNote = "在青湾旧物市场买下" + goods.Name + "送给了周维成。";
+            return FinishManualCityActivity(activity.Id);
+        }
         public static string CommunityBoxPlace(int index) => new[]{"life_hike","life_court","metro_b"}[index];
         public static string CommunityBoxName(int index) => new[]{"绿绳旧居资料箱","蓝绳街铺资料箱","红绳市场资料箱"}[index];
         public static string CommunityPieceName(int index) => new[]{"旧居街图页","商业街图页","批发市场图页"}[index];
@@ -42,6 +67,11 @@ namespace PCShopSell.Core.Session
             _district.CommunityMapQuest=true;_district.CommunitySearchVersion=2;
             _district.CommunityAcceptedAt=Clock.Now.TotalMinutes;
         }
+        private void RegisterCommunityLeadContacts()
+        {
+            if (!Flags.Add("community:lead-contacts")) return;
+            for (int i = 0; i < 3; i++) Meet(CommunityLeadPerson(i), 0);
+        }
         private void RecordCommunityOuting(CityActivity activity)
         {
             if(!_district.CommunityMapQuest||_district.CommunitySearchVersion!=2||_district.CommunityMapDelivered
@@ -49,10 +79,11 @@ namespace PCShopSell.Core.Session
                 ||activity.ActualStart<_district.CommunityAcceptedAt)return;
             for(int i=0;i<3;i++)
                 if(CityActivityService(activity)?.Id==CommunityLeadActivity(i)&&activity.VenueId==CommunityLeadVenue(i)
-                    &&activity.Participants.Any(p=>p.PersonId==CommunityLeadPerson(i)))
+                    &&activity.Participants.Any(p=>p.PersonId==CommunityLeadPerson(i))
+                    && (i != 2 || activity.Choices.Contains(CommunityMarketGift)))
                 {
                     _district.CommunityOutings|=1<<i;
-                    if(CommunitySearchActive && !CommunityHasClue(i) && Relation(CommunityLeadPerson(i))>=CommunityLeadRelation)
+                    if(CommunitySearchActive && !CommunityHasClue(i))
                     {
                         _district.CommunityClues|=1<<i;
                         activity.CommunityClueMask|=1<<i;
@@ -77,27 +108,24 @@ namespace PCShopSell.Core.Session
         public CityActivity CommunityLeadCompletedActivity(int index) => _cityActivities.LastOrDefault(a=>
             a.State==CityActivityPhase.Completed&&a.RewardApplied&&a.EntryPaid&&a.ActualStart>=_district.CommunityAcceptedAt
             &&a.VenueId==CommunityLeadVenue(index)&&CityActivityService(a)?.Id==CommunityLeadActivity(index)
-            &&a.Participants.Any(p=>p.PersonId==CommunityLeadPerson(index)));
+            &&a.Participants.Any(p=>p.PersonId==CommunityLeadPerson(index))
+            && (index != 2 || a.Choices.Contains(CommunityMarketGift)));
         public string CommunityLeadStatus(int index)
         {
             if(CommunityHasPiece(index))return "已找到："+CommunityPieceName(index);
             if(CommunityHasClue(index))return "线索："+CommunityLeadHint(index);
-            string remaining="";
-            if(Relation(CommunityLeadPerson(index))<CommunityLeadRelation)
-                remaining="提升好感："+Relation(CommunityLeadPerson(index))+"/"+CommunityLeadRelation+"。";
-            if(!CommunityHasOuting(index))remaining+="一起完成："+CityLifeCatalog.Activities.First(a=>a.Id==CommunityLeadActivity(index)).Name+"。";
-            return remaining.Length==0?(CommunityLeadCompletedActivity(index)!=null?"查看已完成活动的结算，听对方告诉你藏箱线索。":"条件已满足，可直接向本人打听图页线索。")
-                :remaining+"满足条件后，活动结算结束时对方会告诉你藏箱线索。";
+            if (CommunityHasOuting(index)) return "联系对方打听图页线索。";
+            return index == 2 ? "约周维成去青湾旧物市场，挑一件旧物买下来送给他。"
+                : "一起完成一次" + CityLifeCatalog.Activity(CommunityLeadActivity(index)).Name + "，结束后对方会告诉你藏箱线索。";
         }
         public string AskCommunityLead(int index,bool remote=false)
         {
             if(index<0||index>2||!CommunitySearchActive)return "请先接受委托，向李秀兰问清三位保管人。";
             string id=CommunityLeadPerson(index);
-            string blocker=remote||!CitySamePlace(id)?"请走到本人身边，当面打听图页；电话不能取得线索。":null;
+            string blocker = remote ? RemoteConversationBlocker(id) : CitySamePlace(id) ? null : "请联系这位保管人。";
             if(blocker!=null)return blocker;
             if(CommunityHasClue(index))return CommunityLeadHint(index);
-            if(Relation(id)<CommunityLeadRelation||!CommunityHasOuting(index))
-                return "我确实保管着其中一页。等我们熟悉些，一起去喜欢的地方坐坐、走走，再聊这段旧街往事吧。\n"+CommunityLeadStatus(index);
+            if(!CommunityHasOuting(index)) return CommunityLeadStatus(index);
             _district.CommunityClues|=1<<index;
             RememberSocial(id,"交代了旧街图页的藏箱线索。");
             return CommunityLeadHint(index)+"\n已记录线索，对应资料箱现在可以现场调查。";

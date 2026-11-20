@@ -10,6 +10,8 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private Window _mealDeliveryTutorialWindow;
+
         private void OpenMealDeliverySettings(Window parent)
         {
             if (S.HasSmartphone) OpenMealDeliveryApp(parent, openSettings: true);
@@ -20,16 +22,26 @@ namespace PCShopSell.Game.UI
         private void OpenMealDeliveryApp(Window parent = null, bool openSettings = false)
         {
             if (S.AppBlocker(PhoneApps.FoodDelivery) is string blocker) { Toast(blocker); return; }
-            bool automatic = openSettings;
+            bool tutorial = S.MealDeliveryTutorialPaused;
+            if (tutorial && _mealDeliveryTutorialWindow?.Closed == false) return;
+            bool automatic = openSettings || tutorial;
             string lastOrder = null;
-            OpenPhoneAppWindow("外卖", w =>
+            var window = OpenPhoneAppWindow("外卖", w =>
             {
+                bool locked = tutorial && S.MealDeliveryTutorialPaused;
+                w.Closable = !locked;
+                if (w.CloseButton != null) w.CloseButton.interactable = !locked;
                 void Refresh() { w.Rebuild(); parent?.RequestRebuild(); }
                 var tabs = Ui.Row(w.Content, 42, 8);
-                Ui.Tab(tabs, "点餐", () => { automatic = false; w.Rebuild(); }, !automatic).name = "MealDeliveryOrderTab";
-                Ui.Tab(tabs, "自动订餐", () => { automatic = true; w.Rebuild(); }, automatic).name = "MealDeliveryAutoTab";
+                var orderTab = Ui.Tab(tabs, "点餐", () => { automatic = false; w.Rebuild(); }, !automatic);
+                orderTab.name = "MealDeliveryOrderTab";
+                orderTab.interactable = !locked;
+                var autoTab = Ui.Tab(tabs, "自动订餐", () => { automatic = true; w.Rebuild(); }, automatic);
+                autoTab.name = "MealDeliveryAutoTab";
+                autoTab.interactable = !locked;
                 Ui.Size(Ui.Rect(tabs, "MealDeliveryTabSpacing"), 0, -1, 1);
-                Ui.Size(Ui.Button(tabs, "返回手机", () => { w.Close(); _phoneStoreWindow?.Close(); OpenPhone(); }, 16), 124, 36);
+                Ui.Size(Ui.Button(tabs, "返回手机", () => { w.Close(); _phoneStoreWindow?.Close(); OpenPhone(); },
+                    16, interactable: !locked), 124, 36);
 
                 var columns = Ui.Row(w.Content, -1, 16);
                 columns.GetComponent<LayoutElement>().flexibleHeight = 1;
@@ -45,7 +57,7 @@ namespace PCShopSell.Game.UI
                 Line(details, $"当前饱腹  {S.Player.Hunger:0} / 100", 19);
                 if (automatic)
                 {
-                    BuildMealDeliverySettings(menu, Refresh);
+                    BuildMealDeliverySettings(menu, Refresh, locked);
                     return;
                 }
 
@@ -64,9 +76,10 @@ namespace PCShopSell.Game.UI
                 if (S.OrderDeliveryMealBlocker(0) is string orderBlocker)
                     Para(details, orderBlocker, 16, Ui.Dim);
             }, scrollContent: false);
+            if (tutorial) _mealDeliveryTutorialWindow = window;
         }
 
-        private void BuildMealDeliverySettings(Transform parent, Action refresh)
+        private void BuildMealDeliverySettings(Transform parent, Action refresh, bool locked = false)
         {
             bool enabled = S.MealDeliveryEnabled;
             var header = Ui.Row(parent, 42, 10);
@@ -78,18 +91,14 @@ namespace PCShopSell.Game.UI
                 refresh();
             }, 17, Ui.SelectedButton(enabled), S.HasSmartphone), 148, 38);
             toggle.name = "MealDeliveryAutoToggle";
-            if (S.HasSmartphone && S.Flags.Add("guide:meal-delivery:seen"))
-            {
-                _mealDeliveryGuideButton = toggle;
-                _firstUseGuideSession = S;
-            }
+            if (locked) _mealDeliveryGuideButton = toggle;
             if (!S.HasSmartphone) Para(parent, "需要智能手机才能开启。可以先选好餐档。", 16, Ui.Warn);
             Para(parent, "饭点或饿了时优先吃现有食物，缺餐时按选定档位点餐。", 17, Ui.Dim);
-            BuildMealDeliveryRows(parent, automatic: true, tier => { S.SelectMealDeliveryTier(tier); refresh(); });
+            BuildMealDeliveryRows(parent, automatic: true, tier => { S.SelectMealDeliveryTier(tier); refresh(); }, !locked);
             Para(parent, $"设置即时保存，{Ui.Emphasize("实际下单时扣费")}。{Ui.Emphasize("余额不足", Ui.Warn)}会跳过本次订餐。", 16, Ui.Dim);
         }
 
-        private void BuildMealDeliveryRows(Transform parent, bool automatic, Action<int> choose)
+        private void BuildMealDeliveryRows(Transform parent, bool automatic, Action<int> choose, bool allowSelection = true)
         {
             for (int i = 0; i < GameSession.DeliveryMeals.Count; i++)
             {
@@ -107,7 +116,7 @@ namespace PCShopSell.Game.UI
                 string blocker = automatic ? null : S.OrderDeliveryMealBlocker(tier);
                 string label = automatic ? selected ? "当前餐档 ✓" : "设为自动餐档" : "点这份";
                 var button = Ui.Size(Ui.Button(row, label, () => choose(tier), 17,
-                    automatic ? Ui.SelectedButton(selected) : Ui.ButtonHot, blocker == null), 148, 38);
+                    automatic ? Ui.SelectedButton(selected) : Ui.ButtonHot, allowSelection && blocker == null), 148, 38);
                 button.name = (automatic ? "MealDeliveryAutoTier_" : "MealDeliveryOrder_") + tier;
                 if (blocker != null) button.Tip(blocker);
             }

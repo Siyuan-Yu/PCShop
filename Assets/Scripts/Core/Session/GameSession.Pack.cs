@@ -81,7 +81,10 @@ namespace PCShopSell.Core.Session
             foreach (string id in PhoneApps.Preinstalled) _apps.Add(id);
             Say("买了一部智能手机。自带应用商店、通讯录、日历、外卖和证券。网购可去应用商店下载。");
             if (!MealDeliveryEnabled)
+            {
+                Flags.Add(MealDeliveryGuidePending);
                 Popup?.Invoke(MealDeliveryUnlockedTitle, "打开手机里的「外卖」，就能点餐或设置自动订餐。开启后，饭点或饿了时会优先吃手头的食物，缺餐时按选定价位下单。");
+            }
             return true;
         }
 

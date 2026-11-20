@@ -60,16 +60,39 @@ namespace PCShopSell.Core.Session
             string Reply(int mode)
             {
                 if (r.Reviewed || ReceiptShop(r) != shop) return "这条顾客记录已经处理或门店已变化。";
-                r.Reviewed = true; shop.Sim.AdjustShopReputation(mode == 2 ? .5 : 1);
+                r.Reviewed = true;
                 if (mode == 2)
+                {
+                    shop.Sim.AdjustShopReputation(.5);
                     _flyerCampaigns.Add(new FlyerCampaign { ShopId = shop.Place.Id, RetailKind = shop.RetailKind,
                         StartDay = Clock.Today.TotalDays + 1, Remaining = 2, NextVisit = (Clock.Today.TotalDays + 1) * 1440L });
-                return mode == 2 ? "已征得这位顾客同意转发，明天起有两位潜在顾客在营业时到店；是否成交仍看真实库存和服务。"
-                    : mode == 1 ? "你问了具体使用感受，反馈记在这家门店，口碑 +1。" : "你感谢了这位真实成交顾客，门店口碑 +1。";
+                    return "已征得这位顾客同意转发，明天起有两位潜在顾客在营业时到店；是否成交仍看真实库存和服务。";
+                }
+
+                bool askForFeedback = mode == 1;
+                double score = askForFeedback ? (2 * Player.Intelligence + EffectiveCharm) / 3d : EffectiveCharm;
+                (string message, double reputation) = askForFeedback
+                    ? score switch
+                    {
+                        < 35 => ("顾客只回了句「用着还行」，没再说下去。", 0d),
+                        < 70 => ($"顾客回道「{r.Product}拿到手和我预期差不多。要是下单前能看到更多细节，我会更放心。」", .5d),
+                        _ => ($"顾客回道「我买{r.Product}前还和别家比过。建议你把实物细节和退换条件放在一起，像我这样犹豫的顾客一下就能看明白。」", 1d)
+                    }
+                    : score switch
+                    {
+                        < 35 => ("你回了消息。顾客点了个赞。", 0d),
+                        < 70 => ("顾客回道「谢谢你专门回复，下次有需要还会来。」", .5d),
+                        _ => ("顾客回道「你还记得我买了什么，真用心。」随后在原评论里补了一句，夸你回复得周到。", 1d)
+                    };
+                double previous = shop.Sim.ShopReputation;
+                shop.Sim.AdjustShopReputation(reputation);
+                double gained = shop.Sim.ShopReputation - previous;
+                return gained > 0 ? $"{message}\n门店口碑 +{gained:0.##}" : message;
             }
             return ShopIllustratedEvent(template, shop, $"一位在{ShopTitle(shop)}买过{r.Product}、实付 ¥{r.PaidCents / 100.0:0.00} 的顾客发布了店铺推荐。",
                 new EventCgFrame("event_phone_message", personId: r.PersonId),
-                Choose("发消息感谢", _ => Reply(0)), Choose("询问具体使用意见", _ => Reply(1)),
+                Choose("回复顾客评论 · " + EventScript.AttributeHint(("魅力", EffectiveCharm)), _ => Reply(0)),
+                Choose("询问具体使用意见 · " + EventScript.AttributeHint(("智力", Player.Intelligence), ("魅力", EffectiveCharm)), _ => Reply(1)),
                 Choose("征求同意后转发", _ => Reply(2)), Choose("暂不回复", _ => { r.Reviewed = true; return "本次没有回复，不发奖励。"; }));
         }
         private EventDef BindWrongChange(EventDef template)
@@ -130,7 +153,7 @@ namespace PCShopSell.Core.Session
                 if (bps == 10000)
                 {
                     double chance = EventScript.ProgressiveChance(.5, (EffectiveCharm, 45, .01), (Player.Intelligence, 50, .01));
-                    if (!Random.Chance(chance)) return $"原价成交成功率 {chance:P0}。对方未接受，本次未下单、无收入或库存扣除。";
+                    if (!Random.Chance(chance)) return "对方没接受原价，本次没有成交。";
                 }
                 _cityReferrals.Add(quote);
                 return "已记录真实十件订单，报价 " + quote.Total + "。请在门店订单／城市履历确认接单，再实际备货交付；当前没有收入。";
@@ -139,7 +162,7 @@ namespace PCShopSell.Core.Session
                 + "按店型备货、装机或制作，全量交付后才入账；价格按真实商品和折扣计算。",
                 Choose("报九五折 · " + Money.FromCents(quote.FullPriceCents).Scale(.95), _ => Record(9500)),
                 Choose("报九折 · " + Money.FromCents(quote.FullPriceCents).Scale(.9), _ => Record(9000)),
-                Choose("坚持原价 · 低于魅力45或智力50必定谈失败", _ => Record(10000)),
+                Choose("坚持原价 · " + EventScript.AttributeHint(("魅力", EffectiveCharm), ("智力", Player.Intelligence)), _ => Record(10000)),
                 Choose("这单不接", _ => "本次拒单，没有钱款和库存变化。"));
         }
         private void SaveCustomerBatch(SaveData d)

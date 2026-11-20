@@ -33,7 +33,6 @@ namespace PCShopSell.Core.Home
                 "models" => item.Id == FurnitureCatalog.ShopDisplay || item.Id == FurnitureCatalog.ModelPaintBench,
                 "secondhand" => item.Id == "used_repairbench",
                 "clothing" => item.Id == FurnitureCatalog.ShopDisplay || item.Id == FurnitureCatalog.FittingMirror,
-                "restaurant" => GameSession.MatchesOpeningFurniture(FurnitureCatalog.Shelf, item),
                 _ => false,
             };
             return useful ? required.Length * 2 : -1;

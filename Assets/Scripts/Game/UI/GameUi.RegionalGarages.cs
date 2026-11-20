@@ -303,6 +303,8 @@ namespace PCShopSell.Game.UI
                     {
                         parent?.Close();
                         UpdateVehicleButtons();
+                        Canvas.ForceUpdateCanvases();
+                        UpdateFirstUseGuide();
                     }
                     else parent?.Rebuild();
                 }, 20, Ui.ButtonHot, why == null), -1, 46);

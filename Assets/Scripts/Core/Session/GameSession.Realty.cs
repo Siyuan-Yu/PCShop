@@ -138,7 +138,7 @@ namespace PCShopSell.Core.Session
                 Show("提前签约",
                     $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）签下来了，周租 {l.Rent}，押金 {deposit}。\n" +
                     $"{ShopHandoverText(l.OpenDay)}，交房后可以入驻。\n" +
-                    "房租从今天就开始算，这段时间每七天照样要交。" +
+                    "签约已付首周租金，之后交房前也按周日扣租。" +
                     (newShop ? "\n交房那天就多了一家新店（毛坯，要自己摆收银台和货架），现在的店照常营业。"
                         : Lease != null ? "\n交房那天自动搬店：退旧铺押金、收搬家费，旧铺之前照常营业。" : "\n在那之前你还是没有店铺。"));
                 return true;
@@ -170,7 +170,7 @@ namespace PCShopSell.Core.Session
                 $"{ShopTitle(_focus)}已租下{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}），周租 {rent}，押金 {deposit}。\n" +
                 (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n"
                         : "这是间毛坯铺子，只配一个后仓纸箱；请按经营类型摆好开业所需设施。\n") +
-                "签约后每七天交一次店租。");
+                "首周租金已付，之后周日扣租。");
         }
 
         private void ShowNewShop(Place place, Money rent, Money deposit, string title)
@@ -179,7 +179,7 @@ namespace PCShopSell.Core.Session
             Show(title,
                 $"{ShopTitle(_focus)}已租下{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}），周租 {rent}，押金 {deposit}。\n" +
                 "原来的店照常营业，货、员工、设施各管各的。新店是毛坯：按经营类型摆好设施，人不在店里时要雇人看店才开门。\n" +
-                "进哪家店，店里的面板、进货送货就对哪家店。每家店按自己的签约日每七天交租。");
+                "首周租金已付，之后周日扣租。");
         }
 
         /// <summary>提前签的铺子到了交房日：开新店，或者自动搬进去（搬店：退旧押金、收搬家费）。</summary>
@@ -187,10 +187,16 @@ namespace PCShopSell.Core.Session
         {
             if (PendingLease == null || today < PendingLease.StartDay) return;
             if (CancelProtectedPendingLease()) return;
-            if (!PendingIsNewShop && PetsStaying(_focus)) return;
             ShopLease p = PendingLease;
-            PendingLease = null;
             Place place = City.GetPlace(p.PlaceId);
+            if (!PendingIsNewShop && PetsStaying(_focus))
+            {
+                if (Flags.Add($"shop-handover-wait:{p.PlaceId}:{p.SignedDay}:{p.StartDay}"))
+                    Show(ShopHandoverWaitingPopupTitle,
+                        $"{City.StreetName(place.StreetId)} · {place.Name}已到交房日。旧店还有宠物在代养，全部交接后才能搬店。");
+                return;
+            }
+            PendingLease = null;
             if (PendingIsNewShop && HasShop)
             {
                 PendingIsNewShop = false;
@@ -198,7 +204,7 @@ namespace PCShopSell.Core.Session
                 Lease.SignedDay = p.SignedDay;
                 SetOpeningShopKind(PendingRetailKind);
                 PendingRetailKind = RetailShopTypes.Default;
-                ShowNewShop(place, p.Rent, p.Deposit, "交房了");
+                ShowShopHandover(place, moving: false);
                 RefreshQuestProgress();
                 return;
             }
@@ -213,8 +219,14 @@ namespace PCShopSell.Core.Session
             Lease.SignedDay = p.SignedDay;
             if(!moving)SetOpeningShopKind(PendingRetailKind);
             PendingRetailKind = RetailShopTypes.Default;
-            ShowMovedIn(place, p.Rent, p.Deposit, moving, "交房了");
+            ShowShopHandover(place, moving);
             RefreshQuestProgress();
+        }
+
+        private void ShowShopHandover(Place place, bool moving)
+        {
+            string next = moving ? "店铺已搬入新址，请重新摆放收银台和家具。" : "现在可以进店布置开业所需的设施。";
+            Show(ShopHandoverPopupTitle, $"{ShopTitle(_focus)}已交房\n{City.StreetName(place.StreetId)} · {place.Name}\n{next}");
         }
 
         private void PaySigning(Money rent, Place place)
@@ -230,23 +242,54 @@ namespace PCShopSell.Core.Session
                 LedgerAttribution.ForShop(place.Id, transactionKind: "中介费"));
         }
 
+        private const string ResidentialRentPopupTitle = "周日住宅租金已扣款";
+        private const string CommercialRentPopupTitle = "周日商铺租金已扣款";
+        private const string ShopHandoverPopupTitle = "商铺已交房";
+        private const string ShopHandoverWaitingPopupTitle = "商铺已到交房日";
+
+        public static bool IsScheduledPropertyPopup(string title) => title is ResidentialRentPopupTitle or CommercialRentPopupTitle
+            or ShopHandoverPopupTitle or ShopHandoverWaitingPopupTitle;
+
+        private static string ShopRentSource(string placeId, int day) => $"rent:{placeId}:{day}";
+
+        // 旧存档里工作日缴纳的租金也覆盖完整的一周。
+        private bool CommercialRentDue(ShopLease lease, int day) => lease?.RentDue(day) == true
+            && LatestCommercialRentPaymentDay(lease, day - 1) <= day - GameDate.DaysPerWeek;
+
+        private int LatestCommercialRentPaymentDay(ShopLease lease, int throughDay)
+        {
+            int firstDay = Math.Max(lease.SignedDay + 1, throughDay - GameDate.DaysPerWeek + 1);
+            for (int day = throughDay; day >= firstDay; day--)
+            {
+                string source = ShopRentSource(lease.PlaceId, day);
+                if (Ledger.HasSource(source) || _eventBills.Any(b => b.Id == source && b.SignedDay == lease.SignedDay))
+                    return day;
+            }
+            return lease.SignedDay;
+        }
+
         private void CollectWeeklyShopRent(GameDate today)
         {
-            Money paid = Money.Zero;
+            var charges = new List<string>();
+            Money total = Money.Zero;
             int day = today.TotalDays;
-            foreach (var shop in _shops)
+            foreach (var shop in _shops) Charge(shop.Lease, RentOf(shop), ShopTitle(shop));
+            if (PendingLease != null)
+                Charge(PendingLease, PendingLease.Rent, City.GetPlace(PendingLease.PlaceId).Name + "（待交房）");
+            if (charges.Count > 0)
+                ShowEventCg(CommercialRentPopupTitle, VisualResult(string.Join("\n", charges) + $"\n合计 {total}",
+                    "event_rent_commercial"));
+
+            void Charge(ShopLease lease, Money rent, string name)
             {
-                Money rent = RentOf(shop);
-                if (!rent.IsPositive || !shop.Lease.RentDue(day)) continue;
-                paid += ChargeRecordedBill("rent-shop", shop.Place.Id, shop.Lease.SignedDay, "rent:" + shop.Place.Id + ":" + day, rent, "房租", ShopTitle(shop) + "周租",
-                    LedgerAttribution.ForShop(shop.Place.Id, "rent:" + shop.Place.Id + ":" + day, "租金"));
+                if (!rent.IsPositive || !CommercialRentDue(lease, day)) return;
+                string source = ShopRentSource(lease.PlaceId, day);
+                var paid = ChargeRecordedBill("rent-shop", lease.PlaceId, lease.SignedDay, source, rent, "房租", name + "周租",
+                    LedgerAttribution.ForShop(lease.PlaceId, source, "租金"));
+                if (!paid.IsPositive) return;
+                total += paid;
+                charges.Add($"{name} {paid}");
             }
-            if (PendingLease?.RentDue(day) == true)
-            {
-                paid += ChargeRecordedBill("rent-shop", PendingLease.PlaceId, PendingLease.SignedDay, "rent:" + PendingLease.PlaceId + ":" + day, PendingLease.Rent, "房租", City.GetPlace(PendingLease.PlaceId).Name + "周租（待交房）",
-                    LedgerAttribution.ForShop(PendingLease.PlaceId, "rent:" + PendingLease.PlaceId + ":" + day, "租金"));
-            }
-            if (paid.IsPositive) Say("商铺周租已扣款 " + paid);
         }
 
         private void MigrateWeeklyCommercialRent()

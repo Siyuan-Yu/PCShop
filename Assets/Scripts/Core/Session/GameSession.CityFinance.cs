@@ -39,8 +39,8 @@ namespace PCShopSell.Core.Session
             {
                 var date = today.AddDays(offset);
                 foreach (var shop in _shops)
-                    if (shop.Lease?.RentDue(date.TotalDays) == true) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", shop.Place.Id, shop.Lease.SignedDay, RentOf(shop));
-                if (PendingLease?.RentDue(date.TotalDays) == true) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", PendingLease.PlaceId, PendingLease.SignedDay, PendingLease.Rent);
+                    if (CommercialRentDue(shop.Lease, date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", shop.Place.Id, shop.Lease.SignedDay, RentOf(shop));
+                if (CommercialRentDue(PendingLease, date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", PendingLease.PlaceId, PendingLease.SignedDay, PendingLease.Rent);
                 foreach (var place in ResidentialRentsDue(date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-home", place.Id, ResidentialLeaseSignedDay(place), SignedResidentialRent(place));
                 if (date.IsMonthStart) result.KnownMandatory += ForecastBillNet(billCredits, "utilities", Home.Id, 0, HomeUtilitiesAtDay(date.TotalDays));
             }

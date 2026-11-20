@@ -107,7 +107,7 @@ namespace PCShopSell.Game.UI
             {
                 _propertyContract = null;
                 if (submitted) refresh?.Invoke();
-            }, showTitleBar: false);
+            }, showTitleBar: false, fitContent: true);
         }
     }
 

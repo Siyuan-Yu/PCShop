@@ -86,7 +86,7 @@ namespace PCShopSell.Game.UI
             string shortcut = HotkeyLabel(key);
             var button = Ui.Size(Ui.Button(row, title, open, 20, bg), 0, -1, 1)
                 .Tip($"<b>{title}</b>　快捷键：{shortcut}\n{description}");
-            Ui.HudNavigationArt(button, title, false);
+            Ui.HudNavigationArt(button, title, false, shortcut);
             _hudPanelButtons.Add(key, button);
             return button;
         }
@@ -104,7 +104,7 @@ namespace PCShopSell.Game.UI
             if (S == null || S.IsGameOver || S.IsWorking) return false;
             if (AnyModalOpen && (key != KeyCode.B || _backpackWin == null || _backpackWin.Closed)) return false;
             if (!_hudCanvas.gameObject.activeInHierarchy || !_expoHudGate.interactable) return false;
-            if (S.RequiredTutorialPaused && key != KeyCode.Escape) return true;
+            if (S.ScooterTutorialPaused || S.SecuritiesTutorialPaused || (S.RequiredTutorialPaused && key != KeyCode.Escape)) return true;
             if (key == KeyCode.O || key == KeyCode.G)
             {
                 if (S.OpeningAgencyGuidePending) return true;
@@ -132,7 +132,7 @@ namespace PCShopSell.Game.UI
                 RectTransform row = Ui.Row(w.Content, 46, 8);
                 Ui.Size(Ui.Button(row, "取消", w.Close, 18), -1, -1, 1);
                 Ui.Size(Ui.Button(row, confirmLabel, () => { CloseAllWindows(); action(); }, 18, Ui.Warn), -1, -1, 1);
-            });
+            }, fitContent: true);
         }
 
         private string StatsTip() =>
@@ -155,10 +155,15 @@ namespace PCShopSell.Game.UI
             string s = $"<b>{v.Name}</b>{(S.Vehicle == v.Kind ? "（当前使用）" : "")}\n{TravelSpeedText(v)}　最多载 {v.CargoCapacity * Core.Home.Backpack.KgPerSpace:0} 千克";
             if (v.Illegal) s += "\n<color=#9C4634>城里不让上路，会被交警追</color>";
             if (v.Purchasable) s += "\n" + S.VehicleUsage(v.Kind);
-            if (v.Kind == Core.Session.VehicleKind.EBike && S.ScooterReturnHint is string returnHint)
-                s += "\n" + returnHint;
-            if (!S.CanUse(v.Kind) && !(v.Kind == Core.Session.VehicleKind.EBike && S.ImpoundedVehicleCount(v.Kind) > 0))
-                s += v.Purchasable ? S.Owns(v.Kind) ? "\n当前没有空闲车辆，可在员工管理查看使用人。" : $"\n去车行购买：{v.Price}/台" : "\n暂时用不了";
+            string returnHint = S.VehicleReturnHint(v.Kind);
+            if (returnHint != null) s += "\n" + returnHint;
+            if (!S.CanUse(v.Kind))
+            {
+                if (returnHint != null && S.FreeVehicleCount(v.Kind) > 0)
+                    s += "\n其他空闲车辆可在车库设为通勤车。";
+                else if (returnHint == null)
+                    s += v.Purchasable ? S.Owns(v.Kind) ? "\n暂无可用通勤车，可到车库或员工管理查看。" : $"\n去车行购买：{v.Price}/台" : "\n暂时用不了";
+            }
             return s;
         }
     }

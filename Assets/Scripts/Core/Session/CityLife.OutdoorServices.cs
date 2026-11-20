@@ -15,16 +15,16 @@ namespace PCShopSell.Core.Session
             foreach (int n in new[] { 65, 67 })
             {
                 Add("social_" + n, n == 65 ? "莫欣的海味砂锅夜宵" : "吴磊的收工砂锅夜宵", "life_restaurant", 90,
-                    new CityVenueService(480, hunger: 70, energy: 6, mood: 14, nutrition: 3, relation: 8), "坐下吃砂锅", "聊今天的经历", "聊工作与合作", "安静吃饭陪伴");
+                    new CityVenueService(480, hunger: 70, energy: 6, mood: 14, nutrition: 3, relation: 8), "海味砂锅");
                 Add("social_" + n + "_private", n == 65 ? "莫欣的深夜私厨" : "吴磊的收工私厨", "life_restaurant", 120,
-                    new CityVenueService(1200, hunger: 85, energy: 8, mood: 21, nutrition: 4, relation: 11), "坐下吃私厨", "聊今天的经历", "聊工作与合作", "安静吃饭陪伴");
+                    new CityVenueService(1200, hunger: 85, energy: 8, mood: 21, nutrition: 4, relation: 11), "私厨套餐");
             }
             foreach (string id in new[] { "social_66", "social_66_before" })
-                Add(id, "茅宁的快餐约饭", "life_restaurant", 45, new CityVenueService(160, hunger: 55, energy: 5, mood: 10, nutrition: 2, relation: 7), "坐下吃快餐", "聊值班生活", "安静吃饭");
+                Add(id, "茅宁的快餐约饭", "life_restaurant", 45, new CityVenueService(160, hunger: 55, energy: 5, mood: 10, nutrition: 2, relation: 7), "快餐");
             Add("social_66_delivery", "送夜宵到岗亭", "life_restaurant", 20, new CityVenueService(0, relation: 6), "等到岗亭见面", "交付背包中的餐食");
             Add("social_68", "周维成的市场走访", "stall_cpu", 90, new CityVenueService(0, energy: -6, mood: 8, relation: 6), "进入市场", "走访下一档口", "了解供货条件", "选择实际采购");
-            Add("social_69", "李承业的同款比价", "stall_cpu", 120, new CityVenueService(0, energy: -8, mood: 8, relation: 7), "开始采集报价", "走访下一核对点", "现场市场单价更合算", "网购单价更合算", "已签直供单价更合算", "尝试谈价 · 智力50交情35起", "选择实际采购");
-            Add("social_70", "王振海的显卡看货", "stall_gpu", 90, new CityVenueService(0, energy: -6, mood: 8, relation: 7), "看显卡样品", "走访下一展台", "上机核对所选显卡 · 五分钟", "谈账期 · 智力50交情35起", "选择实际采购");
+            Add("social_69", "李承业的同款比价", "stall_cpu", 120, new CityVenueService(0, energy: -8, mood: 8, relation: 7), "开始采集报价", "走访下一核对点", "现场市场单价更合算", "网购单价更合算", "已签直供单价更合算", "尝试谈价", "选择实际采购");
+            Add("social_70", "王振海的显卡看货", "stall_gpu", 90, new CityVenueService(0, energy: -6, mood: 8, relation: 7), "看显卡样品", "走访下一展台", "上机核对所选显卡 · 五分钟", "谈账期", "选择实际采购");
             Add("social_71", "顾文的钟表旧物局", GameSession.OldMarketVenueId, 90, new CityVenueService(0, energy: -6, mood: 10, relation: 6), "在市场会合", "走到下一旧物摊", "观察机芯", "核对走时", "询问流转记录");
             Add("social_72", "雷鸣的旧电子局", GameSession.OldMarketVenueId, 90, new CityVenueService(0, energy: -6, mood: 10, relation: 6), "在市场会合", "走到下一旧物摊", "学习电路检测", "学习线材检测", "学习接头检测");
             all.Add(new CityActivityDefinition

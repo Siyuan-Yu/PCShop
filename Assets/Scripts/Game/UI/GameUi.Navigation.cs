@@ -75,7 +75,8 @@ namespace PCShopSell.Game.UI
         }
 
         // Primary screens reuse one window. Detail dialogs keep their parent and its draft.
-        private Window OpenWorkspace(string group, string page, string title, float width, float height, Action<Window> build, bool isTab = false)
+        private Window OpenWorkspace(string group, string page, string title, float width, float height, Action<Window> build,
+            bool isTab = false, bool scrollContent = true)
         {
             if (!_navigation.TryGetValue(group, out var state) || state.Window == null || state.Window.Closed)
             {
@@ -97,7 +98,7 @@ namespace PCShopSell.Game.UI
                 build(w);
             }
             if (state.Window == null || state.Window.Closed)
-                state.Window = OpenWindow(title, width, height, Render);
+                state.Window = OpenWindow(title, width, height, Render, scrollContent: scrollContent);
             else
             {
                 var w = state.Window; w.TitleText.text = title;

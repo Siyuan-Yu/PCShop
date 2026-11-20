@@ -115,14 +115,66 @@ namespace PCShopSell.Game.UI
                 }, 16, Ui.SelectedButton(current == level)), 0, 34, 1).name = "UsedRisk_" + label;
         }
 
-        public void OpenUsedDesk() => OpenUsedDesk(-1);
-        public void OpenUsedRepairDesk() => OpenUsedDesk(2);
-        private void OpenUsedDesk(int initialTab)
+        public void OpenUsedRepairDesk()
+        {
+            if (!S.InPlayerShop || S.RetailKind != "secondhand") return;
+            var shop = S.CurrentShop;
+            var state = S.SpecialBusiness(shop.Place.Id);
+            OpenWindow("二手修复台", 940, 560, w =>
+            {
+                var items = state.Used
+                    .Where(item => item.Owned && !item.Sold && (item.RepairAttempted
+                        || (!item.Listed && GameSession.UsedCanRepair(item))))
+                    .OrderBy(item => item.RepairWorkRemaining > 0 ? 0 : item.RepairAttempted ? 2 : 1)
+                    .ThenBy(item => item.Id)
+                    .ToArray();
+                if (items.Length == 0)
+                {
+                    Line(w.Content, "暂无可修复的旧物。鉴定出有瑕疵或损坏的旧物后，可在这里安排修复。", 17, Ui.Dim);
+                    return;
+                }
+
+                foreach (var item in items)
+                {
+                    var row = Ui.Row(w.Content, 64, 10);
+                    ItemPortrait(row, "used:" + item.Product, 46);
+                    var info = Ui.Size(Ui.Rect(row, "UsedRepairItem_" + item.Id), 0, 64, 1);
+                    Ui.VList(info, 2, 3);
+                    Line(info, UsedItemTitle(item) + " · " + GameSession.UsedConditionName(item), 18);
+                    if (item.RepairAttempted)
+                    {
+                        string status = S.UsedRepairStatus(shop, item);
+                        if (item.RepairWorkRemaining <= 0) status += item.Listed ? " · 已上架" : " · 待上架";
+                        Line(info, status + $" · 已付耗材 ¥{item.RepairCost:N0}", 16, Ui.Dim);
+                        continue;
+                    }
+
+                    string blocker = S.UsedRepairBlocker(shop, item);
+                    Line(info, blocker ?? "待修复", 16, blocker == null ? Ui.Dim : Ui.Warn);
+                    Ui.Size(UsedRepairButton(row, item, blocker, () =>
+                    {
+                        RebuildDock();
+                        w.Rebuild();
+                    }), 214, 38);
+                }
+            });
+        }
+
+        private Button UsedRepairButton(Transform parent, UsedItem item, string blocker, Action onStarted)
+        {
+            var button = Ui.Button(parent, $"安排修复 · 耗材 ¥{GameSession.UsedRepairMaterialCost(item):N0}",
+                () =>
+                {
+                    if (S.StartUsedRepair(item.Id)) onStarted();
+                }, 16, Ui.ButtonHot, blocker == null);
+            return button.Tip(blocker ?? "每件仅可尝试一次；失败保留原状态，不退耗材。修复师到岗后工作。");
+        }
+
+        public void OpenUsedDesk()
         {
             if (!S.InPlayerShop || S.RetailKind != "secondhand") return;
             var state = S.SpecialBusiness(S.CurrentShop.Place.Id);
-            int tab = initialTab >= 0 ? initialTab : Array.FindIndex(PendingUsedItems(state), items => items.Length > 0);
-            tab = Math.Max(0, tab);
+            int tab = Math.Max(0, Array.FindIndex(PendingUsedItems(state), items => items.Length > 0));
             int selectedId = 0;
             OpenWindow("收购鉴定台", 900, 550, w =>
             {
@@ -243,9 +295,7 @@ namespace PCShopSell.Game.UI
             else if (GameSession.UsedCanRepair(item))
             {
                 string blocker = S.UsedRepairBlocker(S.CurrentShop, item);
-                Ui.Size(Ui.Button(parent, $"安排修复 · 耗材 ¥{GameSession.UsedRepairMaterialCost(item):N0}",
-                    () => Complete(S.StartUsedRepair(id), 2), 16, Ui.ButtonHot, blocker == null), -1, 36)
-                    .Tip(blocker ?? "每件仅可尝试一次；失败保留原状态，不退耗材。修复师到岗后工作。");
+                Ui.Size(UsedRepairButton(parent, item, blocker, () => Complete(true, 2)), -1, 36);
             }
             if (GameSession.UsedSaleReputation(item) > 0)
                 Line(parent, $"顾客付款后 · 名望 +{GameSession.UsedSaleReputation(item):0.#}", 16, Ui.Good);

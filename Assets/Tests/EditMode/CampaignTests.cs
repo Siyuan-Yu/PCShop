@@ -450,6 +450,8 @@ namespace PCShopSell.Tests
             var listing = s.DebugAddListing("tea", 150, 180, Money.FromYuan(2000));
             var nextListing = s.DebugAddListing("pc", 0, 180);
             GameSessionTests.Teleport(s, "agency");
+            var handoverNotices = new List<string>();
+            s.Popup += (title, body) => { if (title == "商铺已交房") handoverNotices.Add(body); };
 
             Assert.AreEqual("还有 125 天交房", s.ShopHandoverText(listing.OpenDay));
             Assert.IsTrue(s.SignLease("tea"));
@@ -457,10 +459,14 @@ namespace PCShopSell.Tests
 
             CrossInto(s, 26);
             StringAssert.Contains("还有 124 天交房。交房前不能再签", s.LeaseBlocker(nextListing));
+            Assert.IsEmpty(handoverNotices);
 
             CrossInto(s, 150);
             Assert.AreEqual("今天交房", s.ShopHandoverText(listing.OpenDay));
             Assert.IsNull(s.PendingLease);
+            StringAssert.Contains(s.City.GetPlace("tea").Name, handoverNotices.Single());
+            CrossInto(s, 151);
+            Assert.AreEqual(1, handoverNotices.Count);
         }
 
         [Test]

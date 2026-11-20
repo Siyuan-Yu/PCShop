@@ -158,6 +158,7 @@ namespace PCShopSell.Core.Shop
         private static readonly int FullKitMask = PartCatalog.Categories.Aggregate(0, (mask, category) => mask | (1 << (int)category));
         public int Mistakes;
         public int EmployeeMinutesLeft;
+        internal int EmployeeAssemblyAptitude;
 
         public double ReputationReward => ContractId == null ? ShopSimulation.BuildOrderReputation : 0;
 
@@ -298,6 +299,8 @@ namespace PCShopSell.Core.Shop
         public const double SaleAwarenessGain = 0.012;
         public const double BuildAwarenessGain = 0.4;
         public const double BuildOrderReputation = 0.2;
+        public const double CustomerBuildCancellationReputationLoss = 1;
+        public const double CustomerBuildOverdueReputationLoss = 2;
 
         /// <summary>知名度每天自然衰减，不经营就会掉。</summary>
         public const double DailyReputationRetention = 0.998;
@@ -421,6 +424,9 @@ namespace PCShopSell.Core.Shop
             return _shelfKg.TryGetValue(kind.Id, out double kg) ? kg : 0;
         }
 
+        internal int? ShelfItemLimitOf(ShelfKind kind) =>
+            _shelfItemLimits != null && _shelfItemLimits.TryGetValue(kind.Id, out int limit) ? limit : (int?)null;
+
         /// <summary>这类货现在在货架上摆着哪些（后仓里没摆上去的不算）。</summary>
         public ShelfFill ShelfFillAt(int layoutIndex, ShelfKind kind)
         {
@@ -440,7 +446,7 @@ namespace PCShopSell.Core.Shop
         public ShelfFill ShelfFillOf(ShelfKind kind)
         {
             if (kind == null) return new ShelfFill(null,0,0);
-            int limit = _shelfItemLimits != null && _shelfItemLimits.TryGetValue(kind.Id,out int max) ? max : int.MaxValue;
+            int limit = ShelfItemLimitOf(kind) ?? int.MaxValue;
             if (_shelfSlots != null && _shelfSlots.TryGetValue(kind.Id,out var slots) && slots.Length > 1)
             {
                 var fills = AllocateShelfSlots(kind,slots);
@@ -733,15 +739,19 @@ namespace PCShopSell.Core.Shop
             PartCatalog.BuildList(order.Tier).Where(p => !order.HasReservedPart(p)).ToList();
 
         /// <summary>交付装好的整机并收款。配件不齐返回 false。</summary>
-        public bool CompleteBuild(int orderId, GameTimestamp? completedAt = null)
+        public bool CompleteBuild(int orderId, GameTimestamp? completedAt = null) =>
+            CompleteBuild(orderId, completedAt ?? _clock.Now, 0, out _);
+
+        internal bool CompleteBuild(int orderId, GameTimestamp at, double assemblyPriceBonus, out Money payment)
         {
+            payment = Money.Zero;
             BuildOrder o = _orders.Find(x => x.Id == orderId);
-            GameTimestamp at = completedAt ?? _clock.Now;
             if (o == null || at >= o.DueAt || !o.PartsReserved) return false;
             _orders.Remove(o);
+            payment = o.ContractId == null ? o.Price + o.Price.Scale(assemblyPriceBonus) : o.Price;
             string orderScope = _ledger.SalesAccountOfShop?.Invoke(ShopId) ?? ShopId;
-            _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + orderScope + ":" + o.Id, "销售"));
-            TodaySales += o.Price;
+            _ledger.Credit(at.Date, BuildCategory, payment, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + orderScope + ":" + o.Id, "销售"));
+            TodaySales += payment;
             AdjustShopAwareness(BuildAwarenessGain);
             AdjustPersonalReputation(o.ReputationReward);
             AdjustShopReputation(.5);
@@ -763,8 +773,7 @@ namespace PCShopSell.Core.Shop
             if (o == null) return false;
             _orders.Remove(o);
             ReturnReservedParts(o);
-            Reputation = Math.Max(0, Reputation - 1);
-            AdjustShopReputation(-1);
+            if (o.ContractId == null) AdjustShopReputation(-CustomerBuildCancellationReputationLoss);
             OrderCancelled?.Invoke(o);
             return true;
         }
@@ -1370,8 +1379,7 @@ namespace PCShopSell.Core.Shop
                 if (now < o.DueAt) continue;
                 _orders.RemoveAt(i);
                 ReturnReservedParts(o);
-                Reputation -= 3;
-                AdjustShopReputation(-2);
+                if (o.ContractId == null) AdjustShopReputation(-CustomerBuildOverdueReputationLoss);
                 OrderExpired?.Invoke(o);
             }
         }

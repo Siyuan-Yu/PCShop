@@ -78,6 +78,7 @@ namespace PCShopSell.Core.Session
             .OrderBy(i => i.Day).Select(i => i.Copy()).ToArray();
 
         private static long RaceDayStart(int day) => day * 1440L;
+        private static long RaceDayEnd(int day) => RaceDayStart(day + 1);
         private RaceInvitation RaceInviteFor(string personId, int day) => _raceInvitations.Find(i => i.Day == day && i.PersonId == personId);
 
         private RaceRegistration FindRaceRegistration(string trackId, int day)
@@ -96,7 +97,7 @@ namespace PCShopSell.Core.Session
             var track = RaceTracks.Get(trackId);
             if (track == null || !City.HasPlace(trackId) || DistrictAccessTier < track.Tier) return "赛场还未开放";
             if (RacingWins < track.RequiredWins) return $"需要累计赢得 {track.RequiredWins} 场低级别比赛";
-            if (RacingSchedule.On(day) == RaceMeeting.None || RaceDayStart(day.TotalDays) + RacingSchedule.MeetCloseMinute <= Clock.Now.TotalMinutes)
+            if (RacingSchedule.On(day) == RaceMeeting.None || day < Clock.Today)
                 return "请选择尚未结束的正式场次";
             var existing = FindRaceRegistration(trackId, day.TotalDays);
             return existing == null ? null : existing.Started ? "已经参加本场比赛" : "已经报名本场比赛";
@@ -114,7 +115,7 @@ namespace PCShopSell.Core.Session
 
         public bool CancelRaceRegistration(string trackId, GameDate day)
         {
-            if (Racing || RaceDayStart(day.TotalDays) + RacingSchedule.MeetCloseMinute <= Clock.Now.TotalMinutes) return false;
+            if (Racing || day < Clock.Today) return false;
             return _raceRegistrations.RemoveAll(r => r.TrackId == trackId && r.Day == day.TotalDays && !r.Started) > 0;
         }
 
@@ -133,7 +134,7 @@ namespace PCShopSell.Core.Session
 
         private void RecordRaceOpponentResults(RaceTrack track, RaceStanding[] standings)
         {
-            foreach (var entry in standings.Where(e => !e.Player))
+            foreach (var entry in standings.Where(e => !e.Player && !string.IsNullOrEmpty(e.PersonId)))
                 _lastRaceOpponentResults[entry.PersonId] = new RaceOpponentResult
                 {
                     PersonId = entry.PersonId, TrackId = track.Id, Day = Clock.Today.TotalDays, Vehicle = entry.Vehicle,
@@ -155,9 +156,9 @@ namespace PCShopSell.Core.Session
             if (track == null || !City.HasPlace(trackId) || DistrictAccessTier < track.Tier) return "赛场还未开放";
             if (RacingWins < track.RequiredWins) return "这座赛场的正赛需要累计 " + track.RequiredWins + " 胜";
             int date = day.TotalDays;
-            long start = RaceDayStart(date) + RacingSchedule.MeetOpenMinute;
-            long end = RaceDayStart(date) + RacingSchedule.MeetCloseMinute;
+            long end = RaceDayEnd(date);
             if (RacingSchedule.On(day) == RaceMeeting.None || end <= Clock.Now.TotalMinutes) return "请选择尚未结束的正式场次";
+            if (FindRaceRegistration(trackId, date)?.Started == true) return "已经参加本场比赛";
             var booked = RaceInviteFor(personId, date);
             if (booked != null) return booked.TrackId == trackId ? "已经约好这场比赛" : "对方当天已经约好去另一个赛场";
             if (_raceInvitations.Count(i => i.Day == date && i.TrackId == trackId) >= RaceSimulation.RivalCount) return "这场比赛的邀请席位已满";
@@ -173,7 +174,7 @@ namespace PCShopSell.Core.Session
                 return "对方当天有主线会面";
             if (person.LocationPlaceId != trackId || person.Route != null)
             {
-                var route = PlanCityRoute(person, trackId, Clock.Now.TotalMinutes, start);
+                var route = PlanCityRoute(person, trackId, Clock.Now.TotalMinutes, end);
                 if (route == null || Math.Max(Clock.Now.TotalMinutes, depart) + route.ArriveMinute - route.DepartMinute >= end)
                     return "对方来不及在比赛结束前到达";
             }
@@ -194,8 +195,13 @@ namespace PCShopSell.Core.Session
         internal string EventRaceInvite(string personId, string trackId)
         {
             string name = CityPerson(personId)?.Name ?? personId;
-            var day = RacingSchedule.On(Clock.Today) != RaceMeeting.None && Clock.MinuteOfDay < RacingSchedule.MeetOpenMinute ? Clock.Today : RacingSchedule.Next(Clock.Today);
+            var day = Clock.Today;
             string why = RaceInviteBlocker(personId, trackId, day);
+            if (why != null)
+            {
+                day = RacingSchedule.Next(day);
+                why = RaceInviteBlocker(personId, trackId, day);
+            }
             if (why != null) return "（" + name + "的赛车邀约这次没约成：" + why + "。）";
             _raceInvitations.RemoveAll(i => i.Day < Clock.Today.TotalDays);
             _raceInvitations.Add(new RaceInvitation { PersonId = personId, TrackId = trackId, Day = day.TotalDays });
@@ -211,7 +217,7 @@ namespace PCShopSell.Core.Session
 
         private bool RaceInviteOverlaps(string personId, long from, long until)
             => _raceInvitations.Any(i => i.PersonId == personId
-                && from < RaceDayStart(i.Day) + RacingSchedule.MeetCloseMinute
+                && from < RaceDayEnd(i.Day)
                 && until > RaceDayStart(i.Day) + RacingSchedule.DriverDepartureMinute);
 
         private string RaceDestination(string personId, GameDate day)
@@ -229,15 +235,15 @@ namespace PCShopSell.Core.Session
         private bool TickRaceAttendee(CityPersonState person, long now, bool workingForPlayer)
         {
             int minute = (int)(now % 1440);
-            if (workingForPlayer || minute < RacingSchedule.DriverDepartureMinute || minute >= RacingSchedule.MeetCloseMinute) return false;
+            if (workingForPlayer || minute < RacingSchedule.DriverDepartureMinute) return false;
             var date = new GameDate((int)(now / 1440));
             string trackId = RaceDestination(person.PersonId, date);
             if (trackId == null || !City.HasPlace(trackId)) return false;
             if (person.LocationPlaceId != trackId)
             {
-                long start = RaceDayStart(date.TotalDays) + RacingSchedule.MeetOpenMinute;
-                var route = PlanCityRoute(person, trackId, now, start);
-                if (route == null || route.ArriveMinute >= RaceDayStart(date.TotalDays) + RacingSchedule.MeetCloseMinute) return false;
+                long end = RaceDayEnd(date.TotalDays);
+                var route = PlanCityRoute(person, trackId, now, end);
+                if (route == null || route.ArriveMinute >= end) return false;
                 person.Route = route;
                 person.LocationPlaceId = null;
                 person.Task = CityPersonTask.Travelling;
@@ -259,7 +265,7 @@ namespace PCShopSell.Core.Session
         public IReadOnlyList<string> RaceParticipantIds(string trackId)
         {
             var track = RaceTracks.Get(trackId);
-            if (track == null || CurrentRaceMeeting == RaceMeeting.None || Clock.MinuteOfDay >= RacingSchedule.MeetCloseMinute)
+            if (track == null || CurrentRaceMeeting == RaceMeeting.None)
                 return Array.Empty<string>();
             return CityLifeCatalog.RacingEnthusiasts.Where(id => RaceAttendeeHere(id, trackId))
                 .OrderByDescending(id => RaceInviteFor(id, Clock.Today.TotalDays) != null)
@@ -268,15 +274,17 @@ namespace PCShopSell.Core.Session
                 .Take(RaceSimulation.RivalCount).ToArray();
         }
 
-        private RaceOpponent[] BuildRaceOpponents(RaceTrack track, MotorModel playerModel)
+        private RaceOpponent[] BuildRaceOpponents(RaceTrack track, MotorModel playerModel, string eventHost = null)
         {
             // Use the factory model to choose the field. Tuning and wear still affect the race itself.
             var models = MotorCatalog.All.Where(model => model.Kind == playerModel.Kind
                 && model.Speed >= playerModel.Speed * .74 && model.Speed <= playerModel.Speed * 1.32)
                 .OrderBy(model => model.Speed).ToArray();
-            return RaceParticipantIds(track.Id).Select((id, index) =>
+            IEnumerable<string> participants = RaceParticipantIds(track.Id);
+            if (eventHost != null) participants = participants.Prepend(eventHost).Distinct().Take(RaceSimulation.RivalCount);
+            return participants.DefaultIfEmpty("").Select((id, index) =>
             {
-                int seed = ConversationSeed(id);
+                int seed = index == 0 ? 0 : ConversationSeed(id);
                 return new RaceOpponent
                 {
                     PersonId = id,
@@ -312,7 +320,7 @@ namespace PCShopSell.Core.Session
             double seconds = race.Elapsed + race.Penalty;
             var entries = race.Opponents.Select((rival, i) => new RaceStanding
             {
-                PersonId = rival.PersonId, Name = CityPerson(rival.PersonId)?.Name ?? rival.PersonId,
+                PersonId = rival.PersonId, Name = CityPerson(rival.PersonId)?.Name ?? "赛场车手",
                 Vehicle = rival.Motor.Name, Seconds = race.RivalResultSeconds(i),
                 Invited = RaceInviteFor(rival.PersonId, Clock.Today.TotalDays) != null
             }).ToList();

@@ -48,10 +48,10 @@ namespace PCShopSell.Core.Session
         public bool HandbrakeHeld { get; private set; }
         public bool Drifting => Math.Abs(_driftAngle) > .10 && Speed > 1.5;
         public RaceSimulation(RaceTrack track,MotorModel model,bool practice,RaceMeeting meeting=RaceMeeting.Small,
-            IReadOnlyList<RaceOpponent> opponents = null, int? lapLimit = null, bool paidPractice = false)
+            IReadOnlyList<RaceOpponent> opponents = null, bool paidPractice = false)
         {
             Track=track;Model=model;Practice=practice;Meeting=practice?RaceMeeting.None:meeting;_cumulative=new double[track.Points.Length+1];
-            Laps = lapLimit ?? track.Laps;
+            Laps = track.Laps;
             PaidPractice = practice && paidPractice;
             Opponents = practice || opponents == null ? Array.Empty<RaceOpponent>() : opponents.ToArray();
             RivalProgress=new double[practice ? 0 : opponents?.Count ?? RivalCount];

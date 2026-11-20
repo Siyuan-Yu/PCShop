@@ -163,7 +163,7 @@ namespace PCShopSell.Core.Session
             if (!MotorUsable(v)) return Fail("车辆正在使用或被扣押");
             var kind = MotorCatalog.Get(v.ModelId).Kind;
             var old = _garage.FirstOrDefault(x => x.Commuter && MotorCatalog.Get(x.ModelId).Kind == kind);
-            if (old != null && !MotorUsable(old)) return Fail("原通勤车正在使用或被扣押");
+            if (old != null && MotorBusy(old)) return Fail("原通勤车正在使用");
             if (old != null) { old.Commuter = false; old.GarageId = v.GarageId; }
             v.Commuter = true; v.GarageId = null;
             Say(MotorCatalog.Get(v.ModelId).Name + "已设为" + Vehicles.Get(kind).Name + "通勤车，不再用于比赛或练习。"); return true;

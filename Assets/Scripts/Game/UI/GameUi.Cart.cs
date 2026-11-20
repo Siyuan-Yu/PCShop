@@ -104,6 +104,10 @@ namespace PCShopSell.Game.UI
             if(!Input.GetMouseButton(0) || (_owner!=null&&(_owner.Closed||_owner.Root==null))){Stop();return;}
             Advance(seconds);
         }
+        internal static void CancelActiveHold()
+        {
+            if (_pressed) Stop();
+        }
         private static void Advance(float seconds)
         {
             _held+=Mathf.Max(0,seconds);

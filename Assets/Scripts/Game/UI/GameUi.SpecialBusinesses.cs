@@ -92,32 +92,7 @@ namespace PCShopSell.Game.UI
             {
                 bool hasFridge = S.CanOpenFridge;
                 double weight = shop.Fridge.WeightKg;
-                var missing = new System.Collections.Generic.List<(string Name, bool InWarehouse)>();
-                long now = S.Clock.Now.TotalMinutes;
-                if (hasFridge)
-                {
-                    int neededRecipes = state.RecipeMask;
-                    foreach (var order in state.Orders)
-                    {
-                        if (order.Stage != DiningStage.Waiting || order.TableCleared
-                            || (order.IsFishOrder && now >= order.DueAt)) continue;
-                        neededRecipes |= 1 << order.Recipe;
-                    }
-                    if (neededRecipes != 0 && S.KitchenRice(shop) < .25 - 1e-9)
-                        missing.Add(("大米", shop.Locker.Food.RiceKg > 1e-9));
-                    for (int recipe = 0; recipe < GameSession.RecipeIngredients.Length; recipe++)
-                    {
-                        string id = GameSession.RecipeIngredients[recipe];
-                        if ((neededRecipes & (1 << recipe)) != 0 && S.KitchenIngredientCount(shop, id) < 1)
-                            missing.Add((Ingredients.Get(id).Name, shop.Locker.Food.IngredientCount(id) > 0));
-                    }
-                    foreach (var order in state.Orders.Where(o => o.IsFishOrder && o.Stage == DiningStage.Waiting && now < o.DueAt)
-                                 .GroupBy(o => o.FishId).Select(orders => orders.First()))
-                    {
-                        if (order.Fish != null && S.KitchenIngredientCount(shop, order.FishId) < 1)
-                            missing.Add((order.Fish.Name, shop.Locker.Food.IngredientCount(order.FishId) > 0));
-                    }
-                }
+                var missing = hasFridge ? S.RestaurantMissingIngredients(shop, state) : Array.Empty<(string Name, bool InWarehouse)>();
 
                 bool empty = weight <= 1e-9;
                 bool warning = !hasFridge || empty || missing.Count > 0;

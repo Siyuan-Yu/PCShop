@@ -25,8 +25,8 @@ namespace PCShopSell.Core.Shop
         public Money Deposit;
         public int StartDay;
         public int SignedDay;
-        public bool RentDue(int day) => Rent.IsPositive && day > SignedDay && (day - SignedDay) % GameDate.DaysPerWeek == 0;
-        public double UnusedRentShare(int day) => (GameDate.DaysPerWeek - Math.Max(0, day - SignedDay) % GameDate.DaysPerWeek) / (double)GameDate.DaysPerWeek;
+        public bool RentDue(int day) => Rent.IsPositive && day - SignedDay >= GameDate.DaysPerWeek
+            && new GameDate(day).Weekday == GameWeekday.Sunday;
     }
 
     /// <summary>

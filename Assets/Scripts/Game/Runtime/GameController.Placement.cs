@@ -296,7 +296,7 @@ namespace PCShopSell.Game
         /// <summary>每帧：摆放模式下处理键盘和鼠标。</summary>
         private void UpdatePlacement()
         {
-            if (!Placing) return;
+            if (!Placing || Session.ScooterTutorialPaused) return;
             UpdatePlacementCore();
             if (Placing) UpdateEditOverlay();
         }

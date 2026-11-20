@@ -81,7 +81,7 @@ namespace PCShopSell.Game
                 }
                 var water=puddle.transform.Find("Water");water.gameObject.SetActive(leak.Water>0);water.localScale=new Vector3(.5f+leak.Water*.3f,.025f,.5f+leak.Water*.3f);
                 puddle.transform.Find("Bucket").gameObject.SetActive(leak.Bucket);
-                var drip=puddle.transform.Find("Drip");drip.gameObject.SetActive(Session.CityIsRaining);drip.localPosition=new Vector3(0,.5f+2*(1-(UnityEngine.Time.unscaledTime%1)),0);
+                var drip=puddle.transform.Find("Drip");drip.gameObject.SetActive(Session.CityIsRaining);drip.localPosition=new Vector3(0,.5f+2*(1-(_worldVisualTime%1)),0);
             }
             else HideNeighborhood("CommunityRoofLeak");
             var festival=Session.LanternFestival;

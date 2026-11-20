@@ -28,6 +28,7 @@ namespace PCShopSell.Game.UI
 
         private static Dictionary<string, (string sheet, int cell)> _itemArt;
         private static readonly Dictionary<string, Texture2D> ItemSheets = new Dictionary<string, Texture2D>();
+        private static Material _itemAtlasMaterial;
 
         private static Dictionary<string, (string sheet, int cell)> LoadItemArt()
         {
@@ -121,6 +122,10 @@ namespace PCShopSell.Game.UI
                 return rect;
             }
             image.texture = texture;
+            if (_itemAtlasMaterial == null && Resources.Load<Shader>("Shaders/ItemPortraitBackdrop") is Shader atlasShader
+                && atlasShader.isSupported)
+                _itemAtlasMaterial = new Material(atlasShader) { hideFlags = HideFlags.HideAndDontSave };
+            if (_itemAtlasMaterial != null) image.material = _itemAtlasMaterial;
             float cellSize = 1f / ItemSheetColumns;
             float insetX = 1f / texture.width, insetY = 1f / texture.height;
             int col = entry.cell % ItemSheetColumns, row = entry.cell / ItemSheetColumns;

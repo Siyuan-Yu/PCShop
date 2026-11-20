@@ -109,6 +109,27 @@ namespace PCShopSell.Tests
             s.ResolveEvent(2); Assert.AreEqual(cash, s.Ledger.Balance); Assert.AreEqual(1, s.CreateSave().flyerCampaigns.Length);
             s.RaiseEvent("shop_regular_review"); Assert.IsNull(s.PendingEvent);
         }
+
+        [TestCase(0, 1, 100, 0)]
+        [TestCase(0, 100, 1, 1)]
+        [TestCase(1, 80, 1, 0)]
+        [TestCase(1, 80, 20, .5)]
+        [TestCase(1, 100, 100, 1)]
+        public void CustomerRepliesUseAttributesAndApplyReputationToTheReceiptShop(
+            int choice, int charm, int intelligence, double expectedGain)
+        {
+            using var s = Make();
+            PaidSale(s);
+            s.Player.Charm = charm;
+            s.Player.Intelligence = intelligence;
+            s.RaiseEvent("shop_regular_review");
+            Assert.IsNotNull(s.PendingEvent);
+            StringAssert.Contains(choice == 0 ? "看魅力" : "看智力、魅力", s.PendingEvent.Choices[choice].Text);
+            double before = s.MainShop.Sim.ShopReputation;
+            Assert.IsTrue(s.ResolveEvent(choice));
+            Assert.AreEqual(before + expectedGain, s.MainShop.Sim.ShopReputation, .001);
+        }
+
         [Test]
         public void ChangeNeedsCashAndRefundBalancesTheRecordedLiabilityExactlyOnceAcrossSave()
         {

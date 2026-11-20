@@ -277,7 +277,15 @@ namespace PCShopSell.Tests
             using var s = Make(); s.MainShop.Sim.SetHours(480, 1080);
             long hot = Enumerable.Range(50, 150).Select(day => day * 1440L + 780).First(at => s.CityOutdoorTemperature(at) >= 30);
             AtTime(s, hot); var cash = s.Ledger.Balance; s.RaiseEvent("shop_summer_heat"); Assert.NotNull(s.PendingEvent);
-            Assert.IsFalse(s.PendingEvent.Choices[1].Enabled(s)); Assert.IsFalse(s.ResolveEvent(1)); Assert.AreEqual(cash, s.Ledger.Balance); Assert.IsTrue(s.ResolveEvent(2));
+            var pending = s.PendingEvent;
+            Assert.IsNotEmpty(pending.Choices[0].Details);
+            Assert.IsFalse(s.ResolveEvent(0));
+            Assert.AreSame(pending, s.PendingEvent);
+            Assert.IsFalse(s.Flags.Contains("shop-event:aircon:" + s.MainShop.Place.Id));
+            Assert.IsFalse(s.IsChoiceEnabled(pending.Choices[2]));
+            Assert.IsFalse(s.ResolveEvent(2));
+            Assert.AreEqual(cash, s.Ledger.Balance);
+            Assert.IsTrue(s.ResolveEvent(3));
         }
     }
 }

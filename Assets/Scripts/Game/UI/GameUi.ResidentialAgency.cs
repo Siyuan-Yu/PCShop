@@ -56,8 +56,7 @@ namespace PCShopSell.Game.UI
                 if(_ctrl.World.Places.TryGetValue(agency.Id,out var agentBuilding))
                 {
                     var bounds=view.BoundsOf(agentBuilding);
-                    var glow=Ui.Rect(overlay,"ResidentialAgencyGlow");AgencyAt(glow,0,0,view.Width,view.Height);glow.gameObject.AddComponent<CanvasRenderer>();
-                    glow.gameObject.AddComponent<AgencyBuildingGlow>().Initialize(AgencyStreetMap.Corners(bounds).Select(view.Project).ToArray(),new Color32(66,158,255,255),false);
+                    AgencyMapGlow(overlay, view, "ResidentialAgencyGlow", agentBuilding, new Color32(66,158,255,255));
                     var at=view.Project(new Vector3(bounds.center.x,bounds.max.y+1,bounds.center.z));
                     if(at.x>=0&&at.x<=view.Width&&at.y>=0&&at.y<=view.Height)
                     {
@@ -69,17 +68,20 @@ namespace PCShopSell.Game.UI
                 {
                     if(!_ctrl.World.Places.TryGetValue(p.Id,out var building))continue;
                     bool selected=p.Id==_residentialSelectedId;
-                    var color=selected?Ui.Accent:p==S.Home||S.HasResidentialLease(p)||S.PropertyAt(p.Id)!=null?new Color32(75,155,230,255):S.ResidentialTenants(p.Id).Length>0?AgencyFuture:Ui.Good;
+                    bool owned = S.PropertyAt(p.Id) != null || p == S.Home && S.HomePriceCents > 0;
                     var bounds=view.BoundsOf(building);
-                    if(selected)
-                    {
-                        var glow=Ui.Rect(overlay,"SelectedResidenceGlow");AgencyAt(glow,0,0,view.Width,view.Height);glow.gameObject.AddComponent<CanvasRenderer>();
-                        glow.gameObject.AddComponent<AgencyBuildingGlow>().Initialize(AgencyStreetMap.Corners(bounds).Select(view.Project).ToArray(),color,true);
-                    }
+                    if (owned)
+                        AgencyMapGlow(overlay, view, "OwnedResidenceGlow_" + p.Id, building, AgencyOwnedPropertyColor, selected);
+                    else if (selected)
+                        AgencyMapGlow(overlay, view, "SelectedResidenceGlow", building, Ui.Accent, true);
                     var at=view.Project(new Vector3(bounds.center.x,bounds.max.y+1,bounds.center.z));
                     if(at.x<0||at.x>view.Width||at.y<0||at.y>view.Height)continue;
+                    bool rented = S.HasResidentialLease(p);
+                    bool occupied = !owned && !rented && S.ResidentialTenants(p.Id).Length > 0;
+                    Color color = selected ? Ui.Accent : owned ? (Color)AgencyOwnedPropertyColor
+                        : rented ? (Color)new Color32(75,155,230,255) : occupied ? (Color)AgencyStreetMap.RentalUpcoming : Ui.Good;
                     string id=p.Id;int number=Array.IndexOf(homes,p)+1;
-                    string label=number.ToString("D2")+" "+(p==S.Home?"默认住处":S.HasResidentialLease(p)?"我的租房":S.PropertyAt(id)!=null?"我的住宅":S.ResidentialTenants(id).Length>0?"有住户":"空房");
+                    string label=number.ToString("D2")+" "+(p==S.Home?"默认住处":owned?"我的住宅":rented?"我的租房":occupied?"有住户":"空房");
                     var button=Ui.Button(overlay,label,()=>view.Selected?.Invoke(id),14,color);
                     button.name="ResidenceMap_"+id;AgencyAt((RectTransform)button.transform,Mathf.Clamp(at.x-53,2,view.Width-108),Mathf.Clamp(at.y-25,2,view.Height-32),106,30);
                     button.Tip(p.Name+"\n"+ResidentialStatus(p));
@@ -90,7 +92,12 @@ namespace PCShopSell.Game.UI
             AgencyMapControl(map,"+","ResidentialZoomIn",788,44,()=>view.ZoomBy(1.35f));
             AgencyMapControl(map,"本片区","ResidentialResetView",842,80,view.ResetView);
             AgencyMapControl(map,"放大这套","ResidentialFocusUnit",932,172,()=>{var p=homes.FirstOrDefault(h=>h.Id==_residentialSelectedId);if(p!=null)view.Focus(p);});
-            AgencyMapText(map,"绿：空房　橙：有住户、可购产权　蓝：已租或已购　金：已选中",16,18,702,1080,32,Ui.Dim);
+            AgencyMapText(map,"房源标记",14,16,703,90,24,Ui.Dim);
+            AgencyMapKey(map, 120, Ui.Good, "绿色：空房");
+            AgencyMapKey(map, 276, AgencyStreetMap.RentalUpcoming, "橙色：有住户、可购产权");
+            AgencyMapKey(map, 502, new Color32(75,155,230,255), "蓝色：已租 / 当前中介");
+            AgencyMapKey(map, 720, AgencyOwnedPropertyColor, "紫色：我的产权");
+            AgencyMapKey(map, 894, Ui.Accent, "金色：已选中");
             view.Changed();
         }
         private void BuildResidentialDetail(Transform detail,Place p,int number,Window parent)

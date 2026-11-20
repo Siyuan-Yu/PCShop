@@ -15,7 +15,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("装机台", 900, 680, w =>
             {
                 ShopSimulation shop = S.PlayerShop;
-                Line(w.Content, $"散客装机单有 {shop.Settings.BuildOrderDueDays} 天交期。请按工单上的剩余时间交付，逾期会扣名望。", 15, Ui.Dim);
+                Line(w.Content, $"散客装机单有 {shop.Settings.BuildOrderDueDays} 天交期。逾期影响本店口碑。", 15, Ui.Dim);
 
                 // 台面：深色桌面，每张装机单是一张工单卡
                 Image desk = Ui.Panel(w.Content, "Desk", Ui.Chrome);

@@ -426,7 +426,9 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             s.EventsEnabled = false;
-            s.Clock.Restore(new GameDate(s.Lease.SignedDay + 6), 23 * 60);
+            int chargeDay = s.Lease.SignedDay + GameDate.DaysPerWeek;
+            while (new GameDate(chargeDay).Weekday != GameWeekday.Sunday) chargeDay++;
+            s.Clock.Restore(new GameDate(chargeDay - 1), 23 * 60);
             Money beforeWeek = s.Ledger.Balance;
             s.AdvanceClock(61);
             Assert.AreEqual(s.CurrentShopRent + Money.FromYuan(500), beforeWeek - s.Ledger.Balance);

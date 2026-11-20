@@ -18,7 +18,7 @@ namespace PCShopSell.Core.Session
             foreach(var row in new[]{
                 new[]{"landlady","44","照看老房子和种花","把房屋维护和租约交代清楚，也给自己留些休息时间。"},
                 new[]{"lin","29","玩游戏和约老朋友吃饭","工作稳定以后，还能和老朋友认真见面。"},
-                new[]{"zhou","40","旧电子设备和听评书","把熟人的信任和自己能承担的风险分清楚。"},
+                new[]{"zhou","40","在青湾旧物市场淘旧电子","把熟人的信任和自己能承担的风险分清楚。"},
                 new[]{"jie","32","拆手机和街边小吃","守好自己的店，不为扩张压垮原有生活。"},
                 new[]{"li","39","钓鱼和研究硬件","让老客户放心，也给新店一次靠谱合作的机会。"},
                 new[]{"wang","36","研究显卡和逛市场","消息说清来处，不再拿猜测当保证。"},
@@ -57,6 +57,7 @@ namespace PCShopSell.Core.Session
             var titles=new Dictionary<string,string>{{"life_creator","我已经不喜欢那个角色了"},{"life_ming","第二块招牌"},{"life_ning","夜校的那盏灯"},{"life_qiao","路线册之外"},{"life_enterprise","孩子一直惦记的那一件"},{"life_tenant","下一次续租"},{"life_curator","名单上还有谁"},{"life_maker","旧展品的新底座"},{"life_clothier","看起来像那么回事"},{"life_designer","衣服里的自己"},{"life_chef","这里还有我的位置"},{TangWei,"把大家的事办成"},{LiangJing,"我们一直都这么办"},{ShenXiao,"窗边的小凳子"}};
             foreach(var t in titles)people.First(p=>p.Id==t.Key).StoryTitle=t.Value;
             Place("landlady","life_home_s_oldhomes","life_home_s_oldhomes",540,660);
+            people.First(p => p.Id == Npcs.Landlady).LeisurePlaces = new[] { "life_hike" };
             Place("lin","life_home_s_oldhomes","life_company",540,1080);
             Place("zhou","life_home_s_oldhomes","stall_cpu",540,1020);
             Place("zhang","life_home_s_services","life_service",480,960);

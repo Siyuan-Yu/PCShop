@@ -562,7 +562,12 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < DeliveryMeals.Count; i++) Flags.Remove("life:meal-delivery-tier:" + i);
             Flags.Add("life:meal-delivery-tier:" + tier);
         }
-        public void ToggleMealDelivery() { if (!Flags.Remove("life:meal-delivery")) Flags.Add("life:meal-delivery"); }
+        public void ToggleMealDelivery()
+        {
+            if (Flags.Remove("life:meal-delivery")) return;
+            Flags.Add("life:meal-delivery");
+            Flags.Remove(MealDeliveryGuidePending);
+        }
 
         public string OrderDeliveryMealBlocker(int tier)
         {

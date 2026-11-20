@@ -27,7 +27,7 @@ namespace PCShopSell.Game.UI
             long now = Now(); if (_lastMinute == now) return; _lastMinute = now;
             Label.text = Countdown(ExpireDay, now);
             long left = ExpireDay.HasValue ? FoodBatch.ExpiryMinute(ExpireDay.Value) - now : long.MaxValue;
-            Label.color = left <= 360 ? new Color(1, .65f, .53f) : left <= 1440 ? new Color(1, .85f, .38f) : new Color(.75f, .95f, .77f);
+            Label.color = left <= 360 ? Ui.Warn : left <= 1440 ? Ui.Accent : Ui.Good;
         }
     }
 
@@ -36,7 +36,7 @@ namespace PCShopSell.Game.UI
         private void AddFoodExpiry(Button cell, string key, int? day)
         {
             if (!day.HasValue) return;
-            var panel = Ui.Panel(cell.transform, "ExpiryBadge_" + key, BagBadgeSurface);
+            var panel = Ui.Panel(cell.transform, "ExpiryBadge_" + key, Color.clear);
             panel.rectTransform.Anchor(.03f, .02f, .97f, .20f);
             var label = Ui.Label(panel.transform, "", 13, TextAnchor.MiddleCenter);
             label.fontStyle = FontStyle.Bold;

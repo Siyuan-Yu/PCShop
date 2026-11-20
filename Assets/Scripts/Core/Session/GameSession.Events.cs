@@ -15,7 +15,8 @@ namespace PCShopSell.Core.Session
     public enum EventCgProp
     {
         None, Passed, Notice, Fine, Boxes, Camera, Sale, Wallet, Banknotes, Calendar, Takeout, Envelope, Meal, Stew,
-        Battery, SponsorSticker, RaceSuit, RaceHelmet, StrayCat, StrayDog, Thermometer, EmergencyLamp, Candle, BurntCarton, LeakBucket, MessagePhone
+        Battery, SponsorSticker, RaceSuit, RaceHelmet, StrayCat, StrayDog, Thermometer, EmergencyLamp, Candle, BurntCarton, LeakBucket, MessagePhone,
+        TastingRice, TastingTofu, TastingSoup
     }
 
     public enum EventCgLighting { Normal, Blackout, Emergency, Candle, Evening, Rain }
@@ -54,6 +55,7 @@ namespace PCShopSell.Core.Session
         public string Text;
         public (string Key, string Label)? Selection;
         public (string Payment, long Start, int Minutes, Money Price, bool AskHost, string Note)? Appointment;
+        public (PartDef Part, OwnedShop Destination)? OnlinePurchase;
 
         /// <summary>这个选项现在能不能选（比如钱够不够）。为 null 表示总能选。</summary>
         public Func<GameSession, bool> Enabled;
@@ -94,12 +96,13 @@ namespace PCShopSell.Core.Session
     {
         /// <summary>每天的抽取时刻：11:00、15:00、20:00。每个时刻各掷一次，没有未处理的事件才会抽。</summary>
         public static readonly int[] EventMinutes = { 11 * 60, 15 * 60, 20 * 60 };
-        /// <summary>每个时刻出事件的概率（一天三次，满足条件的事件够多时约 1.2 个/天，实际受条件限制会少一些）。</summary>
-        public const double EventSlotChance = 0.4;
-        /// <summary>频率保障：每天最多 EventDayCap 个，任意连续 7 天最多 EventWeekCap 个；前 EventEarlyDays 天（第 0–13 天）概率只有一半。
+        /// <summary>常规阶段每次抽取随机事件的基础概率。</summary>
+        public const double EventSlotChance = 0.42;
+        /// <summary>每天最多 EventDayCap 个，任意连续 7 天最多 EventWeekCap 个；前 EventEarlyDays 天逐步提高抽取概率。
         /// 只统计随机抽出来的事件，约会、剧情等不算。</summary>
         public const int EventDayCap = 3, EventWeekCap = 10, EventEarlyDays = 14;
         public const double EventEarlyFactor = 0.5;
+        private const double EventSecondWeekChance = 0.22;
         private readonly List<int> _randomEventDays = new List<int>();
         private readonly Dictionary<string, int> _eventLastDay = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _eventCount = new Dictionary<string, int>();
@@ -146,7 +149,8 @@ namespace PCShopSell.Core.Session
                 return;
             }
             _deferredRandomEventDay = 0;
-            double chance = day < EventEarlyDays ? EventSlotChance * EventEarlyFactor : EventSlotChance;
+            double chance = day < GameDate.DaysPerWeek ? EventSlotChance * EventEarlyFactor
+                : day < EventEarlyDays ? EventSecondWeekChance : EventSlotChance;
             bool more = IncomingInvitations == InvitationMode.More;
             if (!Random.Chance(more ? chance * 2 : chance)) return;
             // The extra share of rolls can only deliver invitations. Ordinary events keep their original odds.
@@ -431,6 +435,9 @@ namespace PCShopSell.Core.Session
             Func<GameSession, bool> enabled = null, string reason = null) =>
             new EventChoice { Text = text, Apply = apply, Enabled = enabled, DisabledReason = reason };
 
+        private static EventChoice ViewEventDetails(string text, string details) =>
+            new EventChoice { Text = text, Details = details };
+
         public event Action<string, string, EventCgFrame> EventCgPopup;
         public event Action<string, EventCgFrame> EventCgNotice;
 
@@ -496,7 +503,7 @@ namespace PCShopSell.Core.Session
             "race_helmet_deal" => new EventCgFrame("event_race_service", EventCgProp.RaceHelmet),
             "race_track_visit_rain" => new EventCgFrame("event_race_wet"),
             "race_ning_study" => new EventCgFrame("event_race_track", personId: "life_ning"),
-            "act_dinner_cook" => new EventCgFrame("friend_meal", EventCgProp.Meal, "res_cook", seated: true),
+            "act_dinner_cook" => new EventCgFrame("friend_meal", personId: "res_cook", seated: true),
             "act_dinner_chef" => new EventCgFrame("friend_meal", EventCgProp.Stew, "life_chef", seated: true),
             "act_dinner_linhe" => new EventCgFrame("event_restaurant_evening", EventCgProp.Meal, "resident_linhe", seated: true),
             "act_dinner_farm" => new EventCgFrame("event_home_dinner", personId: "keeper_farm"),
@@ -650,7 +657,7 @@ namespace PCShopSell.Core.Session
                     shop.Sim.AdjustShopReputation(1);
                     return VisualResult("已补办并通过检查，门店口碑 +1。", "inspection", EventCgProp.Passed, caption: "已付 ¥300 · 口碑 +1");
                 }, s => s.Ledger.CanAfford(remediation), "现金不足"),
-                ChooseCg($"争取 7 天宽限 · 成功率 {Chance(this) * 100:0}%", s =>
+                ChooseCg("争取 7 天宽限 · " + EventScript.AttributeHint(("魅力", EffectiveCharm)), s =>
                 {
                     if (s.Random.Chance(Chance(s))) return VisualResult(ScheduleInspection(s, 7),
                         "inspection", EventCgProp.Calendar, caption: "争取到 7 天宽限");
@@ -962,7 +969,7 @@ namespace PCShopSell.Core.Session
             if (canSchedule)
                 choices.Add(Choose("约饭，当面再谈", s => s.ScheduleLegacyCityMeeting(Npcs.Landlady, "dinner",
                     $"legacy-rent-talk:{shop.Place.Id}:{lease.SignedDay}:{s.Clock.Today.TotalDays}")));
-            choices.Add(Choose($"讨价还价 · 成功率 {Chance(this) * 100:0.#}%", s => Resolve(s, true)));
+            choices.Add(Choose("讨价还价 · " + EventScript.AttributeHint(("魅力", EffectiveCharm), ("与房东的交情", Relation(Npcs.Landlady))), s => Resolve(s, true)));
             choices.Add(Choose("接受新周租", s => Resolve(s, false)));
             string body = $"李秀兰想调整{ShopTitle(shop)}的租金。\n现周租 {before}，拟调整为 {proposed}，从{new GameDate(NextShopRentDay(shop))}起缴。";
             return canSchedule
@@ -1240,8 +1247,17 @@ namespace PCShopSell.Core.Session
                     if (witnessed && owner != null)
                     {
                         s.AddRelation(owner.Id, -5);
-                        s.InspectionShop()?.Sim.AdjustShopReputation(-2);
-                        return VisualResult("获得 ¥300。有在场的人认出了钱包，失主得知后降低了对你的评价，门店口碑 −2。",
+                        var fame = s.MainShop.Sim;
+                        double fameBefore = fame.Reputation;
+                        fame.AdjustPersonalReputation(-2);
+                        string changes = $"名望 {fame.Reputation - fameBefore:+0.#;-0.#;0}";
+                        if (s.InspectionShop() is OwnedShop shop)
+                        {
+                            double reputationBefore = shop.Sim.ShopReputation;
+                            shop.Sim.AdjustShopReputation(-2);
+                            changes += $" · 门店口碑 {shop.Sim.ShopReputation - reputationBefore:+0.#;-0.#;0}";
+                        }
+                        return VisualResult("获得 ¥300。有在场的人认出了钱包，失主得知后降低了对你的评价。\n" + changes,
                             "wallet", EventCgProp.Banknotes, caption: "获得 ¥300 · 失主得知此事");
                     }
                     return VisualResult("获得 ¥300。周围没有人认领钱包。", "wallet", EventCgProp.Banknotes, caption: "获得 ¥300");
@@ -1327,7 +1343,7 @@ namespace PCShopSell.Core.Session
                 if (booking == null) return VisualResult("时段约不上，可以在人物对话中另约。", background, personId: ClassmateId, caption: "未能约上");
                 booking.HostId = ClassmateId;
                 booking.HostPays = true;
-                return VisualResult($"已加入日程 · {new GameTimestamp(when)} · {s.City.GetPlace(meal.VenueId).Name}。这顿由陈志衡请客。",
+                return VisualResult($"已加入日程 · {new GameTimestamp(when)} · {s.City.GetPlace(meal.VenueId).Name}。到场后可以选餐，这顿由陈志衡请客。",
                     background, EventCgProp.Calendar, ClassmateId, $"已约好 · {new GameTimestamp(when)}");
             }
             string where = canMeet ? $"\n{City.GetPlace(meal.VenueId).Name} · {new GameTimestamp(start)} · 陈志衡请客。" : "";
@@ -1368,37 +1384,46 @@ namespace PCShopSell.Core.Session
         private RelativeReceivable _relativeReceivable = new RelativeReceivable();
         internal bool CanOfferRelativeLoan => _relativeReceivable.Amount == 0 && Ledger.CanAfford(Money.FromYuan(2000));
 
+        private static EventCgResult RelativeLoanVisual(string body, EventCgProp prop = EventCgProp.None, string caption = null) =>
+            VisualResult(body, "lend", prop, CityLifeCatalog.CousinId, caption);
+
         private EventDef BindRelativeLoan(EventDef template)
         {
             if (!CanOfferRelativeLoan) return null;
             int due = Clock.Today.TotalDays + 3;
             EventCgResult Lend(GameSession s, int amount)
             {
-                if (!s.Ledger.TryDebit(s.Clock.Today, "借款借出", Money.FromYuan(amount), "借给表哥"))
-                    return VisualResult("现金不足。", "lend", caption: "未借出");
+                if (!s.Ledger.TryDebit(s.Clock.Today, "借款借出", Money.FromYuan(amount), $"借给{CityLifeCatalog.CousinName}"))
+                    return RelativeLoanVisual("现金不足。", caption: "未借出");
                 s._relativeReceivable.Amount = amount;
                 s._relativeReceivable.DueDay = due;
                 s._relativeReceivable.Extended = false;
-                return VisualResult($"已借出 ¥{amount}，约定 {new GameDate(due)} 归还。", "lend", EventCgProp.Envelope,
+                s.RememberSocial(CityLifeCatalog.CousinId, $"你借给表哥 ¥{amount} 周转，约好 {new GameDate(due)} 归还。");
+                return RelativeLoanVisual($"已借给{CityLifeCatalog.CousinName} ¥{amount}，约定 {new GameDate(due)} 归还。", EventCgProp.Envelope,
                     caption: $"借出 ¥{amount} · {new GameDate(due)} 归还");
             }
-            return IllustratedEvent(template, $"表哥要先垫一笔维修费，想借 ¥800，约定 {new GameDate(due)} 还款。"
+            return IllustratedEvent(template, $"表哥{CityLifeCatalog.CousinName}要先垫一笔维修配件费，想借 ¥800，约定 {new GameDate(due)} 还款。"
                 + $"\n过往按时还清 {_relativeReceivable.Repaid} 笔，逾期后还清 {_relativeReceivable.LateRepaid} 笔，认亏 {_relativeReceivable.Defaults} 笔。",
-                new EventCgFrame("lend", caption: "借款请求 · ¥800"),
+                new EventCgFrame("lend", personId: CityLifeCatalog.CousinId, caption: "借款请求 · ¥800"),
                 ChooseCg("借 ¥800", s => Lend(s, 800)),
                 ChooseCg("只借 ¥400", s => Lend(s, 400)),
-                ChooseCg("婉拒", _ => VisualResult("你说明手头也需要留周转金。", "lend", caption: "未借出")));
+                ChooseCg("婉拒", s =>
+                {
+                    s.RememberSocial(CityLifeCatalog.CousinId, "表哥来借钱周转。你解释了手头也要留周转金，他说理解。");
+                    return RelativeLoanVisual($"你说明手头也需要留周转金。{CityLifeCatalog.CousinName}点点头，说他再想想办法。", caption: "未借出");
+                }));
         }
 
         private void ReceiveRelativeRepayment(bool late)
         {
             Money amount = Money.FromYuan(_relativeReceivable.Amount);
-            Ledger.Credit(Clock.Today, NpcRepaymentTitle, amount, "表哥还钱");
+            Ledger.Credit(Clock.Today, NpcRepaymentTitle, amount, $"{CityLifeCatalog.CousinName}还款");
             _relativeReceivable.Amount = 0;
             if (late) _relativeReceivable.LateRepaid++;
             else _relativeReceivable.Repaid++;
-            ShowEventCg(NpcRepaymentTitle, VisualResult($"表哥已还款 {amount}，当前现金 {Ledger.Balance}。",
-                "lend", EventCgProp.Banknotes, caption: $"已收回 {amount}"));
+            RememberSocial(CityLifeCatalog.CousinId, late ? $"表哥在逾期后还清了 {amount}。" : $"表哥按时还清了 {amount}。");
+            ShowEventCg(NpcRepaymentTitle, RelativeLoanVisual($"{CityLifeCatalog.CousinName}已还款 {amount}，当前现金 {Ledger.Balance}。",
+                EventCgProp.Banknotes, caption: $"已收回 {amount}"));
         }
 
         private void CheckRelativeRepayment(GameDate today)
@@ -1407,8 +1432,8 @@ namespace PCShopSell.Core.Session
             if (debt.Amount == 0 || debt.DueDay != today.TotalDays) return;
             double chance = debt.Extended ? .5 : debt.Amount <= 400 ? .85 : .75;
             if (Random.Chance(chance)) ReceiveRelativeRepayment(debt.Extended);
-            else ShowEventCg("表哥的借款已逾期", VisualResult($"还有 ¥{debt.Amount} 没还。空下来可以决定催款、延期或认亏。",
-                "lend", EventCgProp.Notice, caption: $"逾期未还 · ¥{debt.Amount}"));
+            else ShowEventCg($"{CityLifeCatalog.CousinName}的借款已逾期", RelativeLoanVisual($"还有 ¥{debt.Amount} 没还。空下来可以决定催款、延期或认亏。",
+                EventCgProp.Notice, caption: $"逾期未还 · ¥{debt.Amount}"));
         }
 
         private bool TryShowRelativeOverdue()
@@ -1420,14 +1445,15 @@ namespace PCShopSell.Core.Session
                 int amount = debt.Amount;
                 debt.Amount = 0;
                 debt.Defaults++;
-                return VisualResult(prefix + $"已记下这次未收回的 ¥{amount}。", "lend", EventCgProp.Notice,
+                RememberSocial(CityLifeCatalog.CousinId, $"表哥借的 ¥{amount} 没能收回，你结束了这笔借款。");
+                return RelativeLoanVisual(prefix + $"已记下这次未收回的 ¥{amount}。", EventCgProp.Notice,
                     caption: $"未收回 · ¥{amount}");
             }
             var choices = new List<EventChoice>
             {
-                ChooseCg("联系表哥催款", s =>
+                ChooseCg($"联系{CityLifeCatalog.CousinName}催款", s =>
                 {
-                    if (!s.Random.Chance(.5)) return WriteOff("表哥目前仍拿不出钱。");
+                    if (!s.Random.Chance(.5)) return WriteOff($"{CityLifeCatalog.CousinName}目前仍拿不出钱。");
                     s.ReceiveRelativeRepayment(true);
                     return null;
                 }),
@@ -1438,12 +1464,13 @@ namespace PCShopSell.Core.Session
                 {
                     debt.DueDay = s.Clock.Today.TotalDays + 3;
                     debt.Extended = true;
-                    return VisualResult($"新的还款日是 {new GameDate(debt.DueDay)}。", "lend", EventCgProp.Calendar,
+                    s.RememberSocial(CityLifeCatalog.CousinId, $"你同意表哥把还款日延到 {new GameDate(debt.DueDay)}。");
+                    return RelativeLoanVisual($"新的还款日是 {new GameDate(debt.DueDay)}。", EventCgProp.Calendar,
                         caption: "已延期 3 天");
                 }));
-            Raise(IllustratedEvent(new EventDef { Id = "relative-loan-overdue", Title = "表哥的借款逾期" },
-                $"表哥还欠你 ¥{debt.Amount}。这笔款原定 {new GameDate(debt.DueDay)} 归还。",
-                new EventCgFrame("lend", EventCgProp.Notice), choices.ToArray()), Clock.Today);
+            Raise(IllustratedEvent(new EventDef { Id = "relative-loan-overdue", Title = $"{CityLifeCatalog.CousinName}的借款逾期" },
+                $"{CityLifeCatalog.CousinName}还欠你 ¥{debt.Amount}。这笔款原定 {new GameDate(debt.DueDay)} 归还。",
+                new EventCgFrame("lend", EventCgProp.Notice, CityLifeCatalog.CousinId), choices.ToArray()), Clock.Today);
             return true;
         }
 
@@ -1614,7 +1641,9 @@ namespace PCShopSell.Core.Session
             foreach(var original in template.Choices)
             {
                 var choice=original;
-                string text = choice.Text == "公开回应" ? $"公开回应 · 成功率 {EventCatalog.ReviewChance(this) * 100:0.#}%" : choice.Text;
+                string text = choice.Text == "公开回应"
+                    ? "公开回应 · " + EventScript.AttributeHint(("魅力", EffectiveCharm), ("智力", Player.Intelligence))
+                    : choice.Text;
                 bound.Choices.Add(new EventChoice{Text=text,DisabledReason=choice.DisabledReason,
                     Enabled=session=>
                     {
@@ -1633,13 +1662,35 @@ namespace PCShopSell.Core.Session
 
         public bool IsChoiceEnabled(EventChoice c) => c.Enabled == null || c.Enabled(this);
 
+        public string EventActivityChoiceLabel(CityActivityDefinition definition, int index)
+        {
+            string label = definition.Choices[index];
+            if (definition.Id == "social_49" && index > 0)
+                return label + " · " + EventScript.AttributeHint(("智力", Player.Intelligence));
+            if ((definition.Id == "social_69" && index == 5) || (definition.Id == "social_70" && index == 3))
+            {
+                string person = OutdoorPeople[(definition.Id == "social_69" ? 69 : 70) - 61];
+                return label + " · " + EventScript.AttributeHint(("智力", Player.Intelligence), ("交情", Relation(person)));
+            }
+            return label;
+        }
+
         /// <summary>结算事件选项。禁用或只供查看的选项不结算。结果通过 Popup 告诉玩家。</summary>
-        public bool ResolveEvent(int choiceIndex)
+        public bool ResolveEvent(int choiceIndex) => ResolveEvent(choiceIndex, 0);
+
+        public bool ResolveEvent(int choiceIndex, int quantity)
         {
             EventDef def = PendingEvent;
             if (def == null || choiceIndex < 0 || choiceIndex >= def.Choices.Count) return false;
             EventChoice choice = def.Choices[choiceIndex];
             if (choice.Details != null || !IsChoiceEnabled(choice)) return false;
+            if (choice.OnlinePurchase is { } purchase)
+            {
+                if (!PlaceOnlinePartOrder(purchase.Part, quantity, purchase.Destination))
+                    return false;
+                PendingEvent = null;
+                return true;
+            }
             PendingEvent = null;
             if (choice.ApplyCg != null) ShowEventCg(def.Title, choice.ApplyCg(this), def.IllustrationShop);
             else

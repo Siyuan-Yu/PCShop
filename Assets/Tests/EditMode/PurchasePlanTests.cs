@@ -106,11 +106,47 @@ namespace PCShopSell.Tests
                 Assert.True(s.ConfigureEmployeePurchase(buyer.Id, plan));
                 Assert.AreEqual(3,buyer.PurchasePlan.Items.Single().Count);
                 int firstStock = s.PurchaseRemaining(first);
+                var quote = s.QuoteEmployeePurchase(buyer.Id);
+                Assert.IsNull(quote.Error);
                 Assert.True(s.DispatchEmployeePurchase(buyer.Id));
                 var trip = s.EmployeeTrip(buyer.Id);
                 CollectionAssert.AreEqual(new[] { Stalls.Cpu, s.MainShop.Place.Id }, trip.TravelLegs.Select(leg => leg.TargetPlaceId));
+                Assert.AreEqual(trip.BoughtAt, trip.TravelLegs.Last().DepartMinute);
+                Assert.AreEqual(trip.ReturnAt, trip.TravelLegs.Last().ArriveMinute);
+                Assert.AreEqual(quote.DeliveryMinutes, trip.DeliveryAt - trip.DepartAt);
+                foreach (var leg in trip.TravelLegs)
+                {
+                    Assert.AreEqual(trip.Transport, leg.Transport);
+                    Assert.AreEqual(CityTravelTiming.NpcMinutes(leg.Meters.Sum(), Vehicles.Get(trip.Transport)),
+                        leg.ArriveMinute - leg.DepartMinute);
+                }
                 Assert.AreEqual(firstStock - 3, s.PurchaseRemaining(first));
             }
+        }
+
+        [Test]
+        public void PurchaseTransportControlsTravelTimeAndFreight()
+        {
+            using var s = Make();
+            var buyer = s.MainShop.Buyer;
+            var product = s.EmployeePurchaseCatalog().Single(o => o.Id == "cpu0");
+            EmployeePurchaseQuote Quote(VehicleKind transport) => s.EstimateEmployeePurchase(buyer.Id,
+                new EmployeePurchasePlan { Transport = transport, Items = new[] { product.Line(1) } });
+
+            var walk = Quote(VehicleKind.Walk);
+            var taxi = Quote(VehicleKind.Taxi);
+            var scooter = Quote(VehicleKind.EBike);
+            Assert.IsNull(walk.Error);
+            Assert.IsNull(taxi.Error);
+            Assert.IsNull(scooter.Error);
+            Assert.Less(taxi.DeliveryMinutes, walk.DeliveryMinutes);
+            Assert.Less(scooter.ReturnMinutes, walk.ReturnMinutes);
+            Assert.AreEqual(scooter.DeliveryMinutes, scooter.ReturnMinutes);
+            Assert.AreEqual(Money.Zero, walk.Travel);
+            Assert.IsTrue(taxi.Travel.IsPositive);
+            Assert.IsTrue(walk.Freight.IsPositive);
+            Assert.AreEqual(walk.Freight, taxi.Freight);
+            Assert.AreEqual(Money.Zero, scooter.Freight);
         }
 
         [Test]

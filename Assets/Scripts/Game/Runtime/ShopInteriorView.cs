@@ -1308,6 +1308,7 @@ namespace PCShopSell.Game.Runtime
             UpdateStaff(s);
             UpdateSpecialBusinessVisuals(s, dt);
             UpdateRestaurantPlayer(s);
+            UpdateRestaurantStockWarning(s);
 
             // Shelf meshes are presentation, not simulation. 8x must not rebuild
             // every shelf eight times as often (nor freeze stock refresh when paused).

@@ -155,7 +155,11 @@ namespace PCShopSell.Core.Session
             sim.OrderCancelled += o => ContractOrderResult(shop, o, false);
             sim.OrderExpired += o => ContractOrderResult(shop, o, false);
             sim.OrderPlaced += o => Notice?.Invoke($"{(MyShopCount > 1 ? ShopTitle(shop) : "")}新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，{sim.Settings.BuildOrderDueDays} 天内交付。");
-            sim.OrderExpired += o => Popup?.Invoke("订单取消", $"{(MyShopCount > 1 ? ShopTitle(shop) : "")}{PartCatalog.TierName(o.Tier)}整机订单超时，顾客取消了订单，名望下降。");
+            sim.OrderExpired += o =>
+            {
+                if (o.ContractId == null)
+                    Popup?.Invoke("订单取消", $"{(MyShopCount > 1 ? ShopTitle(shop) + "的" : "")}{PartCatalog.TierName(o.Tier)}整机订单逾期，顾客已取消。逾期会影响门店口碑。");
+            };
             if (_shops.Count > 0 && _shops[0] != shop && _shops[0].Sim != null) sim.ShareReputationWith(_shops[0].Sim);
             return sim;
         }
@@ -389,6 +393,7 @@ namespace PCShopSell.Core.Session
         {
             id = o.Id, contractId = o.ContractId, tier = o.Tier, priceCents = o.Price.Cents, placedAt = o.PlacedAt.TotalMinutes,
             dueAt = o.DueAt.TotalMinutes, partsReserved = o.PartsReserved, mistakes = o.Mistakes, employeeMinutesLeft = o.EmployeeMinutesLeft,
+            employeeAssemblyAptitude = o.EmployeeAssemblyAptitude,
             reservedPartMask = o.ReservedPartMask, boxedPartMask = o.BoxedPartMask,
         };
 
@@ -396,6 +401,7 @@ namespace PCShopSell.Core.Session
             new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt))
             {
                 ContractId = o.contractId, PartsReserved = o.partsReserved, Mistakes = Math.Max(0, o.mistakes), EmployeeMinutesLeft = Math.Max(0, o.employeeMinutesLeft),
+                EmployeeAssemblyAptitude = Math.Max(0, Math.Min(100, o.employeeAssemblyAptitude)),
                 ReservedPartMask = o.reservedPartMask, BoxedPartMask = o.boxedPartMask,
             };
     }

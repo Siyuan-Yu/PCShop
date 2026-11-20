@@ -291,8 +291,23 @@ namespace PCShopSell.Tests
             if (number == 44)
             {
                 Assert.IsFalse(loaded.CanFinishManualCityActivity(a.Id));
-                Assert.IsTrue(loaded.TasteCooksDish(a.Id));
-                for (int topic = 0; topic < 3; topic++) Assert.IsNotNull(loaded.ReviewCooksDish(a.Id, topic, 0));
+                Assert.IsFalse(loaded.TasteCooksDish(a.Id, 1));
+                for (int dish = 0; dish < GameSession.CookTastingDishes.Count; dish++)
+                {
+                    var mood = loaded.Player.Mood;
+                    var familiarity = loaded.Relation(personId);
+                    Assert.IsNull(loaded.ReviewCooksDish(a.Id, dish, 0));
+                    Assert.IsTrue(loaded.TasteCooksDish(a.Id, dish));
+                    Assert.IsFalse(loaded.TasteCooksDish(a.Id, dish));
+                    Assert.IsNotNull(loaded.ReviewCooksDish(a.Id, dish, dish == 1 ? 2 : 0));
+                    if (dish == 1)
+                    {
+                        Assert.Less(loaded.Player.Mood, mood);
+                        Assert.Less(loaded.Relation(personId), familiarity);
+                    }
+                    if (dish + 1 < GameSession.CookTastingDishes.Count)
+                        Assert.IsTrue(loaded.ServeNextCooksDish(a.Id, dish));
+                }
                 Assert.IsTrue(loaded.FinishManualCityActivity(a.Id));
             }
             else loaded.AdvanceClock(a.Duration + 1);

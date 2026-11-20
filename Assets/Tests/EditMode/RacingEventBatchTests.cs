@@ -54,7 +54,7 @@ namespace PCShopSell.Tests
             Assert.IsNull(loaded.EventRaceStartBlocker("rider", id));
             Assert.IsTrue(loaded.StartEventRace("rider", id));
             var race = loaded.ActiveRace;
-            Assert.AreEqual(1, race.Laps); Assert.AreEqual(1, race.Opponents.Count);
+            Assert.AreEqual(2, race.Laps); Assert.AreEqual(1, race.Opponents.Count);
             race.Elapsed = 100; race.Finished = true; race.RivalFinishTime[0] = win ? 110 : 90;
             var balance = loaded.Ledger.Balance;
             Assert.NotNull(loaded.FinishRace());
@@ -68,7 +68,7 @@ namespace PCShopSell.Tests
             loaded.Clock.Restore(new GameDate((int)(meal.ScheduledStart / 1440)), (int)(meal.ScheduledStart % 1440));
             At(loaded, meal.VenueId); Assert.IsTrue(loaded.PrepareVenueCompanions(loaded.CurrentPlace));
             var mealBalance = loaded.Ledger.Balance;
-            loaded.AdvanceClock(61);
+            loaded.Tick(.05);
             Assert.AreEqual(CityActivityPhase.Completed, meal.State);
             Assert.AreEqual(mealBalance - Money.FromYuan(win ? 0 : 2000), loaded.Ledger.Balance);
         }

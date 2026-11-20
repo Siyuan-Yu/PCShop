@@ -161,7 +161,7 @@ namespace PCShopSell.Core.Session
             var offer = FindEventRace(person);
             if (offer == null) return null;
             bool charity = kind == "charity";
-            string fee = charity ? "到场付 ¥2,000，完赛只颁纪念奖牌，不发奖金。" : "一对一实际跑一圈，无报名费。输家请 ¥2,000 夜宵，完赛后再约时间赴宴。";
+            string fee = charity ? "到场付 ¥2,000，完赛只颁纪念奖牌，不发奖金。" : "一对一跑两圈，无报名费。输家请 ¥2,000 夜宵，完赛后再约时间赴宴。";
             var choices = new List<EventChoice>
             {
                 Choose("确认预约", s =>
@@ -180,8 +180,8 @@ namespace PCShopSell.Core.Session
             }, s => s.Ledger.CanAfford(Money.FromYuan(CharityDonation)), "现金不足 ¥500"));
             choices.Add(Choose("改天再约", _ => "这次不预约，之后有机会再约，交情不变。"));
             choices.Add(Choose("这次不参加", _ => "你婉拒了，交情不变。"));
-            return EventScene(template, (charity ? "车友发起慈善赛。" : "吴磊约你比一圈。") + fee
-                + "\n" + new GameDate(offer.Day) + " 09:00–18:00 · " + RaceTracks.Get(offer.TrackId).Name, choices.ToArray());
+            return EventScene(template, (charity ? "车友发起慈善赛。" : "吴磊约你在赛道上比一场。") + fee
+                + "\n" + new GameDate(offer.Day) + " 全天 · " + RaceTracks.Get(offer.TrackId).Name, choices.ToArray());
         }
 
         public string EventRaceStartBlocker(string kind, string vehicleId)
@@ -190,8 +190,6 @@ namespace PCShopSell.Core.Session
             if (booking == null) return "请在预约当天到指定赛场";
             string reason = RaceBlocker(booking.TrackId, vehicleId, true, 0);
             if (reason != null) return reason;
-            if (Clock.MinuteOfDay < 540 || Clock.MinuteOfDay >= 1080) return "专属比赛 09:00–18:00 举行";
-            if (kind != "wet" && !RaceAttendeeHere(booking.PersonId, booking.TrackId)) return "约好的车友尚未到场，请稍候";
             long fee = kind == "wet" ? WetPracticeFee : kind == "charity" ? CharityRaceFee : RiderMealPrice;
             return Ledger.CanAfford(Money.FromYuan(fee)) ? null : kind == "wet" ? "湿地训练报名需要 ¥1,000" : kind == "charity" ? "报名需要 ¥2,000" : "请预留输了之后的 ¥2,000 夜宵费用";
         }
@@ -223,9 +221,9 @@ namespace PCShopSell.Core.Session
             if (kind == "charity" && !Ledger.TryDebit(Clock.Today, "慈善赛报名", Money.FromYuan(CharityRaceFee), "车友慈善赛")) return false;
             var track = RaceTracks.Get(booking.TrackId, City);
             var opponent = new RaceOpponent { PersonId = booking.PersonId, Motor = MotorCatalog.Performance(vehicle), Pace = .88 };
-            var opponents = kind == "rider" ? new[] { opponent } : BuildRaceOpponents(track, MotorCatalog.Get(vehicle.ModelId));
+            var opponents = kind == "rider" ? new[] { opponent } : BuildRaceOpponents(track, MotorCatalog.Get(vehicle.ModelId), booking.PersonId);
             _drivingEventBooking = booking;
-            StartDriving(new RaceSimulation(track, MotorCatalog.Performance(vehicle), false, RaceMeeting.None, opponents, kind == "rider" ? 1 : (int?)null), vehicle.Id);
+            StartDriving(new RaceSimulation(track, MotorCatalog.Performance(vehicle), false, RaceMeeting.None, opponents), vehicle.Id);
             ApplyEventBatteryFailure(vehicle);
             return true;
         }
@@ -442,9 +440,9 @@ namespace PCShopSell.Core.Session
         private void AddRacingBatchSchedule(List<ScheduleEntry> entries)
         {
             foreach (var b in EventRaceBookings)
-                entries.Add(new ScheduleEntry { Minute = (long)b.Day * 1440 + 540, Day = DescribeDay(b.Day), TimeText = "09:00–18:00",
+                entries.Add(new ScheduleEntry { Minute = RaceDayStart(b.Day), Day = DescribeDay(b.Day), HasTime = false,
                     Kind = "race_invite", DestinationId = b.TrackId,
-                    Text = (b.Kind == "wet" ? "人工洒水湿地训练 · ¥1,000" : b.Kind == "rider" ? "吴磊一圈挑战 · 输家请 ¥2,000 夜宵" : "慈善赛 · 报名 ¥2,000，无奖金") + " · " + RaceTracks.Get(b.TrackId).Name });
+                    Text = (b.Kind == "wet" ? "人工洒水湿地训练 · ¥1,000" : b.Kind == "rider" ? "吴磊两圈挑战 · 输家请 ¥2,000 夜宵" : "慈善赛 · 报名 ¥2,000，无奖金") + " · " + RaceTracks.Get(b.TrackId).Name });
         }
         private void SaveRacingBatchEvents(SaveData data)
         {

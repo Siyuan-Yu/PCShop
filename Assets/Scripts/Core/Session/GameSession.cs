@@ -178,6 +178,8 @@ namespace PCShopSell.Core.Session
         {
             _manualMoving = false;
             if (Racing || IsGameOver || realSeconds <= 0 || double.IsNaN(realSeconds)) return 0;
+            if (CurrentPlace != null && !_sleeping && !IsWorking && PendingEvent == null
+                && !RequiredTutorialPaused && TryCompleteAutomaticMeal()) return 0;
             if (ManualActivityClockPaused)
             {
                 TickManualActivity(realSeconds);
@@ -345,7 +347,7 @@ namespace PCShopSell.Core.Session
         public string OpeningHoursText(Place p)
         {
             if (p == null) return null;
-            var track=RaceTracks.Get(p.Id);if(track!=null)return track.OpeningHours;
+            var track=RaceTracks.Get(p.Id);if(track!=null)return CurrentRaceMeeting == RaceMeeting.None ? track.OpeningHours : "比赛日全天开放";
             if (SupplierClosesOnWeekend(p)) return $"周一至周五 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)}";
             if(p.ExplicitEntrance&&p.OpenMinute==0&&p.CloseMinute==1440)return "24小时";
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return $"每天 {Hm(p.OpenMinute)}–{Hm(p.CloseMinute)}";
@@ -367,7 +369,7 @@ namespace PCShopSell.Core.Session
             if (p == null) return false;
             if (p.Business == BankBusiness) return BankTellerOnDuty(p) != null;
             if(NeighborhoodVenueFits(p,Clock.Now.TotalMinutes,1))return true;
-            var track=RaceTracks.Get(p.Id);if(track!=null)return RacingUnlocked&&track.IsOpenAt(Clock.MinuteOfDay);
+            var track=RaceTracks.Get(p.Id);if(track!=null)return RacingUnlocked && (CurrentRaceMeeting != RaceMeeting.None || track.IsOpenAt(Clock.MinuteOfDay));
             if (RacingGarageEntryBlocker(p.Id) != null) return false;
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
@@ -559,8 +561,8 @@ namespace PCShopSell.Core.Session
             AccrueBankInterest();
             CollectDueAppLoans();
             DecayRelations();
-            CollectWeeklyShopRent(today);
             ChargeResidentialRent(today);
+            CollectWeeklyShopRent(today);
             if (today.IsMonthStart)
             {
                 if (HomeUtilities.IsPositive) ChargeRecordedBill("utilities", Home.Id, 0, "home:utilities:" + today.TotalDays, HomeUtilities, "水电", "住处固定水电",new LedgerAttribution(LedgerBusinessKind.Personal,sourceEventId:"home:utilities:"+today.TotalDays,transactionKind:"固定水电"));

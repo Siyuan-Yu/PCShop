@@ -12,6 +12,10 @@ namespace PCShopSell.Core.Session
         internal const int IntelligenceThreshold = 50;
         internal const int RelationThreshold = 35;
 
+        internal static string AttributeHint(params (string Name, double Current)[] attributes) =>
+            "看" + string.Join("、", attributes.Select(attribute => attribute.Name))
+            + "（当前" + string.Join("、", attributes.Select(attribute => $"{attribute.Name} {attribute.Current:0.#}")) + "）";
+
         internal static double ProgressiveChance(double chance, params (double Score, double Threshold, double PerPoint)[] stats)
         {
             foreach (var stat in stats)

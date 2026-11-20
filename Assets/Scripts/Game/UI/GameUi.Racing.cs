@@ -116,7 +116,14 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(actions,"回收出售 · ¥"+sale.ToString("N0"),()=>ConfirmBusiness("出售车辆",model.Name+"将从车库移除，收到 ¥"+sale.ToString("N0"),()=>{S.SellMotor(v.Id);w.Rebuild();}),16,Ui.Warn,S.CurrentPlace?.Kind==PlaceKind.Dealer&&S.MotorAvailable(v)),-1,36,1);
                 }
                 if(S.Garage.Count==0)Para(w.Content,"还没有车辆，先到顺丰车行购买第一辆小电驴。",19);
-                foreach(var k in new[]{VehicleKind.EBike,VehicleKind.Tricycle})if(S.ImpoundedVehicleCount(k)>0){var kind=k;Ui.Size(Ui.Button(w.Content,"赎回"+Vehicles.Get(k).Name+" · "+PoliceSystem.RedeemFee,()=>{S.RedeemVehicle(kind);w.Rebuild();},17),-1,38);}
+                foreach (var vehicle in Vehicles.All)
+                {
+                    var kind = vehicle.Kind;
+                    if (S.VehicleReturnHint(kind) is not string hint) continue;
+                    Para(w.Content, hint, 17, Ui.Accent);
+                    Ui.Size(Ui.Button(w.Content, $"赎回{vehicle.Name} · {PoliceSystem.RedeemFee}",
+                        () => { S.RedeemVehicle(kind); w.Rebuild(); }, 17), -1, 38);
+                }
             });
         }
         public void OpenRacingDestinations()
@@ -141,7 +148,7 @@ namespace PCShopSell.Game.UI
                 Para(w.Content,S.RaceMeetingSummary(),17,Ui.Accent);
                 foreach(var track in RaceTracks.All.Where(track => !GameSession.FirstChapterTrial || track.Tier <= S.DistrictAccessTier))
                 {
-                    var t=track;var card=BusinessCard(w.Content,t.Name);Line(card,t.OpeningHours,16,Ui.Dim);Line(card,$"{GameSession.DistrictName(t.Tier)}进度 · 正赛需 {t.RequiredWins} 胜 · {t.Laps} 圈 · 练习 ¥{RacingSchedule.PracticeFee} 起",17);
+                    var t=track;var card=BusinessCard(w.Content,t.Name);Line(card,"比赛日全天开放 · 自由练习 " + t.OpeningHours,16,Ui.Dim);Line(card,$"{GameSession.DistrictName(t.Tier)}进度 · 正赛需 {t.RequiredWins} 胜 · 每场 {t.Laps} 圈 · 练习 ¥{RacingSchedule.PracticeFee}/场",17);
                     Ui.Size(Ui.Button(card,"前往赛场",()=>{CloseWindowSilently(w);S.BeginCityTravel(t.Id);},18,Ui.ButtonHot,S.DistrictAccessTier>=t.Tier),-1,38);
                 }
             });
@@ -167,7 +174,7 @@ namespace PCShopSell.Game.UI
                     break;
                 case RacingIntroStep.Drive:
                     destination = GameSession.StarterRaceTrackId;
-                    instruction = $"在城郊赛车报名点选入库车辆，按圈购买练习（¥{RacingSchedule.PracticeFee} 起）或参加正式比赛。";
+                    instruction = $"在城郊赛车报名点选择入库车辆，报名练习或参加正式比赛，每场 {RacingSchedule.SessionLaps} 圈。";
                     break;
                 default: return;
             }
@@ -203,8 +210,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenRaceReception(Place place)
         {
-            bool raceToday = S.Clock.MinuteOfDay < RacingSchedule.MeetCloseMinute
-                && S.RaceRegistrationAt(place.Id, S.Clock.Today) is { Started: false };
+            bool raceToday = S.RaceRegistrationAt(place.Id, S.Clock.Today) is { Started: false };
             var view = new RaceReceptionView { Tab = raceToday ? RaceReceptionTab.Registration : RaceReceptionTab.Practice };
             OpenPlaceWindow(place, (w, p) => BuildRaceReception(w, RaceTracks.Get(p.Id), view), 1430, 810);
         }
@@ -238,15 +244,14 @@ namespace PCShopSell.Game.UI
 
             var days = Enumerable.Range(0, 7).Select(today.AddDays).Where(d => RacingSchedule.On(d) != RaceMeeting.None).ToArray();
             if (!days.Any(d => d.TotalDays == view.SelectedDay))
-                view.SelectedDay = days.First(d => d != today || S.Clock.MinuteOfDay < RacingSchedule.MeetCloseMinute).TotalDays;
+                view.SelectedDay = days[0].TotalDays;
             var date = new GameDate(view.SelectedDay.Value);
             var schedule = RaceReceptionColumn(columns, "未来 7 天赛程", 258);
             var scheduleBody = RaceReceptionBody(schedule);
             foreach (var day in days)
             {
                 var entry = S.RaceRegistrationAt(track.Id, day);
-                bool ended = day == today && S.Clock.MinuteOfDay >= RacingSchedule.MeetCloseMinute;
-                string status = entry?.Started == true ? "已参赛" : ended ? "已结束" : entry != null ? "已报名" : "可报名";
+                string status = entry?.Started == true ? "已参赛" : entry != null ? "已报名" : "可报名";
                 string label = (day == today ? "今天 · " : "") + RaceDateText(day) + "\n"
                     + RacingSchedule.Name(RacingSchedule.On(day)) + "  ·  " + status;
                 var button = Ui.Size(Ui.Button(scheduleBody, label, () =>
@@ -262,21 +267,20 @@ namespace PCShopSell.Game.UI
             var detail = RaceReceptionColumn(columns, "比赛信息", 0, 1);
             var body = RaceReceptionBody(detail);
             var registration = S.RaceRegistrationAt(track.Id, date);
-            bool canStart = registration != null && !registration.Started && date == today
-                && S.Clock.MinuteOfDay >= RacingSchedule.MeetOpenMinute && S.Clock.MinuteOfDay < RacingSchedule.MeetCloseMinute;
+            bool canStart = registration != null && !registration.Started && date == today;
             if (view.ChoosingVehicle && canStart)
                 BuildRaceVehicleSelection(body, track, view, bookings, collectorTrial, w);
             else
                 BuildRaceMeetingDetail(body, track, date, registration, canStart, view, w);
 
-            var next = days.Where(d => d > today || S.Clock.MinuteOfDay < RacingSchedule.MeetCloseMinute)
+            var next = days
                 .Select(d => S.RaceRegistrationAt(track.Id, d)).FirstOrDefault(r => r != null && !r.Started);
             if (next != null)
             {
                 var bookedDay = new GameDate(next.Day);
                 var footer = Ui.Row(w.Content, 39, 10);
                 Ui.Size(Ui.Label(footer, "已加入日程", 17, TextAnchor.MiddleLeft, Ui.Good), 94);
-                Ui.Size(Ui.Label(footer, $"{RaceDateText(bookedDay)} · {RacingSchedule.MeetHours} · {RacingSchedule.Name(RacingSchedule.On(bookedDay))}", 16, TextAnchor.MiddleLeft), 0, 39, 1);
+                Ui.Size(Ui.Label(footer, $"{RaceDateText(bookedDay)} · 全天 · {RacingSchedule.Name(RacingSchedule.On(bookedDay))}", 16, TextAnchor.MiddleLeft), 0, 39, 1);
                 Ui.Size(Ui.Button(footer, "查看日程", () => OpenCalendar(next.Day), 16), 106, 34);
             }
 
@@ -320,7 +324,7 @@ namespace PCShopSell.Game.UI
             var portrait = Ui.Panel(card, "RaceHostPortrait", Ui.PanelBg2).rectTransform;
             Ui.Size(portrait, -1, 154);
             FitPortrait(portrait, track.Npc, 3);
-            bool here = S.Clock.MinuteOfDay >= RacingSchedule.MeetOpenMinute && S.Clock.MinuteOfDay < RacingSchedule.MeetCloseMinute
+            bool here = S.Clock.MinuteOfDay >= RacingSchedule.ReceptionOpenMinute && S.Clock.MinuteOfDay < RacingSchedule.ReceptionCloseMinute
                 && S.CitySamePlace(track.Npc);
             Ui.Label(card, npc.Name, 21, TextAnchor.MiddleCenter).fontStyle = FontStyle.Bold;
             Ui.Label(card, npc.Role, 15, TextAnchor.MiddleCenter, Ui.Dim);
@@ -330,7 +334,7 @@ namespace PCShopSell.Game.UI
                 if (S.MeetRacer(track.Id)) OpenPersonDialogue(track.Npc, parent: w);
                 else Toast("接待车友暂不在场。");
             }, 17, interactable: here), -1, 38);
-            Ui.Label(card, "接待 " + RacingSchedule.MeetHours, 14, TextAnchor.MiddleCenter, Ui.Dim);
+            Ui.Label(card, "接待 " + RacingSchedule.ReceptionHours, 14, TextAnchor.MiddleCenter, Ui.Dim);
             if (S.IsMet(track.Npc)) Ui.Label(card, $"熟悉度 {S.Relation(track.Npc)}", 15, TextAnchor.MiddleCenter, Ui.Good);
         }
 
@@ -339,23 +343,22 @@ namespace PCShopSell.Game.UI
         {
             var meeting = RacingSchedule.On(date);
             bool today = date == S.Clock.Today;
-            bool ended = today && S.Clock.MinuteOfDay >= RacingSchedule.MeetCloseMinute;
             var header = Ui.Row(parent, 59, 12);
-            Metric(0, RacingSchedule.Name(meeting), $"{RaceDateText(date)} · {RacingSchedule.MeetHours} · {track.Laps} 圈", Ui.TextColor);
+            Metric(0, RacingSchedule.Name(meeting), $"{RaceDateText(date)} · 全天 · {track.Laps} 圈", Ui.TextColor);
             Metric(126, "参赛费", $"¥{RacingSchedule.Fee(meeting):N0}", Ui.TextColor);
             Metric(138, "冠军奖金", $"¥{RacingSchedule.ChampionPrize(meeting):N0}", Ui.Good);
 
             var invited = S.RaceInvitations.Where(i => i.TrackId == track.Id && i.Day == date.TotalDays).Select(i => i.PersonId).ToArray();
-            var arrived = today && !ended ? S.RaceParticipantIds(track.Id) : Array.Empty<string>();
+            var arrived = today ? S.RaceParticipantIds(track.Id) : Array.Empty<string>();
             var people = arrived.Concat(invited).Distinct().ToArray();
             var heading = Ui.Row(parent, 35, 8);
             Ui.Size(Ui.Label(heading, today ? "参赛车友" : "已约同行", 21, TextAnchor.MiddleLeft), 0, 35, 1).fontStyle = FontStyle.Bold;
-            string rosterStatus = today && !ended ? $"{arrived.Count} 人已到场" : !today ? $"{invited.Length} 人已确认" : "场次已结束";
+            string rosterStatus = today ? $"{arrived.Count} 人已到场" : $"{invited.Length} 人已确认";
             Ui.Size(Ui.Label(heading, rosterStatus, 16, TextAnchor.MiddleRight, Ui.Good), 150, 35);
             var list = Ui.Scroll(parent);
             Ui.Size((RectTransform)list.parent.parent, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
             if (people.Length == 0) Line(list, !today ? "比赛日显示到场车友，可从人物交谈里邀请同行。"
-                : ended ? "本场已经结束。" : "车友尚未到场。", 17, Ui.Dim);
+                : "车友尚未到场，开赛时由赛场安排对手。", 17, Ui.Dim);
             int perRow = people.Length > 8 ? 5 : 4;
             for (int first = 0; first < people.Length; first += perRow)
             {
@@ -367,7 +370,6 @@ namespace PCShopSell.Game.UI
             }
 
             if (registration?.Started == true) { Line(parent, "你已参加本场比赛", 17, Ui.Good); return; }
-            if (ended) { Line(parent, "本场比赛已结束", 17, Ui.Dim); return; }
             var actions = Ui.Row(parent, 43, 8);
             if (registration == null)
             {
@@ -380,7 +382,7 @@ namespace PCShopSell.Game.UI
                 }, 19, Ui.ButtonHot, reason == null), 190, 42);
                 return;
             }
-            Ui.Size(Ui.Label(actions, canStart ? "开赛前选择本区车库的车辆" : $"已报名 · 比赛当天 {RacingSchedule.MeetHours} 到场", 16, TextAnchor.MiddleLeft, Ui.Dim), 0, 43, 1);
+            Ui.Size(Ui.Label(actions, canStart ? "开赛前选择本区车库的车辆" : "已报名 · 比赛当天全天可到场", 16, TextAnchor.MiddleLeft, Ui.Dim), 0, 43, 1);
             Ui.Size(Ui.Button(actions, "取消报名", () =>
             {
                 if (S.CancelRaceRegistration(track.Id, date)) _upcomingScheduleDirty = true;
@@ -445,7 +447,7 @@ namespace PCShopSell.Game.UI
                 var actions = Ui.Row(w.Content, 40, 8);
                 if (arrived)
                     Ui.Size(Ui.Button(actions, "交谈", () => OpenPersonDialogue(id, parent: w, onClosed: parent.Rebuild), 17), 108, 38);
-                if (invited && date.TotalDays * 1440L + RacingSchedule.MeetCloseMinute > S.Clock.Now.TotalMinutes)
+                if (invited && date >= S.Clock.Today)
                     Ui.Size(Ui.Button(actions, "取消邀请", () =>
                     {
                         if (S.CancelRaceInvitation(id, track.Id, date.TotalDays)) { w.Close(); parent.Rebuild(); }
@@ -495,7 +497,7 @@ namespace PCShopSell.Game.UI
                 if (collectorTrial)
                 {
                     string reason = S.CollectorTrialBlocker;
-                    Ui.Size(Ui.Button(list, "试驾顾若宁的收藏车 · 1 圈", () =>
+                    Ui.Size(Ui.Button(list, $"试驾顾若宁的收藏车 · {track.Laps} 圈", () =>
                     { if (S.StartCollectorTrial()) CloseWindowSilently(w); }, 18, Ui.ButtonBg, reason == null), -1, 44);
                     if (reason != null) Line(list, reason, 15, Ui.Dim);
                 }
@@ -504,7 +506,8 @@ namespace PCShopSell.Game.UI
                     string kind = booking.Kind;
                     string reason = S.EventRaceStartBlocker(kind, _raceSelection);
                     string title = kind == "wet" ? "湿地训练 · ¥1,000 · 抓地 60%"
-                        : kind == "rider" ? "吴磊一圈挑战 · 输家请 ¥2,000 夜宵" : "慈善赛 · ¥2,000 · 无奖金";
+                        : kind == "rider" ? "吴磊挑战 · 输家请 ¥2,000 夜宵" : "慈善赛 · ¥2,000 · 无奖金";
+                    title += $" · {track.Laps} 圈";
                     Ui.Size(Ui.Button(list, title, () =>
                     { if (S.StartEventRace(kind, _raceSelection)) CloseWindowSilently(w); }, 18, Ui.ButtonBg, reason == null), -1, 44);
                     if (reason != null) Line(list, reason, 15, Ui.Dim);
@@ -516,29 +519,17 @@ namespace PCShopSell.Game.UI
             string recordKey = $"{track.Id}:{_raceMotorClass}:" + (practice ? "practice-lap" : "race");
             var record = S.RacingRecords.FirstOrDefault(r => r.Key == recordKey);
             if (record?.BestOnCurrentCourse == true) Line(list, $"{(practice ? "最快单圈" : "个人最佳")} · {record.BestSeconds:0.00} 秒", 16, Ui.Good);
-            if (practice)
-            {
-                Line(parent, "购买练习圈数 · 驾驶时游戏时钟暂停，结束后按完成圈数结算时间", 18, Ui.Accent);
-                var passes = Ui.Row(parent, 64, 8);
-                foreach (var pass in RacingSchedule.PracticePasses)
-                {
-                    string reason = S.RacePracticePassBlocker(track.Id, _raceSelection, pass.Laps);
-                    int hours = pass.Laps * CityLifeCatalog.ManualAttemptMinutes / 60;
-                    var button = Ui.Size(Ui.Button(passes, $"<b>{pass.Laps} 圈 · ¥{pass.Price:N0}</b>\n{reason ?? $"结算 {hours} 小时 · 购买并驾驶"}", () =>
-                    {
-                        if (S.StartRacePracticePass(track.Id, _raceSelection, pass.Laps)) CloseWindowSilently(w);
-                        else w.Rebuild();
-                    }, 16, Ui.ButtonBg, reason == null), 0, 64, 1);
-                    button.name = $"RacePracticePass_{pass.Laps}laps";
-                }
-                return;
-            }
-            string blocker = S.RaceBlocker(track.Id, _raceSelection, false);
+            string blocker = S.RaceBlocker(track.Id, _raceSelection, practice);
             if (blocker != null) Para(parent, blocker, 16, Ui.Warn);
-            int fee = RacingSchedule.Fee(S.CurrentRaceMeeting);
-            string start = $"开始比赛 · ¥{fee:N0}";
+            if (practice)
+                Line(parent, $"驾驶时时钟暂停，结束后每完成一圈结算 {CityLifeCatalog.ManualAttemptMinutes} 游戏分钟", 16, Ui.Dim);
+            int fee = practice ? RacingSchedule.PracticeFee : RacingSchedule.Fee(S.CurrentRaceMeeting);
+            string start = $"{(practice ? "报名练习" : "开始比赛")} · {track.Laps} 圈 · ¥{fee:N0}";
             var action = Ui.Size(Ui.Button(parent, start, () =>
-            { if (S.StartRace(track.Id, _raceSelection, false)) CloseWindowSilently(w); }, 19, Ui.ButtonHot, blocker == null), -1, 44);
+            {
+                if (S.StartRace(track.Id, _raceSelection, practice)) CloseWindowSilently(w);
+                else w.Rebuild();
+            }, 19, Ui.ButtonHot, blocker == null), -1, 44);
             action.Tip("固定 1× · W/S 加速或减速 · A/D 转向 · Shift 手刹 · 空格暂停 · R 复位罚 5 秒。");
         }
 
@@ -572,14 +563,14 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Choice(w.Content, tracks.Select(t => t.Name), trackIndex, index =>
             { selectTrack(tracks[index].Id); w.Rebuild(); }), -1, 40);
             var day = S.Clock.Today;
-            if (S.CurrentRaceMeeting == RaceMeeting.None || S.Clock.MinuteOfDay >= RacingSchedule.MeetCloseMinute)
+            if (S.CurrentRaceMeeting == RaceMeeting.None)
                 day = RacingSchedule.Next(day);
             var bookings = S.RaceInvitations;
             for (int i = 0; i < 3; i++, day = RacingSchedule.Next(day))
             {
                 GameDate date = day;
                 var card = BusinessCard(w.Content, date + " · " + RacingSchedule.Name(RacingSchedule.On(date)));
-                Line(card, "09:00—18:00 · " + track.Name, 16, Ui.Dim);
+                Line(card, "全天 · " + track.Name, 16, Ui.Dim);
                 bool booked = bookings.Any(invite => invite.PersonId == person.Id && invite.TrackId == track.Id && invite.Day == date.TotalDays);
                 if (booked)
                 {
@@ -697,7 +688,7 @@ namespace PCShopSell.Game.UI
                     if (Math.Abs(race.RivalProgress[i] - race.Progress) < Math.Abs(race.RivalProgress[closest] - race.Progress))
                         closest = i;
                 var person = S.CityPerson(race.Opponents[closest].PersonId);
-                _drivingNearby.text = person == null ? "" : "最近车友 " + person.Name;
+                _drivingNearby.text = "最近车手 " + (person?.Name ?? "赛场车手");
             }
             _drivingSpeed.text = $"{race.DisplayKph:0} <size=19>km/h</size>";
             _drivingThrottle.rectTransform.anchorMax = new Vector2((float)race.ThrottleInput, 1);
@@ -736,13 +727,8 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(footer, "回到赛场接待处", () =>
                 { CloseWindowSilently(w); if (S.CurrentPlace != null) OnEnteredPlace(S.CurrentPlace); }, 17, Ui.ButtonHot), 190, 40);
 
-                // Fit the window to the full result, including any wrapped event notes.
-                LayoutRebuilder.ForceRebuildLayoutImmediate(w.Content);
-                var panel = (RectTransform)w.Content.parent;
-                panel.sizeDelta = new Vector2(panel.sizeDelta.x, 50 + LayoutUtility.GetPreferredHeight(w.Content));
-                w.Fitter.Fit();
                 PlayUiReveal(reveal);
-            }, scrollContent: false);
+            }, fitContent: true);
         }
 
         private void BuildRaceSettlement(Transform content, RaceSettlement result, UiReveal reveal)
@@ -787,7 +773,7 @@ namespace PCShopSell.Game.UI
                 }
                 Color color = entry.Player ? Ui.Accent : Ui.TextColor;
                 AddRank(row, entry.Place.ToString(), color);
-                if (entry.Player) Ui.Size(Ui.Rect(row, "PortraitSpace"), 28);
+                if (entry.Player || string.IsNullOrEmpty(entry.PersonId)) Ui.Size(Ui.Rect(row, "PortraitSpace"), 28);
                 else PortraitThumb(row, entry.PersonId, 28, null);
                 int delta = !entry.Player && changes.TryGetValue(entry.PersonId, out var change) ? change.After - change.Before : 0;
                 AddCells(row, entry.Name + (entry.Invited ? " · 受邀" : ""), entry.Vehicle,

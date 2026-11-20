@@ -101,7 +101,7 @@ namespace PCShopSell.Core.Session
                 var check = _inspectionFollowups.First(x => ShopAt(x.Key) != null); var shop = ShopAt(check.Key);
                 bool fitted = IsSpecialBusiness(shop) ? SpecialFitGap(shop) == null : !shop.Sim.NotFitted;
                 return ShopEventScene(template, shop, ShopTitle(shop) + "此前有整改记录，将于" + new GameDate(check.Value) + "复查。按实际设施和进货单据核验。",
-                    Choose("查看待整改项", _ => "设施：" + (fitted ? "已配齐" : "尚未配齐") + "；进货单据：" + (shop.Sim.Stock.IsEmpty || HasPurchaseReceipt(shop) ? "无需补充" : "待补充") + "。原复查时间不变。"),
+                    ViewEventDetails("查看待整改项", "设施：" + (fitted ? "已配齐" : "尚未配齐") + "；进货单据：" + (shop.Sim.Stock.IsEmpty || HasPurchaseReceipt(shop) ? "无需补充" : "待补充") + "。原复查时间不变。"),
                     Choose("按原定日期复查", _ => "沿用原复查记录，不重复结算。"));
             }
             if (n == 95)
@@ -109,7 +109,9 @@ namespace PCShopSell.Core.Session
                 var shop = ShopBatchShop(); var part = PartCatalog.Get("gpu1"); var price = OnlinePrice(Online1788.Shopping, part);
                 string Buy(int count) => PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (part, count) }, shop) ? "已按实时采购价下单，次日到货；涨价传闻不保证收益。" : "未下单，请检查现金、容量和采购条件。";
                 return ShopEventScene(template, shop, "听说" + part.Name + "可能涨价。当前网购单价" + price + "，另计实际运费；传闻没有保本承诺。",
-                    Choose("少量试单 · 1件", _ => Buy(1)), Choose("备货 · 3件", _ => Buy(3)), Choose("自选采购数量", _ => { Flags.Add("shop-event:procure:" + shop.Place.Id); return "已加入经营待办，打开采购后自行选数量并确认付款。"; }), Choose("先不囤货", _ => "未采购，也没有额外收益。"));
+                    Choose("少量试单 · 1件", _ => Buy(1)), Choose("备货 · 3件", _ => Buy(3)),
+                    new EventChoice { Text = "自选采购数量", OnlinePurchase = (part, shop) },
+                    Choose("先不囤货", _ => "未采购，也没有额外收益。"));
             }
             if (n == 96)
             {
@@ -140,7 +142,8 @@ namespace PCShopSell.Core.Session
             string nextDue = AppLoans.Where(l => !l.Repaid).OrderBy(l => l.DueDay).Select(l => new GameDate(l.DueDay).ToString()).FirstOrDefault() ?? "无待还借款";
             return EventScene(template, "银行客户经理邀请你了解柜台业务。存款" + BankDeposit + "，借款待还" + AppLoanDebt + "，最近到期：" + nextDue + "。存款月息0.3%。",
                 Choose("预约柜台咨询 · 30分钟", _ => { _shopEventTasks.Add(new ShopEventTask { Id = "bank-advice:" + (++_shopEventSequence), Kind = "bank", ShopId = BankPlaceId, Remaining = 30, Status = "待到柜台咨询" }); return "已加入经营待办，到银行营业时开始，不自动存款或借款。"; }),
-                Choose("只看业务说明", _ => "存取款和借还款请在银行柜台自行选择，不自动购买理财。"), Choose("暂不需要", _ => "没有资金或属性变化。"));
+                ViewEventDetails("查看业务说明", "银行柜台可办理存款、取款、借款和还款，存款按月结息。预约咨询后，可在营业时到柜台办理。"),
+                Choose("暂不需要", _ => "没有资金或属性变化。"));
         }
         private EventDef BindFlashSale(EventDef template)
         {

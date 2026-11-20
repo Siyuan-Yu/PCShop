@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
@@ -231,15 +232,12 @@ namespace PCShopSell.Core.Session
             string name = Vehicles.Get(caught).Name;
             Ledger.ForceDebit(Clock.Today, "罚款", PoliceSystem.Fine, name + "违规上路");
             string body = $"{name}不能在城里上路，罚款 {PoliceSystem.Fine}。";
-            if (Random.Chance(PoliceSystem.ImpoundChance))
+            if (Random.Chance(PoliceSystem.ImpoundChance) && ImpoundVehicle(caught))
             {
-                ImpoundVehicle(caught);
                 Vehicle = VehicleKind.Walk;
                 ApplyCargoLimit();
                 if (Trip != null) Trip.ChangeVehicle(Vehicles.Walk);
-                body += caught == VehicleKind.EBike
-                    ? $"\n{name}被扣了！扣押满 {ScooterImpoundDays} 天会免费自动归还，也可提前去车行交 {PoliceSystem.RedeemFee} 领回。"
-                    : $"\n{name}被扣了！货只能自己扛（走得慢）。去车行交 {PoliceSystem.RedeemFee} 可以赎回。";
+                body += $"\n这台{name}已被扣押，满 {VehicleImpoundDays} 天免费归还。也可提前去车行交 {PoliceSystem.RedeemFee} 领回。";
             }
             Show("被交警抓到了", body);
         }
@@ -280,55 +278,53 @@ namespace PCShopSell.Core.Session
             return v!=null&&SellMotor(v.Id);
         }
 
-        public const int ScooterImpoundDays = 7;
+        public const int VehicleImpoundDays = 3;
 
-        public string ScooterReturnHint
+        public string VehicleReturnHint(VehicleKind kind)
         {
-            get
-            {
-                var scooters = _garage.Where(v => v.Impounded && MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike).ToArray();
-                if (scooters.Length == 0) return null;
-                long minutes = Math.Max(0, scooters.Min(v => v.ImpoundReleaseAt) - Clock.Now.TotalMinutes);
-                long hours = (minutes + 59) / 60;
-                string remaining = hours >= 24 ? $"{hours / 24} 天 {hours % 24} 小时" : hours > 0 ? $"{hours} 小时" : "片刻";
-                return (scooters.Length > 1 ? "最近一台" : "小电驴") + $"还需 {remaining} 自动归还，也可到车行提前领回。";
-            }
+            var impounded = _garage.Where(v => v.Impounded && MotorCatalog.Get(v.ModelId).Kind == kind).ToArray();
+            if (impounded.Length == 0) return null;
+            long minutes = Math.Max(0, impounded.Min(v => v.ImpoundReleaseAt) - Clock.Now.TotalMinutes);
+            long hours = (minutes + 59) / 60;
+            string remaining = hours >= 24 ? $"{hours / 24} 天 {hours % 24} 小时" : hours > 0 ? $"{hours} 小时" : "片刻";
+            return (impounded.Length > 1 ? "最早归还的一台" : Vehicles.Get(kind).Name)
+                + $"还需 {remaining} 自动归还，也可到车行提前领回。";
         }
 
         private void UpdateImpoundedVehicles(long now)
         {
             foreach (var motor in _garage.Where(v => v.Impounded && v.ImpoundReleaseAt > 0
-                && v.ImpoundReleaseAt <= now && MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike))
+                && v.ImpoundReleaseAt <= now))
             {
                 motor.Impounded = false;
                 motor.ImpoundReleaseAt = 0;
-                QueueCustomerFeedback("小电驴已归还", MotorCatalog.Get(motor.ModelId).Name
-                    + $"的 {ScooterImpoundDays} 天扣押期已满，车辆已免费归还。"
-                    + (motor.Commuter ? "\n点击左下角「小电驴」即可切换出行方式。" : "\n车辆已回到原车库，可到车库查看或设为通勤车。"));
+                var model = MotorCatalog.Get(motor.ModelId);
+                QueueCustomerFeedback("车辆已归还", $"{model.Name}的 {VehicleImpoundDays} 天扣押期已满，车辆已免费归还。"
+                    + (motor.Commuter ? $"\n点击左下角「{Vehicles.Get(model.Kind).Name}」即可切换出行方式。" : ""));
             }
         }
 
-        private void ImpoundVehicle(VehicleKind kind,string vehicleId=null)
+        private bool ImpoundVehicle(VehicleKind kind, string vehicleId = null)
         {
-
-            var motor=vehicleId==null?_garage.FirstOrDefault(v=>v.Commuter&&MotorCatalog.Get(v.ModelId).Kind==kind):_garage.Find(v=>v.Id==vehicleId);
-            if(motor==null||motor.Impounded)return;
-            motor.Impounded=true;
-            motor.ImpoundReleaseAt = kind == VehicleKind.EBike
-                ? Clock.Now.TotalMinutes + ScooterImpoundDays * 1440L : 0;
-
+            var motor = _garage.FirstOrDefault(v => MotorCatalog.Get(v.ModelId).Kind == kind
+                && (vehicleId == null ? v.Commuter : v.Id == vehicleId));
+            if (motor == null || motor.Impounded) return false;
+            motor.Impounded = true;
+            motor.ImpoundReleaseAt = Clock.Now.TotalMinutes + VehicleImpoundDays * GameTimestamp.MinutesPerDay;
+            return true;
         }
 
         public bool RedeemVehicle(VehicleKind kind)
         {
-            if (ImpoundedVehicleCount(kind) <= 0) return false;
+            var motor = _garage.Where(v => v.Impounded && MotorCatalog.Get(v.ModelId).Kind == kind)
+                .OrderBy(v => v.ImpoundReleaseAt).FirstOrDefault();
+            if (motor == null) return false;
             if (CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer) return Fail("要在车行办理。");
-            string name = Vehicles.Get(kind).Name;
+            string name = MotorCatalog.Get(motor.ModelId).Name;
             if (!Ledger.TryDebit(Clock.Today, "罚款", PoliceSystem.RedeemFee, "赎回" + name)) return Fail("钱不够赎车。");
 
-            var motor=_garage.Where(v=>v.Impounded&&MotorCatalog.Get(v.ModelId).Kind==kind)
-                .OrderBy(v => v.ImpoundReleaseAt).FirstOrDefault();
-            if (motor != null) { motor.Impounded = false; motor.ImpoundReleaseAt = 0; }
+            motor.Impounded = false;
+            motor.ImpoundReleaseAt = 0;
             Say(name + "赎回来了。");
             return true;
         }

@@ -9,18 +9,20 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private const KeyCode QuestHotkey = KeyCode.R;
+        private const KeyCode StockHotkey = KeyCode.J;
+        private const KeyCode RacingHotkey = KeyCode.T;
 
         private RectTransform _hudTopRow;
         private RectTransform _hudFunctionBar;
         private Button _hudFoldButton;
         private bool _hudFunctionsCollapsed;
-        private bool HudFunctionsVisible => !_hudFunctionsCollapsed
-            || (S?.HasSmartphone == true && S.SecuritiesTutorialPaused && !AnyModalOpen);
+        private bool HudFunctionsVisible => !_hudFunctionsCollapsed;
         private float HudFunctionOffset => HudFunctionsVisible ? 54 : 0;
         private float _appliedHudFunctionOffset = -1;
         private RectTransform _appliedShopDock, _appliedHomeDock;
         private Button _brandButton;
         private Button _stockMarketButton;
+        private Button _racingButton;
         private float _fittedHudWidth;
         private Button _pauseButton;
         private Text _pauseLabel;
@@ -73,14 +75,14 @@ namespace PCShopSell.Game.UI
         private void BuildHudSystemControls(Transform parent)
         {
             _hudFunctionsCollapsed = PlayerPrefs.GetInt("petshop:hud-functions-collapsed", 0) != 0;
-            _hudFoldButton = Ui.Size(Ui.Button(parent, "收起功能栏 ▴", ToggleHudFunctions, 16), 142);
+            _hudFoldButton = Ui.Size(Ui.Button(parent, "收起功能栏 ▴  Tab", ToggleHudFunctions, 16), 166);
             _hudFoldButton.name = "HudFoldFunctions";
             _hudFoldButton.Tip("Tab · 收起或展开功能栏");
             _noticeButtonText = Ui.Size(HudPanelButton(parent, "通知", NoticeHotkey, OpenNoticeHistory,
-                "查看本次会话的通知记录。"), 94, -1, 0).GetComponentInChildren<Text>();
+                "查看本次会话的通知记录。"), 108, -1, 0).GetComponentInChildren<Text>();
             _noticeButtonText.transform.parent.name = "HudNotifications";
             Ui.Size(HudPanelButton(parent, "菜单", KeyCode.Escape, OpenSystemPanel,
-                "存档、读档、重新开始和音效设置。"), 76, -1, 0).name = "HudMenu";
+                "存档、读档、重新开始和音效设置。"), 116, -1, 0).name = "HudMenu";
         }
 
         private void BuildHudShortcuts(Transform parent)
@@ -96,17 +98,29 @@ namespace PCShopSell.Game.UI
             HudPanelButton(row, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
             HudPanelButton(row, "经营", KeyCode.H, OpenStoreManagement, "各门店的经营、员工、采购与补货。").name = "HudManagement";
             HudPanelButton(row, "物价", KeyCode.I, OpenMarketPanel, "查看本期物价、历史涨跌和报价走势。").name = "HudPrices";
-            _stockMarketButton = Ui.Size(Ui.Button(row, "股市", () =>
+            _stockMarketButton = HudPanelButton(row, "股市", StockHotkey, () =>
             {
                 if (S?.HasSmartphone == true) OpenCityInvestments();
-            }, 20, interactable: S?.HasSmartphone == true), 0, -1, 1);
+            }, "打开手机里的「证券」。");
+            _stockMarketButton.interactable = S?.HasSmartphone == true;
             _stockMarketButton.name = "HudStockMarket";
-            _stockMarketButton.Tip(() => S?.HasSmartphone == true ? "打开手机里的「证券」。" : "购买智能手机后可用。");
-            Ui.HudNavigationArt(_stockMarketButton, "股市", false);
+            _stockMarketButton.Tip(() => S?.HasSmartphone == true
+                ? $"打开手机里的「证券」 · 快捷键 {HotkeyLabel(StockHotkey)}"
+                : "购买智能手机后可用。");
             _brandButton = HudPanelButton(row, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
             _brandButton.name = "HudBrand";
             if (!GameSession.FirstChapterTrial)
-                HudPanelButton(row, "赛车", KeyCode.T, OpenRacingDestinations, "赛场开放条件与比赛安排。").name = "HudRacing";
+            {
+                const string racingDescription = "查看赛场和比赛安排。";
+                _racingButton = HudPanelButton(row, "赛车", RacingHotkey, () =>
+                {
+                    if (S?.RacingUnlocked == true) OpenRacingDestinations();
+                }, racingDescription);
+                _racingButton.name = "HudRacing";
+                _racingButton.interactable = S?.RacingUnlocked == true;
+                _racingButton.Tip(() => S?.RacingAccessBlocker
+                    ?? $"{racingDescription} 快捷键 {HotkeyLabel(RacingHotkey)}");
+            }
             _hudFunctionBar.gameObject.SetActive(HudFunctionsVisible);
         }
 
@@ -125,7 +139,7 @@ namespace PCShopSell.Game.UI
             _appliedShopDock = _dock;
             _appliedHomeDock = _homeDock;
             _hudFunctionBar.gameObject.SetActive(HudFunctionsVisible);
-            _hudFoldButton.GetComponentInChildren<Text>().text = HudFunctionsVisible ? "收起功能栏 ▴" : "展开功能栏 ▾";
+            _hudFoldButton.GetComponentInChildren<Text>().text = HudFunctionsVisible ? "收起功能栏 ▴  Tab" : "展开功能栏 ▾  Tab";
             float shift = HudFunctionOffset;
             if (_questPanel != null)
             {

@@ -9,6 +9,14 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
+        private const int UsedStorageWithoutShelves = 20;
+
+        private static int UsedStockLimit(OwnedShop shop) =>
+            shop.Sim.ShelfItemLimitOf(ShelfKinds.Get("secondhand")) ?? UsedStorageWithoutShelves;
+
+        private static int UsedStockCount(SpecialBusinessState state) =>
+            state.Used.Count(item => item.Owned && !item.Sold);
+
         public static double UsedWeight(UsedItem item)=>UsedWeights[Math.Max(0,Math.Min(UsedWeights.Length-1,item.Product))];
         public bool UsedReserved(OwnedShop shop,int id)=>shop.Sim.Queue.Any(c=>c.ResaleId==id);
         private IEnumerable<ResaleOffer> UsedOffers(OwnedShop shop)=>shop.RetailKind!="secondhand"?Enumerable.Empty<ResaleOffer>():

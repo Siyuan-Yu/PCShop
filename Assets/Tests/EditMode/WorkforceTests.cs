@@ -174,9 +174,85 @@ namespace PCShopSell.Tests
                 Assert.True(s.ConfigureEmployeePurchase(first.Id, Plan(VehicleKind.EBike)));
                 Assert.True(s.ConfigureEmployeePurchase(second.Id, Plan(VehicleKind.EBike)));
                 Assert.True(s.DispatchEmployeePurchase(first.Id));
-                Assert.False(s.DispatchEmployeePurchase(second.Id));
-                Assert.AreEqual(1, s.EmployeePurchaseTrips.Count);
+                Assert.True(s.DispatchEmployeePurchase(second.Id));
+                Assert.AreEqual(2, s.EmployeePurchaseTrips.Count);
+                Assert.AreEqual(VehicleKind.EBike, s.EmployeeTrip(first.Id).Transport);
+                Assert.IsNull(s.EmployeeTrip(second.Id).VehicleId);
+                Assert.AreEqual(VehicleKind.EBike, second.PurchasePlan.Transport);
+                Assert.AreEqual(1, s.BusyVehicleCount(VehicleKind.EBike));
             }
+        }
+
+        [TestCase(false, VehicleKind.Walk)]
+        [TestCase(true, VehicleKind.Taxi)]
+        public void ImpoundedPurchaseVehicleUsesFallbackWithoutChangingThePlan(bool shortShift, VehicleKind expectedTransport)
+        {
+            using var s = Make();
+            Buy(s, VehicleKind.Tricycle);
+            var buyer = Worker();
+            s.MainShop.Buyer = buyer;
+            CityTestPeople.AtAssignedWork(s, buyer);
+            Assert.IsTrue(s.ConfigureEmployeePurchase(buyer.Id, Plan(VehicleKind.Tricycle)));
+
+            var data = s.CreateSave();
+            data.racing.Garage.Single(vehicle => MotorCatalog.Get(vehicle.ModelId).Kind == VehicleKind.Tricycle).Impounded = true;
+            using var loaded = GameSession.Load(s.City, data);
+            var worker = loaded.MainShop.Buyer;
+            CityTestPeople.AtAssignedWork(loaded, worker);
+            if (shortShift)
+            {
+                var taxi = loaded.EstimateEmployeePurchase(worker.Id, Plan(VehicleKind.Taxi));
+                var walk = loaded.EstimateEmployeePurchase(worker.Id, Plan(VehicleKind.Walk));
+                Assert.Less(taxi.ReturnMinutes, walk.ReturnMinutes);
+                worker.ShiftEnd = loaded.Clock.MinuteOfDay + taxi.ReturnMinutes;
+                worker.Schedule = new EmployeeSchedule();
+            }
+            var cash = loaded.Ledger.Balance;
+            var quote = loaded.QuoteEmployeePurchase(worker.Id);
+            Assert.IsNull(quote.Error);
+            Assert.IsTrue(loaded.DispatchEmployeePurchase(worker.Id));
+            var trip = loaded.EmployeeTrip(worker.Id);
+            Assert.AreEqual(expectedTransport, trip.Transport);
+            Assert.IsNull(trip.VehicleId);
+            Assert.AreEqual(cash - quote.Total, loaded.Ledger.Balance);
+            Assert.Greater(trip.FreightCents, 0);
+            Assert.AreEqual(shortShift, trip.TravelCents > 0);
+            Assert.AreEqual(1, loaded.ImpoundedVehicleCount(VehicleKind.Tricycle));
+            Assert.AreEqual(trip.DepartAt + 3 * GameClock.MinutesPerDay,
+                loaded.Garage.Single(vehicle => vehicle.Impounded).ImpoundReleaseAt);
+            Assert.AreEqual(VehicleKind.Tricycle, worker.PurchasePlan.Transport);
+        }
+
+        [Test]
+        public void TricyclesAreImpoundedAndReturnedIndividually()
+        {
+            using var s = Make();
+            Buy(s, VehicleKind.Tricycle);
+            var data = s.CreateSave();
+            var commuter = data.racing.Garage.Single(v => v.Commuter);
+            var spare = commuter.Copy();
+            spare.Id = "test-spare-trike";
+            spare.Commuter = false;
+            data.racing.Garage = data.racing.Garage.Append(spare).ToArray();
+            using var loaded = GameSession.Load(s.City, data);
+            var impound = typeof(GameSession).GetMethod("ImpoundVehicle",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            bool Impound(string id) => (bool)impound.Invoke(loaded, new object[] { VehicleKind.Tricycle, id });
+
+            Assert.IsTrue(Impound(spare.Id));
+            Assert.IsTrue(loaded.CanUse(VehicleKind.Tricycle));
+            Assert.AreEqual(1, loaded.ImpoundedVehicleCount(VehicleKind.Tricycle));
+            loaded.AdvanceClock(GameClock.MinutesPerDay);
+            Assert.IsTrue(Impound(commuter.Id));
+            Assert.IsFalse(Impound(spare.Id));
+
+            using var restored = RoundTrip(loaded);
+            restored.AdvanceClock(2 * GameClock.MinutesPerDay - 1);
+            Assert.AreEqual(2, restored.ImpoundedVehicleCount(VehicleKind.Tricycle));
+            restored.AdvanceClock(1);
+            Assert.AreEqual(commuter.Id, restored.Garage.Single(v => v.Impounded).Id);
+            restored.AdvanceClock(GameClock.MinutesPerDay);
+            Assert.AreEqual(0, restored.ImpoundedVehicleCount(VehicleKind.Tricycle));
         }
 
         [Test]

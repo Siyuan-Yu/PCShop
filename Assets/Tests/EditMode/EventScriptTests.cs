@@ -184,7 +184,7 @@ namespace PCShopSell.Tests
                 s.Player.Charm += 44 - s.EffectiveCharm;
                 s.RaiseEvent("inspection");
                 Assert.AreEqual(2, s.PendingEvent.Choices.Count);
-                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("0%"));
+                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("看魅力（当前魅力 44）"));
                 Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[0]));
                 Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
                 var balance = s.Ledger.Balance;
@@ -195,7 +195,7 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(reputation - 2, s.PlayerShop.ShopReputation);
                 s.Player.Charm += 45 - s.EffectiveCharm;
                 s.RaiseEvent("inspection");
-                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("35%"));
+                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("看魅力（当前魅力 45）"));
                 Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
             }
         }
@@ -210,7 +210,7 @@ namespace PCShopSell.Tests
             s.AddRelation("landlady", relation - s.Relation("landlady"));
             s.RaiseEvent("landlady_rent");
             var choice = s.PendingEvent.Choices[1];
-            Assert.That(choice.Text, Does.Contain("成功率 0%"));
+            Assert.That(choice.Text, Does.Contain($"当前魅力 {charm}、与房东的交情 {relation}"));
             Assert.IsTrue(s.IsChoiceEnabled(choice));
             Assert.IsTrue(s.ResolveEvent(1));
             Assert.IsNull(s.PendingEvent);
@@ -218,40 +218,44 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void EventOddsStartAtTheThresholdForEveryParticipatingStat()
+        public void EventChoicesShowCurrentAttributesInsteadOfOdds()
         {
             using var s = GameSessionTests.Make(8000, 600);
-            void ExpectRentChance(string chance)
+            void ExpectRentAttributes(int charm, int relation)
             {
                 s.RaiseEvent("landlady_rent");
-                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("成功率 " + chance + "%"));
+                var text = s.PendingEvent.Choices[1].Text;
+                Assert.That(text, Does.Contain($"当前魅力 {charm}、与房东的交情 {relation}"));
+                Assert.That(text, Does.Not.Contain("%"));
                 Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
             }
             s.Player.Charm += 44 - s.EffectiveCharm;
             s.Meet("landlady", 35);
             s.AddRelation("landlady", 35 - s.Relation("landlady"));
-            ExpectRentChance("0");
+            ExpectRentAttributes(44, 35);
             s.Player.Charm++;
             s.AddRelation("landlady", -1);
-            ExpectRentChance("0");
+            ExpectRentAttributes(45, 34);
             s.AddRelation("landlady", 1);
-            ExpectRentChance("30");
+            ExpectRentAttributes(45, 35);
             s.Player.Charm += 2;
             s.AddRelation("landlady", 3);
-            ExpectRentChance("33.2");
+            ExpectRentAttributes(47, 38);
 
-            void ExpectLoanChance(string chance)
+            void ExpectLoanAttributes(int relation)
             {
                 s.RaiseEvent("lin_loan");
-                Assert.That(s.PendingEvent.Choices[0].Text, Does.Contain(chance + "%"));
+                var text = s.PendingEvent.Choices[0].Text;
+                Assert.That(text, Does.Contain($"当前与林远航的交情 {relation}"));
+                Assert.That(text, Does.Not.Contain("%"));
             }
             s.Meet("lin", 69);
             s.AddRelation("lin", 69 - s.Relation("lin"));
-            ExpectLoanChance("0");
+            ExpectLoanAttributes(69);
             s.AddRelation("lin", 1);
-            ExpectLoanChance("65");
+            ExpectLoanAttributes(70);
             s.AddRelation("lin", 1);
-            ExpectLoanChance("66");
+            ExpectLoanAttributes(71);
         }
 
         [Test]

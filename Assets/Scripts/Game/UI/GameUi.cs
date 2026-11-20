@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.Trade;
 using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
@@ -19,6 +20,7 @@ namespace PCShopSell.Game.UI
         public RectTransform Content;
         public Text TitleText;
         public Text TimeStatusText;
+        internal Button CloseButton;
         internal string TimeStatusOverride;
         internal Action RefreshContent;
         public Action<Window> Builder;
@@ -35,6 +37,8 @@ namespace PCShopSell.Game.UI
         internal Action RefreshQuantityContent;
         internal bool ResetScrollOnRebuild;
         internal WindowFit Fitter;
+        internal bool FitContent;
+        internal RectTransform DialogIllustration;
         internal GameUi Owner;
         internal bool OpeningMealSystem;
         // Owned by the loading coroutine, not by session/menu window cleanup.
@@ -48,9 +52,11 @@ namespace PCShopSell.Game.UI
             _quantityOnly = false;
             RefreshQuantityContent = null;
             RefreshContent = null;
+            DialogIllustration = null;
             var scrolled = Ui.SaveScroll(Root);
             Ui.Clear(Content);
             Builder?.Invoke(this);
+            if (!Closed && FitContent) GameUi.FitWindowToContent(this);
             Ui.RestoreScroll(Root, Root, scrolled);
             if (ResetScrollOnRebuild)
             {
@@ -184,11 +190,12 @@ namespace PCShopSell.Game.UI
             ApplyHudFunctionLayout();
             var selectedControl = EventSystem.current?.currentSelectedGameObject;
             var selectedInput = selectedControl != null ? selectedControl.GetComponent<InputField>() : null;
-            if (Input.GetKeyDown(KeyCode.Tab) && !AnyModalOpen && !_ctrl.Placing
+            if (Input.GetKeyDown(KeyCode.Tab) && !S.RequiredTutorialPaused && !AnyModalOpen && !_ctrl.Placing
                 && (selectedInput == null || !selectedInput.isFocused)
                 && !FishingInputActive && !OnsiteInputActive && !MainMenuOpen)
                 ToggleHudFunctions();
-            HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
+            if (S.ScooterTutorialPaused) HoldRepeat.CancelActiveHold();
+            else HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
             bool pointerBusy = Input.GetMouseButton(0) || Input.GetMouseButtonUp(0);
             foreach (var window in _windows.ToArray())
             {
@@ -215,6 +222,7 @@ namespace PCShopSell.Game.UI
             {
                 UpdateEventBatch();
                 ShowPendingPropertyContractPopup();
+                ShowPendingScheduledPropertyPopup();
             }
             RefreshOpeningKindChoice();
             UpdateWorkScreen();
@@ -373,6 +381,7 @@ namespace PCShopSell.Game.UI
             UpdateSleepBanner();
             _brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
             _stockMarketButton.interactable = S.HasSmartphone;
+            if (_racingButton != null) _racingButton.interactable = S.RacingUnlocked;
             FitHudTopRow();
             _dateText.text = (S.IsCityLifeTest ? "测试 " : "") +
                 $"<size=15>{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)}</size>\n" +
@@ -464,7 +473,9 @@ namespace PCShopSell.Game.UI
                 Ui.SetButtonFill(b, Ui.SelectedButton(S.Vehicle == kind));
                 Text t = b.GetComponentInChildren<Text>();
                 string name = Vehicles.Get(kind).Name;
-                if (S.ImpoundedVehicleCount(kind) > 0 && !can) name = kind == VehicleKind.Tricycle ? "三轮(扣)" : "电驴(扣)";
+                if (!can && (S.CommuteMotor(kind)?.Impounded == true
+                    || S.ImpoundedVehicleCount(kind) > 0 && S.ImpoundedVehicleCount(kind) == S.VehicleCount(kind)))
+                    name = kind == VehicleKind.Tricycle ? "三轮(扣)" : kind == VehicleKind.EBike ? "电驴(扣)" : name + "(扣)";
                 t.text = name;
             }
             _cargoText.text = $"负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克";
@@ -758,6 +769,8 @@ namespace PCShopSell.Game.UI
         public bool CloseTopWindow()
         {
             if(_windows.Any(window=>window.PreserveDuringTransition&&!window.Closed))return true;
+            if (_windows.Count > 0 && _windows[_windows.Count - 1] == _mealDeliveryTutorialWindow
+                && !_mealDeliveryTutorialWindow.Closable) return true;
             if(ChoiceDropdown.CancelFrame==UnityEngine.Time.frameCount)return true;
             foreach(var canvas in Canvases)foreach(var choice in canvas.GetComponentsInChildren<ChoiceDropdown>())if(choice.CloseChoice())return true;
             if (_windows.Count == 0) return false;
@@ -920,7 +933,7 @@ namespace PCShopSell.Game.UI
 
         // ---------- 窗口 ----------
 
-        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false, bool showTitleBar = true, bool fullScreen = false)
+        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false, bool showTitleBar = true, bool fullScreen = false, bool fitContent = false)
         {
             bool system = systemWindow || _windows.Any(window => window.OpeningMealSystem && !window.Closed);
             if (OpeningMealRestricted && !allowDuringOpeningMeal && !system)
@@ -928,9 +941,10 @@ namespace PCShopSell.Game.UI
                 title = "先做饭"; width = 700; height = 390; holds = true; closable = true; onClosed = null; scrollContent = true;
                 showTitleBar = true;
                 fullScreen = false;
+                fitContent = false;
                 builder = BuildOpeningMealReminder;
             }
-            var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
+            var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable, FitContent = fitContent };
             w.OpeningMealSystem = system;
             Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title,
                 fullScreen ? Ui.ChromeWell : Ui.WorldShade);
@@ -962,7 +976,7 @@ namespace PCShopSell.Game.UI
                 rule.raycastTarget = false;
                 if (closable)
                 {
-                    Button close = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18);
+                    Button close = w.CloseButton = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18);
                     ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
                 }
             }
@@ -1001,13 +1015,11 @@ namespace PCShopSell.Game.UI
                 ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.RequiredTutorialPaused && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
         }
 
-        private static void FitWindowToContent(Window w)
+        internal static void FitWindowToContent(Window w)
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(w.Content);
-            var panel = (RectTransform)w.Content.parent;
-            float chromeHeight = panel.rect.height - w.Content.rect.height;
-            panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, chromeHeight + LayoutUtility.GetPreferredHeight(w.Content));
-            w.Fitter.Fit();
+            if (w.Fitter == null) return;
+            var body = w.Content.parent == w.Fitter.transform ? w.Content : (RectTransform)w.Content.parent.parent;
+            w.Fitter.FitContent(w.Content, body, w.DialogIllustration);
         }
 
         public void CloseWindow(Window w)
@@ -1034,6 +1046,7 @@ namespace PCShopSell.Game.UI
         }
 
         private readonly System.Collections.Generic.List<Window> _popups = new System.Collections.Generic.List<Window>();
+        private readonly Queue<(string Title, string Body, EventCgFrame Cg)> _scheduledPropertyPopups = new();
         private bool PopupOpen
         {
             get
@@ -1045,35 +1058,47 @@ namespace PCShopSell.Game.UI
 
         public void Popup(string title, string body, EventCgFrame cg = null)
         {
+            if (title == GameSession.MealDeliveryUnlockedTitle) return;
+            if (GameSession.IsScheduledPropertyPopup(title))
+            {
+                _scheduledPropertyPopups.Enqueue((title, body, cg));
+                return;
+            }
             if (PropertyContractOpen)
             {
                 _propertyContractPopups.Enqueue(() => Popup(title, body, cg));
                 return;
             }
             if (S.IsWorking) { Toast(title + "：" + body); _workMessages.Add(title); return; }
+            OpenPopup(title, body, cg);
+        }
+
+        private void ShowPendingScheduledPropertyPopup()
+        {
+            if (_scheduledPropertyPopups.Count == 0 || PopupOpen || PropertyContractOpen || S.PendingEvent != null
+                || S.IsWorking || S.IsGameOver || S.Racing || S.CityActivityExclusive || S.OpeningAgencyGuidePending
+                || OpeningMealRestricted || _ctrl.Placing || _ctrl.PetFocusActive) return;
+            var notice = _scheduledPropertyPopups.Dequeue();
+            OpenPopup(notice.Title, notice.Body, notice.Cg);
+        }
+
+        private void OpenPopup(string title, string body, EventCgFrame cg)
+        {
             bool purchaseResult = title == GameSession.EmployeePurchaseDeliveryTitle || title == GameSession.EmployeePurchaseIncompleteTitle;
             string reading = Ui.EmphasizeReading(body);
             string windowTitle = title;
 #if UNITY_EDITOR
             if (_eventBatchCurrent == 126) windowTitle = $"#{_eventBatchCurrent:00} · {title}";
 #endif
-            _popups.Add(OpenWindow(windowTitle, cg == null ? 640 : 900, cg == null ? 380 : 590, w =>
+            _popups.Add(OpenWindow(windowTitle, cg != null ? 960 : purchaseResult ? 780 : 640, 440, w =>
             {
-                if (cg != null)
+                if (cg != null) w.DialogIllustration = BuildEventCg(w.Content, cg, 300);
+                Para(w.Content, reading, purchaseResult ? 19 : 20);
+                if (title.EndsWith("发来主线邀请", StringComparison.Ordinal))
                 {
-                    float width = w.Content.rect.width - w.Content.GetComponent<VerticalLayoutGroup>().padding.horizontal;
-                    BuildEventCg(w.Content, cg, width * 9 / 16);
-                    Para(w.Content, reading, 20);
-                }
-                else if (purchaseResult) Ui.Label(Ui.Scroll(w.Content, 230), reading, 19, TextAnchor.UpperLeft);
-                else Ui.Size(Ui.Label(w.Content, reading, 21, TextAnchor.UpperLeft), -1, 230);
-                if(title.EndsWith("发来主线邀请"))
-                    Ui.Size(Ui.Button(w.Content, "查看并回复邀请", () => { w.Close(); OpenDistrictStory(); }, 20, Ui.ButtonHot), -1, 44);
-                if (title == GameSession.MealDeliveryUnlockedTitle)
-                {
-                    var actions = Ui.Row(w.Content, 48);
-                    Ui.Size(Ui.Button(actions, "去设置自动订餐", () => { w.Close(); OpenMealDeliverySettings(null); }, 19, Ui.ButtonHot), -1, 48, 1);
-                    Ui.Size(Ui.Button(actions, "稍后再说", w.Close, 18), -1, 48, 1);
+                    var actions = Ui.Row(w.Content, 48, 10);
+                    Ui.Size(Ui.Button(actions, "知道了", w.Close, 18), 0, 48, 1);
+                    Ui.Size(Ui.Button(actions, "查看并回复邀请", () => { w.Close(); OpenDistrictStory(); }, 20, Ui.ButtonHot), 0, 48, 2);
                 }
                 else if (title == GameSession.NpcRepaymentTitle)
                 {
@@ -1082,8 +1107,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(actions, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48, 1);
                 }
                 else Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48);
-                if (cg != null) FitWindowToContent(w);
-            }, scrollContent: cg == null));
+            }, fitContent: true));
         }
 
         /// <summary>随机事件：必须选一个选项才能继续（不可关闭）。</summary>
@@ -1097,79 +1121,134 @@ namespace PCShopSell.Game.UI
                 && selections.All(group => group.All(entry => entry.Choice.Appointment.HasValue));
             int selected = 0;
             string selectedPayment = null;
-            string choiceDetails = null;
+            EventChoice detailsChoice = null;
+            int purchaseChoice = -1, purchaseQuantity = 1;
             string reading = Ui.EmphasizeReading(def.Body);
-            float h = appointment ? 460 : selections.Length > 0 ? 205 + (selections.Max(group => group.Count()) + choices[null].Count()) * 62
-                : 250 + def.Choices.Count * 62;
+            int visibleChoices = choices[null].Count() + (selections.Length == 0 ? 0 : selections.Max(group => group.Count()));
+            float width = !appointment && visibleChoices >= 6 ? 1060 : def.Cg != null ? 960 : 760;
             string title = def.Title;
 #if UNITY_EDITOR
             if (_eventBatchCurrent > 0) title = $"#{_eventBatchCurrent:00} · {title}";
 #endif
-            float illustrationHeight = 0;
-            if (def.Cg != null)
-            {
-                illustrationHeight = selections.Length > 0 ? 228 : 350;
-                h = selections.Length > 0 ? h + illustrationHeight : 494 + def.Choices.Count * 59;
-            }
-            OpenWindow(title, def.Cg == null ? 720 : 900, h, w =>
+            OpenWindow(title, width, 500, w =>
             {
                 if (S == null || S.PendingEvent != def)
                 {
                     w.Close();
                     return;
                 }
-                if (choiceDetails != null)
+                if (purchaseChoice >= 0)
                 {
-                    Para(w.Content, Ui.EmphasizeReading(choiceDetails), 20);
+                    BuildOnlinePurchase(w, purchaseChoice);
+                    return;
+                }
+                if (detailsChoice != null)
+                {
+                    Para(w.Content, detailsChoice.Text, 22, Ui.Accent).fontStyle = FontStyle.Bold;
+                    Para(w.Content, Ui.EmphasizeReading(detailsChoice.Details), 20);
                     Ui.Size(Ui.Button(w.Content, "返回上一页", () =>
                     {
-                        choiceDetails = null;
+                        detailsChoice = null;
                         w.ResetScrollOnRebuild = true;
                         w.Rebuild();
                     }, 18, Ui.ButtonHot), -1, 42);
                     return;
                 }
-                if (def.Cg != null) BuildEventCg(w.Content, def.Cg, illustrationHeight);
+                if (def.Cg != null) w.DialogIllustration = BuildEventCg(w.Content, def.Cg, appointment ? 228 : 300);
                 if (appointment)
                 {
                     BuildAppointment(w);
                     return;
                 }
+                Para(w.Content, reading, 20);
                 if (selections.Length > 0)
                 {
-                    Para(w.Content, reading, 20);
                     var selector = Ui.Row(w.Content, 42, 10);
                     Ui.Size(Ui.Label(selector, def.SelectionPrompt ?? "请选择", 17, color: Ui.Dim), 96);
                     Ui.Size(Ui.Choice(selector, selections.Select(group => group.First().Choice.Selection.Value.Label),
                         selected, index => { selected = index; w.RequestRebuild(); }), 0, 42, 1).name = "EventChoiceSelection";
-                    foreach (var entry in selections[selected]) AddChoice(entry.Choice, entry.Index);
                 }
-                else if (def.Cg != null) Para(w.Content, reading, 20);
-                else Ui.Size(Ui.Label(w.Content, reading, 20, TextAnchor.UpperLeft), -1, 150);
-                foreach (var entry in choices[null]) AddChoice(entry.Choice, entry.Index);
-
-                void AddChoice(EventChoice c, int idx)
+                var entries = selections.Length > 0 ? selections[selected].Concat(choices[null]).ToArray() : choices[null].ToArray();
+                int columns = entries.Length >= 6 ? 2 : 1;
+                for (int first = 0; first < entries.Length; first += columns)
                 {
-                    bool ok = S.IsChoiceEnabled(c);
-                    string label = ok ? c.Text : $"{c.Text}\n<size=14><color=#9C4634>{c.DisabledReason}</color></size>";
-                    Ui.Size(Ui.Button(w.Content, label, () => SelectChoice(w, idx), 19,
-                        interactable: ok), -1, ok ? 46 : 58);
+                    var group = entries.Skip(first).Take(columns);
+                    var parent = columns == 2 && first + 1 < entries.Length ? Ui.Row(w.Content, -1, 8) : w.Content;
+                    foreach (var (choice, index) in group)
+                    {
+                        bool enabled = S.IsChoiceEnabled(choice);
+                        string label = enabled || string.IsNullOrEmpty(choice.DisabledReason) ? choice.Text
+                            : $"{choice.Text}\n<size=15><color=#9C4634>{choice.DisabledReason}</color></size>";
+                        var button = Ui.Button(parent, label, () => SelectChoice(w, index), 19, interactable: enabled);
+                        Ui.VList((RectTransform)button.transform, 0, 8, expandHeight: true);
+                        Ui.Size(button, 0, -1, 1).GetComponent<LayoutElement>().minHeight = 44;
+                    }
                 }
-            }, true, false, scrollContent: !appointment || def.Cg != null);
+            }, true, false, fitContent: true);
 
             void SelectChoice(Window w, int index)
             {
                 if (S?.PendingEvent != def) return;
                 var choice = def.Choices[index];
-                if (choice.Details == null)
+                if (!S.IsChoiceEnabled(choice)) return;
+                if (choice.OnlinePurchase.HasValue)
+                {
+                    purchaseChoice = index;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }
+                else if (choice.Details == null)
                 {
                     if (S.ResolveEvent(index)) w.Close();
                 }
-                else if (S.IsChoiceEnabled(choice))
+                else
                 {
-                    choiceDetails = choice.Details;
+                    detailsChoice = choice;
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
+                }
+            }
+
+            void BuildOnlinePurchase(Window w, int index)
+            {
+                var (part, destination) = def.Choices[index].OnlinePurchase.Value;
+                var product = Ui.Row(w.Content, 54, 10);
+                ItemPortrait(product, part.Id, 50);
+                Ui.Size(Ui.Label(product, part.Name, 22), 0, 54, 1);
+                Line(w.Content, $"送到 {S.ShopTitle(destination)} · 次日 10:00", 17, Ui.Dim);
+                var quantity = Ui.Row(w.Content, 42, 10);
+                Ui.Size(Ui.Label(quantity, "采购数量", 18), 94);
+                var prices = Line(w.Content, "", 18);
+                var status = Line(w.Content, "", 17);
+                var actions = Ui.Row(w.Content, 46, 8);
+                Ui.Size(Ui.Button(actions, "返回上一页", () =>
+                {
+                    purchaseChoice = -1;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }, 18), 150, 46);
+                var pay = Ui.Size(Ui.Button(actions, "", null, 19, Ui.ButtonHot), 0, 46, 1);
+                var payText = pay.GetComponentInChildren<Text>();
+                pay.onClick.AddListener(() =>
+                {
+                    if (S?.PendingEvent != def) return;
+                    if (S.ResolveEvent(index, purchaseQuantity)) w.Close();
+                    else Refresh();
+                });
+                PurchaseQuantity(w, quantity, "eventOnlinePurchase", purchaseQuantity, 1, GameSession.OnlinePartOrderLimit,
+                    value => purchaseQuantity = (int)value, changed: _ => Refresh(), trackWidth: 0);
+                Refresh();
+                w.RefreshQuantityContent = Refresh;
+
+                void Refresh()
+                {
+                    var quote = S.QuoteOnlinePartOrder(part, purchaseQuantity, destination);
+                    prices.text = $"单价 {quote.UnitPrice} · 运费 {Online1788.ShippingFee}"
+                        + (quote.Discount.IsPositive ? $" · 采购券减 {quote.Discount}" : "");
+                    status.text = quote.Blocker ?? $"可用现金 {S.Ledger.Balance}";
+                    status.color = quote.Blocker == null ? Ui.Dim : Ui.Warn;
+                    payText.text = $"确认付款 · {quote.Total}";
+                    pay.interactable = quote.Blocker == null;
                 }
             }
 
@@ -1212,7 +1291,7 @@ namespace PCShopSell.Game.UI
                 string fare = details.AskHost ? "对方同意后免费" : $"到场付 {details.Price}";
                 string summary = available ? $"{EventAppointmentTime(details.Start)} · {details.Minutes} 分钟 · {fare}"
                     : $"{details.Minutes} 分钟 · {fare} · {chosen.Choice.DisabledReason}";
-                Line(w.Content, summary, 19, available ? Ui.Accent : Ui.Warn).name = "EventAppointmentSummary";
+                Para(w.Content, summary, 19, available ? Ui.Accent : Ui.Warn).name = "EventAppointmentSummary";
                 if (details.Note != null) Para(w.Content, details.Note, 16, Ui.Dim);
                 Ui.Size(Ui.Button(w.Content, details.AskHost ? "商量请客" : "确认预约", () => SelectChoice(w, chosen.Index),
                     20, Ui.ButtonHot, available), -1, 46).name = "EventAppointmentConfirm";

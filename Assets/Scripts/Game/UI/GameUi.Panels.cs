@@ -17,13 +17,9 @@ namespace PCShopSell.Game.UI
         /// <summary>进入地点后打开对应面板。离开面板 = 回到街上。</summary>
         public void OnEnteredPlace(Place p, string activityId = null)
         {
-            var tasting = S.RunningCityActivity;
-            if (p != null && GameSession.IsCookTasting(tasting) && tasting.VenueId == p.Id)
-            {
-                OpenCookTasting(tasting.Id);
-                return;
-            }
+            if (TryOpenCookTasting(p, activityId)) return;
             if (S.IsWorking) { UpdateWorkScreen(); return; }
+            if (S.AutomaticMealAt(p, activityId)) return;
             if (TryOpenSignHelp(p, activityId)) return;
             if(p.Kind==PlaceKind.Garage){OpenMotorGarage();return;}
             if(RaceTracks.Get(p.Id)!=null){OpenRaceReception(p);return;}
@@ -55,6 +51,13 @@ namespace PCShopSell.Game.UI
             {
                 case PlaceKind.Shop when S.IsMyShop(p):
                     OpenDock();
+                    var guide = S.CurrentQuest();
+                    if (guide?.GuideDestination == p)
+                    {
+                        if (guide.Target == QuestTarget.Renovate) SelectTab(ShopTab.Renovate);
+                        else if (guide.Target == QuestTarget.Stock) SelectTab(ShopTab.Stock);
+                        else if (guide.Target == QuestTarget.Counter) SelectTab(ShopTab.Counter);
+                    }
                     break;
                 case PlaceKind.Agency:
                     _agencyViewState = new AgencyStreetMap.ViewState();

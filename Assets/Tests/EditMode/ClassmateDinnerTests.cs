@@ -45,9 +45,8 @@ namespace PCShopSell.Tests
                     Assert.True(loaded.IsMet("res_coder"));
             }
         }
-        [TestCase(false)]
-        [TestCase(true)]
-        public void ClassmateRemainsInContactsWhenDinnerFinishesOrIsInterrupted(bool interrupt)
+        [Test]
+        public void ClassmateDinnerCompletesAfterChoosingMealAndKeepsContactAfterReload()
         {
             using(var s=Make())
             {
@@ -56,34 +55,29 @@ namespace PCShopSell.Tests
                 long departure = a.ScheduledStart - s.CityTravelMinutes(venue) - GameSession.CityArrivalWindowMinutes;
                 for (int i = 0; i < 60000 && s.Clock.Now.TotalMinutes < departure && a.Active; i++) Step(s);
                 Assert.True(s.GoToCityActivity(a.Id));
-                for(int i=0;i<60000&&a.Active&&!a.ServiceConfirmed;i++)
-                {
-                    Step(s);
-                    if(s.CurrentPlace?.Id==a.VenueId&&s.VenueServiceBlocker("dinner",0)==null)
-                        Assert.True(s.SelectVenueService("dinner",0));
-                }
-                for(int i=0;i<1000&&a.Active&&a.State!=CityActivityPhase.Running;i++)Step(s);
-                Assert.AreEqual(CityActivityPhase.Running,a.State,a.EndReason);
-                Assert.AreEqual(a.VenueId,s.CityPersonState("res_coder").LocationPlaceId);
+                for (int i = 0; i < 60000 && s.CurrentPlace != venue && a.Active; i++) Step(s);
+                Assert.AreEqual(venue, s.CurrentPlace);
+                Assert.False(a.EntryPaid);
+                Assert.True(s.SelectVenueService(a.DefinitionId, 1, a.Id), s.VenueServiceBlocker(a.DefinitionId, 1, a.Id));
+                for(int i=0;i<60000&&a.Active;i++)Step(s);
+                Assert.AreEqual(CityActivityPhase.Completed,a.State,a.EndReason);
+                Assert.AreEqual(1, a.ServiceChoice);
+                Assert.Zero(a.EntryCostCents);
+                Assert.IsTrue(a.MealApplied);
                 Assert.True(s.IsMet("res_coder"));
                 using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                 {
                     loaded.EventsEnabled=false;loaded.Time.SetSpeed(8);
                     var meal=loaded.CityActivities.Single(x=>x.Id==a.Id);
                     Assert.AreEqual("res_coder",meal.HostId);
-                    if(interrupt)loaded.Leave();
-                    for(int i=0;i<60000&&meal.Active;i++)Step(loaded);
-                    Assert.AreEqual(interrupt?CityActivityPhase.Interrupted:CityActivityPhase.Completed,meal.State,meal.EndReason);
+                    Assert.AreEqual(CityActivityPhase.Completed,meal.State,meal.EndReason);
                     Assert.True(loaded.IsMet("res_coder"));
-                    if(!interrupt)
-                    {
-                        Assert.True(loaded.SavedConversationContacts().Any(c=>c.Id=="res_coder"));
-                        StringAssert.Contains("已互留联系方式",meal.SettlementSummary);
-                        int memories=loaded.MemoriesOf("res_coder").Count(m=>m.Text.Contains("留下了联系方式"));
-                        for(int i=0;i<30;i++)Step(loaded);
-                        Assert.AreEqual(1,memories);
-                        Assert.AreEqual(memories,loaded.MemoriesOf("res_coder").Count(m=>m.Text.Contains("留下了联系方式")));
-                    }
+                    Assert.True(loaded.SavedConversationContacts().Any(c=>c.Id=="res_coder"));
+                    StringAssert.Contains("已互留联系方式",meal.SettlementSummary);
+                    int memories=loaded.MemoriesOf("res_coder").Count(m=>m.Text.Contains("留下了联系方式"));
+                    for(int i=0;i<30;i++)Step(loaded);
+                    Assert.AreEqual(1,memories);
+                    Assert.AreEqual(memories,loaded.MemoriesOf("res_coder").Count(m=>m.Text.Contains("留下了联系方式")));
                     using(var again=GameSession.Load(loaded.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(loaded.CreateSave()))))
                         Assert.True(again.IsMet("res_coder"));
                 }

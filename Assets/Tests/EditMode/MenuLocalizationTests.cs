@@ -4,7 +4,9 @@ using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Game;
 using PCShopSell.Game.Runtime;
+using PCShopSell.Game.UI;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Tests
 {
@@ -33,6 +35,49 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(1, panel.transform.localScale.x, .001);
             }
             finally { UnityEngine.Object.DestroyImmediate(parent); }
+        }
+
+        [Test]
+        public void EventDialogFitsTheEntirePageBeforeEnablingScroll()
+        {
+            var screen = new GameObject("Screen", typeof(RectTransform));
+            try
+            {
+                var viewport = (RectTransform)screen.transform;
+                viewport.sizeDelta = new Vector2(1100, 740);
+                var panel = Ui.Rect(viewport, "Dialog");
+                panel.anchorMin = panel.anchorMax = new Vector2(.5f, .5f);
+                panel.sizeDelta = new Vector2(900, 440);
+                var fitter = panel.gameObject.AddComponent<WindowFit>();
+                var content = Ui.Scroll(panel);
+                var body = ((RectTransform)content.parent.parent).Anchor(0, 0, 1, 1, 0, 0, 0, 50);
+                var scroll = body.GetComponent<ScrollRect>();
+                var illustration = Ui.Size(Ui.Rect(content, "Illustration"), -1, 300);
+                Ui.Size(Ui.Rect(content, "Text"), -1, 180);
+                Ui.Size(Ui.Rect(content, "Actions"), -1, 44);
+
+                fitter.FitContent(content, body, illustration);
+                Assert.Greater(panel.rect.height, 440);
+                Assert.IsFalse(scroll.vertical);
+                Assert.IsFalse(scroll.verticalScrollbar.gameObject.activeSelf);
+
+                viewport.sizeDelta = new Vector2(1100, 500);
+                fitter.Fit();
+                Assert.AreEqual(1, panel.localScale.x, .001);
+                Assert.Less(LayoutUtility.GetPreferredHeight(illustration), 300);
+                Assert.IsFalse(scroll.vertical);
+
+                viewport.sizeDelta = new Vector2(1100, 380);
+                fitter.Fit();
+                Assert.IsTrue(scroll.vertical);
+                Assert.IsTrue(scroll.verticalScrollbar.gameObject.activeSelf);
+
+                viewport.sizeDelta = new Vector2(1100, 740);
+                fitter.Fit();
+                Assert.AreEqual(300, LayoutUtility.GetPreferredHeight(illustration));
+                Assert.IsFalse(scroll.vertical);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(screen); }
         }
 
         [Test]

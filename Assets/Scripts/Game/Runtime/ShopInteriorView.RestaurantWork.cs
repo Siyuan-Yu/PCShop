@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using UnityEngine;
 
@@ -8,6 +9,57 @@ namespace PCShopSell.Game.Runtime
     public sealed partial class ShopInteriorView
     {
         private bool _restaurantPlayerWorking;
+        private OwnedShop _restaurantStockShop;
+        private float _restaurantStockRefreshAt;
+        private string _restaurantStockWarning;
+
+        private void UpdateRestaurantStockWarning(GameSession session)
+        {
+            var shop = session.CurrentShop;
+            if (!session.InPlayerShop || shop?.RetailKind != "restaurant") return;
+
+            if (_restaurantStockShop != shop || _now >= _restaurantStockRefreshAt)
+            {
+                _restaurantStockShop = shop;
+                _restaurantStockRefreshAt = _now + .25f;
+                _restaurantStockWarning = null;
+                if (!session.CanOpenFridge)
+                    _restaurantStockWarning = "<b>未摆放冰箱</b>\n<size=14>摆好冰箱后才能备料</size>";
+                else
+                {
+                    var missing = session.RestaurantMissingIngredients(shop, session.SpecialBusiness(shop.Place.Id));
+                    if (missing.Count > 0)
+                    {
+                        var names = string.Join("、", missing.Take(3).Select(item => item.Name));
+                        if (missing.Count > 3) names += $"等 {missing.Count} 种";
+                        string supply = missing.Any(item => item.InWarehouse) ? "后仓有货，可移入冰箱" : "请补充食材";
+                        _restaurantStockWarning = $"<b>缺食材 · {names}</b>\n<size=14>{supply}</size>";
+                    }
+                    else if (shop.Fridge.WeightKg <= 1e-9)
+                        _restaurantStockWarning = "<b>冰箱空了</b>\n<size=14>请补充食材</size>";
+                }
+            }
+            if (_restaurantStockWarning == null) return;
+
+            Vector3 position;
+            if (NearFridge)
+                position = NearFridgeWorld + Vector3.up * .8f;
+            else
+            {
+                var station = shop.Layout.FirstOrDefault(item => item.Id == "restaurant_stove")
+                    ?? shop.Layout.FirstOrDefault(item => FurnitureCatalog.Get(item.Id)?.Role == FurnitureRole.Fridge);
+                if (station == null) return;
+                position = Origin + new Vector3((float)station.X, 2.6f, (float)station.Z);
+            }
+            _emotes.Add(new EmoteInfo
+            {
+                Pos = position,
+                Text = _restaurantStockWarning,
+                Size = 17,
+                Color = new Color(.61f, .27f, .20f),
+                Bubble = true
+            });
+        }
 
         private static void UpdateRestaurantSounds(SpecialBusinessState state)
         {

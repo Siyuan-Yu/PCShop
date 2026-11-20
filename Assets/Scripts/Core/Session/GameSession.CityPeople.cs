@@ -133,7 +133,7 @@ namespace PCShopSell.Core.Session
             }
         }
         public static bool CityWithinHours(int minute,int open,int close) => open==close || (close>open?minute>=open&&minute<close:minute>=open||minute<close);
-        public const int HomeVisitMinRelation = 60;
+        public const int HomeVisitMinRelation = 30;
 
         public IEnumerable<CityPersonState> ResidentsAtHome(Place home) =>
             PeopleInPlace(home.Id).Where(person => person.HomePlaceId == home.Id && CityPersonInside(person));
@@ -497,58 +497,74 @@ namespace PCShopSell.Core.Session
             person.LeisureNextMove=arrival+3;
         }
 
+        private static readonly string[] FallbackLeisurePlaces =
+            { "life_hike", "shop14", "shop07", "life_park", "shop15", "shop01", "metro_a", "shop16", "life_court", "metro_b" };
+
         private string CityOutingDestination(CityPersonState person, bool employed, bool working, long now)
         {
             int minute = Clock.MinuteOfDay;
             var resident = Residents.Get(person.PersonId);
-            bool outing = false;
+            int outingEnd = -1;
             if (!employed && resident != null)
                 for (int i = 0; i + 1 < resident.Outings.Length; i += 2)
-                    if (minute >= resident.Outings[i] && minute < resident.Outings[i + 1]) { outing = true; break; }
+                    if (minute >= resident.Outings[i] && minute < resident.Outings[i + 1])
+                        outingEnd = Math.Max(outingEnd, resident.Outings[i + 1]);
             // Only authored lunch/rest breaks may take a shopkeeper out during work.
             // Hired employees keep their actual shifts, appointments and purchase trips.
             int seed = ConversationSeed(person.PersonId);
             if (!working)
             {
                 if (person.WorkPlaceId == null && resident == null)
-                    outing = minute >= 8 * 60 + seed % 90 && minute < 20 * 60 + seed % 60;
-                else if (!outing && (resident == null || resident.Outings.Length == 0))
-                    outing = minute >= 17 * 60 + seed % 120 && minute < 21 * 60 + seed % 60;
+                {
+                    int end = 20 * 60 + seed % 60;
+                    if (minute >= 8 * 60 + seed % 90 && minute < end) outingEnd = end;
+                }
+                else if (outingEnd < 0 && (resident == null || resident.Outings.Length == 0))
+                {
+                    int start = person.PersonId == Npcs.Landlady ? 16 * 60 + 30 : 17 * 60 + seed % 120;
+                    int end = 21 * 60 + seed % 60;
+                    if (minute >= start && minute < end) outingEnd = end;
+                }
             }
-            if (!outing || employed && working)
-            { person.LeisureTargetId = null; person.LeisureNextMove = 0; return null; }
+
+            int minimumStay = working ? 15 : 60;
+            int preferredStay = working ? minimumStay : minimumStay + 15 * (seed % 5);
             if (person.LeisureTargetId != null && City.HasPlace(person.LeisureTargetId))
             {
-                if(!IsPlaceOpen(City.GetPlace(person.LeisureTargetId)))
-                { person.LeisureTargetId=null;person.LeisureNextMove=0; }
+                var place = City.GetPlace(person.LeisureTargetId);
+                if (person.LocationPlaceId == place.Id && IsPlaceOpen(place) && (!working || !employed && outingEnd >= 0))
+                {
+                    if (person.LeisureNextMove == 0) person.LeisureNextMove = now + preferredStay;
+                    if (now < person.LeisureNextMove) return place.Id;
+                    person.LeisureStop++;
+                }
+                person.LeisureTargetId = null;
+                person.LeisureNextMove = 0;
             }
-            if (person.LeisureTargetId != null && City.HasPlace(person.LeisureTargetId))
+            if (outingEnd < 0 || employed && working)
             {
-                if (person.LocationPlaceId != person.LeisureTargetId) return person.LeisureTargetId;
-                if (person.LeisureNextMove == 0) person.LeisureNextMove = now + (working ? 5 : 5 + seed % 11);
-                if (now < person.LeisureNextMove) return person.LeisureTargetId;
-                person.LeisureStop++; person.LeisureNextMove = 0;
+                person.LeisureTargetId = null;
+                person.LeisureNextMove = 0;
+                return null;
             }
-            // Visits have real routes and short pauses rather than everyone standing at one park all afternoon.
+            if (now < person.LeisureNextMove) return null;
+            long windowEnd = now - minute + outingEnd;
+            // A stop must have room for both the trip and the time spent at the destination.
             if (!working && person.LeisureStop % 3 == 0 && (person.PersonId == Npcs.Zhang
                 || person.PersonId == Npcs.Lin || person.PersonId == Npcs.Landlady))
             {
                 var shop = ShopAt(CurrentPlace);
-                if (shop != null && shop.Place.Id != person.LocationPlaceId && DistrictAccessBlocker(shop.Place) == null
-                    && (person.PersonId != Npcs.Landlady || LandladyShop() == shop))
-                {
-                    person.LeisureTargetId = shop.Place.Id;
+                if (shop != null && shop.Place.Id != person.LocationPlaceId
+                    && (person.PersonId != Npcs.Landlady || LandladyShop() == shop) && TryPlanVisit(shop.Place))
                     return person.LeisureTargetId;
-                }
             }
-            string[] destinations = CityPerson(person.PersonId)?.LeisurePlaces;
-            if(destinations==null||destinations.Length==0)destinations=new[]{ "shop14", "shop07", "life_park", "shop15", "shop01", "metro_a", "shop16", "life_court", "metro_b" };
+            var preferred = CityPerson(person.PersonId)?.LeisurePlaces ?? Array.Empty<string>();
+            foreach (var destinations in new[] { preferred, FallbackLeisurePlaces })
             for (int i = 0; i < destinations.Length; i++)
             {
                 string target = destinations[(seed % destinations.Length + person.LeisureStop + i) % destinations.Length];
                 if (!City.HasPlace(target) || target == person.HomePlaceId || target == person.LocationPlaceId || target == person.WorkPlaceId) continue;
                 var place = City.GetPlace(target);
-                if(!IsPlaceOpen(place))continue;
                 if (working && person.WorkPlaceId != null && City.HasPlace(person.WorkPlaceId))
                 {
                     var from = City.ViewPosition(City.GetPlace(person.WorkPlaceId).NodeId);
@@ -556,9 +572,33 @@ namespace PCShopSell.Core.Session
                     if (DistanceCity(from, to) > 30) continue; // Lunch/rest breaks stay in the neighbourhood.
                 }
                 if (place.Kind == PlaceKind.Shop && (IsVacant(place) || IsMyShop(place) || ClosedReason(place) != null)) continue;
-                person.LeisureTargetId = target; return target;
+                if (TryPlanVisit(place)) return target;
             }
-            person.LeisureTargetId = null; return null;
+            person.LeisureNextMove = now + 15 + seed % 10;
+            return null;
+
+            bool TryPlanVisit(Place place)
+            {
+                if (DistrictAccessBlocker(place) != null || !IsPlaceOpen(place)) return false;
+                long travel = EstimateCityCommute(person, place.Id, now);
+                if (travel < 0) return false;
+                long arrival = now + travel;
+                if (arrival + minimumStay > windowEnd || !CityVenueFits(place, arrival, minimumStay)) return false;
+                if (working && City.HasPlace(person.WorkPlaceId))
+                {
+                    string stopNode = StreetServicePlace(place.Id) ? CommunityStreetNode(place) : null;
+                    var stop = stopNode == null ? StandOf(place) : City.ViewPosition(stopNode);
+                    var departure = new CityPersonState { PersonId = person.PersonId, X = stop.X, Y = stop.Y, LocationPlaceId = place.Id };
+                    long returnTrip = EstimateCityCommute(departure, person.WorkPlaceId, arrival + minimumStay);
+                    if (returnTrip < 0 || arrival + minimumStay + returnTrip > windowEnd) return false;
+                }
+                int stay = preferredStay;
+                while (stay > minimumStay && (arrival + stay > windowEnd || !CityVenueFits(place, arrival, stay)))
+                    stay -= 15;
+                person.LeisureTargetId = place.Id;
+                person.LeisureNextMove = arrival + stay;
+                return true;
+            }
         }
 
         private CityRoute PlanCityRoute(CityPersonState p,string target,long now,long latestArrival=long.MaxValue,VehicleKind? transportChoice=null)
@@ -639,7 +679,7 @@ namespace PCShopSell.Core.Session
             if(topic=="work")text=(p.WorkPlaceId!=null&&City.HasPlace(p.WorkPlaceId)?"我现在的工作在"+City.GetPlace(p.WorkPlaceId).Name+"。":"我现在没有固定岗位。")+"\n"+text;
             if (topic == "interest" && ConversationTraits(id)[0].Name is string interest)
                 text = $"我平时喜欢{interest}。有空的时候，也想给自己放个假。";
-            RememberSocial(id,(remote?"通过电话，":"")+(fresh?"聊了新话题：":"再次聊起：")+text);
+            RememberSocial(id, (remote ? PhoneConversationPrefix : "") + (fresh ? NewTopicPrefix : RepeatedTopicPrefix) + text);
             OnCityStoryTalk(id,topic);
             return text;
         }

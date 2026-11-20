@@ -66,7 +66,7 @@ namespace PCShopSell.Core.Shop
         public static readonly IReadOnlyList<ShopUpgradeDef> All = new[]
         {
             new ShopUpgradeDef(Phone, "智能手机", "换掉按键机。本身不赚钱，但是开通收款码的前提。", 1200, null, 0, false),
-            new ShopUpgradeDef(Qr, "开通收款码", "没带现金的顾客也能买单，结账也更快（1 分钟一单）。需要先有智能手机。", 200, null, 0, true, true, PhoneShop),
+            new ShopUpgradeDef(Qr, "开通收款码", "提高部分移动支付顾客的购买率。", 200, null, 0, true, true, PhoneShop),
             new ShopUpgradeDef(SelfCheckout, "自助结账平台", "开通收款码后可安装。排队的顾客会自动结账，仍需有人在店营业。", 4500, requires: Qr, soldAt: PhoneShop),
             new ShopUpgradeDef(Shelf1, "货架扩容 I", "库存容量 +20 格。", 1000, null, 0, false),
             new ShopUpgradeDef(Shelf2, "货架扩容 II", "库存容量再 +20 格。", 2000, Shelf1, 0, false),

@@ -225,11 +225,6 @@ namespace PCShopSell.Core.Session
             string logicalId = def.LogicalId ?? definitionId;
             if(logicalId.StartsWith("expo_")&&!CityExpoDay(start,logicalId=="expo_comic"))return "不在本届展期，下一届按固定月历开放";
             var ids=(persons??Array.Empty<string>()).Where(id=>!string.IsNullOrEmpty(id)).Distinct().ToArray();
-            if(CommunitySearchActive)
-                for(int i=0;i<3;i++)
-                    if(!CommunityHasClue(i)&&def.VenueId==CommunityLeadVenue(i)
-                        &&ids.Contains(CommunityLeadPerson(i))&&!CitySamePlace(CommunityLeadPerson(i)))
-                        return "这次寻物交往需要当面邀约，请先走到"+(CityPerson(CommunityLeadPerson(i))?.Name??CommunityLeadPerson(i))+"身边，通过人物对话邀请活动。";
             if(ids.Length>5)return "一个活动最多六人（含玩家）";
             if(IsOwnedVenue(venue)&&ids.Length+1>VenueCapacity(venue))return "该场地最多容纳 "+VenueCapacity(venue)+" 人（含玩家），请减少同行人数";
             long end=start+def.Minutes;
@@ -270,12 +265,26 @@ namespace PCShopSell.Core.Session
             int seats=_cityActivities.Where(a=>a.Active&&a.VenueId==venue.Id&&start<a.ScheduledStart+a.Duration&&end>a.ScheduledStart).Sum(a=>a.Participants.Length+1);
             return seats+ids.Length+1>18?"这个时段座位不足，请选择下一时段":null;
         }
+        public string CityActivityContactBlocker(string definitionId, string personId) =>
+            IsCommunityLeadInvitation(definitionId, personId) ? RemoteConversationBlocker(personId) : CityInviteBlocker(personId);
+
         public string CityActivityInvitationBlocker(string definitionId, string personId, long start, bool approveEmployee) =>
-            CityInviteBlocker(personId) ?? CityActivityBlocker(definitionId, new[] { personId }, start, approveEmployee);
+            CityActivityContactBlocker(definitionId, personId) ?? CityActivityBlocker(definitionId, new[] { personId }, start, approveEmployee);
 
         public CityActivity ScheduleCityActivityInvitation(string definitionId, string personId, long start, bool approveEmployee)
         {
-            if (CityInviteBlocker(personId) is string reason) { Fail(reason); return null; }
+            if (CityActivityContactBlocker(definitionId, personId) is string reason) { Fail(reason); return null; }
+            if (IsCommunityLeadInvitation(definitionId, personId))
+            {
+                var appointment = ScheduleCityActivity(definitionId, new[] { personId }, start, approveEmployee,
+                    "community-lead:" + _nextCityActivity);
+                if (IsCommunityMarketOuting(appointment))
+                {
+                    appointment.ServiceConfirmed = true;
+                    appointment.ServiceChoice = 0;
+                }
+                return appointment;
+            }
             return ScheduleCityActivity(definitionId, new[] { personId }, start, approveEmployee);
         }
 
@@ -512,7 +521,7 @@ namespace PCShopSell.Core.Session
                     if((now<a.ScheduledStart && !a.RendezvousReady && !immediateDeparture)||!playerReady||!participantsReady)continue;
                     if (!CityVenueFits(venue, now, 1))
                     { EndCityActivity(a, CityActivityPhase.Cancelled, "场所已经打烊，尚未消费", now); continue; }
-                    if (immediateDeparture && !a.ServiceConfirmed)
+                    if ((immediateDeparture || IsAutomaticMeal(a)) && !a.ServiceConfirmed)
                     {
                         a.ServiceConfirmed = true;
                         a.ServiceChoice = 0;
@@ -555,9 +564,12 @@ namespace PCShopSell.Core.Session
                     StartOutdoorBatch(a);
                     StartOnsitePlay(a);
                     foreach(var shop in _shops)shop.Sim.PlayerPresent=false;
-                    if (a.ServiceConfirmed && a.ServiceChoice >= 0 && a.DefinitionId != "fishing" && !IsVenueSport(a) && !IsCookTasting(a))
+                    if (a.ServiceConfirmed && a.ServiceChoice >= 0 && a.DefinitionId != "fishing" && !IsVenueSport(a)
+                        && !IsCookTasting(a) && !IsAutomaticMeal(a))
                         ChooseCityActivity(a.Id, a.ServiceChoice);
-                    if (IsDrinkTasting(a))
+                    if (IsAutomaticMeal(a))
+                        Say($"已入座，开始{serviceTitle}。");
+                    else if (IsDrinkTasting(a))
                         Say($"开始{def.Name}。三杯尝完后，统一结算 {a.Duration} 分钟。");
                     else if (IsManualPlayActivity(a))
                         Say($"开始{serviceTitle}。操作时暂停游戏时间，结束后结算。");
@@ -657,7 +669,7 @@ namespace PCShopSell.Core.Session
         {
             var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId&&x.State==CityActivityPhase.Running);
             var def=CityActivityService(a);
-            if(def==null||IsOnsiteBasketball(a)||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
+            if(def==null||IsOnsiteBasketball(a)||IsAutomaticMeal(a)||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
             if (IsCookTasting(a) && choice > 0) return Fail("请在新菜试吃页面尝过菜后，再给罗师傅具体意见。");
             if (a.DefinitionId == "social_60" && choice == 3 && FishingActive && _fishing.Phase != FishingPhase.Ready)
                 return Fail("请先处理当前鱼口或鱼获，再换钓位");

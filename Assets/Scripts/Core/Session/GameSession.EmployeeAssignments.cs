@@ -13,6 +13,14 @@ namespace PCShopSell.Core.Session
         public static int EmployeeCheckoutCycleMinutes(Employee person) => WorkTaskMinutes(Math.Max(1, person.CheckoutMinutes), person.Dexterity) + 1;
         public static int AssemblyAptitude(Employee person) => (person.Dexterity + person.Intelligence) / 2;
         public static int AssemblyMinutesOf(Employee person) => Math.Max(45, WorkTaskMinutes(person.AssemblyMinutes, AssemblyAptitude(person)) - person.BuildsCompleted / 2);
+        public static double AssemblyPriceBonus(Employee person) => AssemblyPriceBonus(AssemblyAptitude(person));
+
+        private static double AssemblyPriceBonus(int aptitude)
+        {
+            aptitude = Math.Max(60, Math.Min(100, aptitude));
+            return Math.Round((aptitude - 60) * .75, MidpointRounding.AwayFromZero) / 1000;
+        }
+
         public static int EmployeePurchaseMinutes(Employee person) => 2;
         public static double EmployeePurchaseDiscount(Employee person) => Math.Max(0, Math.Min(100, person.Intelligence)) * .001;
         public static PCShopSell.Core.Common.Money EmployeePurchasePrice(Employee person, PurchaseOffer offer) =>

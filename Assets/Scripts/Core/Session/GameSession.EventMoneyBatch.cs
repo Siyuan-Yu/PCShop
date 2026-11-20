@@ -136,21 +136,24 @@ namespace PCShopSell.Core.Session
             if (n == 106)
                 return EventScene(template, "住院保障¥3,000/年。保障期内入院，报销实际住院费用80%；不限次数，没有单次或累计上限。门诊不在保障内。",
                     Choose(HasHospitalCoverage ? "续保一年 · ¥3,000" : "投保一年 · ¥3,000", _ => BuyHospitalPolicy() ? "保障已生效，有效至" + new GameTimestamp(_hospitalPolicyUntil) + "，到期需自行续费。" : "现金不足，未投保。"),
-                    new EventChoice
-                    {
-                        Text = "查看条款",
-                        Details = "一次投保保障360天。有效期内入院按实际住院费用报销80%，不封顶，门诊费用不报销。到期后保障结束，不会自动扣款。提前续保从原到期日接续。"
-                    },
+                    ViewEventDetails("查看条款",
+                        "一次投保保障360天。有效期内入院按实际住院费用报销80%，不封顶，门诊费用不报销。到期后保障结束，不会自动扣款。提前续保从原到期日接续。"),
                     Choose("暂不购买", _ => "没有扣款。"));
             if (n == 107)
             {
-                double chance = PrivateInvestmentChance(Player.Intelligence);
-                return EventScene(template, "朋友推荐一笔高风险私人投资：投入¥10,000，30天后成功总回款¥20,000，失败本金全失。当前智力" + Player.Intelligence + "，成功率" + chance.ToString("P0") + "。",
-                    Choose("核验风险和约定", _ => "没有保本承诺。智力不足50必败，50时成功率30%，之后每点+1个百分点，最高80%。这不是银行存款。"),
-                    Choose("投入¥10,000 · 30天后结算", _ => StartPrivateInvestment() ? "已投入¥10,000，到期结果和投入时的成功率已记录。" : "现金不足或已有待到期投资。"), Choose("不参与", _ => "没有投入或损失。"));
+                string attributes = EventScript.AttributeHint(("智力", Player.Intelligence));
+                return EventScene(template, "朋友推荐一笔高风险私人投资。投入 ¥10,000，30 天后结算。成功总回款 ¥20,000，失败会损失全部本金。",
+                    ViewEventDetails("核验风险和约定",
+                        $"投入 ¥10,000，{new GameTimestamp(Clock.Now.TotalMinutes + 30 * GameTimestamp.MinutesPerDay)} 到期结算。\n"
+                        + "成功时共收回 ¥20,000（含本金），失败时本金全部损失。\n结果" + attributes + "。"),
+                    Choose("投入 ¥10,000 · " + attributes, _ => StartPrivateInvestment() ? "已投入 ¥10,000，30 天后结算。" : "现金不足或已有待到期投资。"),
+                    Choose("不参与", _ => "本次未投入。"));
             }
             return EventScene(template, "你有可处理的随身旧物，可以带去青湾旧物市场，按实物和数量出售。",
-                Choose("看看可卖的闲置", _ => { Flags.Add("event-idle-sale"); return "已加入经营待办。随身闲置列表显示实物、数量与回收单价，到市场才交货收款。"; }), Choose("先留着", _ => "物品原样保留，没有收入。"));
+                ViewEventDetails("查看可卖的闲置", string.Join("\n", EventIdleItems.Select(item =>
+                    $"{item.Name} ×{item.Count} · 回收单价 {item.Price}"))),
+                Choose("记下出售安排", _ => { Flags.Add("event-idle-sale"); return "已记下出售安排，到青湾旧物市场交货后收款。"; }),
+                Choose("先留着", _ => "物品原样保留，没有收入。"));
         }
         public bool BuyEventScratchTicket()
         {

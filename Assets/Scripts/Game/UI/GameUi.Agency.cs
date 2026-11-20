@@ -184,6 +184,7 @@ namespace PCShopSell.Game.UI
         private string AgencyStatus(Place p, ShopListing listing)
         {
             if (p.Kind == PlaceKind.Agency) return "房产中介 · 你在这里";
+            if (OwnsAgencyCommercialProperty(p)) return S.IsMyShop(p) ? "我的产权 · 自营" : "我的产权";
             if (S.IsMyShop(p)) return S.ShopAt(p) == S.MainShop ? "我的主店" : S.PlaceTitle(p);
             if (S.IsPendingShop(p)) return $"已提前签下 · {S.ShopHandoverText(S.PendingLease.StartDay)}";
             if (S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null) return "我的经营资产";
@@ -314,7 +315,7 @@ namespace PCShopSell.Game.UI
                 Line(parent, $"挂牌还剩 {listing.CloseDay - S.Clock.Today.TotalDays + 1} 天", 16, Ui.Dim);
             HelpLink(parent, "租赁与客流说明",
                 $"新店按所选店型、{NewShopHours}正常营业估算。知名度、品牌口碑、街道人流、周末和同类分流会影响客流，实际人数也受开门和值守时长影响。餐馆还受座位周转影响。\n"
-                + "新租报价随地段和面积带来的基础客流及周行情变化。签约付首周租金、一周押金和半周中介费，之后每七天交一次租。\n"
+                + "新租报价随地段、面积和周行情变化。签约付首周租金、一周押金和半周中介费，之后周日扣租。\n"
                 + $"与{Rosters.AgentChen.Name}的熟悉度每增加 1 点，中介费减免 {RealEstate.AgentDiscountPerRapport * 100:0.#} 个百分点，最多减免 {RealEstate.MaxAgentDiscount * 100:0.#}%。\n"
                 + "已签租金保留签约价。提前签约到交房日才能使用。退租前请清理库存，主动退租不退押金。");
         }
@@ -365,7 +366,7 @@ namespace PCShopSell.Game.UI
             string details = $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)}\n"
                 + $"{RetailShopTypes.Name(previewKind)} · 预计每日入店约 {S.ExpectedDailyShopEntrants(p, previewKind):N0} 人";
             details += advance ? "\n" + S.ShopHandoverText(listing.OpenDay) : "\n签约后交付";
-            string terms = $"签约后<b>每七天缴纳 {listing.Rent}</b>。主动退租，<b><color=#{ColorUtility.ToHtmlStringRGB(Ui.Warn)}>{RealEstate.Deposit(listing.Rent)} 押金不退</color></b>。";
+            string terms = $"首周租金签约时支付，之后<b>周日扣租 {listing.Rent}</b>。主动退租，<b><color=#{ColorUtility.ToHtmlStringRGB(Ui.Warn)}>{RealEstate.Deposit(listing.Rent)} 押金不退</color></b>。";
             if (advance) terms += "\n交房后可入驻，房租从签约日开始计算。";
             if (dedicatedVenue)
                 terms += $"\n专用场地「{S.VenueBusinessName(p)}」须保留原用途与设施，另行安排值守，原教练不自动受雇。"
@@ -449,7 +450,7 @@ namespace PCShopSell.Game.UI
                 Para(w.Content,"家具城开店清单："+string.Join("、",GameSession.OpeningFurniture(selected).Select(id=>FurnitureCatalog.Get(id).Name)),16,Ui.Good);
                 Ui.Size(Ui.Button(w.Content,"确认开一家"+RetailShopTypes.Name(selected),()=>
                 {
-                    if(S.ConfirmOpeningKind(placeId,selected)){w.Close();RebuildDock();}
+                    if(S.ConfirmOpeningKind(placeId,selected)){w.Close();RebuildDock();UpdateQuestTracker();}
                 },19,Ui.ButtonHot,S.RetailTypeBlocker(selected) == null),-1,46).name="ConfirmOpeningKind";
             },closable:false);
         }

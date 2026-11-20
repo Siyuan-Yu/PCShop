@@ -8,6 +8,23 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private int _oldMarketStall;
+        private Window _oldMarketWindow;
+
+        private void OpenOldMarket(Place place, string activityId)
+        {
+            if (S.CurrentPlace == place) S.PrepareVenueCompanions(place, activityId);
+            if (_oldMarketWindow == null || _oldMarketWindow.Closed)
+            {
+                _oldMarketWindow = OpenWindow(place.Name, 900, 700, w => BuildOldMarket(w, place, activityId));
+                return;
+            }
+            _windows.Remove(_oldMarketWindow);
+            _windows.Add(_oldMarketWindow);
+            _oldMarketWindow.Root.SetAsLastSibling();
+            _oldMarketWindow.Builder = w => BuildOldMarket(w, place, activityId);
+            _oldMarketWindow.Rebuild();
+        }
+
         private void BuildOldMarket(Window w, Place place, string activityId = null)
         {
             Line(w.Content, "营业时间 09:00–22:00", 17, Ui.Dim);
@@ -17,12 +34,36 @@ namespace PCShopSell.Game.UI
                 return;
             }
             var booking = S.PendingVenueActivity(place, activityId);
-            if (booking?.ServiceConfirmed == true && S.CityActivityService(booking) is CityActivityDefinition reserved)
-                BuildConfirmedVenueAppointment(w, booking, reserved, here: true);
-            foreach (var activity in S.CityActivities.Where(a => a.Active && a.VenueId == place.Id && (a != booking || !a.ServiceConfirmed)))
+            if (GameSession.IsCommunityMarketOuting(booking) && S.VenueAppointmentStartBlocker(booking) == null)
             {
-                string id = activity.Id;
-                Ui.Size(Ui.Button(w.Content, "和朋友一起逛", () => OpenCityActivityDetail(id), 18), -1, 42);
+                S.StartVenueAppointment(booking.Id);
+                booking = S.PendingVenueActivity(place, activityId);
+            }
+            var shopping = S.RunningCityActivity;
+            if (shopping?.VenueId != place.Id) shopping = null;
+            bool shoppingWithZhou = GameSession.IsCommunityMarketOuting(shopping);
+            if (shoppingWithZhou)
+            {
+                var header = Ui.Row(w.Content, 44, 10);
+                Ui.Size(Ui.Label(header, "周维成和你一起逛市场。选一件旧物买下送给他。", 19, color: Ui.Accent), 0, 44, 1);
+                Ui.Size(Ui.Button(header, "提前离开", () => ConfirmEndCityActivity(shopping, false), 17), 116, 42);
+            }
+            else if (GameSession.IsCommunityMarketOuting(booking))
+                Para(w.Content, S.VenueAppointmentStartBlocker(booking), 17, Ui.Dim);
+            else if (booking?.ServiceConfirmed == true && S.CityActivityService(booking) is CityActivityDefinition reserved)
+                BuildConfirmedVenueAppointment(w, booking, reserved, here: true);
+            else if (shopping == null && booking?.DefinitionId == "oldmarket_visit")
+            {
+                string why = S.VenueServiceBlocker(booking.DefinitionId, 0, booking.Id);
+                Ui.Size(Ui.Button(w.Content, "开始逛旧物市场", () =>
+                {
+                    if (S.SelectVenueService(booking.DefinitionId, 0, booking.Id)) w.Close();
+                    else w.Rebuild();
+                }, 18, Ui.ButtonHot, why == null), -1, 42).Tip(why);
+            }
+            else if ((shopping ?? booking) is CityActivity outing)
+            {
+                Ui.Size(Ui.Button(w.Content, "查看同行活动", () => OpenCityActivityDetail(outing.Id), 18), -1, 42);
             }
             var progress = S.OldMarketProgress;
             bool busy = progress.Pending != null;
@@ -85,11 +126,16 @@ namespace PCShopSell.Game.UI
                 Line(info, g.Name, 21, Ui.Accent);
                 Line(info, S.OldMarketPrice(g.Id) + " · " + g.Weight.ToString("0.##") + "kg", 18);
                 Para(info, g.Description + (g.Faulty ? " 修理费¥" + g.RepairFee + "。" : ""), 18, Ui.Dim);
-                Ui.Size(Ui.Button(row, S.OldMarketRemaining(g.Id) > 0 ? "买下" : "已卖出", () =>
+                Ui.Size(Ui.Button(row, S.OldMarketRemaining(g.Id) > 0 ? (shoppingWithZhou ? "买下并送给周维成" : "买下") : "已卖出", () =>
                 {
+                    if (shoppingWithZhou)
+                    {
+                        if (S.BuyCommunityMarketGift(g.Id)) w.Close();
+                        return;
+                    }
                     if (S.BuyOldMarketGoods(g.Id) && g.Faulty) _oldMarketStall = 4;
                     w.Rebuild();
-                }, 18, Ui.ButtonBg, !busy && S.OldMarketRemaining(g.Id) > 0), 96, 36).name = "OldMarketBuy_" + g.Id;
+                }, 18, shoppingWithZhou ? Ui.ButtonHot : Ui.ButtonBg, !busy && S.OldMarketRemaining(g.Id) > 0), shoppingWithZhou ? 186 : 96, 36).name = "OldMarketBuy_" + g.Id;
             }
         }
     }

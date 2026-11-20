@@ -34,7 +34,7 @@ namespace PCShopSell.Core.Session
             string line = NpcTalk.SmallTalkLine(npcId, Clock.Today.TotalDays);
             if (Relation(npcId) < NpcTalk.SmallTalkMaxRelation) AddSocialRelation(npcId, NpcTalk.SmallTalkGain);
             else line += $"\n（和{n.Name}聊得很开心，不过交情到这儿，光闲聊不涨了。送礼、约出去、听他讲讲过去会更有用。）";
-            RememberSocial(npcId, "当面闲聊。\n" + line);
+            RememberSocial(npcId, SmallTalkPrefix + line);
             return line;
         }
 

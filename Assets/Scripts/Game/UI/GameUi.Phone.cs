@@ -24,8 +24,9 @@ namespace PCShopSell.Game.UI
         private Window OpenPhoneAppWindow(string title, Action<Window> build, bool holds = true, bool scrollContent = true) =>
             CenterPhoneApp(OpenWindow(title, PhoneAppWidth, PhoneAppHeight, build, holds: holds, scrollContent: scrollContent));
 
-        private Window OpenPhoneAppWorkspace(string group, string page, string title, Action<Window> build, bool isTab = false) =>
-            CenterPhoneApp(OpenWorkspace(group, page, title, PhoneAppWidth, PhoneAppHeight, build, isTab));
+        private Window OpenPhoneAppWorkspace(string group, string page, string title, Action<Window> build,
+            bool isTab = false, bool scrollContent = true) =>
+            CenterPhoneApp(OpenWorkspace(group, page, title, PhoneAppWidth, PhoneAppHeight, build, isTab, scrollContent));
 
         public void OpenPhone()
         {
@@ -276,14 +277,14 @@ namespace PCShopSell.Game.UI
             OpenPeopleWorkspace("contacts", w => BuildContactsContent(w), phone);
         }
 
-        private void BuildContactsContent(Window w, bool flexible = false)
+        private void BuildContactsContent(Window w, bool closeOnDriverCall = true)
         {
             RectTransform driver = ContactListRow(w.Content, 52);
             PortraitThumb(driver, "truck_driver", 44, null);
             Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b> · 同城送货", 17), -1, -1, 1);
             var call = Ui.Button(driver, "联系司机", () =>
             {
-                if (!flexible) w.Close();
+                if (closeOnDriverCall) w.Close();
                 OpenTruckWindow();
             }, 15, Ui.ButtonBg);
             call.name = "CallTruck";
@@ -294,7 +295,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, "还没有联系人 · 首次当面交谈后自动加入通讯录", 17, Ui.Dim);
                 return;
             }
-            RectTransform list = flexible ? PhoneFlexibleScroll(w.Content, "MyContactsList") : Ui.Scroll(w.Content, 440);
+            RectTransform list = PhoneFlexibleScroll(w.Content, closeOnDriverCall ? "PeopleContactsList" : "MyContactsList");
             foreach (ContactInfo def in met)
             {
                 ContactInfo n = def;

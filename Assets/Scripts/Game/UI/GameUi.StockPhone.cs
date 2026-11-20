@@ -91,7 +91,6 @@ namespace PCShopSell.Game.UI
             string blocker = S.AppBlocker(PhoneApps.Securities);
             if (blocker != null) { Toast(blocker); return; }
             _stockAtBank = false;
-            S.VisitQuestTarget(QuestTarget.BankSecurities);
             EnsureStockSessionState();
             // 仅在主动进入应用时清空，界面刷新及本次浏览期间切页保留当前操作。
             ResetStockOrderDrafts();
@@ -212,7 +211,7 @@ namespace PCShopSell.Game.UI
                     else OpenPhone();
                 }, 16), 124, 36);
             }
-            if (!_stockEmbedded && S.CurrentQuest()?.Id == "bank_securities")
+            if (!_stockEmbedded && _stockAtBank && S.AtBank && S.CurrentQuest()?.Id == "bank_securities")
             {
                 var lesson = Ui.Row(root, 88, 12);
                 Ui.Size(Ui.Label(lesson, "证券入门\n先看股价和涨跌，点 + 或 − 选择待成交股数，再点「成交」。最低 1 股，买卖收取 0.2% 手续费。\n可以先买 1 股体验；股价会波动，请为门店留足周转资金。智能手机自带的「证券」可以查看同一持仓。", 17), 0, 88, 1);

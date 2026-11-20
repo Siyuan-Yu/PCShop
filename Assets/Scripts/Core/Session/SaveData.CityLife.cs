@@ -129,6 +129,10 @@ namespace PCShopSell.Core.Session
             }
             foreach (var activity in _cityActivities.Where(a => a.Active && a.State != CityActivityPhase.Running && IsOnsiteActivity(a)))
                 activity.ServiceConfirmed = false;
+            // Older main-story bookings preselected the first dish even though the player never ordered it.
+            foreach (var activity in _cityActivities.Where(a => a.Active && !a.EntryPaid
+                && IsCommunityLeadDinner(a) && string.IsNullOrEmpty(a.ServiceDefinitionId)))
+                activity.ServiceConfirmed = false;
             _nextCityActivity=Math.Max(1,d.cityNextActivity);_nextCityIntent=Math.Max(1,d.cityNextIntent);
             _cityTopicDay.Clear();for(int i=0;i<Math.Min(d.cityTopicKeys?.Length??0,d.cityTopicDays?.Length??0);i++)_cityTopicDay[d.cityTopicKeys[i]]=d.cityTopicDays[i];
             _cityTrust.Clear();for(int i=0;i<Math.Min(d.cityTrustIds?.Length??0,d.cityTrustValues?.Length??0);i++)_cityTrust[d.cityTrustIds[i]]=Math.Max(0,d.cityTrustValues[i]);

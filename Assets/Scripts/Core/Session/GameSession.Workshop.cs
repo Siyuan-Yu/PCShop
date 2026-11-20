@@ -31,7 +31,11 @@ namespace PCShopSell.Core.Session
             if (shop.Assembler != null) return;
             shop.EmployeeBuilding = false;
             shop.WorkingAssemblers.Clear();
-            foreach (var order in shop.Sim.Orders) order.EmployeeMinutesLeft = 0;
+            foreach (var order in shop.Sim.Orders)
+            {
+                order.EmployeeMinutesLeft = 0;
+                order.EmployeeAssemblyAptitude = 0;
+            }
         }
 
         private void UpdateEmployeeWork(GameTimestamp now)
@@ -54,6 +58,9 @@ namespace PCShopSell.Core.Session
                     if (order == null || !PlayerShop.ReserveBuild(order.Id)) continue;
                     order.EmployeeMinutesLeft = workMinutes;
                 }
+                // Reserve zero for orders that have not recorded the starting worker yet, including old saves.
+                if (order.EmployeeAssemblyAptitude == 0)
+                    order.EmployeeAssemblyAptitude = Math.Max(1, AssemblyAptitude(worker));
                 handled.Add(order.Id);
                 _employeeBuilding |= !dedicated;
                 order.EmployeeMinutesLeft--;
@@ -61,9 +68,12 @@ namespace PCShopSell.Core.Session
                     _focus.WorkingAssemblers.Add(worker.Id);
                 else
                 {
-                    if (!PlayerShop.CompleteBuild(order.Id, now)) continue;
+                    if (!PlayerShop.CompleteBuild(order.Id, now, AssemblyPriceBonus(order.EmployeeAssemblyAptitude), out var payment)) continue;
                     worker.BuildsCompleted++;
-                    Say($"{worker.Name}完成订单 #{order.Id}，收款 {order.Price}。" + (order.ReputationReward > 0 ? $"名望 +{order.ReputationReward:0.#}。" : ""));
+                    Money premium = payment - order.Price;
+                    string premiumText = premium.IsPositive ? $"（含装机溢价 {premium}）" : "";
+                    Say($"{worker.Name}完成订单 #{order.Id}，收款 {payment}{premiumText}。"
+                        + (order.ReputationReward > 0 ? $"名望 +{order.ReputationReward:0.#}。" : ""));
                 }
             }
         }

@@ -15,6 +15,13 @@ namespace PCShopSell.Game.Runtime
         private Texture2D _streak;
         private bool _visible;
 
+        public void SetPaused(bool paused)
+        {
+            if (!_visible) return;
+            if (paused && _rain.isPlaying) _rain.Pause(false);
+            else if (!paused && _rain.isPaused) _rain.Play(false);
+        }
+
         public void Initialize(Camera camera)
         {
             _camera = camera;

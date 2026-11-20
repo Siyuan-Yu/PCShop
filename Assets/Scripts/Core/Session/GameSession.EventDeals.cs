@@ -131,7 +131,7 @@ namespace PCShopSell.Core.Session
             var principal = Money.FromYuan(2000);
             double chance = EventScript.ProgressiveChance(.65, (Relation(Npcs.Lin), 70, .01));
             return EventScene(template, "林远航想借 ¥2,000 报培训班，约定 25 天后还 ¥2,200。",
-                Choose($"借 ¥2,000 · 按时还款概率 {chance * 100:0}%", s =>
+                Choose("借 ¥2,000 · 还款" + EventScript.AttributeHint(("与林远航的交情", Relation(Npcs.Lin))), s =>
                 {
                     if (s.HasLinLoan || !s.Ledger.TryDebit(s.Clock.Today, "借款借出", principal, "借给林远航")) return "借款未登记。";
                     s._linLoan = new LinLoanState { DueDay = s.Clock.Today.TotalDays + 25, Chance = chance };
@@ -165,7 +165,7 @@ namespace PCShopSell.Core.Session
             if (loan?.Overdue != true || EventRaised == null) return false;
             var choices = new List<EventChoice>();
             if (!loan.Reminded)
-                choices.Add(Choose($"催款一次 · 成功率 {loan.Chance * 100:0}%", s =>
+                choices.Add(Choose("催款一次 · 看借出时的交情", s =>
                 {
                     loan.Reminded = true;
                     return s.Random.Chance(loan.Chance) ? s.ReceiveLinRepayment() : "林远航暂时还拿不出钱。";

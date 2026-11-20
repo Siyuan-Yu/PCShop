@@ -26,8 +26,8 @@ namespace PCShopSell.Core.Session
             {
                 var day = Clock.Today.AddDays(offset);
                 if (RacingSchedule.On(day) == RaceMeeting.None) continue;
-                long opens = (long)day.TotalDays * 1440 + RacingSchedule.MeetOpenMinute;
-                long closes = (long)day.TotalDays * 1440 + RacingSchedule.MeetCloseMinute;
+                long opens = RaceDayStart(day.TotalDays);
+                long closes = RaceDayEnd(day.TotalDays);
                 foreach (var entry in tracks)
                 {
                     long earliest = Math.Max(opens, now + entry.Travel);
@@ -51,7 +51,7 @@ namespace PCShopSell.Core.Session
         {
             var day = new GameDate(offer.Day);
             var meeting = RacingSchedule.On(day);
-            return $"{day} 09:00–18:00 · {RaceTracks.Get(offer.TrackId).Name} · {RacingSchedule.Name(meeting)} · 到场报名 ¥{RacingSchedule.Fee(meeting):N0}";
+            return $"{day} 全天 · {RaceTracks.Get(offer.TrackId).Name} · {RacingSchedule.Name(meeting)} · 到场报名 ¥{RacingSchedule.Fee(meeting):N0}";
         }
 
         private bool AcceptEventRace(RaceInvitation offer)
@@ -169,7 +169,7 @@ namespace PCShopSell.Core.Session
         private EventDef BindCollectorDrive(EventDef template)
         {
             if (!CanOfferCollectorDrive) return null;
-            return EventScene(template, $"顾若宁想请你到{City.GetPlace(CollectorTrack).Name}试驾她的{MotorCatalog.Get(CollectorModel).Name}。她在场时可以借你跑一圈计时练习。",
+            return EventScene(template, $"顾若宁想请你到{City.GetPlace(CollectorTrack).Name}试驾她的{MotorCatalog.Get(CollectorModel).Name}。她在场时可以借你跑两圈计时练习。",
                 Choose("接受试驾邀请", s =>
                 {
                     s._collectorTrialThrough = s.Clock.Today.TotalDays + 7;
@@ -188,8 +188,7 @@ namespace PCShopSell.Core.Session
         {
             if (CollectorTrialBlocker is string reason) return Fail(reason);
             _collectorTrialDriving = true;
-            StartDriving(new RaceSimulation(RaceTracks.Get(CollectorTrack, City), MotorCatalog.Get(CollectorModel),
-                true, lapLimit: 1), null);
+            StartDriving(new RaceSimulation(RaceTracks.Get(CollectorTrack, City), MotorCatalog.Get(CollectorModel), true), null);
             return true;
         }
 
@@ -197,7 +196,7 @@ namespace PCShopSell.Core.Session
         {
             _collectorTrialDriving = false;
             double seconds = race.Elapsed + race.Penalty;
-            double target = race.Length / (race.Model.Speed / 7.2) * 3 + 15;
+            double target = race.Length * race.Laps / (race.Model.Speed / 7.2) * 3 + 15;
             bool clean = !race.Abandoned && race.Collisions == 0 && seconds <= target;
             int before = Relation(Ruoning);
             if (!race.Abandoned)
@@ -215,7 +214,7 @@ namespace PCShopSell.Core.Session
                 Relationships = race.Abandoned ? Array.Empty<RaceRelationshipChange>() :
                     new[] { new RaceRelationshipChange { PersonId = Ruoning, Name = "顾若宁", Before = before, After = Relation(Ruoning) } },
                 Extra = race.Abandoned ? "已把车交还顾若宁，邀请有效期内还可再试。" : clean
-                    ? "顾若宁说你这一圈跑得又稳又快，车已交还。" : "顾若宁看完用时和碰撞记录，和你聊了聊驾驶感受。车已交还。" };
+                    ? "顾若宁说你这两圈跑得又稳又快，车已交还。" : "顾若宁看完用时和碰撞记录，和你聊了聊驾驶感受。车已交还。" };
             LastRaceReport = LastRaceSettlement.Extra;
             AdvanceClock(30);
             return LastRaceReport;
@@ -239,15 +238,15 @@ namespace PCShopSell.Core.Session
             AddRacingBatchSchedule(entries);
             foreach (var registration in _raceRegistrations)
             {
-                if (registration.Started || Clock.Now.TotalMinutes >= RaceDayStart(registration.Day) + RacingSchedule.MeetCloseMinute) continue;
+                if (registration.Started || registration.Day < Clock.Today.TotalDays) continue;
                 var day = new GameDate(registration.Day);
                 var meeting = RacingSchedule.On(day);
                 var companions = _raceInvitations.Where(i => i.Day == registration.Day && i.TrackId == registration.TrackId)
                     .Select(i => CityPerson(i.PersonId)?.Name ?? i.PersonId).ToArray();
                 entries.Add(new ScheduleEntry
                 {
-                    Minute = RaceDayStart(registration.Day) + RacingSchedule.MeetOpenMinute,
-                    Day = DescribeDay(registration.Day), TimeText = RacingSchedule.MeetHours, Kind = "race_registration",
+                    Minute = RaceDayStart(registration.Day), HasTime = false,
+                    Day = DescribeDay(registration.Day), Kind = "race_registration",
                     DestinationId = registration.TrackId,
                     Text = $"{RacingSchedule.Name(meeting)} · {City.GetPlace(registration.TrackId).Name} · 已报名 · 开赛支付 ¥{RacingSchedule.Fee(meeting):N0}"
                         + (companions.Length > 0 ? " · 同行 " + string.Join("、", companions) : "")
@@ -258,10 +257,9 @@ namespace PCShopSell.Core.Session
                 && !_eventRaceBookings.Any(b => b.PersonId == i.PersonId && b.TrackId == i.TrackId && b.Day == i.Day)).GroupBy(i => (i.Day, i.TrackId)))
             {
                 var day = new GameDate(group.Key.Day);
-                if (Clock.Now.TotalMinutes >= (long)day.TotalDays * 1440 + RacingSchedule.MeetCloseMinute) continue;
                 string companions = string.Join("、", group.Select(i => CityPerson(i.PersonId)?.Name ?? i.PersonId));
-                entries.Add(new ScheduleEntry { Minute = (long)day.TotalDays * 1440 + RacingSchedule.MeetOpenMinute,
-                    Day = DescribeDay(day.TotalDays), TimeText = RacingSchedule.MeetHours, Kind = "race_invite", DestinationId = group.Key.TrackId,
+                entries.Add(new ScheduleEntry { Minute = RaceDayStart(day.TotalDays), HasTime = false,
+                    Day = DescribeDay(day.TotalDays), Kind = "race_invite", DestinationId = group.Key.TrackId,
                     Text = $"{RacingSchedule.Name(RacingSchedule.On(day))} · {City.GetPlace(group.Key.TrackId).Name} · 和{companions}参赛 · 报名 ¥{RacingSchedule.Fee(RacingSchedule.On(day)):N0}" });
             }
             if (HasCollectorTrial && City.HasPlace(CollectorTrack))

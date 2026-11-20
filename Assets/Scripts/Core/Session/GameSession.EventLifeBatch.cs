@@ -140,7 +140,9 @@ namespace PCShopSell.Core.Session
             if(n==118)return EventScene(template,"叶书邀请你到社区图书角看书，第一次可免费领一本，以后带书交换。",
                 Choose("去看看",_=>{Flags.Add("life:library-invited");return "到社区服务站与叶书见面，选书后实物进入背包，阅读需要实际时间。";}),Choose("改天再去",_=>"没有凭空拿到书或增加智力。"));
             if(n==119)return EventScene(template,"社区夜校四节课，每节60分钟，整期¥1,000。可选记账、采购或沟通，实际到课并完成课堂题。",
-                Choose("查看课程",_=>{Flags.Add("life:school-invited");return "到社区服务站选择课程报名，可邀请认识的顾宁同行。";}),Choose("暂不报名",_=>"没有扣学费。"));
+                Choose("记下报名地点",_=>{Flags.Add("life:school-invited");return "到社区服务站选择课程报名，可邀请认识的顾宁同行。";}),
+                ViewEventDetails("查看课程", "可选经营记账、采购实务或沟通课程。\n每门四节，每节 60 分钟，学费 ¥1,000，到社区服务站报名时支付。"),
+                Choose("暂不报名",_=>"没有扣学费。"));
             return EventScene(template,"禾田集市周末开放临时摊位，¥200租半天。带实际闲置物品，真实顾客到场购买后才收款。",
                 Choose("准备摆摊",_=>{Flags.Add("life:fair-invited");return "到禾田集市选择实物、数量与售价，未售物品会退回。";}),Choose("只去逛逛",_=>{Flags.Add("life:fair-invited");return "可去现有集市浏览实际商品，没有自动消费或收入。";}));
         }

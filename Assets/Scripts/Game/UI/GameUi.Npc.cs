@@ -267,7 +267,7 @@ namespace PCShopSell.Game.UI
         private sealed class TalkOpt
         {
             public string Label, Blocker;
-            public bool Hot, SeparateBlocker;
+            public bool Hot, SeparateBlocker, Invitation, Mainline;
             public System.Action Act;
         }
 
@@ -322,10 +322,13 @@ namespace PCShopSell.Game.UI
 
                 var speech = Ui.Panel(reading, "DialogueSpeech", paper);
                 Ui.Size(speech, -1, -1, 1);
+                var options = replyOnly ? null : makeOptions(ctx);
+                var mainline = options?.Where(opt => opt.Mainline).ToArray();
+                int mainlineHeight = mainline == null || mainline.Length == 0 ? 0 : mainline.Length <= 2 ? 48 : 102;
                 var replyBody = Ui.Scroll(speech.transform);
                 ctx.ReplyScroll = replyBody.GetComponentInParent<ScrollRect>();
                 ctx.ReplyScroll.name = "DialogueTextScroll";
-                ((RectTransform)ctx.ReplyScroll.transform).Fill(18);
+                ((RectTransform)ctx.ReplyScroll.transform).Anchor(0, 0, 1, 1, 18, 18 + mainlineHeight, 18, 18);
                 ctx.ReplyScroll.GetComponent<Image>().color = Color.clear;
                 bool nearby = remote || S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
                 string district = replyOnly ? null : DistrictDialogueContext(portraitId);
@@ -341,8 +344,40 @@ namespace PCShopSell.Game.UI
                 if (replyOnly)
                     Ui.Size(Ui.Button(w.Content, replyConfirm, w.Close, 18, Ui.ButtonHot), -1, 42);
                 else
-                    BuildDialogueOptions(w, makeOptions(ctx));
+                {
+                    if (mainlineHeight > 0)
+                        BuildDialogueMainline(speech.transform, mainline, mainlineHeight);
+                    BuildDialogueOptions(w, options.Where(opt => !opt.Mainline).ToList());
+                }
             }, true, true, onClosed, scrollContent: false, showTitleBar: replyOnly);
+        }
+
+        private static void BuildDialogueMainline(Transform speech, TalkOpt[] options, int height)
+        {
+            var strip = Ui.Rect(speech, "DialogueMainline").Anchor(0, 0, 1, 0, 18, 14, 18, -14 - height);
+            var layout = Ui.Row(strip, -1, 10).Fill();
+            Ui.Size(Ui.Label(layout, "主线", 16, color: Ui.Accent), 44);
+            RectTransform actions;
+            if (options.Length > 4)
+            {
+                actions = Ui.Scroll(layout);
+                Ui.Size(actions.GetComponentInParent<ScrollRect>().GetComponent<Image>(), 0, -1, 1);
+            }
+            else
+            {
+                actions = Ui.Size(Ui.Rect(layout, "MainlineActions"), 0, -1, 1);
+                Ui.VList(actions, 6);
+            }
+            var list = actions.GetComponent<VerticalLayoutGroup>();
+            list.padding = new RectOffset();
+            list.spacing = 6;
+            for (int i = 0; i < options.Length; i += 2)
+            {
+                var row = Ui.Row(actions, 48);
+                BuildTalkOption(row, options[i]);
+                if (i + 1 < options.Length) BuildTalkOption(row, options[i + 1]);
+                else Ui.Size(Ui.Rect(row, "Space"), 0, -1, 1);
+            }
         }
 
         private static void BuildDialogueOptions(Window w, List<TalkOpt> options)
@@ -384,20 +419,27 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Rect(row, "Empty"), 0, -1, 1);
                         continue;
                     }
-                    string label = opt.Blocker == null || opt.SeparateBlocker || opt.Blocker.Length > 20
-                        ? opt.Label : opt.Label.Split('（')[0] + "\n<size=13>" + opt.Blocker + "</size>";
-                    bool close = opt.Label == "结束对话";
-                    var button = Ui.Size(Ui.Button(row, label, opt.Act, 16,
-                        Ui.SelectedButton(!close && opt.Hot), opt.Blocker == null), 0, -1, 1);
-                    var caption = button.GetComponentInChildren<Text>();
-                    caption.rectTransform.Fill(4);
-                    caption.resizeTextForBestFit = true;
-                    caption.resizeTextMinSize = 11;
-                    caption.resizeTextMaxSize = 16;
-                    if (close) button.name = "DialogueEnd";
-                    if (opt.Blocker != null) button.Tip(opt.Blocker);
+                    BuildTalkOption(row, opt);
                 }
             }
+        }
+
+        private static void BuildTalkOption(Transform row, TalkOpt opt)
+        {
+            string label = opt.Blocker == null || opt.SeparateBlocker || opt.Blocker.Length > 20
+                ? opt.Label : opt.Label.Split('（')[0] + "\n<size=13>" + opt.Blocker + "</size>";
+            bool close = opt.Label == "结束对话";
+            if (opt.Invitation) label = "＋ " + label;
+            var button = Ui.Size(Ui.Button(row, label, opt.Act, 16,
+                opt.Invitation ? (Color)new Color32(184, 224, 216, 255) : Ui.SelectedButton(!close && opt.Hot), opt.Blocker == null), 0, -1, 1);
+            var caption = button.GetComponentInChildren<Text>();
+            caption.rectTransform.Fill(4);
+            caption.resizeTextForBestFit = true;
+            caption.resizeTextMinSize = opt.Mainline ? 14 : 11;
+            caption.resizeTextMaxSize = 16;
+            if (opt.Invitation) caption.fontStyle = FontStyle.Bold;
+            if (close) button.name = "DialogueEnd";
+            if (opt.Blocker != null) button.Tip(opt.Blocker);
         }
 
         public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0,bool remote=false)
@@ -468,7 +510,17 @@ namespace PCShopSell.Game.UI
                         if(GameSession.CommunityLeadPerson(i)==personId&&!S.CommunityHasClue(i))
                         {
                             int lead=i;
-                            options.Add(new TalkOpt {Label="打听你保管的旧街图页",Hot=true,Blocker=near?null:"需要走到本人身边，当面打听",
+                            if (S.CommunityLeadAppointment(lead) is CityActivity scheduled)
+                                options.Add(new TalkOpt { Label = "查看已约活动", Mainline = true, Hot = true,
+                                    Act = () => OpenCityActivityDetail(scheduled.Id) });
+                            else if (!S.CommunityHasOuting(lead))
+                            {
+                                string activityId = GameSession.CommunityLeadActivity(lead);
+                                options.Add(new TalkOpt { Label = "邀约 · " + CityLifeCatalog.Activity(activityId).Name,
+                                    Mainline = true, Invitation = true, Blocker = canTalk ? S.CityActivityContactBlocker(activityId, personId) : "对方已离开",
+                                    Act = () => OpenCityActivityOffer(activityId, personId) });
+                            }
+                            else options.Add(new TalkOpt {Label="打听旧街图页",Mainline=true,Hot=true,Blocker=canTalk?null:"对方已离开",
                                 Act=()=>Reply(S.AskCommunityLead(lead,remote))});
                         }
                 if (creatorChoice)
@@ -510,7 +562,7 @@ namespace PCShopSell.Game.UI
                 } });
                 options.Add(new TalkOpt { Label = "送礼", Blocker = !near ? "需要当面送礼" : S.PersonGiftBlocker(personId), Act = () => OpenPersonGiftGrid(personId, name, ctx) });
                 if (definition != null)
-                    options.Add(new TalkOpt { Label = "邀请活动", Blocker = canTalk ? S.CityInviteBlocker(personId) : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
+                    options.Add(new TalkOpt { Label = "邀请活动", Invitation = true, Blocker = canTalk ? S.CityInviteBlocker(personId) : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
                 if (S.IsPlayerPartner(personId))
                 {
                     options.Add(new TalkOpt { Label = "聊聊心事", Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.PartnerConversation(personId)) });
@@ -715,7 +767,7 @@ namespace PCShopSell.Game.UI
                         },
                     });
                 }
-                o.Add(new TalkOpt { Label = "发出邀约（约出去玩）", Blocker = S.CityInviteBlocker(n.Id), Act = () => OpenInvitePanel(n.Id) });
+                o.Add(new TalkOpt { Label = "邀请活动", Invitation = true, Blocker = S.CityInviteBlocker(n.Id), Act = () => OpenInvitePanel(n.Id) });
                 if (stall != null)
                 {
                     bool open = S.IsWholesalerOpen;

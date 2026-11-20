@@ -27,7 +27,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(row, "续保一年", () => { if (!S.BuyHospitalPolicy()) Toast("现金不足，未续保。"); w.Rebuild(); }, 17), 120, 38);
             }
             foreach (var i in S.PrivateInvestments)
-                Line(w.Content, "私人投资¥10,000 · " + (i.Settled ? i.Success ? "已回款¥20,000" : "本金已损失" : new GameTimestamp(i.At) + "到期 · 成功率" + i.Chance.ToString("P0")), 17);
+                Line(w.Content, "私人投资¥10,000 · " + (i.Settled ? i.Success ? "已回款¥20,000" : "本金已损失" : new GameTimestamp(i.At) + "到期"), 17);
             foreach (var bill in S.EventBills)
             {
                 var b = bill;

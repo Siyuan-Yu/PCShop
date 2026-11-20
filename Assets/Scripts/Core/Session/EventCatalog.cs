@@ -8,7 +8,7 @@ using PCShopSell.Core.Shop;
 namespace PCShopSell.Core.Session
 {
     /// <summary>
-    /// 随机事件目录。每天 11:00 按概率抽一个满足条件的事件，弹出选项让玩家选。
+    /// 随机事件目录。每天 11:00、15:00 和 20:00 有机会抽到一个满足条件的事件。
     /// 数值是占位，等试玩后平衡；新增事件只需要在这里加一项。
     /// </summary>
     public static class EventCatalog
@@ -47,7 +47,7 @@ namespace PCShopSell.Core.Session
             new EventDef { Id = "rival", Title = "同行价格战", MinDay = 7, CooldownDays = 14, Weight = 8, When = s => s.EventPromotion() != null },
             new EventDef { Id = "wallet", Title = "捡到钱包", When = s => s.CanFindWallet },
             new EventDef { Id = "friend_meal", Title = "老同学请吃饭", When = s => s.CanOfferClassmateDinner },
-            new EventDef { Id = "lend", Title = "亲戚来借钱", When = s => s.CanOfferRelativeLoan },
+            new EventDef { Id = "lend", Title = $"表哥{CityLifeCatalog.CousinName}来借钱", When = s => s.CanOfferRelativeLoan },
             new EventDef { Id = "classmate_help", Title = "老同学雪中送炭", Group = "npc",
                 When = s => s.NegativeCashDays >= 3 && s.Ledger.Balance.IsNegative },
             new EventDef { Id = "flyer", Title = "发传单的上门了", When = s => s.FlyerShop() != null },

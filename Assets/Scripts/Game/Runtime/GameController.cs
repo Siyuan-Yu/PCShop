@@ -129,6 +129,7 @@ namespace PCShopSell.Game
 
         private void StartSession(GameSession s, int saveSlot = 0, string campaignId = null)
         {
+            ResetCommunityReveal();
             if (PetFocusActive) ExitPetFocus();
             Ui?.CloseAllWindows();
             if (Session != null)
@@ -147,6 +148,7 @@ namespace PCShopSell.Game
                 Session.CityTravelRequested-=OnCityTravelRequested;
                 Session.CityPlaceEntered-=OnCityPlaceEntered;
                 Session.CityActivitySettled-=OnCityActivitySettled;
+                Session.CommunityUnlocked -= QueueCommunityReveal;
                 Session.Dispose();
             }
             Interior.Clear();
@@ -171,6 +173,7 @@ namespace PCShopSell.Game
             s.CityTravelRequested+=OnCityTravelRequested;
             s.CityPlaceEntered+=OnCityPlaceEntered;
             s.CityActivitySettled+=OnCityActivitySettled;
+            s.CommunityUnlocked += QueueCommunityReveal;
             _cityExitIntent=null;
             _pendingEnter = null;
             string sleepDestination = s.CitySleepRequested ? s.CityIntent?.TargetPlaceId ?? s.CurrentPlace?.Id : null;
@@ -195,9 +198,10 @@ namespace PCShopSell.Game
 
             // Apply the initial room visibility, furniture and actor placement before
             // revealing the session. Do not wait for the first gameplay Update.
-            SyncViews(0);
+            SyncViews(0, initialize: true);
             SnapCamera();
-            if (s.CurrentPlace != null && !s.IsGameOver) Ui.OnEnteredPlace(s.CurrentPlace);
+            if (s.CurrentPlace != null && !s.IsGameOver && !s.ScooterTutorialPaused
+                && (!s.SecuritiesTutorialPaused || s.AtBank)) Ui.OnEnteredPlace(s.CurrentPlace);
             if(s.CityIntent!=null&&s.Trip==null&&!s.IsGameOver)
             {
                 OnCityTravelRequested(s.CityIntent);
@@ -476,6 +480,7 @@ namespace PCShopSell.Game
             }
             float dt = Time.unscaledDeltaTime;
             if(UpdateRacing(dt))return;
+            if (UpdateCommunityReveal(dt)) return;
             HandleKeys();
             HandleMovement(dt);
             UpdatePlacement();
@@ -525,6 +530,8 @@ namespace PCShopSell.Game
 
         private float _crowdSyncTimer;
         private float _shopFrontTimer;
+        private float _worldVisualTime;
+        private static readonly int WorldVisualTimeId = Shader.PropertyToID("_PCShopWorldVisualTime");
 
         /// <summary>街坊上班的店门口（站在门前人行道上，进去就消失）。</summary>
         private Vector3? ResidentDoor(string placeId)
@@ -534,11 +541,20 @@ namespace PCShopSell.Game
             return StreetWorldBuilder.ToWorld(Session.DoorOf(p)) - new Vector3(0, 0, 0.4f);
         }
 
-        private void SyncViews(float dt)
+        private void SyncViews(float dt, bool initialize = false)
         {
+            bool scooterTutorialPaused = Session.ScooterTutorialPaused;
+            // Keep the rendered pose and camera fixed while the tutorial canvas keeps updating.
+            if (scooterTutorialPaused && !initialize)
+            {
+                _rain.SetPaused(true);
+                return;
+            }
+            if (!scooterTutorialPaused) _worldVisualTime += dt;
+            Shader.SetGlobalFloat(WorldVisualTimeId, _worldVisualTime);
             bool interior = InInterior;
             bool room = InRoom;
-            bool worldRunning = Session.Time.IsRunning && !Session.ManualActivityClockPaused;
+            bool worldRunning = !scooterTutorialPaused && Session.Time.IsRunning && !Session.ManualActivityClockPaused;
             float worldDt = worldRunning ? Mathf.Min(dt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
             Interior.SetActive(interior);
             bool residenceChanged = EnsureResidenceView();
@@ -558,7 +574,7 @@ namespace PCShopSell.Game
             {
                 _crowdPlace=crowdPlace;_crowdActivity=crowdActivity;
                 _crowdSyncTimer = 0.25f;
-                _crowd.SyncCity(Session, FocusPoint(), Cam, World);
+                _crowd.SyncCity(Session, _communityRevealActive ? _rig.Focus : FocusPoint(), Cam, World);
             }
             _crowd.Update(worldDt, !room);
             UpdateBeacons(dt);
@@ -581,12 +597,12 @@ namespace PCShopSell.Game
             UpdateCityTravel(dt);
             FigureMotion.AdvanceAll(dt, worldRunning);
 
-            if (RoomKind != _wasRoomKind || residenceChanged)
+            if (!_communityRevealActive && (RoomKind != _wasRoomKind || residenceChanged))
             {
                 _wasRoomKind = RoomKind;
                 SnapCamera();
             }
-            else
+            else if (!_communityRevealActive)
             {
                 _rig.Follow(FocusPoint(), dt);
             }
@@ -594,6 +610,7 @@ namespace PCShopSell.Game
                 && World.Places.TryGetValue(Session.CurrentPlace.Id, out var venue)
                 && venue.VenueInterior != null && venue.VenueInterior.activeInHierarchy;
             UpdateWeather(room, room || insideVenue);
+            _rain.SetPaused(scooterTutorialPaused);
 
             bool chasing = Session.Police.AnyChasing;
             if (chasing && !_wasChasing) Ui.Toast("被交警发现了！");
@@ -668,6 +685,7 @@ namespace PCShopSell.Game
             if (Session.RequiredTutorialPaused)
             {
                 _orbiting = false;
+                if ((Session.ScooterTutorialPaused || Session.SecuritiesTutorialPaused) && !Ui.AnyModalOpen) return;
                 if (Input.GetKeyDown(KeyCode.Escape) && (!Ui.AnyModalOpen || !Ui.RequiredTutorialControlVisible)
                     && !Ui.CloseTopWindow()) Ui.TryHotkey(KeyCode.Escape);
                 return;
@@ -1324,7 +1342,7 @@ namespace PCShopSell.Game
 
         private void OnEventCgPopup(string title, string body, EventCgFrame cg)
         {
-            if(Session?.BrandExpoExclusive==true&&title!="你晕倒了"&&title!="住院了"){Ui.Toast(title+"："+body);return;}
+            if(Session?.BrandExpoExclusive==true&&title!="你晕倒了"&&title!="住院了"&&!GameSession.IsScheduledPropertyPopup(title)){Ui.Toast(title+"："+body);return;}
 #if UNITY_EDITOR
             // This explicit test-only jump spans a week. Keep its ordinary shop
             // notification backlog from covering the exhibition controls.

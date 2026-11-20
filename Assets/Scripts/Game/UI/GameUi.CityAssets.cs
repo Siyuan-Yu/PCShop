@@ -143,7 +143,7 @@ namespace PCShopSell.Game.UI
                 Para(confirmation.Content, terms, 19);
                 Ui.Size(Ui.Button(confirmation.Content, "确认办理", () => { if (submitted) return; submitted = true; if (action()) { confirmation.Close(); parent?.Rebuild(); } else submitted = false; }, 19, Ui.Warn, enabled), -1, 48);
                 Ui.Size(Ui.Button(confirmation.Content, "返回", confirmation.Close, 19), -1, 44);
-            });
+            }, fitContent: true);
         }
     }
 }

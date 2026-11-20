@@ -78,7 +78,7 @@ namespace PCShopSell.Core.Session
             stall = PurchaseDestination(stall);
             if (HasBargainedToday(stall)) return BargainResult.AlreadyTried;
             double chance = 0.35 + EffectiveCharm * 0.01 + (Player.Tired ? -0.15 : 0);
-            AdvanceClock(5);
+            AdvancePurchaseClock(5);
             bool ok = Random.Chance(Math.Max(0.05, Math.Min(0.9, chance)));
             double bonus = ok ? Random.Range(0.03, 0.07) : -0.01;
             _bargains[stall.Id] = (Clock.Today.TotalDays, bonus);
@@ -114,8 +114,15 @@ namespace PCShopSell.Core.Session
             var purchaseOwner = Npcs.OwnerOf(stall.Id);
             if (purchaseOwner != null) RememberSocial(purchaseOwner.Id, $"在{stall.Name}购入{part.Name} ×{count}。");
             if (_stallCheckoutMinutes.HasValue) _stallCheckoutMinutes += 2;
-            else AdvanceClock(2);
+            else AdvancePurchaseClock(2);
             return true;
+        }
+
+        private void AdvancePurchaseClock(int minutes)
+        {
+            // Shopping from a paused panel does not advance pending deliveries or the world clock.
+            if (Time.IsRunning && !OpeningClockFrozen && !RequiredTutorialPaused)
+                AdvanceClock(minutes);
         }
 
         /// <summary>把随身的货卸进店里，放不下的留在身上。</summary>
@@ -160,6 +167,35 @@ namespace PCShopSell.Core.Session
         public Money OnlinePrice(OnlineStore store, PartDef part) =>
             Online1788.PriceOf(store, Market.PriceOf(part)).Scale(1.0 - NpcPerks.OnlineDiscount(Relation(Npcs.Zhou)));
 
+        public const int OnlinePartOrderLimit = 1000;
+
+        private string OnlineSpaceBlocker(OwnedShop destination, double space)
+        {
+            double free = double.PositiveInfinity;
+            if (destination != null) WithShop(destination, () => free = destination.Sim.Stock.FreeSpace - IncomingShopSpace);
+            return space > free + 1e-9 ? $"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。" : null;
+        }
+
+        public (Money UnitPrice, Money Discount, Money Total, string Blocker) QuoteOnlinePartOrder(PartDef part, int count, OwnedShop destination)
+        {
+            Money unit = OnlinePrice(Online1788.Shopping, part);
+            Money goods = unit * count;
+            Money discount = EventProcurementCouponQuote(goods, false);
+            Money total = goods + Online1788.ShippingFee - discount;
+            string blocker = count < 1 || count > OnlinePartOrderLimit ? $"请选择 1–{OnlinePartOrderLimit} 件。"
+                : destination == null || !destination.Rented || ShopAt(destination.Place.Id) != destination ? "收货门店已不可用。"
+                : AppBlocker(PhoneApps.Shop) ?? OnlineSpaceBlocker(destination, Stock.SpaceOf(part, true, count));
+            if (blocker == null && !Ledger.CanAfford(total)) blocker = "现金不足。";
+            return (unit, discount, total, blocker);
+        }
+
+        private bool PlaceOnlinePartOrder(PartDef part, int count, OwnedShop destination)
+        {
+            var quote = QuoteOnlinePartOrder(part, count, destination);
+            if (quote.Blocker != null) return Fail(quote.Blocker);
+            return PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (part, count) }, destination);
+        }
+
         /// <summary>用手机上的 网购 app 下单（人在哪都行），次日 10:00 送到店里或家里（toHome）。</summary>
         public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool toHome = false) =>
             PlaceOnlineOrderCore(storeId, lines, true, toHome);
@@ -188,15 +224,13 @@ namespace PCShopSell.Core.Session
             foreach (var group in lines.Where(l => l.part != null && l.count > 0).GroupBy(l => l.part.Id))
             {
                 var part = group.First().part; int count = group.Sum(l => l.count);
-                if (count > 1000) return Fail("同一商品每单最多1000件。");
+                if (count > OnlinePartOrderLimit) return Fail($"同一商品每单最多{OnlinePartOrderLimit}件。");
                 total += OnlinePrice(store, part) * count;
                 space += Stock.SpaceOf(part, true, count);
                 order.Lines.Add(new OnlineOrderLine { PartId = part.Id, Count = count });
             }
             if (order.Lines.Count == 0) return Fail("购物车是空的。");
-            double free = double.PositiveInfinity;
-            if (destination != null) WithShop(destination, () => free = PlayerShop.Stock.FreeSpace - IncomingShopSpace);
-            if (space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
+            if (OnlineSpaceBlocker(destination, space) is string spaceBlocker) return Fail(spaceBlocker);
             Money couponDiscount = ProcurementCouponDiscount(order, total);
             total -= couponDiscount;
             if (!PayUnifiedOnlineOrder(order, total, store, couponDiscount)) return Fail($"要 {total}（含运费），钱不够。");
@@ -216,7 +250,7 @@ namespace PCShopSell.Core.Session
             if (manual)
             {
                 RememberPurchaseDelivery(destination);
-                AdvanceClock(5);
+                AdvancePurchaseClock(5);
             }
             return true;
         }

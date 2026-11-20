@@ -259,7 +259,7 @@ namespace PCShopSell.Core.Session
             if (_relativeReceivable.Amount > 0 && _relativeReceivable.DueDay > Clock.Today.TotalDays)
                 l.Add(new ScheduleEntry { Minute = (long)_relativeReceivable.DueDay * GameTimestamp.MinutesPerDay,
                     Day = DescribeDay(_relativeReceivable.DueDay), TimeText = "00:00", Kind = "npc_repayment",
-                    Text = $"表哥约定还款 · ¥{_relativeReceivable.Amount}" });
+                    Text = $"{CityLifeCatalog.CousinName}（表哥）约定还款 · ¥{_relativeReceivable.Amount}" });
             long now = Clock.Now.TotalMinutes;
             for (int i = 0; i < _appointments.Count; i++)
             {

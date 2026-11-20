@@ -53,64 +53,90 @@ namespace PCShopSell.Game.UI
             OpenCookTasting(activity.Id);
         }
 
+        private bool TryOpenCookTasting(Place place, string activityId)
+        {
+            if (place == null || S.CurrentPlace != place || S.IsWorking || S.IsGameOver) return false;
+            var activity = S.RunningCityActivity;
+            if (!GameSession.IsCookTasting(activity) || activity.VenueId != place.Id)
+                activity = S.PendingVenueActivity(place, activityId);
+            if (!GameSession.IsCookTasting(activity)) return false;
+            if (activity.State != CityActivityPhase.Running) S.PrepareVenueCompanions(place, activity.Id);
+            OpenCookTasting(activity.Id);
+            return true;
+        }
+
         private void OpenCookTasting(string id)
         {
-            _openedCookTasting = id;
-            _cookTastingSession = S;
-            OpenWindow("罗师傅的新菜试吃", 820, 800, w =>
+            OpenWindow("罗师傅的新菜试吃", 900, 590, w =>
             {
-                var activity = S.RunningCityActivity;
-                if (activity?.Id != id || !GameSession.IsCookTasting(activity))
+                var activity = S.CityActivities.FirstOrDefault(a => a.Id == id && a.Active);
+                if (!GameSession.IsCookTasting(activity) || S.CurrentPlace?.Id != activity.VenueId)
                 {
                     Para(w.Content, "这次试吃已经结束。", 19);
                     return;
                 }
-                Line(w.Content, "椒香鸡肉饭 · 罗师傅招待", 24, Ui.Accent);
-                Para(w.Content, "罗师傅把试做的一份端上桌，想听听你对口味、分量和定价的真实意见。", 19);
-                Line(w.Content, "本次免费 · 完成试吃后结算 60 分钟", 17, Ui.Good);
-                bool tasted = activity.Choices.Contains("cook-tasted");
+
+                if (activity.State != CityActivityPhase.Running)
+                {
+                    w.DialogIllustration = BuildEventCg(w.Content, new EventCgFrame("friend_meal", personId: "res_cook", seated: true), 300);
+                    Para(w.Content, "罗师傅给你留了座。「今天试三道菜，我一道一道上。你尝完告诉我实话。」", 20);
+                    string blocker = S.VenueAppointmentStartBlocker(activity);
+                    Line(w.Content, blocker ?? $"罗师傅招待 · 约 {activity.Duration} 分钟", 17, blocker == null ? Ui.Dim : Ui.Warn);
+                    Ui.Size(Ui.Button(w.Content, "入座试吃", () =>
+                    {
+                        if (S.StartVenueAppointment(id)) w.Rebuild();
+                    }, 20, Ui.ButtonHot, blocker == null), -1, 46);
+                    return;
+                }
+
+                _cookTastingSession = S;
+                _openedCookTasting = id;
+                int dishIndex = GameSession.CookTastingDishIndex(activity);
+                var dish = GameSession.CookTastingDishes[dishIndex];
+                int review = GameSession.CookTastingReviewIndex(activity, dishIndex);
+                bool tasted = GameSession.HasTastedCooksDish(activity, dishIndex);
+                Line(w.Content, $"第 {dishIndex + 1} / {GameSession.CookTastingDishes.Count} 道 · {dish.Name}", 22, Ui.Accent);
+                w.DialogIllustration = BuildEventCg(w.Content, new EventCgFrame("friend_meal", dish.Art, "res_cook", seated: true), 300, featureDish: true);
+
                 if (!tasted)
                 {
-                    Para(w.Content, "鸡肉刚出锅，配着热米饭，酱汁里带着明显的胡椒香。", 19);
-                    Ui.Size(Ui.Button(w.Content, "尝一口新菜", () =>
+                    Para(w.Content, dish.Served, 20);
+                    Ui.Size(Ui.Button(w.Content, $"试吃{dish.Name}", () =>
                     {
-                        if (S.TasteCooksDish(id)) w.Rebuild();
-                    }, 20, Ui.ButtonHot), -1, 48).name = "CookTastingTaste";
+                        if (S.TasteCooksDish(id, dishIndex)) w.Rebuild();
+                    }, 20, Ui.ButtonHot), -1, 46).name = "CookTastingTaste";
+                }
+                else if (review < 0)
+                {
+                    Para(w.Content, dish.Tasted, 20);
+                    if (!string.IsNullOrEmpty(activity.CookTastingEffects))
+                        Line(w.Content, activity.CookTastingEffects, 17, Ui.Accent);
+                    for (int i = 0; i < dish.Opinions.Length; i++)
+                    {
+                        int choice = i;
+                        Ui.Size(Ui.Button(w.Content, dish.Opinions[i], () =>
+                        {
+                            if (S.ReviewCooksDish(id, dishIndex, choice) != null) w.Rebuild();
+                        }, 19), -1, 42).name = $"CookTastingReview_{dishIndex}_{choice}";
+                    }
                 }
                 else
                 {
-                    Para(w.Content, "你尝过了：鸡肉焦香，酱汁比较浓，米饭吸了汁。罗师傅拿着本子等你的意见。", 19);
-                    string[][] opinions =
-                    {
-                        new[] { "椒香很开胃", "口味可以淡一点" },
-                        new[] { "一份刚好", "可以再加一点饭" },
-                        new[] { "做平价工作餐", "加蔬菜做套餐" }
-                    };
-                    for (int i = 0; i < GameSession.CookTastingTopics.Length; i++)
-                    {
-                        int topic = i;
-                        string key = "cook-review:" + topic + ":";
-                        bool reviewed = activity.Choices.Any(choice => choice.StartsWith(key, StringComparison.Ordinal));
-                        var row = Ui.Row(w.Content, 44, 8);
-                        Ui.Size(Ui.Label(row, GameSession.CookTastingTopics[topic], 18, color: Ui.Accent), 60, 44);
-                        for (int j = 0; j < 2; j++)
+                    Para(w.Content, dish.Replies[review], 20);
+                    if (dishIndex + 1 < GameSession.CookTastingDishes.Count)
+                        Ui.Size(Ui.Button(w.Content, "上下一道菜", () =>
                         {
-                            int opinion = j;
-                            bool selected = activity.Choices.Contains(key + opinion);
-                            Ui.Size(Ui.Button(row, (selected ? "✓ " : "") + opinions[topic][opinion], () =>
-                            {
-                                if (S.ReviewCooksDish(id, topic, opinion) != null) w.Rebuild();
-                            }, 17, Ui.SelectedButton(selected), !reviewed), -1, 44, 1).name = $"CookTastingReview_{topic}_{opinion}";
-                        }
-                    }
-                    Para(w.Content, activity.EventSettlementNote, 18);
-                    Ui.Size(Ui.Button(w.Content, "试吃结束，和罗师傅道别", () =>
-                    {
-                        if (S.FinishManualCityActivity(id)) CloseWindowSilently(w);
-                    }, 19, Ui.ButtonHot, S.CanFinishManualCityActivity(id)), -1, 48).name = "FinishCookTasting";
+                            if (S.ServeNextCooksDish(id, dishIndex)) w.Rebuild();
+                        }, 20, Ui.ButtonHot), -1, 46);
+                    else
+                        Ui.Size(Ui.Button(w.Content, "结束试吃，和罗师傅道别", () =>
+                        {
+                            if (S.FinishManualCityActivity(id)) CloseWindowSilently(w);
+                        }, 20, Ui.ButtonHot, S.CanFinishManualCityActivity(id)), -1, 46).name = "FinishCookTasting";
                 }
-                Ui.Size(Ui.Button(w.Content, "提前离开", () => ConfirmEndCityActivity(activity, false), 17), -1, 40);
-            });
+
+                Ui.Size(Ui.Button(w.Content, "提前离开", () => ConfirmEndCityActivity(activity, false), 17), -1, 38);
+            }, fitContent: true);
         }
 
         private static string VenuePlayerEffects(CityVenueService service)
@@ -260,8 +286,8 @@ namespace PCShopSell.Game.UI
             }
             Line(w.Content, park ? "散步路线与活动" : place.Business == "venue_restaurant" ? "菜单" : "服务价目表", 20, Ui.Accent);
             var list = GoodsList(w.Content, 300);
-            var bookedEvent = CityLifeCatalog.Activity(pending?.DefinitionId);
-            var services = bookedEvent?.EventOnly == true ? new[] { bookedEvent }
+            var bookedService = S.CityActivityService(pending);
+            var services = bookedService != null && (bookedService.EventOnly || bookedService.Id == "dinner") ? new[] { bookedService }
                 : CityLifeCatalog.Activities.Where(def => !def.EventOnly && def.VenueId == place.Id
                     && place.Business is not ("venue_court" or "venue_golf"));
             foreach (var definition in services.Select(def => def.AtVenue(place.Id)))
@@ -277,11 +303,11 @@ namespace PCShopSell.Game.UI
                     : def.FixedGroupPrice ? "整场 " + S.VenuePlayerPrice(def, choice) + "\n你付 " + S.CityActivityEntryPrice(def, choice, pending)
                     : S.CityActivityEntryPrice(def, choice, pending) + (pending?.PlayerTreat == true ? "\n请客合计" : "/人");
                 Ui.Size(Ui.Label(row, priceText, 18, TextAnchor.MiddleLeft, Ui.Good), 130);
-                string why = here ? S.VenueServiceBlocker(def.Id, choice) : "到场后选择";
+                string why = here ? S.VenueServiceBlocker(def.Id, choice, pending?.Id) : "到场后选择";
                 var action = Ui.Rect(row, "ServiceAction"); Ui.VList(action, 4, 0); Ui.Size(action, 150);
                 Ui.Size(Ui.Button(action, walk ? "选这条路线" : place.Business == "venue_restaurant" ? "点这份餐" : "选择这项服务", () =>
                 {
-                    if (!S.SelectVenueService(def.Id, choice)) { w.Rebuild(); return; }
+                    if (!S.SelectVenueService(def.Id, choice, pending?.Id)) { w.Rebuild(); return; }
                     CloseAllWindows();
                 }, 17, Ui.ButtonBg, why == null), -1, 42);
                 if (why != null) Para(action, why, 13, Ui.Dim);

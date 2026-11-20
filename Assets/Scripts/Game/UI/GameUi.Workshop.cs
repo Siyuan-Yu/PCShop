@@ -27,11 +27,15 @@ namespace PCShopSell.Game.UI
                 else Line(parent, Remaining(), 15, Ui.Accent);
             }
             var row = Ui.Row(parent, 36, 4);
+            var shop = S.PlayerShop;
             Ui.Size(Ui.Button(row, "缺件采购清单", () => OpenOrderShopping(order), 15, Ui.ButtonBg, !order.PartsReserved), 160);
             Ui.Size(Ui.Button(row, "取消订单…", () => OpenWindow("取消订单", 520, 250, w =>
             {
-                Para(w.Content, "取消后释放预留配件，名望降低 1。确定取消这笔订单？");
-                Ui.Size(Ui.Button(w.Content, "确认取消", () => { S.PlayerShop.CancelBuild(order.Id); w.Close(); refresh(); }, 17, Ui.Warn), -1, 40);
+                string consequence = order.ContractId == null
+                    ? $"门店口碑最多降低 {ShopSimulation.CustomerBuildCancellationReputationLoss:0.#}。"
+                    : "这台整机计入合同的未交付数量。";
+                Para(w.Content, "取消后会释放预留配件。" + consequence);
+                Ui.Size(Ui.Button(w.Content, "确认取消", () => { shop.CancelBuild(order.Id); w.Close(); refresh(); }, 17, Ui.Warn), -1, 40);
             }), 15), 140);
         }
 

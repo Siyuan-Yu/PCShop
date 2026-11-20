@@ -69,7 +69,7 @@ namespace PCShopSell.Core.Session
             string line = staff.Name + "：“" + staff.LineFor(Clock.Today.TotalDays + chats) + "”";
             if (StaffRapport(staff.Id) < StaffTalk.ChatMaxRapport) AddStaffRapport(staff.Id, StaffTalk.ChatGain);
             else line += $"\n（和{staff.Name}聊得很投缘，不过光闲聊熟络不动了。送点小礼物、听他讲讲自己的事更有用。）";
-            RememberSocial(staff.Id, "当面闲聊。\n" + line);
+            RememberSocial(staff.Id, SmallTalkPrefix + line);
             return line;
         }
 

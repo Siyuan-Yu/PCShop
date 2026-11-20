@@ -180,9 +180,10 @@ namespace PCShopSell.Tests
                     var anchor=s.City.ViewPosition(s.DistrictMeetingStreetNode);agent.X=anchor.X;agent.Y=anchor.Y;
                     s.Leave();s.ArriveAtNode(s.DistrictMeetingStreetNode);
                     typeof(GameSession).GetField("_free",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(s,(PCShopSell.Core.World.MapPoint?)anchor);
-                    ui.CloseAllWindows();ui.OpenPersonDialogue("keeper_agent");
-                    Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>(b.GetComponentInChildren<Text>()?.text??"").StartsWith("主线 · ")));
-                    var arrange=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>(b.GetComponentInChildren<Text>()?.text??"")=="请帮我约唐蔚出来见面");
+                    ui.CloseAllWindows();ui.OpenPersonDialogue("keeper_agent", remote: true);
+                    Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>(b.GetComponentInChildren<Text>()?.text??"").Contains("这次需要我做什么")));
+                    var arrange=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>(b.GetComponentInChildren<Text>()?.text??"").Contains("请陈启明约唐蔚"));
+                    Assert.AreEqual("DialogueMainline", arrange.transform.parent.parent.parent.parent.name);
                     Assert.True(arrange.interactable);arrange.onClick.Invoke();
                     Assert.AreEqual(CityLifeCatalog.TangWei,s.DistrictMeetingContact);
                     Assert.IsNull(s.DistrictPersonObjective("keeper_agent"));
@@ -205,23 +206,27 @@ namespace PCShopSell.Tests
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>(b.GetComponentInChildren<Text>()?.text??"").Contains("接受寻物委托")));
                     ui.CloseAllWindows();ui.OpenPersonDialogue(CityLifeCatalog.TangWei);
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>(b.GetComponentInChildren<Text>()?.text??"").StartsWith("主线 · ")));
-                    var accept=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>(b.GetComponentInChildren<Text>()?.text??"")=="答应帮忙找回三页图，接受寻物委托");
+                    var accept=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>(b.GetComponentInChildren<Text>()?.text??"")=="接受寻找三页商铺图的委托");
                     Assert.True(accept.interactable);accept.onClick.Invoke();
                     Assert.AreEqual("community.clue",s.CurrentDistrictNode.Id);
                     Assert.False(s.AtCurrentDistrictMeeting);
                     Assert.False(s.ActDistrictNode("community.meeting"),"The accepted commission cannot replay");
                     ui.CloseAllWindows();ui.OpenDistrictStory();
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name=="DistrictAcceptMeeting"||b.name=="DistrictCompleteNode"||b.name=="DistrictGoToMeeting"));
-                    if(!s.CitySamePlace("landlady"))
+                    StringAssert.Contains("手机通讯录", string.Join("\n", ui.Canvases
+                        .SelectMany(c => c.GetComponentsInChildren<Text>()).Select(t => t.text)));
+                    if (!s.CitySamePlace("landlady"))
                     {
-                        var beforeNavigation=JsonUtility.ToJson(s.DistrictStoryState);
-                        Assert.True(Find("DistrictFindPerson_landlady").interactable);
-                        Find("DistrictFindPerson_landlady").onClick.Invoke();
-                        Assert.AreEqual(beforeNavigation,JsonUtility.ToJson(s.DistrictStoryState),"Navigation must not book or finish a conversation");
+                        var beforeNavigation = JsonUtility.ToJson(s.DistrictStoryState);
+                        var find = Find("DistrictFindPerson_landlady");
+                        Assert.True(find.interactable);
+                        find.onClick.Invoke();
+                        Assert.AreEqual(beforeNavigation, JsonUtility.ToJson(s.DistrictStoryState));
+                        Assert.False(ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Button>()).Any(b => b.name == "DialogueEnd"));
                     }
                     DistrictProgressionTests.StandWithLead(s,0);
                     ui.CloseAllWindows();ui.OpenPersonDialogue("landlady");
-                    var book=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>(b.GetComponentInChildren<Text>()?.text??"").StartsWith("商量主线会面："));
+                    var book=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>(b.GetComponentInChildren<Text>()?.text??"").Contains("约见面"));
                     Assert.True(book.interactable);book.onClick.Invoke();
                     Assert.AreEqual("community.clue",s.DistrictStoryState.MeetingNodeId);
                     // Seed an in-progress search to verify the actual cheat button and saved evidence.
@@ -245,12 +250,12 @@ namespace PCShopSell.Tests
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name=="DistrictFindPerson_landlady"));
                     StringAssert.DoesNotContain("邀请：",StoryText());
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>(b.GetComponentInChildren<Text>()?.text??"").Contains("找他聊聊")||(b.GetComponentInChildren<Text>()?.text??"").StartsWith("邀请：")));
-                    StringAssert.Contains("向本人打听图页线索",StoryText());
+                    StringAssert.Contains("联系对方打听图页线索",StoryText());
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name=="CommunityAssembleMap"));
                     using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                     {
                         for(int i=0;i<3;i++){Assert.GreaterOrEqual(loaded.Relation(GameSession.CommunityLeadPerson(i)),30);Assert.True(loaded.CommunityHasOuting(i));Assert.IsNull(loaded.RemoteConversationBlocker(GameSession.CommunityLeadPerson(i)));}
-                        Assert.False(loaded.CommunityHasClue(1));loaded.AskCommunityLead(1,true);Assert.False(loaded.CommunityHasClue(1),"Remote chat cannot unlock a clue even with all conditions met");DistrictProgressionTests.AskLeadLocally(loaded,1);Assert.True(loaded.CommunityHasClue(1));Assert.IsNull(loaded.DistrictPersonObjective("lin"));
+                        Assert.False(loaded.CommunityHasClue(1));loaded.AskCommunityLead(1,true);Assert.True(loaded.CommunityHasClue(1));Assert.IsNull(loaded.DistrictPersonObjective("lin"));
                         Assert.True(loaded.CommunityBoxAvailable(1));Assert.False(loaded.CommunityHasPiece(1));Assert.Zero(loaded.DistrictAccessTier);
                     }
                     state.CommunityClues=3;
@@ -260,9 +265,8 @@ namespace PCShopSell.Tests
                     state.CommunityOutings&=~4;
                     DistrictProgressionTests.StandWithLead(s,2);
                     ui.CloseAllWindows();ui.OpenCityActivityChooser("zhou");
-                    StringAssert.Contains("市场走访",Find("CityActivityOffer_market").GetComponentInChildren<Text>().text);
-                    StringAssert.Contains("旧物闲逛",Find("CityActivityOffer_old_market").GetComponentInChildren<Text>().text);
-                    var booking=s.ScheduleCityActivity("market",new[]{"zhou"},s.SuggestCityActivityStart("market","zhou"));
+                    StringAssert.Contains("青湾旧物市场",Find("CityActivityOffer_oldmarket_visit").GetComponentInChildren<Text>().text);
+                    var booking=s.ScheduleCityActivityInvitation("oldmarket_visit","zhou",s.SuggestCityActivityStart("oldmarket_visit","zhou"),false);
                     Assert.NotNull(booking);
                     ui.CloseAllWindows();ui.OpenDistrictStory();
                     Assert.True(Find("DistrictGoToActivity_zhou").interactable,"A same-venue appointment still needs a route; preferred service is chosen on arrival");

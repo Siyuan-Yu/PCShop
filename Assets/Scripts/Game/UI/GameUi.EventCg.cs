@@ -21,10 +21,10 @@ namespace PCShopSell.Game.UI
             return image;
         }
 
-        private void BuildEventCg(Transform parent, EventCgFrame frame, float height)
+        private RectTransform BuildEventCg(Transform parent, EventCgFrame frame, float height, bool featureDish = false)
         {
             var background = Resources.Load<Texture2D>("EventCg/" + frame.Background);
-            if (background == null) return;
+            if (background == null) return null;
             var canvas = Ui.Size(Ui.Rect(parent, "EventIllustration"), -1, height);
             canvas.gameObject.AddComponent<RectMask2D>();
             var location = EventCgImage(canvas, "Location", background, true);
@@ -48,6 +48,8 @@ namespace PCShopSell.Game.UI
                     var propFrame = Ui.Rect(canvas, "OutcomeProp");
                     if (frame.Prop == EventCgProp.EmergencyLamp)
                         propFrame.Anchor(.69f, .71f, .93f, .94f, 0, 0, 0, 0);
+                    else if (featureDish)
+                        propFrame.Anchor(.32f, .015f, .70f, .53f, 0, 0, 0, 0);
                     else if (frame.Seated)
                         propFrame.Anchor(.47f, .055f, .69f, .24f, 0, 0, 0, 0);
                     else
@@ -82,6 +84,7 @@ namespace PCShopSell.Game.UI
             }
             if (!string.IsNullOrEmpty(frame.Caption))
                 EventCgCaption(canvas, frame.Caption, .02f, person == null ? .75f : .49f, TextAnchor.MiddleLeft);
+            return canvas;
         }
 
         private static void EventCgCaption(Transform parent, string caption, float left, float right, TextAnchor alignment)

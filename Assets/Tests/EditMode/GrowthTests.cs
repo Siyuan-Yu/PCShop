@@ -402,12 +402,20 @@ namespace PCShopSell.Tests
             {
                 var city = PCShopSell.Core.World.CityLayout.FromData(GameSessionTests.Layout());
                 var s = new GameSession(city, seed, Money.FromYuan(8000), GameTimestamp.From(new GameDate(0), 8 * 60));
+                const string cousin = "life_cousin";
+                Assert.IsTrue(s.IsMet(cousin));
                 s.RaiseEvent("lend");
+                Assert.NotNull(s.PendingEvent);
+                Assert.AreEqual(cousin, s.PendingEvent.Cg.PersonId);
                 Money start = s.Ledger.Balance;
                 s.ResolveEvent(0);
                 Assert.AreEqual((start - Money.FromYuan(800)).Cents, s.Ledger.Balance.Cents);
                 while (s.Clock.Today.TotalDays < 5) s.AdvanceClock(60);
-                if (s.Ledger.Entries.Any(e => e.Memo == "表哥还钱")) repaid = true;
+                if (s.Ledger.Entries.Any(e => e.Memo == "周启成还款"))
+                {
+                    Assert.IsTrue(s.MemoriesOf(cousin).Any(memory => memory.Text.Contains("按时还清")));
+                    repaid = true;
+                }
             }
             Assert.IsTrue(repaid, "借钱有一定概率会还");
         }

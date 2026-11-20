@@ -265,7 +265,7 @@ namespace PCShopSell.Core.Session
         public long dueAt;
         public bool partsReserved;
         public int reservedPartMask, boxedPartMask;
-        public int mistakes, employeeMinutesLeft;
+        public int mistakes, employeeMinutesLeft, employeeAssemblyAptitude;
     }
 
     [Serializable]

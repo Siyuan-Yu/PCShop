@@ -102,17 +102,17 @@ namespace PCShopSell.Core.Session
     /// <summary>One tier definition shared by racing, parking and second-hand sourcing.</summary>
     public sealed class RacingTierRules
     {
-        public readonly int Laps, RequiredWins, OpenMinute, CloseMinute;
+        public readonly int RequiredWins, OpenMinute, CloseMinute;
         public readonly double HalfRoad;
         public readonly long ParkingRent, ParkingPrice, UsedVehicleCeiling;
-        private RacingTierRules(int laps,int wins,double halfRoad,int open,int close,long rent,long price,long ceiling)
-        { Laps=laps; RequiredWins=wins; HalfRoad=halfRoad; OpenMinute=open; CloseMinute=close;
+        private RacingTierRules(int wins,double halfRoad,int open,int close,long rent,long price,long ceiling)
+        { RequiredWins=wins; HalfRoad=halfRoad; OpenMinute=open; CloseMinute=close;
             ParkingRent=rent; ParkingPrice=price; UsedVehicleCeiling=ceiling; }
         private static readonly RacingTierRules[] All = {
-            new RacingTierRules(2,0,10,0,1440,500,10000,100000),
-            new RacingTierRules(2,1,14,540,1080,500,10000,600000),
-            new RacingTierRules(3,3,14,540,1080,500,10000,1500000),
-            new RacingTierRules(3,6,14,540,1080,500,10000,4000000)
+            new RacingTierRules(0,10,0,1440,500,10000,100000),
+            new RacingTierRules(1,14,540,1080,500,10000,600000),
+            new RacingTierRules(3,14,540,1080,500,10000,1500000),
+            new RacingTierRules(6,14,540,1080,500,10000,4000000)
         };
         public static RacingTierRules For(int tier)
         {
@@ -126,7 +126,7 @@ namespace PCShopSell.Core.Session
         public int CourseRevision = 1;
         public (int First, int Last, int Side)[] Kerbs = Array.Empty<(int, int, int)>();
         private RacingTierRules Rules=>RacingTierRules.For(Tier);
-        public int Laps=>Rules.Laps; public int Fee=>RacingSchedule.Fee(RaceMeeting.Small); public int RequiredWins=>Rules.RequiredWins;
+        public int Laps=>RacingSchedule.SessionLaps; public int Fee=>RacingSchedule.Fee(RaceMeeting.Small); public int RequiredWins=>Rules.RequiredWins;
         public double HalfRoad=>Rules.HalfRoad;
         public int OpenMinute=>Rules.OpenMinute;
         public int CloseMinute=>Rules.CloseMinute;

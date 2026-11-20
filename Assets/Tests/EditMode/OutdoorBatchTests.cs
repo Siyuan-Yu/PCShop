@@ -88,6 +88,17 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));
             if (GameSession.IsOutdoorMarketVisit(a) || GameSession.IsInteractiveFishingActivity(a))
                 Assert.IsTrue(s.StartVenueAppointment(a.Id), s.VenueAppointmentStartBlocker(a));
+            if (GameSession.IsAutomaticMeal(a))
+            {
+                long arrived = s.Clock.Now.TotalMinutes;
+                s.Time.SetPaused(true);
+                s.Tick(.05);
+                Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason);
+                Assert.AreEqual(arrived + a.Duration, s.Clock.Now.TotalMinutes);
+                Assert.IsTrue(a.MealApplied);
+                Assert.IsTrue(a.RewardApplied);
+                return;
+            }
             s.AdvanceClock(3);
             Assert.AreEqual(CityActivityPhase.Running, a.State, a.EndReason);
         }

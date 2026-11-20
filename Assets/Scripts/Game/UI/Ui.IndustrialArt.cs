@@ -6,7 +6,7 @@ namespace PCShopSell.Game.UI
     public static partial class Ui
     {
         private static readonly System.Collections.Generic.Dictionary<string,Sprite> NavigationIcons=new System.Collections.Generic.Dictionary<string,Sprite>();
-        internal static void HudNavigationArt(Button button, string title, bool stacked)
+        internal static void HudNavigationArt(Button button, string title, bool stacked, string shortcut = null)
         {
             if (!NavigationIcons.TryGetValue(title, out var sprite) || sprite == null || sprite.texture == null)
             {
@@ -76,8 +76,18 @@ namespace PCShopSell.Game.UI
             }
             else
             {
-                icon.rectTransform.Anchor(0, .5f, 0, .5f, 10, -10, -30, -10);
-                label.rectTransform.Anchor(0, 0, 1, 1, 36, 1, 8, 1);
+                icon.rectTransform.Anchor(0, .5f, 0, .5f, 8, -8, -24, -8);
+                float right = 8;
+                if (!string.IsNullOrEmpty(shortcut))
+                {
+                    float width = shortcut.Length == 1 ? 20 : 32;
+                    var key = Label(button.transform, shortcut, 15, TextAnchor.MiddleCenter, ChromeDim);
+                    key.name = "NavigationShortcut";
+                    key.raycastTarget = false;
+                    key.rectTransform.Anchor(1, .5f, 1, .5f, -8 - width, -12, 8, -12);
+                    right += width + 4;
+                }
+                label.rectTransform.Anchor(0, 0, 1, 1, 29, 1, right, 1);
             }
             label.alignment = stacked ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
             label.verticalOverflow = VerticalWrapMode.Truncate;

@@ -348,7 +348,7 @@ namespace PCShopSell.Game.UI
             LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRoot);
             for (int i = 0; i < now.Length && i < saved.Count; i++)
             {
-                if (now[i].content == null) continue;
+                if (now[i].content == null || !now[i].vertical) continue;
                 now[i].StopMovement();
                 now[i].content.anchoredPosition = saved[i];
             }

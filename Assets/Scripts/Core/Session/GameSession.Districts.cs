@@ -29,6 +29,7 @@ namespace PCShopSell.Core.Session
         }
         private const string FirstChapterTrialCompletedFlag = "trial:first-chapter-completed";
         public bool FirstChapterTrialCompleted => FirstChapterTrial && Flags.Contains(FirstChapterTrialCompletedFlag);
+        public event Action CommunityUnlocked;
         public int DistrictAccessTier => FirstChapterTrial ? 0 : _district.UnlockedTier;
         public DistrictProgress DistrictStoryState => _district.Copy();
         public static string DistrictName(int tier) => new[] { "城郊", "社区", "公园", "花园" }[Math.Max(0,Math.Min(3,tier))];
@@ -295,7 +296,7 @@ namespace PCShopSell.Core.Session
                     case "tender.review": return "企业合同连续三期交付后再约见；失约失去席位，下一年度可以重新竞标。";
                     case "community.meeting": return "唐蔚筹备街区介绍会，需要找回搬家时寄存的旧街手绘商铺图。先接受寻物委托，再向李秀兰问清箱子去向。没有营业额或交钱要求。";
                     case "community.clue": return "到城郊旧居街居民住宅附近的街边空地约见李秀兰，问清三页图的保管人。之后分别交往、打听具体藏点。";
-                    case "community.search": return "三位保管人分别需要好感达到30、接受委托后一起完成喜欢的活动。再向本人打听才会出现对应箱子；三个箱子可以任意顺序寻找。找齐三页后回城郊当面交给唐蔚。";
+                    case "community.search": return "和李秀兰散步一次、和林远航吃一次饭、陪周维成去青湾旧物市场挑一件旧物送给他。可以用通讯录约时间。找齐三页后交给唐蔚。";
                     case "community.trial": return "把收集到的图页交给唐蔚。她会到城郊中介旁的街边会面点，无需进入中介。交付后开放社区道路。";
                     default: return "完成实际会面后推进；打开消息或目录不会完成任务。";
                 }
@@ -355,6 +356,7 @@ namespace PCShopSell.Core.Session
             if(_district.MeetingNodeId==nodeId)return true;
             if(nodeId=="community.intro")
             {
+                Meet("keeper_agent", 0);
                 RememberDistrictChoice(nodeId,choice); CompleteDistrictNode();
                 return true;
             }
@@ -416,6 +418,7 @@ namespace PCShopSell.Core.Session
             string why=DistrictMeetingBlocker;if(why!=null)return Fail(why);
             if(DistrictCommerceActive&&DistrictCommerceBlocker!=null)return Fail(DistrictCommerceBlocker);
             if(id=="community.meeting")AcceptCommunitySearch();
+            if (id == "community.clue") RegisterCommunityLeadContacts();
             if(id=="community.search")return Fail("请在藏箱旁按 F 调查，再当面交付图页。");
             if(id=="community.trial")
             {
@@ -443,8 +446,10 @@ namespace PCShopSell.Core.Session
         }
         private void GrantDistrictAccess(int tier)
         {
-            _district.UnlockedTier=Math.Max(tier,_district.UnlockedTier);
-            Show("道路已开放", "你完成了引荐与合作，通往"+DistrictName(tier)+"的道路已经放行。房租、采购和经营费用仍按正常规则支付。");
+            if (tier <= _district.UnlockedTier) return;
+            _district.UnlockedTier = tier;
+            if (tier == 1 && CommunityUnlocked != null) CommunityUnlocked.Invoke();
+            else Show("道路已开放", "你完成了引荐与合作，通往"+DistrictName(tier)+"的道路已经放行。");
             if (tier == 2 && Flags.Add("district:introduced-lu"))
             {
                 IntroduceCityPerson("life_curator", LuZhi);
@@ -602,6 +607,8 @@ namespace PCShopSell.Core.Session
                 _district.NodeId=null;_district.MeetingPeople=Array.Empty<string>();_district.MeetingNodeId=null;
             }
             _district.Completed=_district.Completed.Where(id=>DistrictNarrativeCatalog.Nodes.Any(n=>n.Id==id)).ToArray();
+            if (_district.NodeId == "community.meeting") Meet("keeper_agent", 0);
+            if (CommunitySearchActive) RegisterCommunityLeadContacts();
             // Legacy saves keep assets and location. Returning through a checkpoint is always allowed.
         }
     }

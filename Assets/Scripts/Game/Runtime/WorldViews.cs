@@ -21,6 +21,7 @@ namespace PCShopSell.Game.Runtime
         private float _streetYaw = DefaultYaw, _streetPitch = DefaultPitch;
         private readonly Camera _cam;
         private Vector3 _focus;
+        public Vector3 Focus => _focus;
         public float Size = 16f;
         public float MinSize = 5f;
         public float MaxSize = 60f;

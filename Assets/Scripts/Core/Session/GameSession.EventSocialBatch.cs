@@ -78,12 +78,12 @@ namespace PCShopSell.Core.Session
             {
                 41 => "最近一次实际夺冠后，和同场车友吃顿庆功饭。整桌 ¥3,000，由你请客，赴宴开始时才支付。",
                 43 => "顾宁想和你看一场真实比赛，了解赛车。观赛免费，完整观赛后增加见识和交情。",
-                44 => "罗志勇请你到自己工作的店尝新菜。试吃由店方提供，你免费，可以评价口味、分量和定价。",
-                45 => "杜建川请你到自己的餐馆品尝招牌炖菜。店家招待，你免费；到场后可以聊炖菜故事和熟客偏好。",
+                44 => "罗志勇请你到店里免费试吃三道新菜。每道尝完，他都想听听你的评价。",
+                45 => "杜建川请你到自己的餐馆吃招牌炖菜，和你聊聊这道菜的来历。这顿由店家招待。",
                 46 => "林荷约你下班后聊餐厅经营。双人餐合计 ¥2,000，默认各付 ¥1,000；也可以由你请客付全桌 ¥2,000。到场开始才支付。",
                 47 => "王桂芬请你到她真实住处吃家常饭。她请客，你免费。可以空手去，也可以买一份 ¥1,000 的伴手礼带上。",
                 48 => "温音邀请你试唱新伴奏。两小时包间原价 ¥2,000，店方招待，你免费。可选歌、合唱和反馈；续时属于另一次需要自行确认的付费服务。",
-                49 => "傅知请你帮忙试听设备。不收包间费，完整完成后支付 ¥1,500 劳务报酬。比较人声、低频或杂音时，智力影响发现问题的概率；低于 50 也可选择，必定未能找出专业问题。",
+                49 => "傅知请你帮忙试听设备。包间免费，完整参与后可获得 ¥1,500 劳务报酬。能否找出音响问题" + EventScript.AttributeHint(("智力", Player.Intelligence)) + "。",
                 _ => "罗雅邀请你和实际团员一起排练。两小时场地与指导原价 ¥3,000，由合唱团承担，你免费。包含热身、合唱和休息交流。"
             };
             body += "\n同行：" + names + "\n地点：" + City.GetPlace(venueId).Name;
@@ -133,8 +133,8 @@ namespace PCShopSell.Core.Session
         {
             int day = Clock.Today.TotalDays;
             int travel = CityTravelMinutes(City.GetPlace(StarterRaceTrackId));
-            if (Clock.MinuteOfDay + travel + 30 >= 1080) day++;
-            return EventScene(template, "城郊赛车报名点开放人工洒水湿地训练。预约当天 09:00–18:00 到场，使用本区实际入库车辆。"
+            if ((long)Clock.MinuteOfDay + travel >= GameTimestamp.MinutesPerDay) day++;
+            return EventScene(template, "城郊赛车报名点开放人工洒水湿地训练。预约当天全天可到场，使用本区实际入库车辆。"
                 + "\n费用 ¥1,000，抓地力降至平常的 60%、制动降至 80%，按实际操作和碰撞结算，不用胜场掷骰。维修按真实车损另算。"
                 + "\n日期：" + new GameDate(day),
                 Choose("预约湿地驾驶", s =>
@@ -165,61 +165,126 @@ namespace PCShopSell.Core.Session
             }
         }
         public static bool IsCookTasting(CityActivity activity) => activity?.DefinitionId == "social_44";
-        public static readonly string[] CookTastingTopics = { "口味", "分量", "定价" };
+        public static readonly IReadOnlyList<(string Name, EventCgProp Art, string Served, string Tasted,
+            int Hunger, int Energy, int Mood, int Nutrition, string[] Opinions, string[] Replies)> CookTastingDishes =
+            new (string, EventCgProp, string, string, int, int, int, int, string[], string[])[]
+            {
+                ("椒香鸡肉饭", EventCgProp.TastingRice,
+                    "罗师傅把鸡肉和酱汁浇在热米饭上，递给你一只小碗。",
+                    "鸡肉焦香，米饭吸足了汁。最后一口的胡椒味有点重。",
+                    18, 3, 4, 2,
+                    new[] { "椒香很开胃", "少放一点胡椒会更顺口", "胡椒盖住了鸡肉味，我不喜欢" },
+                    new[] { "罗师傅笑了，记下这次的香料比例。", "罗师傅又尝了一口，记下先减半勺胡椒。", "罗师傅抿了抿嘴，把酱汁的小盅端回了厨房。" }),
+                ("葱香煎豆腐", EventCgProp.TastingTofu,
+                    "第二道是刚出锅的煎豆腐，盘里只摆了三块，撒着切碎的葱。",
+                    "外壳很脆，内里还嫩。豆腐吸了不少油，吃完嘴里有些腻。",
+                    10, 0, -4, 1,
+                    new[] { "外脆里嫩，我喜欢", "出锅后沥一下油会更好", "这份太油了，我不想再吃" },
+                    new[] { "罗师傅点点头，把煎豆腐的火候记了下来。", "罗师傅记下试试用沥油架，再端一份给店员尝。", "罗师傅有些扫兴，沉默了一会才把盘子收走。" }),
+                ("番茄蛋花汤", EventCgProp.TastingSoup,
+                    "罗师傅最后端来一碗热汤，碗里浮着番茄和刚打进去的蛋花。",
+                    "番茄的酸味很清爽，热汤冲淡了刚才的油腻，尾味稍淡。",
+                    8, 2, 3, 2,
+                    new[] { "清爽，适合搭着饭卖", "再加点番茄，汤底会更浓", "味道太淡，我不会点" },
+                    new[] { "罗师傅笑着把它记到工作餐的配汤栏。", "罗师傅记下一条：先多熬半颗番茄，再打蛋花。", "罗师傅神色有些失落，低头把你的话记了下来。" })
+            };
+
+        public static int CookTastingDishIndex(CityActivity activity)
+        {
+            for (int dish = 0; dish < CookTastingDishes.Count - 1; dish++)
+                if (!activity.Choices.Contains($"cook-next:{dish}")) return dish;
+            return CookTastingDishes.Count - 1;
+        }
+
+        public static bool HasTastedCooksDish(CityActivity activity, int dish) =>
+            activity.Choices.Contains($"cook-dish:{dish}") || dish == 0 && activity.Choices.Contains("cook-tasted");
+
+        public static int CookTastingReviewIndex(CityActivity activity, int dish)
+        {
+            for (int opinion = 0; opinion < CookTastingDishes[dish].Opinions.Length; opinion++)
+                if (activity.Choices.Contains($"cook-opinion:{dish}:{opinion}")) return opinion;
+            // The old tasting used the same first dish, but its portion and price questions were separate.
+            if (dish == 0 && activity.Choices.Contains("cook-tasted"))
+            {
+                if (activity.Choices.Contains("cook-review:0:0")) return 0;
+                if (activity.Choices.Contains("cook-review:0:1")) return 1;
+            }
+            return -1;
+        }
 
         private bool CookTastingHere(CityActivity activity) => IsCookTasting(activity)
             && activity.State == CityActivityPhase.Running && CurrentPlace?.Id == activity.VenueId
             && !IsWorking && !IsGameOver && !_sleeping;
 
-        public bool TasteCooksDish(string id)
+        public bool TasteCooksDish(string id, int dish)
         {
             var activity = RunningCityActivity;
-            if (activity?.Id != id || !CookTastingHere(activity) || activity.Choices.Contains("cook-tasted")) return false;
-            activity.Choices = activity.Choices.Append("cook-tasted").ToArray();
-            ApplyCityActivityMidpoint(activity, CityActivityService(activity), activity.ActualStart + activity.Duration / 3);
-            activity.EventSettlementNote = "试吃了罗师傅提供的椒香鸡肉饭，未支付餐费。";
+            if (activity?.Id != id || !CookTastingHere(activity) || dish != CookTastingDishIndex(activity)
+                || HasTastedCooksDish(activity, dish)) return false;
+            var sample = CookTastingDishes[dish];
+            var effects = new List<string>();
+            double hunger = Player.Hunger, energy = Player.Energy, mood = Player.Mood, nutrition = Player.Nutrition;
+            Player.Hunger = Math.Min(100, hunger + sample.Hunger);
+            Player.Energy = Math.Min(Player.MaxEnergy, energy + sample.Energy);
+            Player.Mood = Math.Max(0, Math.Min(100, mood + sample.Mood));
+            Player.Nutrition = Math.Min(100, nutrition + sample.Nutrition);
+            AddEffect("饱腹", Player.Hunger - hunger);
+            AddEffect("精力", Player.Energy - energy);
+            AddEffect("心情", Player.Mood - mood);
+            AddEffect("营养", Player.Nutrition - nutrition);
+            activity.CookTastingEffects = effects.Count == 0 ? "属性无变化" : string.Join(" · ", effects);
+            activity.MealApplied = true;
+            activity.Stage = 1;
+            activity.Choices = activity.Choices.Append($"cook-dish:{dish}").ToArray();
+            activity.EventSettlementNote = (activity.EventSettlementNote ?? "") + $"\n试吃了{sample.Name}。";
             return true;
+
+            void AddEffect(string label, double delta)
+            {
+                double rounded = Math.Round(delta, 1);
+                if (rounded != 0) effects.Add($"{label} {rounded:+0.#;-0.#}");
+            }
         }
 
-        public string ReviewCooksDish(string id, int topic, int opinion)
+        public string ReviewCooksDish(string id, int dish, int opinion)
         {
             var activity = RunningCityActivity;
-            if (activity?.Id != id || !CookTastingHere(activity) || !activity.Choices.Contains("cook-tasted")
-                || topic < 0 || topic >= CookTastingTopics.Length || opinion < 0 || opinion > 1) return null;
-            string key = "cook-review:" + topic + ":";
-            if (activity.Choices.Any(choice => choice.StartsWith(key, StringComparison.Ordinal))) return null;
-            string reply = (topic, opinion) switch
-            {
-                (0, 0) => "你觉得椒香很开胃。罗师傅笑着说，会保留这次的香料比例，再把油量收一点。",
-                (0, 1) => "你觉得口味偏咸。罗师傅尝了剩下的一口，记下「酱汁减量，盐晚一点放」。",
-                (1, 0) => "你觉得一份正合适。罗师傅把这份米饭和鸡肉的用量写进了备餐记录。",
-                (1, 1) => "你觉得吃完还差一点。罗师傅准备试做一份加饭版，并重新核算成本。",
-                (2, 0) => "你建议作为平价工作餐卖。罗师傅准备先向附近上班的人问问接受程度。",
-                _ => "你建议多配一点蔬菜，做成套餐。罗师傅记下建议，准备试几种配菜组合。"
-            };
-            activity.Choices = activity.Choices.Append(key + opinion).ToArray();
-            activity.EventSettlementNote += "\n" + reply;
-            RememberSocial("res_cook", reply);
+            if (activity?.Id != id || !CookTastingHere(activity) || dish != CookTastingDishIndex(activity)
+                || !HasTastedCooksDish(activity, dish) || CookTastingReviewIndex(activity, dish) >= 0) return null;
+            var sample = CookTastingDishes[dish];
+            if (opinion < 0 || opinion >= sample.Opinions.Length) return null;
+
+            activity.Choices = activity.Choices.Append($"cook-opinion:{dish}:{opinion}").ToArray();
+            if (opinion == 2) AddRelation("res_cook", -3);
+            else AwardCityActivityRelation(activity, "res_cook", 1);
+            string reply = sample.Replies[opinion];
+            activity.EventSettlementNote += $" 你的评价是「{sample.Opinions[opinion]}」。";
+            RememberSocial("res_cook", $"试吃{sample.Name}时，你说「{sample.Opinions[opinion]}」。{reply}");
             return reply;
         }
 
+        public bool ServeNextCooksDish(string id, int dish)
+        {
+            var activity = RunningCityActivity;
+            if (activity?.Id != id || !CookTastingHere(activity) || dish != CookTastingDishIndex(activity)
+                || dish >= CookTastingDishes.Count - 1 || CookTastingReviewIndex(activity, dish) < 0) return false;
+            activity.Choices = activity.Choices.Append($"cook-next:{dish}").ToArray();
+            activity.CookTastingEffects = null;
+            return true;
+        }
+
         private static bool CookTastingReady(CityActivity activity) => !IsCookTasting(activity)
-            || activity.Choices.Contains("cook-tasted") && Enumerable.Range(0, 3)
-                .All(topic => activity.Choices.Any(choice => choice.StartsWith("cook-review:" + topic + ":", StringComparison.Ordinal)));
+            || Enumerable.Range(0, CookTastingDishes.Count).All(dish => CookTastingReviewIndex(activity, dish) >= 0);
 
         private string SocialBatchChoiceReply(CityActivity activity, int choice)
         {
-            if (activity.DefinitionId == "social_44" && choice > 0)
-                return new[] { "", "你们讨论了咸淡和食材搭配，罗志勇记下了意见。", "你们比较了分量和出餐速度，罗志勇准备再试一锅。", "你们核对食材成本和客群，聊了定价理由。" }[Math.Min(3, choice)];
-            if (activity.DefinitionId == "social_45" && choice > 0)
-                return "杜建川讲起这道炖菜和老熟客的故事，活动完成后会记入人物经历。";
             if (activity.DefinitionId == "social_49" && choice > 0)
             {
                 if (activity.Choices.Contains("audio-finding")) return "本次已经确认一项专业问题，额外发现奖励不会重复发放。";
                 double chance = EventScript.ProgressiveChance(.5, (Player.Intelligence, EventScript.IntelligenceThreshold, .01));
-                if (!Random.Chance(chance)) return $"发现问题的成功率 {chance * 100:0}%。你提出了听感，但未能定位专业问题；完整配合仍有 ¥1,500 基础报酬。";
+                if (!Random.Chance(chance)) return "你提出了试听感受，暂时没定位到问题。完整参与仍有 ¥1,500 基础报酬。";
                 activity.Choices = activity.Choices.Concat(new[] { "audio-finding" }).ToArray();
-                return $"发现问题的成功率 {chance * 100:0}%。你找到了需要调整的频段，完成后获得额外交情与见识奖励。";
+                return "你找到了需要调整的频段，完成后会获得额外交情与见识奖励。";
             }
             return null;
         }

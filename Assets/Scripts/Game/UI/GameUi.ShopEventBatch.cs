@@ -30,7 +30,7 @@ namespace PCShopSell.Game.UI
             {
                 Para(w.Content, Ui.EmphasizeReading(result), 19);
                 Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 19, Ui.ButtonHot), -1, 44);
-            });
+            }, fitContent: true);
         }
 
         private void OpenComplaintFeedback(string id)
@@ -46,7 +46,6 @@ namespace PCShopSell.Game.UI
                 var shop = S.ShopAt(task.ShopId);
                 Line(w.Content, shop != null ? S.ShopTitle(shop) : "原门店", 21, Ui.Accent);
                 Para(w.Content, Ui.EmphasizeReading(task.Message), 19);
-                Line(w.Content, $"智力 {S.Player.Intelligence} · 魅力 {S.EffectiveCharm} · 门店口碑 {shop?.Sim.ShopReputation:0.#} · 名望 {shop?.Sim.Reputation:0.#}", 17, Ui.Dim);
                 foreach (var choice in S.ComplaintChoices(id))
                 {
                     var option = choice;
@@ -56,9 +55,9 @@ namespace PCShopSell.Game.UI
                         string result = option.Apply(S);
                         if (S.PendingComplaint(id) != null) w.Rebuild();
                         else { w.Close(); OpenComplaintResult(result); }
-                    }, 18, Ui.ButtonBg, enabled), -1, 44).Tip(enabled ? null : option.DisabledReason);
+                    }, 18, Ui.ButtonBg, enabled), -1, option.Text.Contains('\n') ? 52 : 44).Tip(enabled ? null : option.DisabledReason);
                 }
-            });
+            }, fitContent: true);
         }
 
         private bool HasShopEventFollowUps() => S.ShopEventTasks.Length > 0
@@ -67,8 +66,7 @@ namespace PCShopSell.Game.UI
             || S.EventBills.Any(bill => bill.CreditCents > 0 || S.EventBillRefundDue(bill.Id) > 0)
             || S.EventCoupon != null || S.EventFlashSales.Length > 0 || S.Flags.Contains("event-idle-sale")
             || S.MyShops.Any(shop => S.HasEventMembership(shop)
-                || S.Flags.Contains("shop-event:aircon:" + shop.Place.Id)
-                || S.Flags.Contains("shop-event:procure:" + shop.Place.Id));
+                || S.Flags.Contains("shop-event:aircon:" + shop.Place.Id));
 
         private void BuildScheduledEventFollowUps(Window w)
         {
@@ -156,13 +154,6 @@ namespace PCShopSell.Game.UI
             var target = shop;
             Line(w.Content, "为" + S.ShopTitle(shop) + "选购空调", 20, Ui.Accent);
             Ui.Size(Ui.Button(w.Content, "家具采购 · 冷暖空调¥1,200 / 大店空调¥3,600", () => { _onlineTab = 1; OpenOnlinePanel(target); }, 18), -1, 44);
-        }
-        foreach (var shop in S.MyShops.Where(shop => S.Flags.Contains("shop-event:procure:" + shop.Place.Id)))
-        {
-            var target = shop;
-            var row = Ui.Row(w.Content, 38, 8);
-            Ui.Size(Ui.Label(row, S.ShopTitle(shop) + " · 自选配件采购", 17), -1, 38, 1);
-            Ui.Size(Ui.Button(row, "选购", () => { _onlineTab = 5; OpenOnlinePanel(target); }, 17), 90, 38);
         }
         if (!HasShopEventFollowUps()) Line(w.Content, "暂时没有待处理事件。", 18, Ui.Dim);
         }

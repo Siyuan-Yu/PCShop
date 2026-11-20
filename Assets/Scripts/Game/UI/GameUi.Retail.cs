@@ -369,11 +369,13 @@ namespace PCShopSell.Game.UI
                     Line(w.Content,item.Name+" · "+S.VehicleUsage(item.Kind),19);
                     Ui.Size(Ui.Button(w.Content,"出售一台（购价六折）",()=>ConfirmBusiness("出售载具",item.Name+"按购价六折回收。",()=>{S.SellVehicle(item.Kind);w.Rebuild();}),17,Ui.Warn),-1,40);
                 }
-                foreach(var kind in new[]{VehicleKind.EBike,VehicleKind.Tricycle})
+                foreach (var vehicle in Vehicles.All)
                 {
-                    var selected=kind;if(S.ImpoundedVehicleCount(kind)<=0)continue;
-                    if (kind == VehicleKind.EBike) Para(w.Content, S.ScooterReturnHint, 17, Ui.Accent);
-                    Ui.Size(Ui.Button(w.Content,"交 "+PoliceSystem.RedeemFee+" 赎回"+Vehicles.Get(kind).Name,()=>{S.RedeemVehicle(selected);w.Rebuild();},17),-1,40);
+                    var kind = vehicle.Kind;
+                    if (S.VehicleReturnHint(kind) is not string hint) continue;
+                    Para(w.Content, hint, 17, Ui.Accent);
+                    Ui.Size(Ui.Button(w.Content, $"交 {PoliceSystem.RedeemFee} 赎回{vehicle.Name}",
+                        () => { S.RedeemVehicle(kind); w.Rebuild(); }, 17), -1, 40);
                 }
             });
         }

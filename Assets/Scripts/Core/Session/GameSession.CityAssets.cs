@@ -63,7 +63,10 @@ namespace PCShopSell.Core.Session
             if (shop?.Lease != null)
             {
                 quote.DepositCredit = shop.Lease.Deposit;
-                quote.PrepaidCredit = shop.Lease.Rent.Scale(shop.Lease.UnusedRentShare(Clock.Today.TotalDays));
+                int today = Clock.Today.TotalDays;
+                int paidDay = LatestCommercialRentPaymentDay(shop.Lease, today);
+                int unusedDays = Math.Max(0, GameDate.DaysPerWeek - (today - paidDay));
+                quote.PrepaidCredit = shop.Lease.Rent.Scale(unusedDays / (double)GameDate.DaysPerWeek);
             }
             else if (venture != null)
             {

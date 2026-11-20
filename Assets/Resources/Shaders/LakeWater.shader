@@ -18,6 +18,7 @@
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
             CBUFFER_END
+            float _PCShopWorldVisualTime;
             struct Attributes { float4 positionOS:POSITION; };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float fog:TEXCOORD1; };
             Varyings vert(Attributes a)
@@ -27,7 +28,7 @@
             }
             half4 frag(Varyings i):SV_Target
             {
-                float2 p=i.world.xz;float time=_Time.y;
+                float2 p=i.world.xz;float time=_PCShopWorldVisualTime;
                 float wave=sin(p.x*.31+sin(p.y*.09)*2+time*.5)*cos(p.y*.47+cos(p.x*.07)*2-time*.3);
                 float3 n=normalize(float3(wave*.025,1,cos(p.x*.23-p.y*.41+wave+time*.3)*.018));
                 float3 view=GetWorldSpaceNormalizeViewDir(i.world);

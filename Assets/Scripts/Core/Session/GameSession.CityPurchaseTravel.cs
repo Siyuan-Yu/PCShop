@@ -7,6 +7,15 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
+        private CityRoute PlanEmployeePurchaseLeg(CityPersonState person, string destination, long departure, VehicleSpec transport)
+        {
+            var route = PlanCityRoute(person, destination, departure);
+            if (route == null) return null;
+            route.Transport = transport.Kind;
+            route.ArriveMinute = departure + CityTravelTiming.NpcMinutes(route.Meters.Sum(), transport);
+            return route;
+        }
+
         // The purchase order owns this route. Its timestamps are the same promises used for
         // delivery/return, so restoring a view cannot create another shopper or another shipment.
         private void ApplyCityPurchasePosition(EmployeePurchaseTrip trip,CityPersonState person,long now)

@@ -97,7 +97,16 @@ namespace PCShopSell.Core.Session
                     Choose("打烊后盘点", _ => { var t = AddShopTask("audit", shop, 30); long end = Clock.Today.TotalDays * 1440L + shop.Sim.CloseMinute; t.At = end > Clock.Now.TotalMinutes ? end : end + 1440; return "已加入经营待办，打烊后到店开始。"; }));
             var choices = new List<EventChoice>();
             if (HasSeasonalAircon(shop.Place.Id)) choices.Add(Choose("已有空调，照常营业", _ => "空调已按现有规则改善室内舒适，电费沿用账单。"));
-            else choices.Add(Choose("查看空调 · ¥1,200 / ¥3,600", _ => { Flags.Add("shop-event:aircon:" + shop.Place.Id); return "从经营待办进入家具采购，实际买入并安装后生效。"; }));
+            else
+            {
+                choices.Add(ViewEventDetails("查看空调规格",
+                    $"冷暖空调 {FurnitureCatalog.Get("aircon").Price}，大店空调 {FurnitureCatalog.Get("aircon_large").Price}。\n购入后需在店内安装，运行电费随门店账单结算。"));
+                choices.Add(Choose("记下空调采购", _ =>
+                {
+                    Flags.Add("shop-event:aircon:" + shop.Place.Id);
+                    return "已记下空调采购，可从经营待办打开家具采购。";
+                }));
+            }
             bool eveningHours = Enumerable.Range(1080, 300).Any(m => shop.Sim.InHours(new GameTimestamp(Clock.Today.TotalDays * 1440L + m)));
             choices.Add(Choose("晚间宣传 · ¥1,000", s => {
                 if (!eveningHours) return "本店没有晚间营业时段，未投放或扣款。";
@@ -212,6 +221,8 @@ namespace PCShopSell.Core.Session
             var receipt = ComplaintReceipt(); var shop = ReceiptShop(receipt);
             Money paid = ComplaintPaidTotal(receipt);
             Money compensation = paid * 2;
+            int complaintCase = DrawComplaintCase();
+            string message = ComplaintMessage(complaintCase, receipt.Product ?? "本店商品", shop.RetailKind);
             string Reply(string mode)
             {
                 if (receipt.BadReview || ReceiptShop(receipt) != shop) return "这条评价已处理或门店已变化。";
@@ -219,25 +230,36 @@ namespace PCShopSell.Core.Session
                 if (mode == "pay") ReverseCompensatedMemberPoints(receipt);
                 receipt.BadReview = true;
                 var t = AddShopTask("complaint", shop); t.At = Clock.Now.TotalMinutes + 1440; t.Started = true;
-                InitializeComplaint(t, receipt);
+                InitializeComplaint(t, receipt, complaintCase);
                 t.Paid = mode == "pay" ? compensation.Cents : 0;
                 t.Status = "等待顾客回复";
                 return mode == "pay" ? "已支付" + compensation + "并提交处理说明，明天查看反馈。" : "已联系顾客，明天查看反馈。";
             }
             return ShopIllustratedEvent(template, shop, "一位购买过" + receipt.Product + "的顾客评价体验一般，本单实付" + paid + "。",
                 new EventCgFrame("event_online_review", personId: receipt.PersonId),
-                Choose("了解具体问题", _ => Reply("ask")), Choose("按实付双倍赔偿 · " + compensation, _ => Reply("pay"), s => s.Ledger.CanAfford(compensation), "现金不足"), Choose("公开回复", _ => Reply("reply")));
+                Choose("联系顾客跟进", _ => Reply("ask")), Choose("按实付双倍赔偿 · " + compensation, _ => Reply("pay"), s => s.Ledger.CanAfford(compensation), "现金不足"),
+                ViewEventDetails("查看顾客留言", message), Choose("公开回复", _ => Reply("reply")));
         }
 
-        private void InitializeComplaint(ShopEventTask task, EventPaidReceipt receipt)
+        private int DrawComplaintCase()
+        {
+            int roll = Random.Next(0, 100);
+            return roll < 35 ? 0 : roll < 65 ? 1 : roll < 80 ? 2 : roll < 90 ? 3 : 4;
+        }
+
+        private void InitializeComplaint(ShopEventTask task, EventPaidReceipt receipt, int? complaintCase = null)
         {
             task.HasComplaintDetails = true;
-            int roll = Random.Next(0, 100);
-            task.ComplaintCase = roll < 35 ? 0 : roll < 65 ? 1 : roll < 80 ? 2 : roll < 90 ? 3 : 4;
+            task.ComplaintCase = complaintCase ?? DrawComplaintCase();
             task.ComplaintProduct = receipt?.Product ?? "本店商品";
             task.ComplaintReceiptKey = receipt?.Key;
             task.ComplaintCompensation = receipt != null ? (ComplaintPaidTotal(receipt) * 2).Cents : 20000;
-            string issue = task.RetailKind switch
+            task.Message = ComplaintMessage(task.ComplaintCase, task.ComplaintProduct, task.RetailKind);
+        }
+
+        private static string ComplaintMessage(int complaintCase, string product, string retailKind)
+        {
+            string issue = retailKind switch
             {
                 "restaurant" => "收到的餐食有焦糊味，分量也比描述少",
                 "models" => "模型配件有破损，开盒时就发现了",
@@ -246,13 +268,13 @@ namespace PCShopSell.Core.Session
                 "computer" => "买回去的配件反复出故障，无法正常使用",
                 _ => "买的用品有破损，拿回去就用不了"
             };
-            task.Message = task.ComplaintCase switch
+            return complaintCase switch
             {
-                0 => $"关于「{task.ComplaintProduct}」，顾客留言「{issue}，请给一个处理办法。」并附上了照片。",
-                1 => $"关于「{task.ComplaintProduct}」，顾客留言「和我想的不一样，是不是你们介绍有问题？」暂未说明具体哪里不符。",
-                2 => $"关于「{task.ComplaintProduct}」，顾客留言「你们卖的东西都有问题！」附图中的包装和这笔订单有些差异。",
-                3 => $"关于「{task.ComplaintProduct}」，顾客私信「给我转钱就删掉差评，否则还会继续发。」并发来了收款要求。",
-                _ => $"关于「{task.ComplaintProduct}」，顾客补充「刚才没弄明白，后来按说明试了，东西挺好。你们回复也很及时。」"
+                0 => $"关于「{product}」，顾客留言「{issue}，请给一个处理办法。」并附上了照片。",
+                1 => $"关于「{product}」，顾客留言「和我想的不一样，是不是你们介绍有问题？」暂未说明具体哪里不符。",
+                2 => $"关于「{product}」，顾客留言「你们卖的东西都有问题！」附图中的包装和这笔订单有些差异。",
+                3 => $"关于「{product}」，顾客私信「给我转钱就删掉差评，否则还会继续发。」并发来了收款要求。",
+                _ => $"关于「{product}」，顾客补充「刚才没弄明白，后来按说明试了，东西挺好。你们回复也很及时。」"
             };
         }
 
@@ -261,7 +283,6 @@ namespace PCShopSell.Core.Session
 
         private double ComplaintReplyChance(OwnedShop shop)
         {
-            if (EffectiveCharm >= 70 || shop.Sim.ShopReputation >= 75 || shop.Sim.Reputation >= PersonStanding.Famous) return 1;
             return Math.Min(.95, .35 + Math.Max(0, EffectiveCharm - 20) * .007
                 + Math.Max(0, shop.Sim.ShopReputation - 50) * .008 + Math.Min(.15, shop.Sim.Reputation * .003));
         }
@@ -278,17 +299,20 @@ namespace PCShopSell.Core.Session
                     Choose("征得同意后转发推荐", s => s.ResolveComplaint(id, "share"))
                 };
             var choices = new List<EventChoice>();
+            string evidenceHint = EventScript.AttributeHint(("智力", Player.Intelligence),
+                ("门店口碑", shop.Sim.ShopReputation), ("名望", shop.Sim.Reputation));
+            string replyHint = EventScript.AttributeHint(("魅力", EffectiveCharm),
+                ("门店口碑", shop.Sim.ShopReputation), ("名望", shop.Sim.Reputation));
             if (!task.ComplaintInvestigated)
-                choices.Add(Choose("核对订单、照片和沟通记录", s => s.ResolveComplaint(id, "investigate")));
+                choices.Add(Choose($"核对订单、照片和沟通记录\n<size=15>{evidenceHint}</size>", s => s.ResolveComplaint(id, "investigate")));
             else if (!task.ComplaintVerified)
-                choices.Add(Choose("重新核对记录 · 智力50 / 口碑70 / 名望25",
+                choices.Add(Choose($"重新核对记录\n<size=15>{evidenceHint}</size>",
                     s => s.ResolveComplaint(id, "investigate"),
                     s => s.Player.Intelligence >= 50 || shop.Sim.ShopReputation >= 70 || shop.Sim.Reputation >= PersonStanding.Known,
-                    "需要智力50、门店口碑70或名望25其中一项"));
+                    "目前还不能进一步核实"));
             choices.Add(Choose("补偿并协商改评 · " + Money.FromCents(task.ComplaintCompensation),
                 s => s.ResolveComplaint(id, "pay"), s => s.Ledger.CanAfford(Money.FromCents(task.ComplaintCompensation)), "现金不足"));
-            double chance = ComplaintReplyChance(shop);
-            choices.Add(Choose($"沟通澄清，请对方改评或删评 · {chance:P0}", s => s.ResolveComplaint(id, "reply")));
+            choices.Add(Choose($"沟通澄清，争取改评或删评\n<size=15>{replyHint}</size>", s => s.ResolveComplaint(id, "reply")));
             bool evidence = task.ComplaintInvestigated && task.ComplaintVerified;
             choices.Add(Choose(evidence ? "提交核实记录，公开说明或申诉" : "公开说明或申诉 · 先核实证据",
                 s => s.ResolveComplaint(id, "evidence"), _ => evidence, "请先核对记录，确认事实"));
@@ -314,7 +338,7 @@ namespace PCShopSell.Core.Session
                     2 => "核实结果：附图与本单的商品、包装记录不符，这条指控缺乏事实依据。",
                     3 => "核实结果：订单和交付记录一致，私信明确要求付钱删评，已保留索款证据。",
                     _ => "核实结果：对方确认商品正常，对售后回应表示满意。"
-                } : "核实结果：已找到订单，但现有照片仍无法确认争议。智力达到50、门店口碑达到70或名望达到25时，可以进一步辨认记录中的线索。");
+                } : "核实结果：已找到订单，现有照片仍无法确认争议。");
                 return task.Message;
             }
 

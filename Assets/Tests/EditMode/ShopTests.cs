@@ -368,6 +368,31 @@ namespace PCShopSell.Tests
             Assert.Greater(expired, 0);
         }
 
+        [TestCase(false, false, 1)]
+        [TestCase(false, true, 2)]
+        [TestCase(true, false, 0)]
+        [TestCase(true, true, 0)]
+        public void UnfulfilledBuildOrdersOnlyAffectCustomerOrderShopReputation(
+            bool contract, bool overdue, double expectedLoss)
+        {
+            var r = Make(BusySettings());
+            r.Shop.Settings.BaseCustomersPerHour = 0;
+            var order = new BuildOrder(1, 0, Money.FromYuan(3000), r.Clock.Now, r.Clock.Now.AddMinutes(2))
+                { ContractId = contract ? "contract-fixture" : null };
+            r.Shop.RestoreOrders(new[] { order }, 2);
+            r.Shop.Reputation = 10;
+            double awareness = r.Shop.Awareness;
+            double reputation = r.Shop.ShopReputation;
+
+            if (overdue) r.Clock.Advance(2);
+            else Assert.IsTrue(r.Shop.CancelBuild(order.Id));
+
+            Assert.IsEmpty(r.Shop.Orders);
+            Assert.AreEqual(10, r.Shop.Reputation);
+            Assert.AreEqual(awareness, r.Shop.Awareness);
+            Assert.AreEqual(reputation - expectedLoss, r.Shop.ShopReputation);
+        }
+
         [Test]
         public void CustomerBuildCooldownSurvivesCancellationAndSave()
         {

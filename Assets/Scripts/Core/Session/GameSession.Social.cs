@@ -22,13 +22,42 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed partial class GameSession
     {
+        private const string PhoneConversationPrefix = "通过电话，";
+        private const string NewTopicPrefix = "聊了新话题：";
+        private const string RepeatedTopicPrefix = "再次聊起：";
+        private const string SmallTalkPrefix = "当面闲聊。\n";
+
         private readonly List<SocialMemory> _socialMemories = new List<SocialMemory>();
+        private readonly HashSet<(string PersonId, long Day, string Text)> _recordedConversations =
+            new HashSet<(string PersonId, long Day, string Text)>();
         public IEnumerable<SocialMemory> MemoriesOf(string personId) =>
             _socialMemories.Where(m => m.PersonId == personId).Reverse().OrderByDescending(m => m.Minute);
         private void RememberSocial(string personId, string text)
         {
             if (string.IsNullOrEmpty(personId) || string.IsNullOrEmpty(text)) return;
-            _socialMemories.Add(new SocialMemory { PersonId = personId, Text = text, Minute = Clock.Now.TotalMinutes });
+            AddSocialMemory(new SocialMemory { PersonId = personId, Text = text, Minute = Clock.Now.TotalMinutes });
+        }
+
+        private void AddSocialMemory(SocialMemory memory)
+        {
+            string conversation = ConversationMemoryContent(memory.Text);
+            if (conversation != null
+                && !_recordedConversations.Add((memory.PersonId, memory.Minute / GameTimestamp.MinutesPerDay, conversation)))
+                return;
+            _socialMemories.Add(memory);
+        }
+
+        private static string ConversationMemoryContent(string text)
+        {
+            // The first conversation, repeat conversation and phone labels describe how the same line was heard.
+            if (text.StartsWith(PhoneConversationPrefix, StringComparison.Ordinal))
+                text = text.Substring(PhoneConversationPrefix.Length);
+            if (text.StartsWith(NewTopicPrefix, StringComparison.Ordinal))
+                return text.Substring(NewTopicPrefix.Length).Trim();
+            if (text.StartsWith(RepeatedTopicPrefix, StringComparison.Ordinal))
+                return text.Substring(RepeatedTopicPrefix.Length).Trim();
+            return text.StartsWith(SmallTalkPrefix, StringComparison.Ordinal)
+                ? text.Substring(SmallTalkPrefix.Length).Trim() : null;
         }
 
         public const int EveningStartMinute = 19 * 60;
@@ -364,10 +393,11 @@ namespace PCShopSell.Core.Session
         {
             SaveSocial s = d.social ?? new SaveSocial();
             _socialMemories.Clear();
+            _recordedConversations.Clear();
             foreach (var memory in s.memories ?? Array.Empty<SocialMemory>())
                 if (memory != null && !string.IsNullOrEmpty(memory.PersonId) && !string.IsNullOrEmpty(memory.Text)
                     && memory.Minute >= 0 && memory.Minute <= Clock.Now.TotalMinutes)
-                    _socialMemories.Add(memory.Copy());
+                    AddSocialMemory(memory.Copy());
 
             _appointments.Clear();
             int n = MinLen(s.apptNpc, s.apptSlot, s.apptDay);

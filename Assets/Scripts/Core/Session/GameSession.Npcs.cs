@@ -33,7 +33,8 @@ namespace PCShopSell.Core.Session
 
         private static readonly (string Id, int Familiarity)[] StartingContacts =
         {
-            (ClassmateId, 35), (Npcs.Lin, 35), (Npcs.Jie, 16), (Npcs.Landlady, 12), ("res_cook", 14), ("res_grandpa", 12)
+            (ClassmateId, 35), (Npcs.Lin, 35), (Npcs.Jie, 16), (Npcs.Landlady, 12), ("res_cook", 14), ("res_grandpa", 12),
+            (CityLifeCatalog.CousinId, 35)
         };
 
         private void InitializeStartingContacts()

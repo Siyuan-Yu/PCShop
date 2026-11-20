@@ -168,10 +168,10 @@ namespace PCShopSell.Game.UI
                 EmployeeRole.Cashier =>
                     ("给顾客结账", $"收银 {GameSession.EmployeeCheckoutCycleMinutes(employee)} 分钟 / 单", "动手能力"),
                 EmployeeRole.Assembler =>
-                    ("组装订单电脑", $"装机 {GameSession.AssemblyMinutesOf(employee)} 分钟 / 台",
+                    ("组装订单电脑", $"装机 {GameSession.AssemblyMinutesOf(employee)} 分钟 / 台 · 普通订单整机售价 +{GameSession.AssemblyPriceBonus(employee):0.#%}",
                         $"动手能力、智力、装机经验（已装 {employee.BuildsCompleted} 台）"),
                 EmployeeRole.Buyer =>
-                    ("按计划外出进货", $"进货价优惠 {GameSession.EmployeePurchaseDiscount(employee):0.#%} · 每款 {GameSession.EmployeePurchaseMinutes(employee)} 分钟（路程另计）",
+                    ("按计划外出进货", $"进货价优惠 {GameSession.EmployeePurchaseDiscount(employee):0.#%}",
                         "智力影响进货价"),
                 EmployeeRole.Salesperson =>
                     ("向顾客推介商品", $"在店上班时，购买意愿个人加成 +{GameSession.EmployeeSalesBonus(employee) * 100:0.##} 个百分点",

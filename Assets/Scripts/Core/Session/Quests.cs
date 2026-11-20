@@ -20,6 +20,7 @@ namespace PCShopSell.Core.Session
 
         public int Chapter;
         public QuestTarget Target;
+        public Place GuideDestination;
         public bool Lesson;
         public bool QuietTransition;
         public Func<GameSession, bool> LessonReady;
@@ -127,7 +128,7 @@ namespace PCShopSell.Core.Session
             {
                 Id = "qr", Title = "开通收款码", Target = QuestTarget.PhoneShop,
                 Short = $"去{K("手机店")}开通收款码",
-                Hint = $"不带现金的顾客{K("也能买单")}。",
+                Hint = $"提高部分移动支付顾客的{K("购买率")}。",
                 Done = s => s.HasUpgrade(ShopUpgrades.Qr),
             },
             new QuestDef
@@ -140,32 +141,32 @@ namespace PCShopSell.Core.Session
             new QuestDef
             {
                 Id = "bank_securities", Title = "了解股市", Target = QuestTarget.BankSecurities,
-                Short = $"打开{K("证券")}，了解股价、持仓与手续费",
-                Hint = $"点顶栏{K("股市")}打开手机证券，也可到银行柜台打开{K("证券交易")}。看完后点{K("已了解，继续开店")}。",
+                Short = $"去{K("城郊银行")}学习证券交易",
+                Hint = $"点任务卡上的{K("前往银行")}。到柜台后打开{K("证券交易")}，看完说明后点{K("已了解，继续开店")}。",
                 Lesson = true,
-                LessonReady = s => s.HasApp(PhoneApps.Securities) || (s.AtBank && s.BankBlocker() == null),
+                LessonReady = s => s.AtBank && s.BankBlocker() == null,
                 QuietTransition = true,
-                Done = s => s.QuestLessonRead("bank_securities") || s.QuestCompleted("second_shop")
+                Done = s => s.BankPlace == null || s.QuestLessonRead("bank_securities") || s.QuestCompleted("second_shop")
                     || s.OperatingStorefrontCount >= 2 || s.RacingUnlocked,
-                Progress = s => s.Flags.Contains("tutorial:visited:bank_securities")
-                    ? "已打开证券 · 确认教学后继续" : "打开证券，查看入门说明",
+                Progress = s => s.AtBank ? "已到银行 · 打开证券交易"
+                    : s.CityIntent?.TargetPlaceId == s.BankPlace?.Id ? "正在前往银行" : "到银行查看证券入门说明",
             },
             new QuestDef
             {
                 Id = "second_shop", Title = "开第二家店", Target = QuestTarget.Agency,
                 Short = $"去{K("中介")}找间新铺，筹备第二家店",
-                Hint = "手头周转得开时，可以去中介签下一间新铺并选好店型。摆齐开业设施后，门店从装修次日起计入进度。",
+                Hint = "去中介签下新铺并选好店型，按任务备齐设施、装修和备货，然后完成新店的第一单。",
                 QuietTransition = true,
-                Done = s => s.RacingUnlocked || s.OperatingStorefrontCount >= 2,
+                Done = s => s.ExpansionStorefrontComplete(2),
                 Progress = s => $"已开业 {Math.Min(s.OperatingStorefrontCount, 2)}/2 家",
             },
             new QuestDef
             {
                 Id = "third_shop", Title = "开第三家店", Target = QuestTarget.Agency,
                 Short = $"去{K("中介")}寻找新铺，筹备第三家店",
-                Hint = "第二家店稳定经营后，可以按自己的节奏筹备第三家店。到中介选择新铺、签约并选好店型，摆齐开业设施；门店从装修次日起计入进度。",
+                Hint = "去中介签下新铺并选好店型，按任务备齐设施、装修和备货，然后完成新店的第一单。",
                 QuietTransition = true,
-                Done = s => s.OperatingStorefrontCount >= 3,
+                Done = s => s.ExpansionStorefrontComplete(3),
                 Progress = s => $"已开业 {Math.Min(s.OperatingStorefrontCount, 3)}/3 家",
             },
             new QuestDef
@@ -205,6 +206,7 @@ namespace PCShopSell.Core.Session
         {
             if (!s.HasShop) return 0;
             if (s.RetailKind == "secondhand") return s.ShelvesOfKind("secondhand");
+            if (s.RetailKind == "restaurant") return GameSession.HasRestaurantDrinkShelf(s.CurrentShop) ? 1 : 0;
             if(s.IsSpecialBusiness(s.CurrentShop))return s.SpecialFitGap(s.CurrentShop)==null?1:0;
             if(s.RetailKind!="computer")return s.ShelfIndexes().Count(i=>s.ShelfKindAt(i)?.GiftIds.Any(id=>RetailShopTypes.Sells(s.RetailKind,id))==true);
             return FurnitureCatalog.ShelfCategories.Count(c => s.ShelvesOfKind(ShelfKinds.ForCategory(c).Id) > 0);
@@ -218,6 +220,8 @@ namespace PCShopSell.Core.Session
 
         public static QuestDef ForShop(QuestDef source,GameSession s)
         {
+            if (source?.Id == "second_shop" || source?.Id == "third_shop")
+                return s.ExpansionOpeningGuide(source, source.Id == "second_shop" ? 2 : 3);
             if (source?.Target == QuestTarget.Cooker)
             {
                 if (s.Pantry.Cooking == null && s.Pantry.CookedBowls == 0) return source;
@@ -235,6 +239,8 @@ namespace PCShopSell.Core.Session
                     : "去家具城买" + string.Join("、", missing.Select(f => f.Name));
                 purchase.Hint = missing.Length == 0 ? purchase.Short
                     : "还需购买\n" + string.Join("\n", missing.Select(f => f.Name + " ×1 · " + f.Price));
+                if (s.RetailKind == "restaurant" && missing.Any(f => f.Id == FurnitureCatalog.Shelf))
+                    purchase.Hint += "\n货架任选一种规格。";
                 purchase.Progress = _ => $"已备 {required - missing.Length}/{required} 项";
                 return purchase;
             }
@@ -275,6 +281,12 @@ namespace PCShopSell.Core.Session
                     q.Short = $"把货架设成{K("二手转售品")}";
                     q.Hint = "走到货架旁按 F，或在门店的库存页选择货架。点「选择摆什么」或「换品类」，在「零售商品」中选择「二手转售品」。";
                 }
+                else if (s.RetailKind == "restaurant")
+                {
+                    q.Title = "设置饮料货架";
+                    q.Short = $"把货架设成{K("饮料")}";
+                    q.Hint = GameSession.RestaurantDrinkShelfHint;
+                }
                 else if (s.IsSpecialBusiness(s.CurrentShop))
                 {
                     q.Title = "准备经营设施";
@@ -307,6 +319,8 @@ namespace PCShopSell.Core.Session
     {
         private const string OpeningMealTutorialFlag = "tutorial:opening-meal-pending";
         private const string OpeningAgencyGuideFlag = "tutorial:opening-agency-pending";
+        private const string MealDeliveryGuidePending = "guide:meal-delivery:pending";
+        private const string SecuritiesTravelStarted = "guide:securities:travel-started";
         public bool OpeningMealTutorialPending => Flags.Contains(OpeningMealTutorialFlag);
         public bool OpeningAgencyGuidePending => CurrentPlace == null && !IsGameOver && LookingForFirstShop
             && Flags.Contains(OpeningAgencyGuideFlag) && City.HasPlace("agency");
@@ -323,10 +337,21 @@ namespace PCShopSell.Core.Session
                 if (!QuestCompleted("scooter") || QuestCompleted("bank_securities") || !CanPauseForTutorial)
                     return false;
                 var lesson = Quests.Get("bank_securities");
-                return lesson.LessonReady(this) && !lesson.Done(this) && QuestStageReady(lesson);
+                if (lesson.Done(this) || !QuestStageReady(lesson)) return false;
+                if (AtBank) return lesson.LessonReady(this);
+                return !Flags.Contains(SecuritiesTravelStarted) && CityIntent?.TargetPlaceId != BankPlace.Id && LeaveBlocker == null;
             }
         }
-        public bool RequiredTutorialPaused => ScooterTutorialPaused || SecuritiesTutorialPaused;
+
+        public bool StartSecuritiesTutorialTravel()
+        {
+            if (BankPlace is not Place bank || !BeginCityTravel(bank.Id)) return false;
+            Flags.Add(SecuritiesTravelStarted);
+            return true;
+        }
+        public bool MealDeliveryTutorialPaused => HasSmartphone && !MealDeliveryEnabled
+            && Flags.Contains(MealDeliveryGuidePending) && CanPauseForTutorial;
+        public bool RequiredTutorialPaused => MealDeliveryTutorialPaused || ScooterTutorialPaused || SecuritiesTutorialPaused;
 
         public const string OpeningMealLeaveBlock = "先做饭，吃一碗，再把剩下的饭全部装进背包，才能出门。";
         public bool OpeningMealEaten => Flags.Contains("tutorial:opening-meal-eaten");

@@ -74,9 +74,12 @@ namespace PCShopSell.Tests
         }
         [Test] public void RentCreditAffectsActualWeeklyDebitAndCashReserveForecast()
         {
-            using var s = Make(); string id = Bill(s, true, extra: 5000); var before = s.GetCityCashReserve(7).KnownMandatory;
+            using var s = Make();
+            int day = Math.Max(s.MainShop.Lease.SignedDay + GameDate.DaysPerWeek, s.Clock.Today.TotalDays + 1);
+            while (new GameDate(day).Weekday != GameWeekday.Sunday) day++;
+            Time(s, (day - 1) * 1440L);
+            string id = Bill(s, true, extra: 5000); var before = s.GetCityCashReserve(7).KnownMandatory;
             Assert.IsTrue(s.SettleEventBill(id, true)); Assert.AreEqual(before - Money.FromYuan(50), s.GetCityCashReserve(7).KnownMandatory);
-            int day = s.MainShop.Lease.SignedDay + 7; while (day <= s.Clock.Today.TotalDays) day += 7;
             Time(s, day * 1440L); var cash = s.Ledger.Balance; Call(s, "CollectWeeklyShopRent", s.Clock.Today);
             var debit = s.Ledger.Entries.Single(e => e.SourceEventId == "rent:" + s.MainShop.Place.Id + ":" + day);
             Assert.AreEqual(-(s.MainShop.Lease.Rent - Money.FromYuan(50)), debit.Amount);
@@ -133,7 +136,15 @@ namespace PCShopSell.Tests
         [Test] public void LowIntelligenceInvestmentIsSelectableAndLosesAtTheActualDeadline()
         {
             using var s = Make(); s.Player.Intelligence = 20; var cash = s.Ledger.Balance; var worth = s.NetWorth();
-            s.RaiseEvent("money_invest_tip"); Assert.NotNull(s.PendingEvent); Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1])); Assert.IsTrue(s.ResolveEvent(1));
+            s.RaiseEvent("money_invest_tip");
+            var pending = s.PendingEvent;
+            Assert.NotNull(pending);
+            Assert.IsNotEmpty(pending.Choices[0].Details);
+            Assert.IsFalse(s.ResolveEvent(0));
+            Assert.AreSame(pending, s.PendingEvent);
+            Assert.AreEqual(cash, s.Ledger.Balance);
+            Assert.IsTrue(s.IsChoiceEnabled(pending.Choices[1]));
+            Assert.IsTrue(s.ResolveEvent(1));
             Assert.AreEqual(cash - Money.FromYuan(10000), s.Ledger.Balance); Assert.AreEqual(worth, s.NetWorth()); var i = s.PrivateInvestments.Single();
             Assert.IsFalse(i.Success); Assert.AreEqual(0, i.Chance); s.Player.Intelligence = 100;
             using var loaded = Reload(s); Assert.IsFalse(loaded.PrivateInvestments.Single().Success); Time(loaded, i.At - 1); loaded.AdvanceClock(1);

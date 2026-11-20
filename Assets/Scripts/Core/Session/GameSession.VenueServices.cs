@@ -38,14 +38,40 @@ namespace PCShopSell.Core.Session
         public string CityActivityMidText(CityActivity activity)
         {
             if (IsCookTasting(activity))
-                return activity.Choices.Contains("cook-tasted") ? "已经尝过新菜，继续向罗师傅反馈口味、分量和定价。"
-                    : "罗师傅已经端上新菜，打开试吃页面尝一口。";
+                return "继续试吃，尝完每道菜再给罗师傅评价。";
             var def = CityActivityService(activity);
             return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
         }
         public const int CityArrivalWindowMinutes = 60;
         private const int CityDepartureLeadHours = 6;
         public CityActivity PendingVenueActivity(Place place, string activityId = null) => FindPendingVenueActivity(place, activityId);
+
+        public static bool IsAutomaticMeal(CityActivity activity) => activity != null
+            && ((string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId)
+                is "social_41" or "social_45" or "social_46" or "social_47"
+                or "social_65" or "social_65_private" or "social_66" or "social_66_before" or "social_67" or "social_67_private" or "race_bet_meal"
+                || (IsCommunityLeadDinner(activity) || activity.DefinitionId == "dinner" && activity.HostPays)
+                    && (activity.EntryPaid || activity.ServiceConfirmed && activity.ServiceDefinitionId == "dinner"));
+
+        public bool AutomaticMealAt(Place place, string activityId = null) => place != null && CurrentPlace == place
+            && (RunningCityActivity is CityActivity meal
+                ? meal.VenueId == place.Id && IsAutomaticMeal(meal)
+                : IsAutomaticMeal(FindPendingVenueActivity(place, activityId)));
+
+        private bool TryCompleteAutomaticMeal()
+        {
+            var meal = RunningCityActivity;
+            if (meal == null)
+            {
+                meal = FindPendingVenueActivity(CurrentPlace);
+                if (!IsAutomaticMeal(meal) || !PrepareVenueCompanions(CurrentPlace, meal.Id)
+                    || !VenueRendezvousReady(meal)) return false;
+                TickCityActivities(Clock.Now.TotalMinutes, meal.Id);
+                if (meal.State != CityActivityPhase.Running) return false;
+            }
+            if (!IsAutomaticMeal(meal) || CurrentPlace?.Id != meal.VenueId) return false;
+            return FinishManualCityActivity(meal.Id);
+        }
 
         private CityActivity FindPendingVenueActivity(Place place, string activityId = null, bool onsiteOnly = false)
         {
@@ -55,7 +81,7 @@ namespace PCShopSell.Core.Session
                     && (activityId == null || a.Id == activityId) && (!onsiteOnly || IsOnsiteActivity(a))
                     && (Math.Abs(now - a.ScheduledStart) <= CityArrivalWindowMinutes
                         || !IsOnsiteActivity(a) && a.RendezvousReady && CurrentPlace?.Id == place.Id))
-                .OrderByDescending(a => onsiteOnly && a.RendezvousReady)
+                .OrderByDescending(a => a.RendezvousReady && (onsiteOnly || IsAutomaticMeal(a)))
                 .ThenBy(a => Math.Abs(a.ScheduledStart - now)).FirstOrDefault();
         }
 
@@ -150,6 +176,8 @@ namespace PCShopSell.Core.Session
             if (definitionId == "fishing_pass_16h" && !matchingPass) return "请选择钓场在售的抛竿次数";
             if (CityLifeCatalog.Activity(booking?.DefinitionId)?.EventOnly == true && definitionId != booking.DefinitionId)
                 return "本次为已约定的专属活动，请按原日程参加";
+            if (CityActivityService(booking)?.Id == "dinner" && definitionId != "dinner")
+                return "请从本次饭局的菜单中点餐";
             Money cost = CityActivityEntryPrice(def, choice, booking);
             if (cost.IsPositive && !Ledger.CanAfford(cost)) return $"现金不足，需要 {cost}";
             if (booking?.ServiceConfirmed == true) return "本次已选好服务";
@@ -196,19 +224,19 @@ namespace PCShopSell.Core.Session
             return booking.State == CityActivityPhase.Running;
         }
 
-        public bool SelectVenueService(string definitionId, int choice)
+        public bool SelectVenueService(string definitionId, int choice, string activityId = null)
         {
-            PrepareVenueCompanions(CurrentPlace);
-            string why = VenueServiceBlocker(definitionId, choice);
+            PrepareVenueCompanions(CurrentPlace, activityId);
+            string why = VenueServiceBlocker(definitionId, choice, activityId);
             if (why != null) return Fail(why);
             var def = CityLifeCatalog.Activity(definitionId);
-            var booking = PendingVenueActivity(CurrentPlace)
+            var booking = PendingVenueActivity(CurrentPlace, activityId)
                 ?? ScheduleCityActivity(definitionId, Array.Empty<string>(), Clock.Now.TotalMinutes, sourceId: "walk-in:" + _nextCityActivity);
             if (booking == null) return false;
             booking.ServiceDefinitionId = definitionId;
             booking.ServiceChoice = choice;
             booking.ServiceConfirmed = true;
-            PrepareVenueCompanions(CurrentPlace);
+            PrepareVenueCompanions(CurrentPlace, booking.Id);
             TickCityActivities(Clock.Now.TotalMinutes, IsInteractiveFishingActivity(booking) ? booking.Id : null);
             if (def.Id == "hike")
                 Say("已选择" + VenueServiceName(def, choice) + "，免费散步。");

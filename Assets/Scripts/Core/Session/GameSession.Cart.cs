@@ -379,7 +379,7 @@ namespace PCShopSell.Core.Session
                 CourierDest = chosenDest;
                 int purchaseMinutes = _stallCheckoutMinutes.GetValueOrDefault();
                 _stallCheckoutMinutes = null;
-                if (purchaseMinutes > 0) AdvanceClock(purchaseMinutes);
+                if (purchaseMinutes > 0) AdvancePurchaseClock(purchaseMinutes);
             }
         }
 

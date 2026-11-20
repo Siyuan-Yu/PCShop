@@ -168,10 +168,13 @@ namespace PCShopSell.Core.Session
                     || _eventBills.Any(b => b.Id == attribution.SourceEventId)) continue;
                 string name = place == Home ? HomeTitle : place.Name;
                 var paid = ChargeRecordedBill("rent-home", place.Id, ResidentialLeaseSignedDay(place), attribution.SourceEventId, rent, "房租", name + "周租", attribution);
+                if (!paid.IsPositive) continue;
                 total += paid;
                 charges.Add($"{name} {paid}");
             }
-            if (charges.Count > 0) Popup?.Invoke("周日住宅租金已扣款", string.Join("\n", charges) + $"\n合计 {total}");
+            if (charges.Count > 0)
+                ShowEventCg(ResidentialRentPopupTitle, VisualResult(string.Join("\n", charges) + $"\n合计 {total}",
+                    "event_rent_residential"));
         }
 
         private IEnumerable<Place> ResidentialRentsDue(int day) =>

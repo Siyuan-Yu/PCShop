@@ -88,12 +88,12 @@ namespace PCShopSell.Core.Session
             var all = new List<CityActivityDefinition>(originals);
             Add(41, "车友庆功宴", "life_restaurant", 90, 3000, new CityVenueService(3000, hunger: 80, energy: 8, mood: 20, charm: 1, relation: 7), "用餐与庆功", "聊比赛亮点", "约下次练习");
             Add(43, "和顾宁观赛", "race_0", 60, 0, new CityVenueService(0, mood: 12, intelligence: 1, relation: 6), "观看正式比赛", "讲解赛道", "聊夜校生活");
-            Add(44, "罗师傅的新菜试吃", "life_restaurant", 60, 0, new CityVenueService(0, hunger: 65, energy: 5, mood: 12, nutrition: 3, relation: 6), "品尝新菜", "评价口味", "评价分量", "评价定价");
+            Add(44, "罗师傅的新菜试吃", "life_restaurant", 60, 0, new CityVenueService(0, relation: 2), "三道新菜试吃");
             Add(45, "招牌炖菜品鉴", "life_restaurant", 75, 0, new CityVenueService(0, hunger: 75, energy: 7, mood: 15, nutrition: 3, relation: 7), "品尝招牌炖菜", "询问炖菜的故事", "聊熟客偏好");
             Add(46, "林荷的下班饭局", "life_restaurant_tier2", 90, 1000, new CityVenueService(1000, hunger: 75, energy: 7, mood: 17, nutrition: 4, relation: 8), "双人餐", "聊值班经历", "聊餐厅经营");
             Add(47, "王婶家的家常饭", "life_restaurant", 90, 0, new CityVenueService(0, hunger: 80, energy: 8, mood: 18, nutrition: 5, relation: 8), "一起吃家常饭", "聊农贸市场", "听家常往事");
             Add(48, "新伴奏试唱专场", "life_ktv", 120, 2000, new CityVenueService(2000, energy: -4, mood: 18, charm: 1, relation: 7), "选歌试唱", "合唱新歌", "反馈伴奏效果");
-            Add(49, "音响调试试听", "life_ktv", 90, 0, new CityVenueService(0, energy: -5, mood: 10, relation: 5), "试听设备", "比较人声 · 智力 50 起", "比较低频 · 智力 50 起", "检查杂音 · 智力 50 起");
+            Add(49, "音响调试试听", "life_ktv", 90, 0, new CityVenueService(0, energy: -5, mood: 10, relation: 5), "试听设备", "比较人声", "比较低频", "检查杂音");
             Add(50, "社区合唱团排练", "life_ktv", 120, 3000, new CityVenueService(3000, energy: -8, mood: 21, charm: 1, relation: 7), "热身与排练", "一起合唱", "休息交流");
             Add(59, "邵安的周末技巧钓鱼", GameSession.FishingVenueId, 120, 800, new CityVenueService(800, energy: 2, mood: 16, intelligence: 1, relation: 8), "选位抛竿", "请教选饵", "交流提竿技巧");
             Add(60, "乔松的湖畔钓叙", GameSession.FishingVenueId, 180, 1800, new CityVenueService(1800, mood: 12, relation: 8), "安静陪钓", "请教园艺", "听往事", "换远处钓位");
@@ -104,9 +104,9 @@ namespace PCShopSell.Core.Session
                     Minutes = minutes, EventOnly = true, ServiceOptionCount = 1, Choices = choices,
                     FixedGroupPrice = number is 41 or 48 or 50,
                     DefaultService = service,
-                    StartText = number == 44 ? "罗师傅端上椒香鸡肉饭，请你尝过后给点真实意见。" : "大家到齐，开始" + name + "。",
-                    MidText = number == 44 ? "尝过新菜后，和罗师傅聊聊口味、分量和定价。" : "按本次安排体验并交流。",
-                    EndText = number == 44 ? "你尝过了新菜，也把三方面的建议告诉了罗师傅。他收好记录，和你道别。" : name + "完成。" });
+                    StartText = number == 44 ? "罗师傅摆好餐具，准备一道一道上菜。" : "大家到齐，开始" + name + "。",
+                    MidText = number == 44 ? "一道一道试吃，尝完再给罗师傅意见。" : "按本次安排体验并交流。",
+                    EndText = number == 44 ? "三道菜都尝完了。罗师傅收好试菜笔记，送你到门口。" : name + "完成。" });
             }
         }
     }

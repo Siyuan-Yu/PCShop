@@ -13,15 +13,22 @@ namespace PCShopSell.Core.Session
     {
         public string Key;
         public double BestSeconds;
-        public int Wins, Starts, BestCourseRevision;
+        public int Wins, Starts, BestCourseRevision, BestDistanceLaps;
         public bool BestOnCurrentCourse
         {
             get
             {
                 if (Key == null) return false;
                 int separator = Key.IndexOf(':');
-                return BestSeconds > 0 && separator > 0
-                    && RaceTracks.Get(Key.Substring(0, separator))?.CourseRevision == BestCourseRevision;
+                if (BestSeconds <= 0 || separator <= 0) return false;
+                var track = RaceTracks.Get(Key.Substring(0, separator));
+                if (track == null || track.CourseRevision != BestCourseRevision) return false;
+                bool singleLapTime = Key.EndsWith(":practice-lap", StringComparison.Ordinal);
+                int distance = BestDistanceLaps;
+                // Saves from before the two-lap format only recorded the course revision.
+                if (distance == 0)
+                    distance = singleLapTime || Key.EndsWith(":event:rider", StringComparison.Ordinal) ? 1 : track.Tier >= 2 ? 3 : 2;
+                return distance == (singleLapTime ? 1 : track.Laps);
             }
         }
         public RaceRecord Copy() => (RaceRecord)MemberwiseClone();
@@ -37,6 +44,7 @@ namespace PCShopSell.Core.Session
         public UsedMotor[] Stock;
         public string[] BoughtLeads;
         public int Serial;
+        public int ScooterImpoundDays;
     }
     public sealed partial class SaveData {public RacingSave racing;}
     public sealed partial class GameSession
@@ -55,7 +63,7 @@ namespace PCShopSell.Core.Session
         public string RaceMeetingSummary()
         {
             var meeting=CurrentRaceMeeting;var next=RacingSchedule.Next(Clock.Today);
-            return (meeting==RaceMeeting.None?"今天无比赛，可按时长购买练习":RacingSchedule.Name(meeting)+" · 09:00—18:00 · 参赛 ¥"+RacingSchedule.Fee(meeting)+" · 冠军 ¥"+RacingSchedule.ChampionPrize(meeting))
+            return (meeting==RaceMeeting.None?"今天无比赛，可报名自由练习":RacingSchedule.Name(meeting)+" · 全天 · 参赛 ¥"+RacingSchedule.Fee(meeting)+" · 冠军 ¥"+RacingSchedule.ChampionPrize(meeting))
                 +"\n下一场："+next+" · "+RacingSchedule.Name(RacingSchedule.On(next));
         }
         public const string StarterRaceTrackId = "race_0";
@@ -181,17 +189,16 @@ namespace PCShopSell.Core.Session
         }
         public string RaceBlocker(string trackId,string motorId,bool practice)
             => RaceBlocker(trackId, motorId, practice, null);
-        private string RaceBlocker(string trackId,string motorId,bool practice,int? entryFee)
+
+        private string RaceBlocker(string trackId, string motorId, bool practice, int? eventEntryFee)
         {
             var t=RaceTracks.Get(trackId,City);var v=_garage.Find(g=>g.Id==motorId);
             if(RacingAccessBlocker is string accessBlocker)return accessBlocker;
             if(Racing||IsGameOver||IsWorking||_sleeping||CityActivityExclusive||PendingEvent!=null)return "请先结束当前活动";
             if(t==null||CurrentPlace?.Id!=trackId)return "请实际前往赛场";
             if(DistrictAccessTier<t.Tier)return "先解锁"+DistrictName(t.Tier)+"片区";
-            if(!t.IsOpenAt(Clock.MinuteOfDay))return "赛场开放时间 "+t.OpeningHours;
-            if(!practice&&CurrentRaceMeeting==RaceMeeting.None)return "今天没有比赛；下一场 "+RacingSchedule.Next(Clock.Today)+"，现在可购买练习圈数";
-            if (!practice && (Clock.MinuteOfDay < RacingSchedule.MeetOpenMinute || Clock.MinuteOfDay >= RacingSchedule.MeetCloseMinute))
-                return "正式比赛在比赛日 09:00—18:00 举行";
+            if(practice && !eventEntryFee.HasValue && !t.IsOpenAt(Clock.MinuteOfDay))return "自由练习开放时间 "+t.OpeningHours;
+            if(!practice&&CurrentRaceMeeting==RaceMeeting.None)return "今天没有比赛；下一场 "+RacingSchedule.Next(Clock.Today)+"，现在可报名练习";
             if(v==null||!MotorAvailable(v))return "请准备一辆空闲且未被扣押的自有车辆";
             if(!MotorCatalog.CanRace(MotorCatalog.Get(v.ModelId).Kind))return "货车仅供员工进货，不可比赛或练习";
             if(v.Commuter)return "通勤车不能比赛或练习，请先在当地车库改为入库车辆";
@@ -199,52 +206,26 @@ namespace PCShopSell.Core.Session
             if(!HasGarage(garageId)||v.GarageId!=garageId)return "只能使用本区车库的入库车辆，可付费从其他车库调入";
             if(v.Condition<40)return "车况低于40%，先去车间修复";
             if(!practice&&RacingWins<t.RequiredWins)return "需要累计赢得 "+t.RequiredWins+" 场低级别比赛";
-            int fee = entryFee ?? (practice ? RacingSchedule.PracticeFee : RacingSchedule.Fee(CurrentRaceMeeting));
+            int fee = eventEntryFee ?? (practice ? RacingSchedule.PracticeFee : RacingSchedule.Fee(CurrentRaceMeeting));
             if (Ledger.Balance < Money.FromYuan(fee)) return practice ? $"练习费不足，需要 ¥{fee:N0}" : "参赛费不足";
-            if (!practice)
-            {
-                if (FindRaceRegistration(trackId, Clock.Today.TotalDays)?.Started == true) return "已经参加本场比赛";
-                var absent = _raceInvitations.FirstOrDefault(i => i.Day == Clock.Today.TotalDays && i.TrackId == trackId
-                    && !RaceAttendeeHere(i.PersonId, trackId));
-                if (absent != null) return "受邀车友" + CityPerson(absent.PersonId)?.Name + "尚未到场。关闭接待窗口等待，或取消邀请后参赛。";
-                if (RaceParticipantIds(trackId).Count == 0) return "还没有车友到场，关闭接待窗口稍候再来";
-            }
-            return null;
-        }
-        public string RacePracticePassBlocker(string trackId, string motorId, int laps)
-        {
-            var pass = RacingSchedule.PracticePasses.FirstOrDefault(option => option.Laps == laps);
-            if (pass.Laps == 0) return "请选择练习圈数";
-            string why = RaceBlocker(trackId, motorId, true, pass.Price);
-            if (why != null) return why;
-            var track = RaceTracks.Get(trackId);
-            if (track.CloseMinute - track.OpenMinute < 1440 && Clock.MinuteOfDay + laps * CityLifeCatalog.ManualAttemptMinutes > track.CloseMinute)
+            if (practice && !eventEntryFee.HasValue && t.CloseMinute - t.OpenMinute < 1440
+                && Clock.MinuteOfDay + t.Laps * CityLifeCatalog.ManualAttemptMinutes > t.CloseMinute)
                 return "赛场关闭前没有足够时间";
+            if (!practice && FindRaceRegistration(trackId, Clock.Today.TotalDays)?.Started == true) return "已经参加本场比赛";
             return null;
         }
-
-        public bool StartRacePracticePass(string trackId, string motorId, int laps)
-        {
-            if (RacePracticePassBlocker(trackId, motorId, laps) is string why) return Fail(why);
-            return StartRaceSession(trackId, motorId, true, RacingSchedule.PracticePasses.First(pass => pass.Laps == laps).Price, laps);
-        }
-
         public bool StartRace(string trackId,string motorId,bool practice)
         {
             if (RaceBlocker(trackId, motorId, practice) is string why) return Fail(why);
-            return StartRaceSession(trackId, motorId, practice, practice ? RacingSchedule.PracticeFee : RacingSchedule.Fee(CurrentRaceMeeting));
-        }
-
-        private bool StartRaceSession(string trackId, string motorId, bool practice, int fee, int? practiceLaps = null)
-        {
             var t=RaceTracks.Get(trackId,City);var v=_garage.Find(g=>g.Id==motorId);
             var meeting=CurrentRaceMeeting;
-            string activity = practiceLaps.HasValue ? $"练习 {practiceLaps} 圈" : practice ? "计时练习" : RacingSchedule.Name(meeting);
+            int fee = practice ? RacingSchedule.PracticeFee : RacingSchedule.Fee(meeting);
+            string activity = practice ? $"自由练习 · {t.Laps} 圈" : RacingSchedule.Name(meeting);
             if(!Ledger.TryDebit(Clock.Today,practice?"赛车练习":"赛车报名",Money.FromYuan(fee),t.Name+" · "+activity))return false;
             var opponents = practice ? Array.Empty<RaceOpponent>() : BuildRaceOpponents(t, MotorCatalog.Get(v.ModelId));
             if (!practice) RecordRaceRegistrationStart(trackId);
             StartDriving(new RaceSimulation(t,MotorCatalog.Performance(v),practice,meeting,opponents,
-                lapLimit: practiceLaps, paidPractice: practiceLaps.HasValue), v.Id);
+                paidPractice: practice), v.Id);
             ApplyEventBatteryFailure(v);
             return true;
         }
@@ -276,6 +257,7 @@ namespace PCShopSell.Core.Session
             {
                 record.BestSeconds = recordTime;
                 record.BestCourseRevision = r.Track.CourseRevision;
+                record.BestDistanceLaps = r.PaidPractice ? 1 : r.Laps;
             }
             int position = r.Practice || r.Abandoned ? 0 : r.Position;
             long prize = r.Meeting == RaceMeeting.None ? 0 : r.PrizeForPosition(position);
@@ -292,7 +274,7 @@ namespace PCShopSell.Core.Session
                 Standings = position > 0 ? RaceStandings(r) : Array.Empty<RaceStanding>(),
                 Relationships = position > 0 ? SettleRaceRelationships(r) : Array.Empty<RaceRelationshipChange>()
             };
-            string raceTitle = _drivingEventBooking?.Kind == "wet" ? "人工洒水湿地训练" : _drivingEventBooking?.Kind == "rider" ? "吴磊单圈挑战" : _drivingEventBooking?.Kind == "charity" ? "慈善赛" : null;
+            string raceTitle = _drivingEventBooking?.Kind == "wet" ? "人工洒水湿地训练" : _drivingEventBooking?.Kind == "rider" ? "吴磊两圈挑战" : _drivingEventBooking?.Kind == "charity" ? "慈善赛" : null;
             LastRaceSettlement.EventTitle = r.PaidPractice ? "自由练习" : raceTitle;
             if (position > 0 && r.Meeting != RaceMeeting.None && _drivingEventBooking == null)
                 RecordRaceOpponentResults(r.Track, LastRaceSettlement.Standings);
@@ -324,7 +306,8 @@ namespace PCShopSell.Core.Session
                 Records = _raceRecords.Select(r => r.Copy()).ToArray(), Invitations = RaceInvitations.ToArray(),
                 Registrations = _raceRegistrations.Where(r => r.Day >= Clock.Today.TotalDays).Select(r => r.Copy()).ToArray(),
                 OpponentResults = _lastRaceOpponentResults.Values.Select(r => r.Copy()).ToArray(),
-                Serial = _motorSerial, Stock = _usedMotors.Select(s => s.Copy()).ToArray(), BoughtLeads = _boughtMotorLeads.ToArray()
+                Serial = _motorSerial, Stock = _usedMotors.Select(s => s.Copy()).ToArray(), BoughtLeads = _boughtMotorLeads.ToArray(),
+                ScooterImpoundDays = VehicleImpoundDays
             };
         }
         private void LoadRacing(SaveData d)
@@ -367,9 +350,18 @@ namespace PCShopSell.Core.Session
                     foreach (var vehicle in _garage.Where(v => MotorCatalog.Get(v.ModelId).Kind == kind).Take(Math.Max(0, count))) vehicle.Impounded = true;
                 }
             }
-            foreach (var vehicle in _garage.Where(v => v.Impounded && v.ImpoundReleaseAt <= 0
-                && MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike))
-                vehicle.ImpoundReleaseAt = Clock.Now.TotalMinutes + ScooterImpoundDays * 1440L;
+            long now = Clock.Now.TotalMinutes;
+            const int legacyScooterImpoundDays = 7;
+            bool legacyScooterDeadline = (d.racing?.ScooterImpoundDays ?? 0) == 0;
+            foreach (var vehicle in _garage.Where(v => v.Impounded))
+            {
+                if (vehicle.ImpoundReleaseAt <= 0)
+                    vehicle.ImpoundReleaseAt = now + VehicleImpoundDays * GameTimestamp.MinutesPerDay;
+                else if (legacyScooterDeadline && MotorCatalog.Get(vehicle.ModelId).Kind == VehicleKind.EBike)
+                    vehicle.ImpoundReleaseAt = Math.Max(1, vehicle.ImpoundReleaseAt
+                        - (legacyScooterImpoundDays - VehicleImpoundDays) * GameTimestamp.MinutesPerDay);
+            }
+            UpdateImpoundedVehicles(now);
             foreach (var vehicle in _garage.Where(v => MotorCatalog.Get(v.ModelId).Kind == VehicleKind.Van))
             { vehicle.Commuter = false; vehicle.GarageId = null; }
         }

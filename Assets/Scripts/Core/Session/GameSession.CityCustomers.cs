@@ -25,6 +25,7 @@ namespace PCShopSell.Core.Session
             if (!Random.Chance(.25)) return;
             InitializeCityPeople();
             var person = _cityPeople.Values.Where(p => p.PersonId != CityLifeCatalog.InvitationTestPersonId && p.Route == null && p.ActivityId == null && p.VisitId == null
+                && !(p.LeisureTargetId != null && p.LeisureTargetId == p.LocationPlaceId && p.LeisureNextMove > Clock.Now.TotalMinutes)
                 && p.Task != CityPersonTask.Working && p.Task != CityPersonTask.Waiting
                 && !Employees.Any(e => e.Person.PersonId == p.PersonId)
                 && !_candidates.Any(e => e.PersonId == p.PersonId)
