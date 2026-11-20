@@ -16,8 +16,13 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class EventScratchTicket
     {
+        public const int Columns = 18, Rows = 8, CellCount = Columns * Rows;
+        private const int CellsToReveal = (CellCount * 60 + 99) / 100;
+        public bool ReadyToReveal => !Paid && ClearedCount >= CellsToReveal;
+        public int ProgressPercent => ClearedCount * 100 / CellCount;
+        private int ClearedCount => Cleared.Count(cell => cell);
         public int Id, PrizeYuan; public bool Paid;
-        public bool[] Cleared = new bool[144];
+        public bool[] Cleared = new bool[CellCount];
         public string ResultText => PrizeYuan > 0
             ? $"这张刮刮乐中了 {Money.FromYuan(PrizeYuan)}，奖金已到账。"
             : "这张刮刮乐没有中奖。";
@@ -131,8 +136,9 @@ namespace PCShopSell.Core.Session
                     Choose("抵扣下期账单", _ => SettleEventBill(b.Id, true) ? "已记入本处账单抵扣，下期实际少扣。" : "暂不能抵扣，请查看原租约。"), Choose("稍后处理", _ => "待退款仍保留，可从经营待办处理。"));
             }
             if (n == 103)
-                return EventScene(template, "刮刮乐¥200一张：80%未中、12%中¥200、7%中¥1,000、1%中¥10,000。买下后自己刮开。",
-                    Choose("买一张 · ¥200", _ => BuyEventScratchTicket() ? "已买下，打开经营待办刮开彩票。" : "没有买下，请检查现金或已有彩票。"), Choose("不买", _ => "没有消费。"));
+                return EventScene(template, "刮刮乐 ¥200 一张，买完自己刮，当场开奖。80%未中、12%中¥200、7%中¥1,000、1%中¥10,000。",
+                    Choose("买一张 · ¥200", s => s.BuyEventScratchTicket() ? null : "没有买下，请检查现金或已有彩票。"),
+                    Choose("不买", _ => "没有消费。"));
             if (n == 106)
                 return EventScene(template, "住院保障¥3,000/年。保障期内入院，报销实际住院费用80%；不限次数，没有单次或累计上限。门诊不在保障内。",
                     Choose(HasHospitalCoverage ? "续保一年 · ¥3,000" : "投保一年 · ¥3,000", _ => BuyHospitalPolicy() ? "保障已生效，有效至" + new GameTimestamp(_hospitalPolicyUntil) + "，到期需自行续费。" : "现金不足，未投保。"),
@@ -163,17 +169,17 @@ namespace PCShopSell.Core.Session
         }
         public bool ScratchEventCell(int cell)
         {
-            if (_eventTicket == null || _eventTicket.Paid || cell < 0 || cell >= 144 || _eventTicket.Cleared[cell]) return false;
+            if (_eventTicket == null || _eventTicket.Paid || cell < 0 || cell >= EventScratchTicket.CellCount || _eventTicket.Cleared[cell]) return false;
             _eventTicket.Cleared[cell] = true; return true;
         }
-        public bool CanClaimScratch => _eventTicket != null && !_eventTicket.Paid && _eventTicket.Cleared.Count(c => c) >= 87;
-        public bool ClaimEventScratch()
+        public bool CanClaimScratch => _eventTicket?.ReadyToReveal == true;
+        public bool ClaimEventScratch(bool showPopup = true)
         {
             if (!CanClaimScratch) return false;
             _eventTicket.Paid = true;
             if (_eventTicket.PrizeYuan > 0) Ledger.Credit(Clock.Today, "刮刮乐中奖", Money.FromYuan(_eventTicket.PrizeYuan), "刮刮乐#" + _eventTicket.Id,
                 new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: "scratch-prize:" + _eventTicket.Id));
-            Show("刮刮乐结果", _eventTicket.ResultText);
+            if (showPopup) Show("刮刮乐结果", _eventTicket.ResultText);
             return true;
         }
         public bool BuyHospitalPolicy()

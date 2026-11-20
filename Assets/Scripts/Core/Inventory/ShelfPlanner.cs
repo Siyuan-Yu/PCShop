@@ -9,7 +9,7 @@ namespace PCShopSell.Core.Inventory
     public sealed class ResaleOffer
     {
         public int Id,Product;
-        public string Name;
+        public string Name, ProductName, Portrait;
         public double Kg;
         public long Price,ReferencePrice;
         public long ListedAt;

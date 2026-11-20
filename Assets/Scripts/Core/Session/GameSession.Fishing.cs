@@ -12,6 +12,7 @@ namespace PCShopSell.Core.Session
 
     [Serializable] public sealed class FishingState
     {
+        public const double BiteWindowSeconds = 3;
         public string ActivityId, PendingFishId, Message;
         public FishingPhase Phase;
         public int Spot, Bait, SpeciesRoll, Casts, Catches, Kept, Released, Gifts, Style;
@@ -169,7 +170,7 @@ namespace PCShopSell.Core.Session
                     _fishing.PhaseSeconds = 0;
                     _fishing.Message = FishingHint;
                 }
-                else if (_fishing.Phase == FishingPhase.Bite && _fishing.PhaseSeconds >= 3)
+                else if (_fishing.Phase == FishingPhase.Bite && _fishing.PhaseSeconds >= FishingState.BiteWindowSeconds)
                     LoseFishingFish("提竿太迟，鱼吐出了钩；这一份鱼饵已经用掉。");
                 else if (_fishing.Phase == FishingPhase.Fighting)
                 {

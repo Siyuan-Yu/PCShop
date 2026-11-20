@@ -30,6 +30,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(prices,"− ¥5",()=>{S.ConfigureVenue(place.Id,state.Accepting,state.Open,state.Close,System.Math.Max(100,state.PriceCents-500));w.Rebuild();},18),90,42);
                 Ui.Size(Ui.Label(prices,Money.FromCents(state.PriceCents)+"/次",21),150);
                 Ui.Size(Ui.Button(prices,"+ ¥5",()=>{S.ConfigureVenue(place.Id,state.Accepting,state.Open,state.Close,System.Math.Min(100000,state.PriceCents+500));w.Rebuild();},18),90,42);
+                if (place.Id == CityLifeCatalog.PachinkoVenue) BuildPachinkoMachineSettings(w.Content, w, state);
                 if (!S.VenueHasAttendant(shop)) Ui.Notice(w.Content, "当前无人值守 · 暂停接待");
                 if(shop.Employee!=null)
                 {

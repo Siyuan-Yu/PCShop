@@ -14,6 +14,7 @@ namespace PCShopSell.Game.UI
         private Text _onsiteStatus,_onsiteReadout;
         private Image _onsitePower;
         private RectTransform _onsiteRoundResult;
+        private bool _onsiteIllustratedBar;
         private bool _onsiteHeld,_onsiteWasHeld;
         private string _onsiteLayoutKey;
         private string _onsiteSportActivityId;
@@ -36,7 +37,21 @@ namespace PCShopSell.Game.UI
             _onsiteRoundResult = null;
             var panel=w.Root.Find("Panel") as RectTransform;if(w.Fitter!=null)w.Fitter.enabled=false;if(panel!=null){panel.localScale=Vector3.one;panel.Fill();}
             w.Content.GetComponent<VerticalLayoutGroup>().enabled=false;w.Content.Fill();
-            _ctrl.RenderOnsiteScene();var view=Ui.Rect(w.Content,"ActualOnsiteScene");view.Fill();var raw=view.gameObject.AddComponent<RawImage>();raw.texture=_ctrl.OnsiteTexture;raw.raycastTarget=false;
+            if (s.IsFootballPenalty)
+            {
+                _onsiteIllustratedBar = false;
+                BuildFootballPenalty(w, s);
+                return;
+            }
+            _onsiteIllustratedBar = s.Number is >= 51 and <= 53 && BuildLeisureBackdrop(w.Content, "event_lighthouse_bar");
+            if (!_onsiteIllustratedBar)
+            {
+                _ctrl.RenderOnsiteScene();
+                var view = Ui.Rect(w.Content, "ActualOnsiteScene").Fill();
+                var raw = view.gameObject.AddComponent<RawImage>();
+                raw.texture = _ctrl.OnsiteTexture;
+                raw.raycastTarget = false;
+            }
             var header=Ui.Panel(w.Content,"OnsiteHeader",Ui.Chrome);header.rectTransform.Anchor(0,.91f,1,1);
             Ui.Label(header.transform,S.CityActivityService(S.RunningCityActivity)?.Name,27,color:Ui.Accent).rectTransform.Anchor(.02f,0,.53f,1);
             var activity = S.RunningCityActivity;
@@ -44,6 +59,12 @@ namespace PCShopSell.Game.UI
             bool drinkTasting = GameSession.IsDrinkTasting(activity);
             bool practice = GameSession.IsVenueSport(activity);
             bool venueBasketball = GameSession.IsVenueBasketball(activity);
+            if (venueBasketball)
+            {
+                var score = Ui.Panel(w.Content, "BasketballPracticeScore", Ui.Chrome).rectTransform.Anchor(.025f, .80f, .185f, .882f);
+                Ui.Label(score, $"已投 {s.Round} 球　命中 {s.Success} 球", 20, TextAnchor.MiddleCenter, Ui.Accent)
+                    .rectTransform.Fill(6);
+            }
             bool readyToFinish = practice ? S.CanFinishOnsiteSport && S.ManualAttemptsLeft == 0
                 : S.CanFinishManualCityActivity(activity.Id);
             if (drinkTasting)
@@ -55,7 +76,7 @@ namespace PCShopSell.Game.UI
             if (sport && s.Phase == "result")
             {
                 _onsiteRoundResult = Ui.Panel(w.Content, "OnsiteRoundResult", Ui.PanelBg2).rectTransform;
-                _onsiteRoundResult.Anchor(.19f, .79f, .55f, .89f);
+                _onsiteRoundResult.Anchor(.32f, .77f, .68f, .875f);
                 bool golf = s.Number >= 57;
                 string unit = golf ? "杆" : "回合";
                 string tally = s.Number == 56 ? $"{(s.Round == 5 ? "终场" : "当前")}比分 {s.Success * 2} : {s.OpponentScore}"
@@ -84,7 +105,9 @@ namespace PCShopSell.Game.UI
                 if (practice) { if (S.FinishOnsiteSport()) ReturnFromOnsitePlay(); }
                 else QuitActivity();
             }, 19, Ui.ButtonBg, !practice || S.CanFinishOnsiteSport).GetComponent<RectTransform>().Anchor(.85f,.18f,.985f,.8f);
-            var body=Ui.Panel(w.Content,"OnsiteActions",Ui.Chrome);body.rectTransform.Anchor(.70f,.20f,1,.90f);
+            var body=Ui.Panel(w.Content,"OnsiteActions",Ui.Chrome);
+            body.rectTransform.Anchor(.735f, .22f, .988f, _onsiteIllustratedBar ? .83f : .90f);
+            body.gameObject.SetActive(!venueBasketball);
             var list=Ui.Rect(body.transform,"Actions");list.Anchor(0,0,1,1,16,12,16,12);var layout=list.gameObject.AddComponent<VerticalLayoutGroup>();layout.spacing=5;layout.childControlHeight=true;layout.childControlWidth=true;layout.childForceExpandHeight=false;
             void Label(string text)=>Ui.Size(Ui.Label(list,text,18),-1,34);
             void Button(string label, Action action, bool enabled = true, bool selected = false)
@@ -174,9 +197,21 @@ namespace PCShopSell.Game.UI
                 Button("曝光："+new[]{"偏暗","正常","偏亮"}[(int)s.Exposure],()=>Frame(s.PhotoYaw,s.PhotoPitch,s.PhotoDistance,s.PhotoOffset,((int)s.Exposure+1)%3));
                 Button("拍照并保存",()=>{if(!_ctrl.CaptureOnsitePhoto())Toast("照片未保存，请检查现场、相机和写入空间。");});Button("查看相册",OpenOnsiteAlbum);
             }
-            var rail=Ui.Panel(w.Content,"OnsiteBottom",Ui.Chrome);rail.rectTransform.Anchor(0,0,1,.19f);
+            var rail=Ui.Panel(w.Content,"OnsiteBottom",Ui.Chrome);
+            if (venueBasketball) rail.rectTransform.Anchor(.23f, .03f, .77f, .175f);
+            else rail.rectTransform.Anchor(0, 0, 1, .19f);
             _onsiteStatus=Ui.Label(rail.transform,_onsiteRoundResult == null ? s.Message : "",21,color:Ui.Accent);_onsiteStatus.rectTransform.Anchor(.025f,s.Number==53?.18f:.48f,.70f,.98f);
             _onsiteReadout=Ui.Label(rail.transform,"",18);_onsiteReadout.rectTransform.Anchor(.025f,.10f,.70f,.48f);
+            if (venueBasketball && !readyToFinish)
+            {
+                _onsiteStatus.rectTransform.Anchor(.035f, .63f, .47f, .98f);
+                _onsiteReadout.rectTransform.Anchor(.035f, .06f, .70f, .28f);
+                bool canAim = s.Phase is not ("charging" or "flight");
+                Ui.Button(rail.transform, "←", () => S.AimOnsiteSport(s.Angle - 3), 19, Ui.ButtonBg, canAim)
+                    .GetComponent<RectTransform>().Anchor(.49f, .64f, .565f, .91f);
+                Ui.Button(rail.transform, "→", () => S.AimOnsiteSport(s.Angle + 3), 19, Ui.ButtonBg, canAim)
+                    .GetComponent<RectTransform>().Anchor(.578f, .64f, .653f, .91f);
+            }
             if (readyToFinish)
             {
                 Ui.Button(rail.transform, "结束并结算", () =>
@@ -193,11 +228,23 @@ namespace PCShopSell.Game.UI
                 string action = s.BasketballDrill ? s.Number == 54 ? "练习脚步" : s.Mode == 0 ? "运球" : "急停转向"
                     : s.Number == 55 ? "跳投" : s.Number <= 56 ? "投篮" : "击球";
                 bool canCharge = s.Phase != "flight";
-                string chargeLabel = canCharge ? "按住蓄力 · 松手" + action : s.BasketballDrill ? "正在练习…" : "球在飞行中…";
+                string chargeLabel = canCharge ? "按住蓄力\n松手" + action : s.BasketballDrill ? "正在练习…" : "球在飞行中…";
                 var charge = Ui.Button(rail.transform, chargeLabel, null, 23, Ui.ButtonHot, canCharge);
                 charge.GetComponent<RectTransform>().Anchor(.73f,.2f,.98f,.85f);
                 if (canCharge) charge.gameObject.AddComponent<FishingHoldInput>().Held = v => _onsiteHeld = v;
-                var meter=Ui.Panel(rail.transform,"PowerBackground",Ui.ButtonBg);meter.rectTransform.Anchor(.025f,.02f,.68f,.09f);_onsitePower=Ui.Panel(meter.transform,"Power",Ui.Accent);_onsitePower.raycastTarget=false;
+                var meter = Ui.Panel(rail.transform, "PowerBackground", Ui.ButtonBg);
+                meter.rectTransform.Anchor(.035f, venueBasketball ? .35f : .02f, .653f, venueBasketball ? .51f : .09f);
+                _onsitePower = Ui.Panel(meter.transform, "Power", Ui.ButtonHot);
+                _onsitePower.raycastTarget = false;
+                if (venueBasketball)
+                {
+                    // Strength interval that reaches the rim when aimed straight ahead.
+                    float start = (float)((s.TargetZ - OnsitePlayState.BasketballRimTolerance) / s.BasketballShotRange);
+                    float end = (float)((s.TargetZ + OnsitePlayState.BasketballRimTolerance) / s.BasketballShotRange);
+                    var interval = Ui.Panel(meter.transform, "RimRange", new Color(.39f, .64f, .39f, .7f));
+                    interval.rectTransform.Anchor(start, 0, end, 1);
+                    interval.raycastTarget = false;
+                }
             }
             else if (!drinkTasting)
                 Ui.Button(rail.transform,"完成现场步骤后结算",null,19,Ui.ButtonBg,false).GetComponent<RectTransform>().Anchor(.74f,.3f,.98f,.75f);
@@ -226,14 +273,30 @@ namespace PCShopSell.Game.UI
             if (s == null) { ReturnFromOnsitePlay(); return; }
             if (_windows.LastOrDefault() != _onsiteWindow) return;
             bool held=_onsiteHeld||Input.GetKey(KeyCode.Space);
-            if(GameSession.IsOnsiteSport(S.RunningCityActivity))
-            {if(held&&!_onsiteWasHeld)S.BeginOnsiteCharge();if(!held&&_onsiteWasHeld)S.ReleaseOnsiteShot();S.StepOnsiteSport(dt);}
+            if (GameSession.IsOnsiteSport(S.RunningCityActivity))
+            {
+                if (s.IsFootballPenalty) UpdateFootballAim(s);
+                else if (s.Number is >= 54 and <= 56 && !s.BasketballDrill)
+                {
+                    if (Input.GetKeyDown(KeyCode.LeftArrow)) S.AimOnsiteSport(s.Angle - 3);
+                    if (Input.GetKeyDown(KeyCode.RightArrow)) S.AimOnsiteSport(s.Angle + 3);
+                }
+                if (held && !_onsiteWasHeld) S.BeginOnsiteCharge();
+                if (!held && _onsiteWasHeld) S.ReleaseOnsiteShot();
+                S.StepOnsiteSport(dt);
+            }
             _onsiteWasHeld=held;s=S.CurrentOnsite;
             if (s == null) { ReturnFromOnsitePlay(); return; }
             if(OnsiteLayoutKey(s)!=_onsiteLayoutKey&&s.Phase!="charging")_onsiteWindow.RequestRebuild();
             bool showRoundResult = _onsiteRoundResult != null && s.Phase == "result";
             if (_onsiteRoundResult != null) _onsiteRoundResult.gameObject.SetActive(showRoundResult);
-            _ctrl.RenderOnsiteScene();if(_onsiteStatus!=null)_onsiteStatus.text=showRoundResult ? "" : s.Message;
+            if (!_onsiteIllustratedBar) _ctrl.RenderOnsiteScene();
+            if (s.IsFootballPenalty)
+            {
+                RefreshFootballPenalty(s);
+                return;
+            }
+            if (_onsiteStatus != null) _onsiteStatus.text = showRoundResult ? "" : s.Message;
             if (_onsiteReadout != null)
             {
                 if (s.Number is >= 54 and <= 56)
@@ -245,7 +308,13 @@ namespace PCShopSell.Game.UI
                 }
                 else _onsiteReadout.text=s.Number is 51 or 53?"":s.Pending!=null?"现场操作中":s.Number>=57&&s.Number<=58?$"力度{s.Power:P0} · 方向{s.Angle:0}° · 已打{s.Round}杆 · 目标({s.TargetX:0}, {s.TargetZ:0})米 · 风偏{s.Wind:+0.0;-0.0;0}米":s.Number==76?$"已保存{s.PhotoCount}张 · 合格{s.GoodPhotos}张 · 当前构图{S.OnsitePhotoScore}分":"聊完后选择「结束并结算」。";
             }
-            if(_onsitePower!=null)_onsitePower.rectTransform.Anchor(0,0,(float)s.Power,1);
+            if (_onsitePower != null)
+            {
+                _onsitePower.rectTransform.Anchor(0, 0, (float)s.Power, 1);
+                if (GameSession.IsVenueBasketball(S.RunningCityActivity))
+                    _onsitePower.color = Math.Abs(s.Power * s.BasketballShotRange - s.TargetZ)
+                        < OnsitePlayState.BasketballRimTolerance ? Ui.Good : Ui.ButtonHot;
+            }
         }
         public void OpenOnsiteAlbum()
         {

@@ -152,6 +152,7 @@ namespace PCShopSell.Game.UI
         {
             if(property!=null)
             {
+                _agencyMyProperties=false;
                 _agencyResidential=property.Kind==PlaceKind.Home;
                 _agencySelectedId=property.Id;
                 _residentialSelectedId=property.Id;

@@ -759,7 +759,7 @@ namespace PCShopSell.Game.UI
                 foreach (var line in fill.Goods)
                     ReadOnlyStock(details,line.Key,Gifts.Get(line.Key).Name,line.Value,"ShelfGoods_"+line.Key);
                 foreach (var offer in fill.Resale)
-                    ReadOnlyStock(details,"used:"+offer.Product,offer.Name,1);
+                    ReadOnlyStock(details,offer.Portrait ?? "used:"+offer.Product,offer.Name,1);
                 if (fill.Total==0) Line(details,"这个货架是空的。",15,Ui.Dim);
             }
 
@@ -795,7 +795,7 @@ namespace PCShopSell.Game.UI
                 foreach (var item in S.SpecialBusiness(S.CurrentShop.Place.Id).Used.Where(i=>i.Owned&&!i.Sold&&!resaleOnShelf.Contains(i.Id)))
                 {
                     rows++;
-                    ReadOnlyStock(warehouse,"used:"+item.Product,GameSession.UsedNames[item.Product]+" #"+item.Id,1);
+                    ReadOnlyStock(warehouse,GameSession.UsedItemPortrait(item),GameSession.UsedItemName(item)+" #"+item.Id,1);
                 }
             if(rows==0)Line(warehouse,"后仓是空的。",16,Ui.Dim);
         }

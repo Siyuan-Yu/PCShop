@@ -30,10 +30,10 @@ namespace PCShopSell.Game.UI
         }
         private string ResidentialStatus(Place p)
         {
-            if(p==S.Home)return S.HomePriceCents>0?"自有 · 默认住处":"已租 · 默认住处";
+            if(p==S.Home)return S.HomePriceCents>0?"已购 · 主住所":"已租 · 主住所";
             if(S.HasResidentialLease(p))return "已租 · 可入住";
             bool occupied=S.ResidentialTenants(p.Id).Length>0;
-            return S.PropertyAt(p.Id)!=null?(occupied?"我的产权 · NPC租住":"我的空置住宅"):(occupied?"已有NPC居住 · 可购产权":"空置 · 可租住或购买");
+            return S.PropertyAt(p.Id)!=null ? "已购 · " + OwnedPropertyStatus(p) : (occupied?"已有住户 · 可购产权":"空置 · 可租住或购买");
         }
         private void BuildResidentialMap(RectTransform map,Place[] homes,Place agency,Action refreshProperty)
         {
@@ -56,11 +56,11 @@ namespace PCShopSell.Game.UI
                 if(_ctrl.World.Places.TryGetValue(agency.Id,out var agentBuilding))
                 {
                     var bounds=view.BoundsOf(agentBuilding);
-                    AgencyMapGlow(overlay, view, "ResidentialAgencyGlow", agentBuilding, new Color32(66,158,255,255));
+                    AgencyMapGlow(overlay, view, "ResidentialAgencyGlow", agentBuilding, AgencyLocationColor);
                     var at=view.Project(new Vector3(bounds.center.x,bounds.max.y+1,bounds.center.z));
                     if(at.x>=0&&at.x<=view.Width&&at.y>=0&&at.y<=view.Height)
                     {
-                        var label=Ui.Label(overlay,"● 当前中介",15,TextAnchor.MiddleCenter,new Color32(66,158,255,255));label.raycastTarget=false;
+                        var label=Ui.Label(overlay,"● 当前中介",15,TextAnchor.MiddleCenter,AgencyLocationColor);label.raycastTarget=false;
                         AgencyAt(label.rectTransform,Mathf.Clamp(at.x-70,2,view.Width-142),Mathf.Clamp(at.y-24,2,view.Height-30),140,28);
                     }
                 }
@@ -68,20 +68,20 @@ namespace PCShopSell.Game.UI
                 {
                     if(!_ctrl.World.Places.TryGetValue(p.Id,out var building))continue;
                     bool selected=p.Id==_residentialSelectedId;
-                    bool owned = S.PropertyAt(p.Id) != null || p == S.Home && S.HomePriceCents > 0;
+                    bool owned = OwnsPropertyAt(p);
+                    bool rented = LeasesPropertyAt(p);
                     var bounds=view.BoundsOf(building);
-                    if (owned)
-                        AgencyMapGlow(overlay, view, "OwnedResidenceGlow_" + p.Id, building, AgencyOwnedPropertyColor, selected);
+                    if (owned || rented)
+                        AgencyMapGlow(overlay, view, "MyResidenceGlow_" + p.Id, building, owned ? PropertyOwnedColor : PropertyRentedColor, selected);
                     else if (selected)
-                        AgencyMapGlow(overlay, view, "SelectedResidenceGlow", building, Ui.Accent, true);
+                        AgencyMapGlow(overlay, view, "SelectedResidenceGlow", building, Ui.PanelBg, true);
                     var at=view.Project(new Vector3(bounds.center.x,bounds.max.y+1,bounds.center.z));
                     if(at.x<0||at.x>view.Width||at.y<0||at.y>view.Height)continue;
-                    bool rented = S.HasResidentialLease(p);
                     bool occupied = !owned && !rented && S.ResidentialTenants(p.Id).Length > 0;
-                    Color color = selected ? Ui.Accent : owned ? (Color)AgencyOwnedPropertyColor
-                        : rented ? (Color)new Color32(75,155,230,255) : occupied ? (Color)AgencyStreetMap.RentalUpcoming : Ui.Good;
+                    Color color = owned ? PropertyOwnedColor : rented ? PropertyRentedColor
+                        : occupied ? AgencyStreetMap.RentalUpcoming : Ui.Good;
                     string id=p.Id;int number=Array.IndexOf(homes,p)+1;
-                    string label=number.ToString("D2")+" "+(p==S.Home?"默认住处":owned?"我的住宅":rented?"我的租房":occupied?"有住户":"空房");
+                    string label=(selected ? "✓ " : "")+number.ToString("D2")+" "+(owned?"已购":rented?"已租":occupied?"有住户":"空房");
                     var button=Ui.Button(overlay,label,()=>view.Selected?.Invoke(id),14,color);
                     button.name="ResidenceMap_"+id;AgencyAt((RectTransform)button.transform,Mathf.Clamp(at.x-53,2,view.Width-108),Mathf.Clamp(at.y-25,2,view.Height-32),106,30);
                     button.Tip(p.Name+"\n"+ResidentialStatus(p));
@@ -95,9 +95,9 @@ namespace PCShopSell.Game.UI
             AgencyMapText(map,"房源标记",14,16,703,90,24,Ui.Dim);
             AgencyMapKey(map, 120, Ui.Good, "绿色：空房");
             AgencyMapKey(map, 276, AgencyStreetMap.RentalUpcoming, "橙色：有住户、可购产权");
-            AgencyMapKey(map, 502, new Color32(75,155,230,255), "蓝色：已租 / 当前中介");
-            AgencyMapKey(map, 720, AgencyOwnedPropertyColor, "紫色：我的产权");
-            AgencyMapKey(map, 894, Ui.Accent, "金色：已选中");
+            AgencyMapKey(map, 502, PropertyRentedColor, "已租");
+            AgencyMapKey(map, 610, PropertyOwnedColor, "已购");
+            AgencyMapKey(map, 720, AgencyLocationColor, "当前中介");
             view.Changed();
         }
         private void BuildResidentialDetail(Transform detail,Place p,int number,Window parent)
@@ -121,18 +121,13 @@ namespace PCShopSell.Game.UI
             string id = p.Id;
             var property = S.PropertyAt(id);
             bool selfOwned = p == S.Home && S.HomePriceCents > 0;
-            Line(settlement, selfOwned || property != null ? "出售结算" : occupied ? "全款购买结算" : "办理结算", 21);
             if (selfOwned || property != null)
             {
-                Money proceeds = selfOwned ? S.HomePurchasePrice.Scale(.9) : S.PropertySaleNet(property);
-                string action = selfOwned ? "出售自住房" : "出售住宅产权";
-                string terms = selfOwned ? "按当前估值九折出售，继续租住，满七天起逢周日扣租。"
-                    : "包含估值折价与交易成本，原住户保留。";
-                AgencyPaymentSummary(settlement, -proceeds, action, () => ConfirmHousing(parent, p, action,
-                    -proceeds, terms, () => selfOwned ? S.SellHome() : S.SellResidentialInvestment(id)));
+                BuildOwnedResidenceActions(settlement, p, parent);
                 return;
             }
 
+            Line(settlement, occupied ? "全款购买结算" : "办理结算", 21);
             if (AgencyPurchaseMode(settlement, p, () =>
             {
                 Ui.Clear(settlement);
@@ -144,6 +139,7 @@ namespace PCShopSell.Game.UI
             }
             if (S.HasResidentialLease(p))
             {
+                BuildResidencePropertyActions(settlement, p, parent, includeRental: false);
                 AgencyFeeLine(settlement, "签约周租", S.SignedResidentialRent(p).ToString());
                 if (S.NextResidentialRentDay(p) is int nextRentDay)
                     Line(settlement, "下次扣租 · " + new PCShopSell.Core.Time.GameDate(nextRentDay) + " 周日", 16, Ui.Dim);
@@ -165,6 +161,21 @@ namespace PCShopSell.Game.UI
                         return false;
                     }, parent.Rebuild, "ResidenceConfirm", S.ResidentialLeaseBlocker(id)),
                 "ResidenceRent", S.ResidentialLeaseBlocker(id));
+        }
+
+        private void BuildOwnedResidenceActions(Transform parent, Place place, Window owner)
+        {
+            var row = Ui.Row(parent, 33, 6);
+            Ui.Size(Ui.Label(row, "住宅管理", 20, TextAnchor.MiddleLeft, Ui.Accent), 0, 33, 1);
+            bool selfOwned = place == S.Home && S.HomePriceCents > 0;
+            var property = S.PropertyAt(place.Id);
+            Money proceeds = selfOwned ? S.HomePurchasePrice.Scale(.9) : S.PropertySaleNet(property);
+            string title = selfOwned ? "出售自住房" : "出售住宅产权";
+            string terms = selfOwned ? "按当前估值九折出售，出售后继续租住，满七天起逢周日扣租。" : "原住户保留。";
+            Ui.Size(Ui.Button(row, "出售产权…", () => ConfirmHousing(owner, place, title, -proceeds, terms,
+                () => selfOwned ? S.SellHome() : S.SellResidentialInvestment(place.Id)), 15, Ui.Warn), 111, 33)
+                .Tip($"出售到手 {proceeds}");
+            BuildResidencePropertyActions(parent, place, owner, includeRental: true);
         }
 
         private void OpenResidentialAgencyDetails(Place place)

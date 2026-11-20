@@ -65,6 +65,9 @@ namespace PCShopSell.Game.UI
             {
                 Ui.Size(Ui.Button(w.Content, "查看同行活动", () => OpenCityActivityDetail(outing.Id), 18), -1, 42);
             }
+            Ui.Size(Ui.Button(w.Content, S.MarketHuntRemaining > 0
+                ? $"继续淘旧物 · 剩 {S.MarketHuntRemaining} 次" : "去摊位淘旧物",
+                () => { w.Close(); OpenMarketHunt(); }, 20, Ui.ButtonHot), -1, 47).name = "OpenMarketHunt";
             var progress = S.OldMarketProgress;
             bool busy = progress.Pending != null;
             bool manualVisit = S.ManualActivityClockPaused && S.RunningCityActivity?.VenueId == place.Id;

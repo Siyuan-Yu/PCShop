@@ -16,6 +16,7 @@ namespace PCShopSell.Game.UI
         private FishingFightGraphic _fishingTrack;
         private Image _fishingPower, _fishingProgress, _fishingTension;
         private Text _fishingStatus, _fishingReadout, _fishingActionText;
+        private RectTransform _fishingBiteHint;
         private Button _fishingAction;
         private bool _fishingPointerHeld, _fishingWasHeld;
         private FishingPhase _fishingRenderedPhase;
@@ -82,8 +83,11 @@ namespace PCShopSell.Game.UI
             _fishingWater = null; _fishingTrack = null; _fishingActionText = null; _fishingAction = null;
             _fishingPower = _fishingProgress = _fishingTension = null;
             _fishingStatus = _fishingReadout = null;
+            _fishingBiteHint = null;
+            bool illustrated = BuildLeisureBackdrop(w.Content, "event_fishing_pond", fill: false);
             var water = Ui.Rect(w.Content, "FishingPondScene"); water.Fill();
             _fishingWater = water.gameObject.AddComponent<FishingWaterGraphic>(); _fishingWater.raycastTarget = true;
+            _fishingWater.Illustrated = illustrated;
             water.gameObject.AddComponent<FishingHoldInput>().Held = value => _fishingPointerHeld = value;
             _fishingWater.State = fish;
             var header = Ui.Panel(w.Content, "FishingSceneHeader", Ui.Chrome);
@@ -107,8 +111,37 @@ namespace PCShopSell.Game.UI
                 BuildFishingCatchResult(w, fish);
                 return;
             }
-            _fishingStatus = Ui.Label(w.Content, S.FishingHint, 22, color: Ui.TextColor);
-            _fishingStatus.rectTransform.Anchor(.08f, .80f, .83f, .87f);
+            if (S.FishingActive && fish.Phase is FishingPhase.Casting or FishingPhase.Waiting)
+            {
+                var wait = Ui.Panel(w.Content, "WatchFloat", Ui.Chrome);
+                wait.raycastTarget = false;
+                wait.rectTransform.Anchor(.36f, .055f, .64f, .112f);
+                Ui.Label(wait.transform, fish.Phase == FishingPhase.Casting ? "浮漂即将落水" : "看着浮漂，鱼咬钩时提竿",
+                    19, TextAnchor.MiddleCenter, Ui.Accent).rectTransform.Fill(8);
+                return;
+            }
+
+            if (S.FishingActive && fish.Phase == FishingPhase.Bite)
+            {
+                var hint = Ui.Panel(w.Content, "BiteAtFloat", Ui.PanelBg);
+                hint.raycastTarget = false;
+                _fishingBiteHint = hint.rectTransform;
+                Ui.Label(hint.transform, "咬钩了！", 22, TextAnchor.MiddleCenter, Ui.Accent).rectTransform.Fill(6);
+                var bite = Ui.Panel(w.Content, "LiftRod", Ui.PanelBg).rectTransform.Anchor(.34f, .055f, .66f, .16f);
+                _fishingReadout = Ui.Label(bite, "", 20, color: Ui.Accent);
+                _fishingReadout.rectTransform.Anchor(.05f, .1f, .55f, .90f);
+                _fishingAction = Ui.Button(bite, "提竿", null, 22, Ui.ButtonHot);
+                _fishingAction.GetComponent<RectTransform>().Anchor(.58f, .19f, .96f, .81f);
+                _fishingAction.gameObject.AddComponent<FishingHoldInput>().Held = value => _fishingPointerHeld = value;
+                RefreshFishingGraphics();
+                return;
+            }
+
+            _fishingStatus = Ui.Label(w.Content, S.FishingHint, 22, TextAnchor.MiddleCenter, Ui.Accent);
+            var status = Ui.Panel(w.Content, "FishingHint", Ui.PanelBg).rectTransform.Anchor(.32f, .80f, .68f, .857f);
+            status.GetComponent<Image>().raycastTarget = false;
+            _fishingStatus.rectTransform.SetParent(status, false);
+            _fishingStatus.rectTransform.Fill(7);
             var rail = Ui.Panel(w.Content, "FishingControls", Ui.Chrome);
             rail.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -164);
             _fishingReadout = Ui.Label(rail.transform, "", 20, color: Ui.Accent);
@@ -120,9 +153,11 @@ namespace PCShopSell.Game.UI
             }
             if (fish.Phase == FishingPhase.Fighting)
             {
-                var track = Ui.Rect(w.Content, "FishControlTrack"); track.Anchor(.895f, .36f, .947f, .73f);
+                var control = Ui.Panel(w.Content, "FishControl", Ui.PanelBg).rectTransform.Anchor(.835f, .32f, .97f, .75f);
+                control.GetComponent<Image>().raycastTarget = false;
+                var track = Ui.Rect(control, "FishControlTrack").Anchor(.30f, .07f, .70f, .84f);
                 _fishingTrack = track.gameObject.AddComponent<FishingFightGraphic>(); _fishingTrack.raycastTarget = false;
-                Ui.Label(w.Content, "让绿区跟住鱼", 18, TextAnchor.MiddleCenter).rectTransform.Anchor(.85f, .74f, .99f, .78f);
+                Ui.Label(control, "让绿区跟住鱼", 18, TextAnchor.MiddleCenter).rectTransform.Anchor(0, .84f, 1, .98f);
             }
             if (fish.Phase == FishingPhase.Ready && S.ManualAttemptsLeft > 0)
             {
@@ -132,9 +167,10 @@ namespace PCShopSell.Game.UI
                     int index = i;
                     var dock = Ui.Button(w.Content, (fish.Spot == i ? "● " : "") + FishingCatalog.Spots[i], () => { S.SelectFishingSpot(index); w.Rebuild(); }, 17,
                         Ui.SelectedButton(fish.Spot == i));
-                    dock.GetComponent<RectTransform>().Anchor(.25f + i * .17f, .245f, .33f + i * .17f, .29f);
+                    float dockX = _fishingWater.DockCenter(i);
+                    dock.GetComponent<RectTransform>().Anchor(dockX - .058f, .185f, dockX + .058f, .228f);
                     var dockHit = Ui.Rect(w.Content, "DockHitArea" + i);
-                    dockHit.Anchor(.26f + i * .17f, .29f, .32f + i * .17f, .435f);
+                    dockHit.Anchor(dockX - .052f, .235f, dockX + .052f, .38f);
                     var hitImage = dockHit.gameObject.AddComponent<Image>(); hitImage.color = Color.clear;
                     var hitButton = dockHit.gameObject.AddComponent<Button>(); hitButton.targetGraphic = hitImage;
                     hitButton.onClick.AddListener(() => { if (S.SelectFishingSpot(index)) w.Rebuild(); });
@@ -239,13 +275,25 @@ namespace PCShopSell.Game.UI
         }
         private void RefreshFishingGraphics()
         {
-            var f = S.CurrentFishing; if (f == null || _fishingStatus == null) return;
-            _fishingStatus.text = f.Phase == FishingPhase.Ready ? "点钓台换位置，按住水面甩竿"
-                : f.Phase == FishingPhase.Charging ? "松手甩出" : f.Phase == FishingPhase.Casting ? ""
-                : f.Phase == FishingPhase.Waiting ? "等浮漂下沉…" : f.Phase == FishingPhase.Bite ? "咬钩了，点一下！"
-                : f.Phase == FishingPhase.Fighting ? (f.LineTension >= .65 ? "鱼线绷紧了，松手！" : "按住收线，松开放线")
-                : "上鱼了！";
+            var f = S.CurrentFishing;
+            if (f == null) return;
             if (_fishingWater != null) { _fishingWater.State = f; _fishingWater.SetVerticesDirty(); }
+            if (_fishingBiteHint != null && _fishingWater != null)
+            {
+                Vector2 p = _fishingWater.BobberPosition;
+                _fishingBiteHint.Anchor(p.x - .063f, p.y + .039f, p.x + .063f, p.y + .090f);
+                _fishingReadout.text = $"还剩 {Math.Max(0, FishingState.BiteWindowSeconds - f.PhaseSeconds):0.0} 秒";
+                return;
+            }
+            if (_fishingStatus == null) return;
+            _fishingStatus.text = f.Phase switch
+            {
+                FishingPhase.Ready => "选钓位，按住水面甩竿",
+                FishingPhase.Charging => "松手甩出",
+                FishingPhase.Fighting => f.LineTension >= .65 ? "鱼线绷紧了，松手！" : "按住收线，松开放线",
+                FishingPhase.Ended => "收竿休息，下次再来。",
+                _ => ""
+            };
             if (_fishingTrack != null) { _fishingTrack.State = f; _fishingTrack.ZoneSize = (float)S.FishingControlSize; _fishingTrack.SetVerticesDirty(); }
             void Meter(Image img, double amount) { if (img != null) img.rectTransform.Anchor(0, 0, (float)amount, 1); }
             Meter(_fishingPower, f.CastPower); Meter(_fishingProgress, f.CatchProgress); Meter(_fishingTension, f.LineTension);
@@ -253,8 +301,6 @@ namespace PCShopSell.Game.UI
             if (_fishingTension != null) _fishingTension.color = f.LineTension >= .65 ? new Color(.95f, .30f, .15f) : Ui.Accent;
             if (_fishingReadout != null) _fishingReadout.text = f.Phase == FishingPhase.Charging ? $"力度 {f.CastPower:P0} · 预计落点 {4 + 26 * f.CastPower:0.0} 米"
                 : f.Phase == FishingPhase.Fighting ? (f.LineTension >= .65 ? "松开放线，张力就会下降" : FishingCatalog.Get(f.PendingFishId)?.BehaviorHint)
-                : f.Phase == FishingPhase.Waiting ? $"落点 {f.CastDistance:0.0} 米 · {FishingCatalog.Baits[f.Bait]} · 等待浮漂下沉…"
-                : f.Phase == FishingPhase.Bite ? "咬钩了，马上提竿！"
                 : f.Phase == FishingPhase.Ready ? (S.FishingCastBlocker ?? (f.Message?.StartsWith("本次包含") == true
                     ? "选好鱼饵就可以甩竿" : f.Message)) : f.Message;
             if (_fishingAction != null) _fishingAction.interactable = f.Phase == FishingPhase.Ready

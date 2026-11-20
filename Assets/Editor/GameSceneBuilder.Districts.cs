@@ -60,10 +60,13 @@ namespace PCShopSell.EditorTools
                 {
                     Guide("find-"+id);
                     var nav=Buttons().FirstOrDefault(b=>b.name=="DistrictFindPerson_"+id);
-                    if(nav!=null){nav.onClick.Invoke();Walk();}
+                    if(nav!=null&&nav.IsInteractable()){nav.onClick.Invoke();Walk();}
                     else _game.Ui.CloseAllWindows();
+                    if(s.CitySamePlace(id))return;
                     var person=s.CityPersonState(id);
-                    if(s.DistrictPersonWaitingPlace(id)!=null)
+                    var currentPlace=s.DistrictPersonCurrentPlace(person);
+                    if(currentPlace!=null&&(s.DistrictAccessBlocker(currentPlace)!=null
+                        ||currentPlace.Kind==PlaceKind.Home&&s.HomeVisitBlocker(currentPlace)!=null))
                     {
                         Log("WALKTHROUGH 等待人物按真实日程抵达可接触地点 "+id);
                         WaitUntil(s.Clock.Now.TotalMinutes+60);continue;

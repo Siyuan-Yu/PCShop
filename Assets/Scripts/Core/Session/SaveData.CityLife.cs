@@ -141,7 +141,8 @@ namespace PCShopSell.Core.Session
             CityDefaultDestination=City.HasPlace(d.cityDefaultDestination)?d.cityDefaultDestination:null;
             CityAgencyShortcut=City.HasPlace(d.cityAgencyShortcut)?d.cityAgencyShortcut:"agency";
             _cityMarketShortcut=City.HasPlace(d.cityMarketShortcut)&&(d.cityMarketShortcutExplicit||d.cityMarketShortcut!="stall_cpu")?d.cityMarketShortcut:null;
-            CityShopShortcut=MyShops.Any(s=>s.Place.Id==d.cityShopShortcut)?d.cityShopShortcut:null;
+            CityShopShortcut=null;
+            SetCityShopShortcut(d.cityShopShortcut);
             CityHomeShortcut = City.HasPlace(d.cityHomeShortcut) ? d.cityHomeShortcut : null;
             CityIntent=d.cityTravelIntent!=null&&City.HasPlace(d.cityTravelIntent.TargetPlaceId)&&!d.cityTravelIntent.Cancelled?d.cityTravelIntent:null;
             if(d.cityTrip!=null)

@@ -33,12 +33,13 @@ namespace PCShopSell.Core.Session
         public bool IsPlayerPropertyOccupied(string id)
         {
             var p = PropertyAt(id);
-            return p != null && p.UseMode != "npc" && p.UseMode != "managed" && ShopAt(id) == null && VentureAt(id) == null;
+            return p != null && p.UseMode != "npc" && p.UseMode != "leased" && ShopAt(id) == null && VentureAt(id) == null;
         }
         public string CityPropertyTitle(Place p)
         {
             var owned = PropertyAt(p.Id);
-            return owned == null || owned.UseMode == "npc" ? p.Name : owned.UseMode == "vacant" ? p.Name + "（自有空置）" : p.Name + "（自有出租）";
+            return owned == null || owned.UseMode == "npc" ? p.Name : owned.AskingRentCents > 0 ? p.Name + "（招租中）"
+                : owned.UseMode == "vacant" ? p.Name + "（自有空置）" : p.Name + "（已出租）";
         }
         public string CityPropertyAddress(Place p) => City.StreetName(p.StreetId) + " · " + p.Name;
         public Money CityPropertyPrice(string id)
@@ -123,22 +124,8 @@ namespace PCShopSell.Core.Session
             if (net.IsPositive) Ledger.Credit(Clock.Today, "物业出售", net, "按估值九折，包含交易成本", LedgerAttribution.ForAsset(id, key));
             _cityAssetEffects.Add(key); _properties.Remove(p);
             if (id == ParkPlaceId) { ParkPlaceId = null; ParkReadyDay = 0; }
-            if (p.UseMode == "vacant" || p.UseMode == "managed") { _vacant.Add(id); if (!_listings.Any(l => l.PlaceId == id)) AddListing(City.GetPlace(id), Clock.Today.TotalDays, Clock.Today.TotalDays + 45); }
+            if (p.UseMode == "vacant") { _vacant.Add(id); if (!_listings.Any(l => l.PlaceId == id)) AddListing(City.GetPlace(id), Clock.Today.TotalDays, Clock.Today.TotalDays + 45); }
             Say("物业已出售；原租户继续经营，人物、商品与关系不会删除。"); return true;
-        }
-        public bool SetCityPropertyRental(string id, bool rentOut)
-        {
-            if(City.HasPlace(id)&&City.GetPlace(id).Kind==PlaceKind.Home)return Fail("住宅只按实际NPC住户收租，空房不产生托管租金。");
-            var p = PropertyAt(id); if (p == null || IsGameOver) return false;
-            if (rentOut && City.HasPlace(id) && !IsCommercialPremises(City.GetPlace(id))) return Fail("专用场所不可重新出租。");
-            if (!InAgency) return Fail("请到中介办理出租登记。");
-            if (!City.HasPlace(id) || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("请到房源所属片区的中介办理。");
-            if (ShopAt(id) != null || VentureAt(id) != null) return Fail("自营物业不能同时向自己收租。");
-            if (p.UseMode == "npc") return Fail("现有租户租约受保护，本轮不提供强制驱逐。");
-            if (!rentOut && p.UseMode == "managed" && Clock.Today.TotalDays < p.LeaseEndDay) return Fail("托管租约尚未到期，不能直接腾空。");
-            p.UseMode = rentOut ? "managed" : "vacant"; p.TenantName = rentOut ? "中介托管商户" : "";
-            if (rentOut) { p.LeaseEndDay = Clock.Today.TotalDays + 28; p.WeeklyRentCents = ShopRentQuote(City.GetPlace(id)).Cents; p.CommercialRentFromDay = Clock.Today.TotalDays; }
-            Say(rentOut ? "出租已登记：下一月账期收取租金，管理及空置折损为15%。" : "租约结束，物业恢复空置。"); return true;
         }
         public bool OpenCityOwnedShop(string id, string retailKind = RetailShopTypes.Default)
         {
@@ -147,7 +134,7 @@ namespace PCShopSell.Core.Session
             if (p.UseMode != "vacant" || ShopAt(id) != null || VentureAt(id) != null) return Fail("该物业仍被使用，不能清走原租户。");
             var place = City.GetPlace(id);
             if (!HasShop) MoveInto(place, Money.Zero, Money.Zero); else OpenNewShop(place, Money.Zero, Money.Zero);
-            _focus.OwnsProperty = true; p.UseMode = "self"; p.TenantName = "玩家自营";
+            _focus.OwnsProperty = true; p.UseMode = "self"; p.TenantName = "玩家自营"; p.AskingRentCents = 0;
             if(IsDedicatedVenue(place)){ShowVenueHandover(place);return true;}
             SetOpeningShopKind(retailKind);
             Say("自有物业开店完成，不收自己的房租。按正常流程购买设施、装修并在次日营业。"); return true;
@@ -158,21 +145,21 @@ namespace PCShopSell.Core.Session
             int month = today.TotalDays / 30;
             foreach (var p in _properties)
             {
-                bool residential=City.HasPlace(p.PlaceId)&&City.GetPlace(p.PlaceId).Kind==PlaceKind.Home;
+                var place = City.GetPlace(p.PlaceId);
+                bool residential = place.Kind == PlaceKind.Home;
                 bool self = ShopAt(p.PlaceId) != null || VentureAt(p.PlaceId) != null || p.PlaceId == ParkPlaceId;
                 bool rentDue = WeeklyRentDue(day, residential ? p.BoughtDay : p.CommercialRentFromDay);
-                if (residential && (rentDue || today.IsMonthStart))
+                if (residential && p.UseMode != "leased" && (rentDue || today.IsMonthStart))
                 {
                     var residents = ResidentialTenants(p.PlaceId);
                     p.TenantName=string.Join("、",residents.Select(r=>CityPerson(r.PersonId)?.Name??r.PersonId));
                     p.TenantPersonId=residents.FirstOrDefault()?.PersonId;
                     p.UseMode=residents.Length>0?"npc":"vacant";
                 }
-                if (rentDue && !self && (p.UseMode == "npc" || p.UseMode == "managed"))
+                if (!self)
                 {
-                    Money rent = Money.FromCents(p.WeeklyRentCents).Scale(p.UseMode == "managed" ? .85 : 1);
-                    if (rent.IsPositive) Ledger.Credit(today, "物业租金", rent, p.TenantName + "本周租金",
-                        LedgerAttribution.ForAsset(p.PlaceId, "property:" + p.PlaceId + ":week:" + day + ":rent"));
+                    if (rentDue && p.UseMode == "npc") CreditPropertyRent(p, today);
+                    AdvancePropertyRental(p, place, today);
                 }
                 if (!today.IsMonthStart || p.LastSettledMonth >= month || day <= p.BoughtDay) continue;
                 p.LastSettledMonth = month;
@@ -247,12 +234,23 @@ namespace PCShopSell.Core.Session
                 if (p.CitySchema == 0)
                 {
                     p.CitySchema = 1; p.UseMode = ShopAt(p.PlaceId) != null || VentureAt(p.PlaceId) != null ? "self" : "managed";
-                    p.MonthlyRentCents = p.PriceCents / 120; p.TenantName = p.UseMode == "self" ? "玩家自营" : "既有托管租户";
+                    p.MonthlyRentCents = p.PriceCents / 120; p.TenantName = p.UseMode == "self" ? "玩家自营" : "原租户";
                     p.LeaseEndDay = Clock.Today.TotalDays + 30; p.LastSettledMonth = Clock.Today.TotalDays / 30;
                 }
                 if (d.residentialWeeklyRentVersion == 0 && p.MonthlyRentCents > 0 &&
                     City.HasPlace(p.PlaceId) && City.GetPlace(p.PlaceId).Kind == PlaceKind.Home)
                     p.WeeklyRentCents = WeeklyResidentialRent(Money.FromCents(p.MonthlyRentCents)).Cents;
+                if (p.UseMode == "managed")
+                {
+                    if (City.GetPlace(p.PlaceId).Kind == PlaceKind.Home) p.UseMode = "vacant";
+                    else
+                    {
+                        p.UseMode = "leased";
+                        p.LegacyRentalDiscount = true;
+                        p.RecoverAtLeaseEnd = true;
+                        p.TenantName = "原租户";
+                    }
+                }
                 var shop = _shops.Find(s => s.Place.Id == p.PlaceId && s.Lease != null);
                 if (shop != null) { shop.OwnsProperty = true; shop.Lease.Rent = Money.Zero; shop.Lease.Deposit = Money.Zero; }
             }

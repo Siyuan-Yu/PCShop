@@ -5,8 +5,7 @@ namespace PCShopSell.Game.UI
         // Keep existing entry points directed to the two-page asset workspace.
         public void OpenCityFinanceOverview()
         {
-            _assetStreet = _assetKind = _assetStoreId = null;
-            OpenAssetWorkspace();
+            OpenAssetFinance();
         }
         public void OpenShopFinance(string shopId) => OpenAssetWorkspace(0, shopId);
     }

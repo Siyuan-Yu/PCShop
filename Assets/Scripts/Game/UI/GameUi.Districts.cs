@@ -293,17 +293,116 @@ namespace PCShopSell.Game.UI
             var state=S.DistrictStoryState;
         }
 
-        private string DistrictDialogueContext(string personId)
+        private string DistrictDialogueContext(string personId, bool remote)
         {
-            var node=S.CurrentDistrictNode;
-            if(node==null||(!node.People.Contains(personId)&&personId!=S.DistrictMeetingContact)||node.Id=="community.intro"
-                ||S.CommunitySearchActive||S.DistrictCommerceGameplay)return null;
-            var state=S.DistrictStoryState;
-            if(state.MeetingNodeId!=node.Id)
-                return "主线 · "+node.Title+"\n"+node.Dialogue+"\n\n"+S.DistrictNodeTerms;
-            return "主线 · "+node.Title+"\n"+S.DistrictCurrentGoal+"\n\n本次确认联系人："+(S.CityPerson(S.DistrictMeetingContact)?.Name??"联系人")
-;
+            var node = S.CurrentDistrictNode;
+            if (node == null || node.Id == "community.intro" || S.CommunitySearchActive || S.DistrictCommerceGameplay)
+                return null;
+
+            var state = S.DistrictStoryState;
+            bool isBroker = node.Id == "community.meeting" && personId == "keeper_agent";
+            if (!isBroker && personId != S.DistrictMeetingContact && !state.MeetingPeople.Contains(personId))
+                return null;
+
+            if (state.MeetingNodeId != node.Id)
+            {
+                return node.Id switch
+                {
+                    "community.meeting" => "李姐跟我提过你。唐蔚最近在找几页旧街的图，我帮你约她，让她当面跟你说吧。",
+                    "community.clue" => "你是来问唐蔚那张图的吧？那天搬家我在场。咱们找个时间，我慢慢跟你说。",
+                    "community.trial" => "图都找齐了？我一会儿过去，咱们在中介旁边碰面。",
+                    _ => "这事当面说方便些。咱们约个时间吧。"
+                };
+            }
+
+            string time = DistrictSpeechTime(state.MeetingAt);
+            if (!S.AtCurrentDistrictMeeting)
+                return isBroker ? DistrictBookedSpeech(node.Id)
+                    : $"咱们约的是{time}，在{DistrictSpeechMeetingPlace(state)}碰面。到那儿再细说。";
+            if (remote)
+                return "这事等见面再细聊吧。";
+
+            var waiting = state.MeetingPeople.Where(id => id != personId)
+                .Where(id => S.CityPersonState(id)?.Route != null
+                    || S.CityPersonState(id)?.LocationPlaceId != state.MeetingPlaceId)
+                .Select(id => S.CityPerson(id)?.Name ?? "另一位").ToArray();
+            string waitingFor = string.Join("、", waiting);
+            if (S.Clock.Now.TotalMinutes < state.MeetingAt)
+                return waiting.Length > 0
+                    ? $"你来得早。我跟{waitingFor}约的是{time}，人还在路上，先在这儿等会儿吧。"
+                    : $"你来得早。咱们约的是{time}，先在这儿等会儿吧。";
+            if (waiting.Length > 0)
+                return $"{waitingFor}还在路上。咱们再等一会儿，人到齐了再聊。";
+            if (S.DistrictMeetingBlocker != null)
+                return "先在这儿等会儿吧，人到齐了再说。";
+
+            if (isBroker) return "唐蔚到了。你过去跟她聊吧，我就不打扰了。";
+            if (personId != S.DistrictMeetingContact) return "人齐了，咱们说正事吧。";
+            return node.Id switch
+            {
+                "community.meeting" => DistrictCharacterLine(node, personId)
+                    ?? "你好，我是唐蔚。陈启明跟我说过你，有件事正想请你帮忙。",
+                "community.clue" => "你来了。唐蔚把找图的事跟你说了吧？那天搬家的事，我还记得。",
+                "community.trial" => "你把图带来了？拿给我看看，三页都在吗？",
+                _ => DistrictCharacterLine(node, personId) ?? "你来了，咱们说正事吧。"
+            };
         }
+
+        private string DistrictSpeechTime(long minute)
+        {
+            var time = new PCShopSell.Core.Time.GameTimestamp(minute);
+            int days = time.Date.TotalDays - S.Clock.Today.TotalDays;
+            string day = days == 0 ? "今天" : days == 1 ? "明天" : days == 2 ? "后天" : days == -1 ? "昨天" : time.Date.ToString();
+            string period = time.Hour < 6 ? "凌晨" : time.Hour < 12 ? "上午" : time.Hour < 13 ? "中午" : time.Hour < 19 ? "下午" : "晚上";
+            int hour = (time.Hour + 11) % 12 + 1;
+            return day + period + hour + "点" + (time.Minute == 0 ? "" : time.Minute + "分");
+        }
+
+        private string DistrictSpeechMeetingPlace(DistrictProgress state)
+        {
+            if (!S.City.HasPlace(state.MeetingPlaceId)) return "约好的地方";
+            string place = S.City.GetPlace(state.MeetingPlaceId).Name;
+            return place + (S.DistrictMeetingOutdoors ? "旁边的空地" : "门口");
+        }
+
+        private string DistrictBookedSpeech(string nodeId)
+        {
+            var state = S.DistrictStoryState;
+            if (state.MeetingNodeId != nodeId) return "行，那就改天再说。";
+            string time = DistrictSpeechTime(state.MeetingAt);
+            string place = DistrictSpeechMeetingPlace(state);
+            return nodeId == "community.meeting"
+                ? $"我跟唐蔚说好了，{time}在{place}见。她会过去，你到时候找她就行。"
+                : $"那就说定了，{time}在{place}见。";
+        }
+
+        private string DistrictCharacterLine(DistrictNarrativeNode node, string personId)
+        {
+            string name = S.CityPerson(personId)?.Name;
+            if (string.IsNullOrEmpty(name)) return null;
+            string speaker = name + "：";
+            int start = node.Dialogue.IndexOf(speaker, System.StringComparison.Ordinal);
+            if (start < 0) return null;
+            start += speaker.Length;
+            int end = node.Dialogue.Length;
+            foreach (string otherId in node.People.Where(id => id != personId))
+            {
+                string otherName = S.CityPerson(otherId)?.Name;
+                if (string.IsNullOrEmpty(otherName)) continue;
+                int next = node.Dialogue.IndexOf(otherName + "：", start, System.StringComparison.Ordinal);
+                if (next >= 0 && next < end) end = next;
+            }
+            return node.Dialogue.Substring(start, end - start).Trim();
+        }
+
+        private string DistrictConversationResult(DistrictNarrativeNode node, string personId) => node.Id switch
+        {
+            "community.meeting" => "那就拜托你了。先去问问李秀兰吧，那几个箱子托给了谁，她最清楚。",
+            "community.clue" => DistrictCharacterLine(node, personId)
+                ?? "三页没丢，我、林远航和周维成各收着一页。我把他俩的号码发你了，你可以跟他们约时间。",
+            "community.trial" => DistrictCharacterLine(node, personId) ?? "三页都齐了。谢谢你，我这就把那些小店补进名册。",
+            _ => "好，那就这么定了。"
+        };
 
         private void AddDistrictDialogue(List<TalkOpt> options,string personId,bool remote,bool near,System.Action<string> reply)
         {
@@ -323,13 +422,13 @@ namespace PCShopSell.Game.UI
                 string bookingBlocker = remote ? S.RemoteConversationBlocker(personId) : near ? null : "对方已离开。";
                 if(node.Choices.Length==0)
                     options.Add(new TalkOpt{Label=node.Id=="community.meeting"?"请陈启明约唐蔚":"约见面",Mainline=true,Invitation=true,Blocker=bookingBlocker,
-                        Act=()=>reply(S.BeginDistrictMeeting(node.Id)?S.DistrictMeetingDescription:"暂时无法安排，请先结束冲突的活动。")});
+                        Act=()=>reply(S.BeginDistrictMeeting(node.Id) ? DistrictBookedSpeech(node.Id) : "这会儿约不上，咱们晚点再试吧。")});
                 foreach(var option in node.Choices)
                 {
                     var choice=option;
                     string label=choice.Label;
                     options.Add(new TalkOpt{Label=label,Mainline=true,Hot=true,Blocker=bookingBlocker,
-                        Act=()=>reply(S.BeginDistrictMeeting(node.Id,choice.Id)?S.DistrictMeetingDescription:"暂时无法安排本次会面。")});
+                        Act=()=>reply(S.BeginDistrictMeeting(node.Id, choice.Id) ? DistrictBookedSpeech(node.Id) : "这会儿约不上，咱们晚点再试吧。")});
                 }
                 return;
             }
@@ -349,12 +448,18 @@ namespace PCShopSell.Game.UI
                 :node.Id=="community.trial"?"交付三份图页，完成引荐"
                 :node.Id.EndsWith(".invitation")?"接受邀请，开始准备"
                 :"确认履约记录，完成引荐";
-            options.Add(new TalkOpt{Label=action,Mainline=true,Hot=true,SeparateBlocker=true,Blocker=local??S.DistrictMeetingBlocker??S.DistrictCommerceBlocker,
+            string meetingBlocker = S.DistrictMeetingBlocker;
+            string unavailable = meetingBlocker == null ? S.DistrictCommerceBlocker
+                : S.Clock.Now.TotalMinutes < state.MeetingAt ? "会面时间还没到" : "会面条件还没满足";
+            options.Add(new TalkOpt{Label=action,Mainline=true,Hot=true,SeparateBlocker=true,Blocker=local??unavailable,
                 Act=()=>
                 {
-                    if(!S.ActDistrictNode(node.Id)){reply("暂时无法完成，请核对现场条件。" );return;}
-                    reply(S.CurrentDistrictNode?.Id==node.Id?S.DistrictNodeTerms
-                        :node.Dialogue+"\n\n"+(S.CurrentDistrictNode==null?"本段主线已完成。":"下一步："+S.CurrentDistrictNode.Title));
+                    if (!S.ActDistrictNode(node.Id))
+                    {
+                        reply("这事还没办妥，咱们一会儿再说。");
+                        return;
+                    }
+                    reply(DistrictConversationResult(node, personId));
                 }});
         }
 

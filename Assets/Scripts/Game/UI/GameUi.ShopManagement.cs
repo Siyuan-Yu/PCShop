@@ -238,6 +238,9 @@ namespace PCShopSell.Game.UI
             else
                 Ui.Size(Ui.Button(storeActions, "营业时间", () => OpenManagedShopHours(w, shop), 16), 0, 35, 1);
 
+            if (shop.Place.Id == CityLifeCatalog.PachinkoVenue && venue)
+                BuildPachinkoMachineSettings(parent, w, venueState);
+
             Line(parent, "待处理", 19, Ui.Accent);
             var procurement = S.ShopProcurementSummary(shop);
             var buyers = staff.Where(row => row.Role == EmployeeRole.Buyer).ToArray();

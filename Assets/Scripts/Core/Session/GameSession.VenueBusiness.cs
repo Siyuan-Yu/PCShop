@@ -20,7 +20,9 @@ namespace PCShopSell.Core.Session
         public int Open=540, Close=1260, Day, Customers, MaintenanceDay;
         public long PriceCents=3000, RevenueCents, TotalRevenueCents, LastPulse=-1;
         public VenueCustomer[] CustomersHere=Array.Empty<VenueCustomer>();
-        public VenueBusiness Copy(){var copy=(VenueBusiness)MemberwiseClone();copy.CustomersHere=CustomersHere.Select(c=>c.Copy()).ToArray();return copy;}
+        public int[] PachinkoPayouts = { 7, 7, 7 };
+        public long PachinkoPaidCents;
+        public VenueBusiness Copy(){var copy=(VenueBusiness)MemberwiseClone();copy.CustomersHere=CustomersHere.Select(c=>c.Copy()).ToArray();copy.PachinkoPayouts=PachinkoPayouts?.ToArray();return copy;}
     }
     public sealed partial class SaveData { public VenueBusiness[] venueBusinesses; }
     public sealed partial class GameSession
@@ -92,7 +94,7 @@ namespace PCShopSell.Core.Session
             foreach(var shop in MyShops.Where(s=>IsDedicatedVenue(s.Place)))
             {
                 var state=VenueOperation(shop.Place.Id);int today=Clock.Today.TotalDays;
-                if(state.Day!=today){state.Day=today;state.Customers=0;state.RevenueCents=0;}
+                if(state.Day!=today){state.Day=today;state.Customers=0;state.RevenueCents=0;state.PachinkoPaidCents=0;}
                 while(state.MaintenanceDay<today)
                 {
                     state.MaintenanceDay++;
@@ -112,6 +114,7 @@ namespace PCShopSell.Core.Session
                         Ledger.Credit(Clock.Today,"场馆服务",Money.FromCents(customer.PriceCents),CityPerson(customer.PersonId).Name+" 使用"+VenueBusinessName(shop.Place),
                             LedgerAttribution.ForShop(shop.Place.Id,customer.ReservationId,"场馆服务"));
                         state.Customers++;state.RevenueCents+=customer.PriceCents;state.TotalRevenueCents+=customer.PriceCents;
+                        if (shop.Place.Id == CityLifeCatalog.PachinkoVenue) PayPachinkoCustomer(state, customer);
                         var at=CityActivityAnchor(shop.Place,remaining.Count+1);person.X=at.X;person.Y=at.Y;
                         person.Task=CityPersonTask.Participating;person.TaskLabel="付费使用"+VenueBusinessName(shop.Place);
                     }
@@ -123,7 +126,8 @@ namespace PCShopSell.Core.Session
                 int ownerSeats=_cityActivities.Where(a=>a.Active&&a.VenueId==shop.Place.Id&&a.RendezvousReady).Sum(a=>1+a.Participants.Length);
                 if(state.CustomersHere.Length+ownerSeats>=VenueCapacity(shop.Place))continue;
                 double basePrice=(CityLifeCatalog.Activities.FirstOrDefault(a=>!a.EventOnly&&a.VenueId==shop.Place.Id)?.PriceYuan??30)*100;
-                if(!Random.Chance(Math.Min(.8,.45*basePrice/state.PriceCents*FootfallOf(shop.Place).DailyPassers/300.0)
+                double appeal = shop.Place.Id == CityLifeCatalog.PachinkoVenue ? PachinkoCustomerInterest(state) : 1;
+                if(!Random.Chance(Math.Min(.8,.45*appeal*basePrice/state.PriceCents*FootfallOf(shop.Place).DailyPassers/300.0)
                     * ShopPowerTraffic(shop, Clock.Now)))continue;
                 var people=_cityPeople.Values.Where(p=>p.Route==null&&p.ActivityId==null&&p.VisitId==null&&p.Task!=CityPersonTask.Working
                     &&!Employees.Any(e=>PersonIdOf(e.Person)==p.PersonId)

@@ -13,7 +13,8 @@ namespace PCShopSell.Game.UI
     {
         private int _assetPage;
         private string _assetStreet, _assetKind, _assetStoreId, _assetPropertyId;
-        private readonly AssetPropertyMap.ViewState _assetMapView = new AssetPropertyMap.ViewState();
+        private AgencyStreetMap.ViewState _assetMapView = new AgencyStreetMap.ViewState();
+        private string _assetMapDistrict;
         private GameSession _assetSession;
         private bool _assetFocusProperty;
         private readonly HashSet<string> _assetCollapsedStreets = new HashSet<string>();
@@ -22,13 +23,12 @@ namespace PCShopSell.Game.UI
         private void OpenAssetWorkspace(int page = 0, string storeId = null, string propertyId = null)
         {
             EnsureAssetSession();
-            _assetPage = page;
             if (storeId != null)
             {
-                _assetStoreId = storeId;
-                var report = S.AssetStoreReports().FirstOrDefault(r => r.Id == storeId);
-                _assetStreet = report?.StreetId; _assetKind = report?.Kind;
+                OpenAssetFinance(storeId);
+                return;
             }
+            _assetPage = page;
             if (propertyId != null) { _assetPropertyId = propertyId; _assetFocusProperty = true; }
             OpenMyPanel(MyPage.Assets);
         }
@@ -38,7 +38,8 @@ namespace PCShopSell.Game.UI
             if (_assetSession != S)
             {
                 _assetSession = S; _assetStreet = _assetKind = _assetStoreId = _assetPropertyId = null;
-                _assetMapView.Initialized = false;
+                _assetMapView = new AgencyStreetMap.ViewState();
+                _assetMapDistrict = null;
                 _assetCollapsedStreets.Clear(); _assetCollapsedKinds.Clear();
                 _assetPropertyListTab = 0;
             }
@@ -51,10 +52,21 @@ namespace PCShopSell.Game.UI
             for (int i = 0; i < 3; i++)
             {
                 int choice = i;
-                Ui.Tab(tabs, new[]{"门店","物业","车产"}[i], () => { _assetPage = choice; w.Rebuild(); },
+                Ui.Tab(tabs, new[]{"商铺","住宅","车产"}[i], () => { _assetPage = choice; w.Rebuild(); },
                     _assetPage == i).name = "AssetPage_" + i;
             }
-            if (_assetPage == 0) BuildAssetStores(w); else if(_assetPage==1) BuildAssetProperties(w);else BuildAssetVehicles(w);
+            if (_assetPage < 2) BuildAssetProperties(w, _assetPage == 1);
+            else BuildAssetVehicles(w);
+        }
+
+        private void OpenAssetFinance(string storeId = null)
+        {
+            EnsureAssetSession();
+            _assetStoreId = storeId;
+            var report = S.AssetStoreReports().FirstOrDefault(r => r.Id == storeId);
+            _assetStreet = report?.StreetId;
+            _assetKind = report?.Kind;
+            OpenWindow("商铺经营收支", 1210, 900, BuildAssetStores, scrollContent: false);
         }
 
         private void BuildAssetStores(Window w)

@@ -59,17 +59,19 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        public string CityDestinationTravelBlocker(Place target, out int minutes, out Money fare)
+        public string CityDestinationTravelBlocker(Place target, out int minutes, out Money fare, bool allowCurrentPlace = false)
         {
             minutes = 0;
             fare = Money.Zero;
             if (target == null) return "请选择一个地点";
-            if (CurrentPlace == target) return "已在此处";
             if (IsGameOver) return "当前无法出发";
+            if (Racing) return "请先完成或退出当前比赛";
             if (CityActivityExclusive) return "请先结束当前活动";
-            if (LeaveBlocker is string leave) return leave;
+            if (IsWorking) return "正在打工，收工后才能出发";
             if (DistrictAccessBlocker(target) is string district) return district;
             if (RacingGarageEntryBlocker(target.Id) is string garageBlock) return garageBlock;
+            if (CurrentPlace == target) return allowCurrentPlace ? null : "已在此处";
+            if (LeaveBlocker is string leave) return leave;
 
             var route = PlanTrip(target.NodeId, StandOf(target), out double meters);
             if (route == null) return "当前路线不可达";

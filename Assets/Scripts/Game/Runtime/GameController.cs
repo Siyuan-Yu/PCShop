@@ -713,7 +713,8 @@ namespace PCShopSell.Game
                 HandleTimeSpeedKeys();
                 return;
             }
-            if (Input.GetKeyDown(KeyCode.Space) && !Ui.FishingInputActive&&!Ui.OnsiteInputActive) Session.Time.TogglePause();
+            if (Input.GetKeyDown(KeyCode.Space) && !Ui.FishingInputActive && !Ui.OnsiteInputActive && !Ui.KaraokeInputActive && !Ui.LeisureGameInputActive)
+                Session.Time.TogglePause();
             HandleTimeSpeedKeys();
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();

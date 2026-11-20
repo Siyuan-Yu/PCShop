@@ -16,11 +16,11 @@ namespace PCShopSell.Game.UI
         private string _cityPropertyTarget;
         private string _cityPropertyStreet = "";
 
-        public void OpenCityProperties() => OpenAssetWorkspace(1);
+        public void OpenCityProperties() => OpenAssetWorkspace();
         private void OpenCityResidence() { _agencyResidential = true; GoToPropertyAgency(S.Home); }
         public void OpenCityProperty(Place place)
         {
-            if(S.PropertyAt(place.Id)!=null||(place==S.Home&&S.HomePriceCents>0)){OpenAssetWorkspace(1,propertyId:place.Id);return;}
+            if(OwnsPropertyAt(place)||LeasesPropertyAt(place)){OpenAssetWorkspace(place.Kind == PlaceKind.Home ? 1 : 0,propertyId:place.Id);return;}
             _cityPropertyTarget = place.Id; _cityPropertyStreet = ""; _cityPropertyTab = S.PropertyAt(place.Id) != null ? 2 : 1; OpenCityPropertiesView();
         }
         private void OpenCityPropertiesView()
@@ -65,15 +65,9 @@ namespace PCShopSell.Game.UI
                     }
                     else
                     {
-                        string mode = property.UseMode == "self" ? "自营" : property.UseMode == "npc" ? "保留原租户" : property.UseMode == "managed" ? "中介托管出租" : "空置";
-                        Line(card, $"用途：{mode} · 租户：{property.TenantName}", 18);
+                        Line(card, "已购 · " + OwnedPropertyStatus(p), 18);
                         Line(card, "当前估值 " + S.PropertyMarketValue(property), 18, Ui.Accent);
-                        Line(card, $"月维护 {Money.FromCents(property.PriceCents).Scale(.001)} · 周租 {Money.FromCents(property.WeeklyRentCents)}（自营不收租）", 17, Ui.Dim);
-                        if (S.ShopAt(p.Id) != null)
-                        {
-                            Para(card, "结束自营：请先处理库存、食物和未收货的采购，再在该店内办理。家具收回，产权保留。", 16, Ui.Dim);
-                            Ui.Size(Ui.Button(card, "结束自营并保留空置产权", () => CityAssetConfirm("结束自营", "按清店校验结束经营，现有产权保留。", () => S.CloseShop(p.Id), w), 17), -1, 42);
-                        }
+                        Line(card, $"月维护 {Money.FromCents(property.PriceCents).Scale(.001)} · 每周应收 {S.PropertyRentReceivable(property)}", 17, Ui.Dim);
                         BuildCommercialPropertyActions(card,p,property,w);
                     }
                 }
@@ -84,27 +78,35 @@ namespace PCShopSell.Game.UI
         private void BuildCommercialPropertyActions(Transform parent, Place place, OwnedProperty property, Window w)
         {
             string id = place.Id;
-            if (property.UseMode == "vacant" && GameSession.IsCommercialPremises(place))
+            bool canOpen = property.UseMode == "vacant" && GameSession.IsCommercialPremises(place);
+            Line(parent, "商铺管理", 20, Ui.Accent);
+            if (canOpen || property.UseMode is "leased" or "npc")
+                BuildPropertyRentalControls(parent, place, w);
+            var actions = Ui.Row(parent, 38, 6);
+            if (canOpen)
             {
-                Ui.Size(Ui.Button(parent,"登记出租…",()=>CityAssetConfirm("登记出租",
-                    "托管租期为28天，次月账期开始收租，管理与空置折损15%。",()=>S.SetCityPropertyRental(id,true),w),17),-1,40);
                 var kinds = RetailShopTypes.All;
+                bool dedicated = S.IsDedicatedVenue(place);
                 string kind = RetailShopTypes.Default;
-                var opening = Ui.Row(parent, 40);
-                Ui.Size(Ui.Choice(opening,kinds.Select(RetailShopTypes.Name),0,index=>kind=kinds[index]),-1,40,1);
-                Ui.Size(Ui.Button(opening,"自营开店",()=>
+                if (!dedicated)
+                    Ui.Size(Ui.Choice(actions, kinds.Select(RetailShopTypes.Name), Array.IndexOf(kinds, kind), index => kind = kinds[index]), 0, 38, 1)
+                        .Tip("选择店铺类型");
+                Ui.Size(Ui.Button(actions, "自营开店…", () =>
                 {
                     string selected = kind;
-                    CityAssetConfirm("在自有铺面开店","开设"+RetailShopTypes.Name(selected)+"。免租金，按正常流程装修和开业。",()=>S.OpenCityOwnedShop(id,selected),w);
-                },17,Ui.ButtonHot),148,40);
+                    string business = dedicated ? S.VenueBusinessName(place) : RetailShopTypes.Name(selected);
+                    string withdraw = property.AskingRentCents > 0 ? "，同时撤下出租挂牌" : "";
+                    CityAssetConfirm("自营开店 · " + place.Name, $"登记为自营{business}，免租金{withdraw}。随后可到店装修、准备营业。",
+                        () => S.OpenCityOwnedShop(id, selected), w);
+                }, 16), 116, 38);
             }
-            if (property.UseMode == "managed")
-                Ui.Size(Ui.Button(parent,"到期恢复空置",()=>{if(S.SetCityPropertyRental(id,false))w?.Rebuild();},17),-1,40);
-            string why = S.CityPropertySaleBlocker(id);
+            else if (S.ShopAt(place) is OwnedShop shop)
+                Ui.Size(Ui.Button(actions, "结束自营…", () => ConfirmCloseShop(shop), 16), 116, 38);
+            string blocker = S.CityPropertySaleBlocker(id);
             Money net = S.PropertySaleNet(property);
-            Line(parent,why ?? $"出售到手 {net}",16,why == null ? Ui.Dim : Ui.Warn);
-            Ui.Size(Ui.Button(parent,"出售产权…",()=>CityAssetConfirm("出售商铺产权",
-                $"到手 {net}，包含估值折价与交易成本。原租户保留。",()=>S.SellProperty(id),w),17,Ui.Warn,why == null),-1,42);
+            Ui.Size(Ui.Button(actions, "出售产权…", () => CityAssetConfirm("出售商铺产权",
+                $"到手 {net}，原租户保留。", () => S.SellProperty(id), w), 16, Ui.Warn, blocker == null), 111, 38)
+                .Tip(blocker ?? $"出售到手 {net}");
         }
 
         private void CityPropertyConfirm(string id, bool mortgage, Window parent)
@@ -115,7 +117,7 @@ namespace PCShopSell.Game.UI
             string why = atAgency ? S.CityPropertyPurchaseBlocker(id, mortgage) : "请到房源所属中介签约。";
             string terms = $"全款购买。<b>月维护费 {q.Price.Scale(.001)}</b>。\n"
                 + (q.IsSelfUse ? "过户后停止缴纳原周租，现有经营保留。"
-                    : q.HasTenant ? "原商户继续经营，商品和员工仍归租户。" : "过户后可自营或登记出租。");
+                    : q.HasTenant ? "原商户继续经营，商品和员工仍归租户。" : "过户后可自营或挂牌出租。");
             OpenPropertyContract("商铺买卖合同", q.Address, $"使用方 · {q.Tenant}", q.TotalDue, fees =>
                 {
                     AgencyFeeLine(fees, "全款售价", q.Price.ToString());

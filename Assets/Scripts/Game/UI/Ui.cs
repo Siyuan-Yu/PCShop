@@ -245,7 +245,7 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>Finite choices without invoking a keyboard. The native list supports scroll and touch.</summary>
-        public static Dropdown Choice(Transform parent, IEnumerable<string> options, int selected, Action<int> choose,
+        public static ChoiceDropdown Choice(Transform parent, IEnumerable<string> options, int selected, Action<int> choose,
             bool opensUp = false, Color? bg = null)
         {
             var face=Panel(parent,"Choice",PanelBg2);
@@ -518,6 +518,8 @@ namespace PCShopSell.Game.UI
     public sealed class ChoiceDropdown : Dropdown
     {
         public static int CancelFrame = -1;
+        internal Func<int, string> OptionBlocker { get; set; }
+        internal Func<int, bool> OptionHeader { get; set; }
         public bool IsChoiceOpen => transform.Find("Dropdown List")!=null;
         internal static bool OpenInside(Transform root)
         {
@@ -532,7 +534,47 @@ namespace PCShopSell.Game.UI
         {
             var list=transform.Find("Dropdown List");var scroll=list==null?null:list.GetComponent<ScrollRect>();
             if(scroll==null)return;
+            RefreshOptionAvailability();
             Canvas.ForceUpdateCanvases();scroll.StopMovement();scroll.verticalNormalizedPosition=options.Count<=1?1:1-value/(float)(options.Count-1);
+        }
+        internal void RefreshOptionAvailability()
+        {
+            if (OptionBlocker == null || transform.Find("Dropdown List") is not Transform list) return;
+            var items = list.GetComponentsInChildren<DropdownItem>();
+            Toggle first = null, previous = null;
+            for (int index = 0; index < items.Length; index++)
+            {
+                var item = items[index];
+                var toggle = item.toggle;
+                bool header = OptionHeader?.Invoke(index) == true;
+                string blocker = header ? null : OptionBlocker(index);
+                bool available = !header && blocker == null;
+                var colors = toggle.colors;
+                colors.disabledColor = Color.white;
+                toggle.colors = colors;
+                toggle.interactable = available;
+                item.text.color = header ? Ui.Accent : available ? itemText.color : Color.Lerp(itemText.color, Ui.ButtonBg, .4f);
+                item.text.fontStyle = header ? FontStyle.Bold : itemText.fontStyle;
+                if (toggle.targetGraphic != null) toggle.targetGraphic.color = header ? Ui.FlatBand : available ? Ui.ButtonBg : Ui.PanelBg2;
+                toggle.Tip(blocker);
+                if (toggle.graphic != null) toggle.graphic.color = available ? Ui.Accent : Ui.Edge;
+                toggle.navigation = new Navigation { mode = available ? Navigation.Mode.Explicit : Navigation.Mode.None,
+                    selectOnUp = available ? previous : null, selectOnLeft = available ? previous : null };
+                if (!available) continue;
+                first ??= toggle;
+                if (previous != null)
+                {
+                    var navigation = previous.navigation;
+                    navigation.selectOnDown = navigation.selectOnRight = toggle;
+                    previous.navigation = navigation;
+                }
+                previous = toggle;
+            }
+            var events = EventSystem.current;
+            var selected = events?.currentSelectedGameObject;
+            if (selected != null && selected.transform.IsChildOf(list)
+                && selected.TryGetComponent<Toggle>(out var focused) && !focused.IsInteractable())
+                events.SetSelectedGameObject(first != null ? first.gameObject : gameObject);
         }
         public bool CloseChoice()
         {

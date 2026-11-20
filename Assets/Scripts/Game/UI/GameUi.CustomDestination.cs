@@ -97,7 +97,7 @@ namespace PCShopSell.Game.UI
             });
             save.onClick.AddListener(() =>
             {
-                if (selected == null) return;
+                if (selected == null || ShortcutTravelBlocker(selected.Place) != null) return;
                 S.SetCityDefault(selected.Place.Id);
                 RefreshShortcutMenus();
                 RefreshDetail();
@@ -180,7 +180,8 @@ namespace PCShopSell.Game.UI
                 }
                 else go.interactable = false;
                 bool saved = place != null && SelectedShortcut(3) == place;
-                save.interactable = place != null && !saved;
+                save.interactable = place != null && !saved
+                    && (S.CurrentPlace == place ? ShortcutTravelBlocker(place) == null : go.interactable);
                 saveLabel.text = saved ? "已保存到底栏" : "保存到底栏";
             }
         }

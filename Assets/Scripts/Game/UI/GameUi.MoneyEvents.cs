@@ -1,4 +1,3 @@
-using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
@@ -14,11 +13,11 @@ namespace PCShopSell.Game.UI
             if (ticket != null)
             {
                 var row = Ui.Row(w.Content, 38, 8);
-                Ui.Size(Ui.Label(row, ticket.Paid ? "刮刮乐 · 已开奖" : "刮刮乐 · 尚未兑付", 18), -1, 38, 1);
+                Ui.Size(Ui.Label(row, ticket.Paid ? "刮刮乐 · 已开奖" : "刮刮乐 · 待刮", 18), -1, 38, 1);
                 if (ticket.Paid)
                     Ui.Size(Ui.Button(row, "查看结果", () => Popup("刮刮乐结果", ticket.ResultText), 17), 108, 38);
                 else
-                    Ui.Size(Ui.Button(row, "刮开", () => OpenEventScratch(w), 17), 108, 38);
+                    Ui.Size(Ui.Button(row, ticket.ProgressPercent > 0 ? "继续刮" : "刮开", () => OpenEventScratch(w), 17), 108, 38);
             }
             Line(w.Content, "住院保障 · " + (S.HasHospitalCoverage ? "有效至 " + new GameTimestamp(S.HospitalPolicyUntil) + " · 报销80%，不封顶" : "未生效或已到期"), 17);
             if (S.HospitalPolicyUntil > 0)
@@ -51,23 +50,31 @@ namespace PCShopSell.Game.UI
             {
                 var ticket = S.ScratchTicket;
                 if (ticket == null) { Line(w.Content, "没有待刮的彩票。", 18); return; }
-                Line(w.Content, "按住鼠标左键，在银色区域来回刮。", 19);
-                var area = Ui.Rect(w.Content, "ScratchTicketSurface"); Ui.Size(area, -1, 180);
-                var prize = Ui.Label(area, ticket.PrizeYuan > 0 ? "奖金 ¥" + ticket.PrizeYuan : "谢谢参与", 40, TextAnchor.MiddleCenter, Ui.Accent);
-                prize.raycastTarget = false; var pr = prize.rectTransform; pr.anchorMin = Vector2.zero; pr.anchorMax = Vector2.one; pr.offsetMin = pr.offsetMax = Vector2.zero;
-                var cover = Ui.Rect(area, "ScratchCover"); cover.anchorMin = Vector2.zero; cover.anchorMax = Vector2.one; cover.offsetMin = cover.offsetMax = Vector2.zero;
-                var graphic = cover.gameObject.AddComponent<ScratchTicketGraphic>(); graphic.Session = S;
-                var row = Ui.Row(w.Content, 40, 8); var status = Ui.Size(Ui.Label(row, "", 18), -1, 40, 1);
-                var claim = Ui.Button(row, "兑奖", () =>
+                var instruction = Line(w.Content, "", 19);
+                var area = Ui.Size(Ui.Panel(w.Content, "ScratchTicketSurface", Ui.PanelBg2), -1, 180).rectTransform;
+                string prizeText = ticket.PrizeYuan > 0 ? $"奖金 {Money.FromYuan(ticket.PrizeYuan)}" : "谢谢参与";
+                Ui.Label(area, prizeText, 40, TextAnchor.MiddleCenter, Ui.Accent).rectTransform.Fill();
+                var cover = Ui.Rect(area, "ScratchCover").Fill();
+                var graphic = cover.gameObject.AddComponent<ScratchTicketGraphic>();
+                graphic.Session = S;
+
+                var row = Ui.Row(w.Content, 44, 8);
+                var status = Ui.Size(Ui.Label(row, "", 18), 0, 44, 1);
+                var finish = Ui.Size(Ui.Button(row, "完成", w.Close, 18, Ui.ButtonHot), 110, 42);
+                void Refresh()
                 {
-                    if (!S.ClaimEventScratch()) return;
-                    w.Rebuild();
-                    owner?.RequestRebuild();
-                }, 18);
-                Ui.Size(claim, 100, 40);
-                void Refresh() { var t = S.ScratchTicket; status.text = t.Paid ? (t.PrizeYuan > 0 ? "奖金已到账" : "本张未中奖") : "已刮开 " + (t.Cleared.Count(c => c) * 100 / 144) + "%"; claim.interactable = S.CanClaimScratch; }
-                graphic.Changed = Refresh; Refresh(); graphic.SetVerticesDirty();
-            });
+                    S.ClaimEventScratch(showPopup: false);
+                    var current = S.ScratchTicket;
+                    instruction.text = current.Paid ? "本张已开奖" : "按住鼠标左键，在银色涂层上来回刮。";
+                    status.text = current.Paid ? current.ResultText : $"已刮开 {current.ProgressPercent}%";
+                    status.color = current.Paid && current.PrizeYuan > 0 ? Ui.Good : Ui.TextColor;
+                    finish.gameObject.SetActive(current.Paid);
+                    graphic.raycastTarget = !current.Paid;
+                }
+                graphic.Changed = Refresh;
+                Refresh();
+                graphic.SetVerticesDirty();
+            }, onClosed: () => owner?.RequestRebuild());
         }
         public void OpenEventIdleSale()
         {

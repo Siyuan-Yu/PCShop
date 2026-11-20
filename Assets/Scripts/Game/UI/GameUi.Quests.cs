@@ -357,8 +357,8 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Pricing: return QuestShopAction(ShopTab.Pricing, "打开定价");
                 case QuestTarget.Orders:
                 case QuestTarget.Enterprise: return QuestShopAction(ShopTab.Orders, "打开订单");
-                case QuestTarget.Finance: return ("打开资产", () => OpenAssetWorkspace(0));
-                case QuestTarget.Property: return ("查看物业", () => OpenAssetWorkspace(1));
+                case QuestTarget.Finance: return ("查看经营收支", OpenCityFinanceOverview);
+                case QuestTarget.Property: return ("查看商铺和住宅", OpenCityProperties);
                 case QuestTarget.Restock: return ("打开网购", OpenOnlinePanel);
                 case QuestTarget.Direct: return ("打开采购", OpenCityProcurement);
                 case QuestTarget.Creators: return ("打开品牌", OpenBrandBusiness);

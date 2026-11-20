@@ -331,16 +331,12 @@ namespace PCShopSell.Game.UI
                 ((RectTransform)ctx.ReplyScroll.transform).Anchor(0, 0, 1, 1, 18, 18 + mainlineHeight, 18, 18);
                 ctx.ReplyScroll.GetComponent<Image>().color = Color.clear;
                 bool nearby = remote || S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
-                string district = replyOnly ? null : DistrictDialogueContext(portraitId);
+                string district = replyOnly ? null : DistrictDialogueContext(portraitId, remote);
                 string currentGreeting = S.IsPlayerPartner(portraitId) ? "你来了，正好想跟你说会儿话。" : greeting;
                 string text = ctx.Reply ?? (nearby ? district ?? currentGreeting : "对方已经离开了，等下次见面再聊吧。");
                 var line = Para(replyBody, Ui.EmphasizeReading(text), 22, ink);
                 line.name = "DialogueReplyText";
                 line.lineSpacing = 1.2f;
-                if (ctx.Reply == null && nearby && district != null &&
-                    S.DistrictStoryState.MeetingNodeId == S.CurrentDistrictNode?.Id)
-                    Para(replyBody, Ui.EmphasizeReading(S.DistrictMeetingDescription), 17, ink);
-
                 if (replyOnly)
                     Ui.Size(Ui.Button(w.Content, replyConfirm, w.Close, 18, Ui.ButtonHot), -1, 42);
                 else
@@ -460,9 +456,6 @@ namespace PCShopSell.Game.UI
             string greeting = S.HasGreeted(personId)
                 ? npc?.Intro ?? staff?.LineFor(S.Clock.Today.TotalDays) ?? "你好，今天过得怎么样？"
                 : name + "看向你，等你开口。";
-            if(!remote&&S.AtCurrentDistrictMeeting&&S.DistrictMeetingBlocker==null
-                &&S.DistrictStoryState.MeetingPeople.Contains(personId)
-                &&(S.DistrictMeetingContact==null||personId==S.DistrictMeetingContact))greeting=S.CurrentDistrictNode.Dialogue;
             bool creatorChoice = initialPage == 3;
             bool discussingPeople = false;
             bool confirmingBreakup = false;

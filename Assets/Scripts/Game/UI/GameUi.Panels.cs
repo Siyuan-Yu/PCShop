@@ -353,7 +353,8 @@ namespace PCShopSell.Game.UI
             if (venture != null || S.IsPlayerPropertyOccupied(p.Id))
             {
                 Line(w.Content, S.PlaceTitle(p), 22, Ui.Accent);
-                Para(w.Content, venture != null ? "这是你委托店长经营的门店。日常收支留在门店周转金中，可在资产页选择门店，再管理定价、维护和资金。" : "这处物业由中介托管出租，每月账期租金进入你的账本。", 18);
+                Para(w.Content, venture != null ? "这是你委托店长经营的门店。日常收支留在门店周转金中，可从「我的资产 → 商铺」查看。" :
+                    "已购 · " + OwnedPropertyStatus(p) + "。可从「我的资产 → 商铺」管理出租。", 18);
                 Ui.Size(Ui.Button(w.Content, "管理这处资产", () => { if (venture != null) OpenBusinessSection(3, p.Id); else OpenCityProperty(p); }, 18, Ui.ButtonHot), -1, 42);
                 return;
             }

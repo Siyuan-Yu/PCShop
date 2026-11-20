@@ -179,7 +179,8 @@ namespace PCShopSell.Game.UI
                 var row = Ui.Row(parent, 56, 10);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 int minutes = booking?.Duration ?? definition.Minutes;
-                int attempts = CityLifeCatalog.ManualPlayAttempts(minutes);
+                int attempts = CityLifeCatalog.ManualPlayAttempts(minutes, definition);
+                bool football = definition.Id == CityLifeCatalog.FootballPenaltyId;
                 bool confirmed = booking?.ServiceConfirmed == true;
                 var price = S.CityActivityEntryPrice(definition, confirmed ? booking.ServiceChoice : 0, booking);
                 string duration = minutes % 60 == 0 ? $"{minutes / 60} 小时" : $"{minutes} 分钟";
@@ -187,11 +188,14 @@ namespace PCShopSell.Game.UI
                 string fare = booking?.HostPays == true ? "邀请人请客"
                     : booking?.EntryPaid == true ? "费用已支付" : price.IsPositive ? price.ToString() : "免费";
                 string startLabel = booking == null ? "购买并开始" : price.IsPositive && !booking.EntryPaid ? "付款并开始" : "开始";
-                var info = Ui.Label(row, $"<b>{attempts} 次</b>  <size=15>全部用完结算 {duration}</size>"
+                var info = Ui.Label(row, $"<b>{(football ? "点球 " : "")}{attempts} {(football ? "球" : "次")}</b>  <size=15>全部用完结算 {duration}</size>"
                     + (blocker == null ? "" : $"\n<size=14>{blocker}</size>"), 20);
                 Ui.Size(info, 0, -1, 1);
                 Ui.Size(Ui.Label(row, fare, 17, TextAnchor.MiddleRight, Ui.Good), 112);
-                var button = Ui.Button(row, startLabel + action, () =>
+                string buttonText = football
+                    ? booking == null ? "购买并踢点球" : price.IsPositive && !booking.EntryPaid ? "付款并踢点球" : "开始踢点球"
+                    : startLabel + action;
+                var button = Ui.Button(row, buttonText, () =>
                 {
                     bool started = confirmed ? S.StartVenueAppointment(booking.Id) : S.SelectVenueService(definition.Id, 0);
                     if (started && S.RunningCityActivity?.VenueId == definition.VenueId) openPlay();
@@ -214,6 +218,7 @@ namespace PCShopSell.Game.UI
                 if (!GameSession.IsVenueSport(booking)) booking = null;
                 var goods = BuildRosterFrame(w, place, 460, scrollGoods: true, rosterWidth: 165);
                 Line(goods, booking != null ? S.CityActivityService(booking).Name
+                    : place.Id == CityLifeCatalog.CommunityFootballVenueId ? "足球点球与投篮"
                     : "购买" + (court ? "投篮" : "击球") + "次数", 24, Ui.Accent);
                 Para(goods, $"{CityPlaceHours(place)} · 操作时暂停游戏时钟，结束后按已用次数结算时间。", 17, Ui.Dim);
                 var definitions = booking == null ? CityLifeCatalog.SportPasses(place.Id) : new[] { S.CityActivityService(booking) };
@@ -230,7 +235,7 @@ namespace PCShopSell.Game.UI
             if (place.Id == GameSession.OldMarketVenueId) { BuildOldMarket(w, place, activityId); return; }
             if (place.Id == "life_expo") { BuildExpoReception(w); return; }
             bool here = S.CurrentPlace == place;
-            bool park = place.Id == "life_hike";
+            bool park = place.Id == "life_hike" || place.Id == GameSession.CommunityParkId;
             var pending = S.PendingVenueActivity(place, activityId);
             var running = S.RunningCityActivity;
             w.LiveConversation = here;
@@ -246,11 +251,12 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18), -1, 42);
                 return;
             }
-            string heading = park ? "公园步道" : S.IsOwnedVenue(place) ? "老板自用 · 免费，不计营业收入" : "现场消费";
+            string heading = place.Id == GameSession.CommunityParkId ? "湖边步道与码头" : park ? "公园步道" : S.IsOwnedVenue(place) ? "老板自用 · 免费，不计营业收入" : "现场消费";
             Line(w.Content, heading + " · " + S.City.StreetName(place.StreetId) + " · " + CityPlaceHours(place), 19, Ui.Accent);
             if (!here)
             {
-                Para(w.Content, park ? "到公园后可以选择散步路线。" : "到场后可与店内人员交流，并选择菜单或服务。邀约请在和对方聊天时约定。", 17, Ui.Dim);
+                Para(w.Content, place.Id == GameSession.CommunityParkId ? "到场后可沿湖散步，也可在码头租船。"
+                    : park ? "到公园后可以选择散步路线。" : "到场后可与店内人员交流，并选择菜单或服务。邀约请在和对方聊天时约定。", 17, Ui.Dim);
                 Ui.Size(Ui.Button(w.Content, "前往" + place.Name, () => { CloseAllWindows(); _ctrl.GoToPlace(place); }, 19, Ui.ButtonHot), -1, 44);
             }
             if(here && IsCarryStore(place))
@@ -267,6 +273,11 @@ namespace PCShopSell.Game.UI
                 var activeService = S.CityActivityService(running);
                 Line(w.Content, "正在体验：" + GameSession.VenueServiceName(activeService, Math.Max(0, running.ServiceChoice)), 19, Ui.Good);
                 BuildPartnerActivityChoices(w, running);
+                if (place.Business == "venue_ktv")
+                    Ui.Size(Ui.Button(w.Content, "打开包间 · 接唱或听歌", OpenKaraokeRoom, 18, Ui.ButtonHot), -1, 42);
+                if (GameSession.IsBarDrinkService(activeService))
+                    Ui.Size(Ui.Button(w.Content, "查看我点的饮品", () => OpenBarCounter(activeService,
+                        running.ServiceChoice, running, ordered: true), 18), -1, 42);
                 string details = activeService?.EventOnly == true ? "查看活动详情" : S.ActivityPartnerId(running) == null ? "查看本次消费" : "查看约会详情";
                 Ui.Size(Ui.Button(w.Content, details,
                     () => OpenCityActivityDetail(running.Id), 18), -1, 42);
@@ -280,7 +291,7 @@ namespace PCShopSell.Game.UI
                     foreach (var person in pending.Participants)
                         Para(w.Content, (S.CityPerson(person.PersonId)?.Name ?? "朋友") + " · " + CityParticipantText(person.Phase), 17);
                 }
-                bool walk = S.CityActivityService(pending)?.Id == "hike";
+                bool walk = GameSession.IsParkWalk(S.CityActivityService(pending));
                 string ready = walk ? "选择散步路线后开始。" : pending.Participants.Length > 0 ? "同行者已到场，点菜或选择服务后一起开始。" : "选好项目后开始本次消费。";
                 Para(w.Content, pending.Participants.Length > 0 && !pending.RendezvousReady ? "请在约定时间前后1小时内到场集合。" : ready, 17, Ui.Good);
             }
@@ -291,24 +302,37 @@ namespace PCShopSell.Game.UI
                 : CityLifeCatalog.Activities.Where(def => !def.EventOnly && def.VenueId == place.Id
                     && place.Business is not ("venue_court" or "venue_golf"));
             foreach (var definition in services.Select(def => def.AtVenue(place.Id)))
-            for (int option = 0; option < definition.ServiceCount; option++)
             {
-                var def = definition; int choice = option;
+                if (GameSession.IsBarDrinkService(definition))
+                {
+                    BuildBarCounterEntry(list, definition, pending, here, running?.VenueId == place.Id);
+                    continue;
+                }
+                for (int option = 0; option < definition.ServiceCount; option++)
+                    BuildServiceRow(definition, option);
+            }
+
+            void BuildServiceRow(CityActivityDefinition def, int choice)
+            {
                 var service = def.Service(choice);
                 var row = Ui.Row(list, service.Description == null ? 90 : 114, 10);
                 string description = def.Minutes + " 分钟\n" + (service.Description == null ? "" : service.Description + "\n") + VenuePlayerEffects(service);
                 Ui.Size(ProductText(row, "<b>" + GameSession.VenueServiceName(def, choice) + "</b>\n<size=15>" + description + "</size>", 18), -1, -1, 1);
-                bool walk = def.Id == "hike";
+                bool walk = GameSession.IsParkWalk(def);
                 string priceText = walk ? "免费" : pending?.HostPays == true ? "邀请人请客\n免费" : S.IsOwnedVenue(place) ? "老板自用\n免费"
                     : def.FixedGroupPrice ? "整场 " + S.VenuePlayerPrice(def, choice) + "\n你付 " + S.CityActivityEntryPrice(def, choice, pending)
                     : S.CityActivityEntryPrice(def, choice, pending) + (pending?.PlayerTreat == true ? "\n请客合计" : "/人");
                 Ui.Size(Ui.Label(row, priceText, 18, TextAnchor.MiddleLeft, Ui.Good), 130);
                 string why = here ? S.VenueServiceBlocker(def.Id, choice, pending?.Id) : "到场后选择";
                 var action = Ui.Rect(row, "ServiceAction"); Ui.VList(action, 4, 0); Ui.Size(action, 150);
-                Ui.Size(Ui.Button(action, walk ? "选这条路线" : place.Business == "venue_restaurant" ? "点这份餐" : "选择这项服务", () =>
+                string actionText = walk ? "选这条路线" : def.Id == GameSession.ParkRowingActivityId ? "租船上湖"
+                    : place.Business == "venue_restaurant" ? "点这份餐" : "选择这项服务";
+                Ui.Size(Ui.Button(action, actionText, () =>
                 {
                     if (!S.SelectVenueService(def.Id, choice, pending?.Id)) { w.Rebuild(); return; }
                     CloseAllWindows();
+                    if (S.ParkRowingActive) OpenParkRowing();
+                    else if (place.Business == "venue_ktv") OpenKaraokeRoom();
                 }, 17, Ui.ButtonBg, why == null), -1, 42);
                 if (why != null) Para(action, why, 13, Ui.Dim);
             }
@@ -338,6 +362,12 @@ namespace PCShopSell.Game.UI
 
             string why = S.VenueAppointmentStartBlocker(booking);
             if (why != null) Ui.Notice(card, why);
+            if (GameSession.IsBarDrinkService(definition))
+            {
+                Ui.Size(Ui.Button(card, "看饮品 · 选口味", () => OpenBarCounter(definition,
+                    booking.ServiceChoice, booking), 19, Ui.ButtonHot, why == null), -1, 48);
+                return;
+            }
             string start = price.IsPositive && !booking.EntryPaid ? $"支付 {price} 并开始"
                 : booking.HostPays || !booking.EntryPaid ? "开始活动 · 免费" : "开始活动";
             Ui.Size(Ui.Button(card, start, () =>
@@ -346,6 +376,7 @@ namespace PCShopSell.Game.UI
                 if (GameSession.IsOutdoorMarketVisit(booking)) { OpenOutdoorMarketVisit(booking); return; }
                 CloseAllWindows();
                 if (GameSession.IsManualPlayActivity(booking)) OpenCityActivityDetail(booking.Id);
+                else if (S.CurrentPlace?.Business == "venue_ktv") OpenKaraokeRoom();
                 else S.Time.SetPaused(false);
             }, 20, Ui.ButtonHot, why == null), -1, 48).name = "StartVenueAppointment";
         }

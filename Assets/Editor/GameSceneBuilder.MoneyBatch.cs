@@ -27,8 +27,13 @@ namespace PCShopSell.EditorTools
             foreach (var c in _game.Ui.Canvases) { c.renderMode = RenderMode.ScreenSpaceCamera; c.worldCamera = camera; c.planeDistance = 1; }
             var s = _game.Session; s.EventsEnabled = false; s.Player.Health = s.Player.Hunger = s.Player.Energy = 100;
             _game.Ui.CloseAllWindows(); Teleport(s, s.MainShop.Place.Id); Frame(0); _game.SnapCamera();
-            if (!s.BuyEventScratchTicket()) throw new InvalidOperationException("Actual ticket purchase failed");
-            _game.Ui.OpenEventScratch(); Shot("103-ticket-covered");
+            s.RaiseEvent("money_win_lottery");
+            if (s.PendingEvent == null) throw new InvalidOperationException("Scratch event missing");
+            var buy = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Button>())
+                .First(b => b.GetComponentInChildren<Text>()?.text == "买一张 · ¥200");
+            buy.onClick.Invoke();
+            if (s.ScratchTicket == null) throw new InvalidOperationException("Actual ticket purchase failed");
+            Shot("103-ticket-covered");
             var scratch = UnityEngine.Object.FindObjectOfType<ScratchTicketGraphic>(); if (scratch == null) throw new InvalidOperationException("Scratch surface missing");
             Canvas.ForceUpdateCanvases(); var rect = scratch.rectTransform; var r = rect.rect;
             var module = scratch.GetComponentInParent<Canvas>().GetComponent<GraphicRaycaster>();
@@ -40,9 +45,8 @@ namespace PCShopSell.EditorTools
                 scratch.OnDrag(e);
                 if (y == 4 && x == 7) Shot("103-ticket-scratching");
             }
-            if (!s.CanClaimScratch) throw new InvalidOperationException("Actual pointer dragging did not reveal ticket");
-            var claim = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Button>()).First(b => b.GetComponentInChildren<Text>()?.text == "兑奖");
-            claim.onClick.Invoke(); if (!s.ScratchTicket.Paid) throw new InvalidOperationException("UI prize settlement failed"); Shot("103-ticket-settled"); _game.Ui.CloseAllWindows();
+            if (!s.ScratchTicket.Paid) throw new InvalidOperationException("Actual pointer dragging did not settle the ticket");
+            Shot("103-ticket-settled"); _game.Ui.CloseAllWindows();
             s.RaiseEvent("money_insurance_agent"); if (s.PendingEvent == null) throw new InvalidOperationException("Insurance event missing"); s.ResolveEvent(0); _game.Ui.CloseAllWindows();
             if (!s.HasHospitalCoverage) throw new InvalidOperationException("Annual policy missing");
             s.Player.Intelligence = 70; s.RaiseEvent("money_invest_tip"); if (s.PendingEvent == null) throw new InvalidOperationException("Investment event missing"); Shot("107-investment-offer"); s.ResolveEvent(1); _game.Ui.CloseAllWindows();

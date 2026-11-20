@@ -11,6 +11,7 @@ namespace PCShopSell.Core.Session
     {
         public static bool UsedCanRepair(UsedItem item) => item != null && item.Owned && item.Inspected && !item.Sold
             && item.Product != ArtifactProduct && !item.RepairAttempted
+            && !(item.MarketReferencePrice > 0 && item.MarketGrade == 0)
             && (item.Condition == UsedCondition.Flawed || item.Condition == UsedCondition.Broken);
 
         public static double UsedRepairSpeed(Employee worker) => .5 +
@@ -48,7 +49,7 @@ namespace PCShopSell.Core.Session
         private bool BeginUsedRepair(OwnedShop shop, UsedItem item, GameDate date)
         {
             long cost = UsedRepairMaterialCost(item);
-            if (!Ledger.TryDebit(date, "进货", Money.FromYuan(cost), "旧物修复耗材 · " + UsedNames[item.Product],
+            if (!Ledger.TryDebit(date, "进货", Money.FromYuan(cost), "旧物修复耗材 · " + UsedItemName(item),
                 LedgerAttribution.ForShop(shop.Place.Id, "used:" + item.Id + ":repair", "修复"))) return false;
             item.RepairAttempted = true;
             item.RepairCost = cost;
@@ -94,7 +95,7 @@ namespace PCShopSell.Core.Session
                 if (item.RepairSucceeded) item.Condition = UsedCondition.Good;
                 item.Price = Math.Max(1, UsedValue(item));
                 SetUsedListing(shop, item, item.Price);
-                Say(ShopTitle(shop) + " · " + UsedNames[item.Product] + (item.RepairSucceeded ? "修复成功" : "修复未成功，保持原状态")
+                Say(ShopTitle(shop) + " · " + UsedItemName(item) + (item.RepairSucceeded ? "修复成功" : "修复未成功，保持原状态")
                     + " · 参考价 ¥" + item.Price + " · 耗材 ¥" + item.RepairCost);
             }
         }

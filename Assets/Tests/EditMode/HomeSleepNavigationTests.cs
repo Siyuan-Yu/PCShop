@@ -75,12 +75,14 @@ namespace PCShopSell.Tests
                     .Single(b => b.name == "ShortcutGo_4");
                 var caption = button.GetComponentInChildren<Text>();
                 Assert.AreEqual("前往 " + s.HomeTitle, caption.text);
-                Assert.AreEqual(2, dropdown.options.Count);
-                Assert.AreEqual(s.HomeTitle + " · 主住所", dropdown.options[0].text);
+                string LabelName(PCShopSell.Core.World.Place place) => place.Name.Split(new[] { " · " }, StringSplitOptions.None).Last();
+                StringAssert.Contains(s.City.StreetName(s.Home.StreetId), dropdown.options[0].text);
+                Assert.True(dropdown.options.Any(option => option.text.EndsWith(LabelName(s.Home) + " · 主住所")));
+                Assert.True(dropdown.options.Any(option => option.text.EndsWith(LabelName(occupied) + " · 有租户")));
                 Assert.AreEqual(VerticalWrapMode.Truncate, dropdown.itemText.verticalOverflow);
                 var tip = button.GetComponent<TipTarget>();
                 StringAssert.Contains(s.City.StreetName(s.Home.StreetId), tip.Text());
-                int index = dropdown.options.FindIndex(o => o.text == vacant.Name);
+                int index = dropdown.options.FindIndex(o => o.text.EndsWith(LabelName(vacant) + " · 已购"));
                 Assert.Greater(index, 0);
                 dropdown.value = index;
                 Assert.AreEqual("前往 " + vacant.Name, caption.text);

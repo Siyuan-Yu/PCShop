@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.World;
@@ -85,7 +85,8 @@ namespace PCShopSell.Core.Session
         public int PriceYuan => DefaultService.PriceYuan * PriceMultiplier;
         public int ServiceCount => Math.Min(ServiceOptionCount, Choices?.Length ?? 0);
         public bool IsSportPass => Id.StartsWith("court_pass_", StringComparison.Ordinal)
-            || Id.StartsWith("golf_pass_", StringComparison.Ordinal);
+            || Id.StartsWith("golf_pass_", StringComparison.Ordinal)
+            || Id == CityLifeCatalog.FootballPenaltyId;
         public CityActivityDefinition AtVenue(string venueId)
         {
             if (string.IsNullOrEmpty(venueId) || venueId == VenueId) return this;
@@ -117,7 +118,7 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class CityActivityParticipant
     {
-        public string PersonId, IntentId;
+        public string PersonId, IntentId, FarewellLine;
         public long DepartMinute;
         public CityParticipantPhase Phase;
         public bool TravelTransportChosen;
@@ -135,6 +136,7 @@ namespace PCShopSell.Core.Session
         public string Id, DefinitionId, SourceId, VenueId, HostId, EndReason;
         public string ServiceDefinitionId;
         public bool ServiceConfirmed;
+        public bool BarHoneyAdded;
         public int ServiceChoice = -1;
         public string PlayerIntentId;
         public CityRoute PlayerVenueRoute;
@@ -163,7 +165,7 @@ namespace PCShopSell.Core.Session
         public CityActivity Copy() => new CityActivity {Id=Id,DefinitionId=DefinitionId,SourceId=SourceId,VenueId=VenueId,HostId=HostId,
             EndReason=EndReason,ServiceDefinitionId=ServiceDefinitionId,ServiceConfirmed=ServiceConfirmed,ServiceChoice=ServiceChoice,PlayerIntentId=PlayerIntentId,PlayerVenueRoute=PlayerVenueRoute?.Copy(),OccupiedFrom=OccupiedFrom,OccupiedUntil=OccupiedUntil,EmployeeLeaveApproved=EmployeeLeaveApproved,ScheduledStart=ScheduledStart,ActualStart=ActualStart,ActualEnd=ActualEnd,
             EventGiftId=EventGiftId,EventGiftDelivered=EventGiftDelivered,EventSettlementNote=EventSettlementNote,
-            CookTastingEffects=CookTastingEffects,
+            CookTastingEffects=CookTastingEffects,BarHoneyAdded=BarHoneyAdded,
             Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,ManualOperationMinute=ManualOperationMinute,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,CommunityClueMask=CommunityClueMask,CommunityClueShownMask=CommunityClueShownMask,EntryCostCents=EntryCostCents,EntryCostRecorded=EntryCostRecorded,
             HasPartialSettlement=HasPartialSettlement,PartialSettlementProgress=PartialSettlementProgress,
             PlayerStatsBefore=PlayerStatsBefore?.ToArray(),PlayerStatsAfter=PlayerStatsAfter?.ToArray(),Reminder=Reminder,EntryPaid=EntryPaid,MealApplied=MealApplied,PlayerTreat=PlayerTreat,
@@ -200,7 +202,7 @@ namespace PCShopSell.Core.Session
             if(_personById==null)_personById=People.ToDictionary(p=>p.Id,StringComparer.Ordinal);
             return _personById.TryGetValue(id,out var person)?person:null;
         }
-        public static readonly CityActivityDefinition[] Activities = AddSocialEventActivities(ExpandPremiumServices(ExpandVenueTiers(new CityActivityDefinition[] {
+        public static readonly CityActivityDefinition[] Activities = AddLeisureActivities(AddSocialEventActivities(ExpandPremiumServices(ExpandVenueTiers(new CityActivityDefinition[] {
             EventActivity("race_bet_meal", "赛后夜宵", "life_restaurant", 60, 2000, 6, 45, 8),
             EventActivity("race_watch", "赛道观赛", "race_0", 60, 0, 4, 0, 6, intelligence: 1),
             EventActivity("race_night", "车友夜骑", "race_0", 90, 0, 4, 0, 10, energy: -8),
@@ -214,9 +216,9 @@ namespace PCShopSell.Core.Session
             WithServices(A("ktv","练歌与合唱","life_ktv",90,160,0,8,8,"选择包间活动","原创伴奏响起，大家轮流唱或坐下交流。","散场时一起整理好麦克风。","合唱原创曲","独唱练习","聊喜欢的声音","聊创作经历"),
                 new CityVenueService(160, "跟着伴奏接唱，和同行的人一起找节拍。", energy: 4, mood: 14, charm: 1, relation: 10),
                 new CityVenueService(160, "独自练气息和音准，多练一遍难唱的段落。", energy: -3, mood: 9, charm: 2, relation: 5)),
-            WithServices(A("bar","吧台小聚","life_bar",60,80,10,5,5,"选择饮品","可以选无酒精饮品，认识同桌的人。","结清本次饮品后各自安排返程。","气泡果饮","热茶","聊近况","认识同桌"),
-                new CityVenueService(80, "果香和气泡提振心情，适合小聚。", hunger: 14, energy: 3, mood: 10, charm: 1, relation: 6),
-                new CityVenueService(65, "慢慢喝一杯热茶，歇一歇恢复精力。", hunger: 4, energy: 9, mood: 6, relation: 5)),
+            WithServices(A("bar","吧台小聚","life_bar",60,80,10,5,5,"选择饮品","可以选无酒精饮品，认识同桌的人。","结清本次饮品后各自安排返程。","柠檬气泡","热乌龙","聊近况","认识同桌"),
+                new CityVenueService(80, "柠檬和气泡清爽解渴，适合小聚。", hunger: 14, energy: 3, mood: 10, charm: 1, relation: 6),
+                new CityVenueService(65, "慢慢喝一杯热乌龙，歇一歇恢复精力。", hunger: 4, energy: 9, mood: 6, relation: 5)),
             WithServices(A("court","组队打球","life_court",60,300,0,-8,6,"在球场完成三回合投篮","在场上热身，开始练球。","打球结束。","定点投篮","加强投篮练习"),
                 new CityVenueService(300, "在场上完成三回合投篮练习。", energy: -8, mood: 8, health: 2, relation: 8),
                 new CityVenueService(300, "加强练习更耗精力，锻炼效果更好。", energy: -13, mood: 10, health: 4, relation: 5)),
@@ -227,6 +229,17 @@ namespace PCShopSell.Core.Session
             WithServices(A("hike","青湾郊游","life_hike",90,0,0,-8,7,"选择步道","走到观景平台，看看沿途风景。","从步道回到入口，自己选择下一站。","轻松路线","观景平台","聊生活","分享经历"),
                 new CityVenueService(0, "沿平缓步道散步，体力消耗较低。", energy: -5, mood: 9, health: 2, relation: 8),
                 new CityVenueService(0, "走得更远，到观景平台看湖，运动量更大。", energy: -12, mood: 14, health: 4, relation: 6)),
+            WithServices(A("park_walk", "社区公园散步", GameSession.CommunityParkId, 45, 0, 0, -2, 5,
+                "沿湖边步道走走", "可以在湖岸歇一会儿。", "在公园入口分别", "沿湖散步", "去长椅歇一会儿", "聊最近的生活"),
+                new CityVenueService(0, "走一圈湖边步道。", energy: -2, mood: 7, relation: 5),
+                new CityVenueService(0, "在岸边坐坐，看看水面。", energy: 2, mood: 6, relation: 5)),
+            new CityActivityDefinition
+            {
+                Id = GameSession.ParkRowingActivityId, Name = "公园划船", VenueId = GameSession.CommunityParkId,
+                Minutes = 45, ServiceOptionCount = 1, FixedGroupPrice = true, Choices = new[] { "租一条船" },
+                DefaultService = new CityVenueService(180, "一起划船看湖，想歇就歇。", energy: -3, mood: 10, relation: 7),
+                StartText = "到码头上船。", MidText = "慢慢划船，看看两岸。", EndText = "已靠岸还船。"
+            },
             A("market","市场走访","stall_cpu",60,0,0,-3,5,"约在电子市场门口","实际走访档口，交换供货信息。","结束走访，不自动购买商品。","看新品","比较供货条件","聊经营","聊行业消息"),
             A("old_market","旧电子档口闲逛","stall_cpu",60,0,0,-3,5,"相约旧电子档口","慢慢看旧收音机和老唱片，听彼此讲旧事。","结束闲逛，各自选择下一站。","看旧收音机","聊配件沿革","找老唱片","听旧设备故事"),
             A("oldmarket_visit","青湾旧物市场闲逛",GameSession.OldMarketVenueId,60,0,0,-3,5,"相约青湾旧物市场","看钟表、旧电子、唱片和收藏杂货；实物购买与修理另行选择。","结束闲逛，各自选择下一站。","看钟表","聊老物件","找唱片","听旧设备故事"),
@@ -235,7 +248,7 @@ namespace PCShopSell.Core.Session
                 new CityVenueService(70, "几碟小菜适合分着吃，坐下来慢慢聊。", hunger: 25, energy: 3, mood: 8, nutrition: 2, relation: 7)),
             A("expo_electronics","电子展游览","life_expo",120,30,0,-4,7,"检票入场","供应商、新品、企业需求与行业联系人分区交流。","可提前离场，已完成展位事件保持记忆。","供应商新品","企业需求","行业联系人","交流试单条件"),
             A("expo_comic","原创潮玩展","life_expo",120,30,0,-4,7,"检票入场","原创模型、创作者工作台和兴趣社交区开放。","原创作品与联系人记录在自己的城市履历中。","原创模型商品","创作者工作台","兴趣社交","讨论推广合作")
-        })));
+        }))));
         private static CityActivityDefinition[] ExpandVenueTiers(CityActivityDefinition[] originals)
         {
             var all=originals.ToList();

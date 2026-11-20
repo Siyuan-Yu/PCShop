@@ -17,6 +17,9 @@ namespace PCShopSell.Core.Session
         public UsedCondition Condition, Claim;
         public long Asking, Minimum, Cost, Price, ExpiresAt;
         public long SalePrice,SoldAt;
+        public string MarketSpotId, MarketModelName;
+        public int MarketTier, MarketGrade;
+        public long MarketReferencePrice;
         public bool Owned, Inspected, Listed, Sold;
         public bool ArtifactAssessmentMade, ArtifactIdentified;
         public bool RepairAttempted, RepairSucceeded;
@@ -104,11 +107,34 @@ namespace PCShopSell.Core.Session
         private const int RestaurantFishSecondOfferGap = 4 * 60;
         private const int LegacyFishOfferInterval = 2 * GameTimestamp.MinutesPerDay;
         public static string ConditionName(UsedCondition c)=>c==UsedCondition.Good?"好货":c==UsedCondition.Flawed?"瑕疵品":c==UsedCondition.Replica?"仿造品":"完全损坏";
-        public static string UsedConditionName(UsedItem item) => item.Product == ArtifactProduct
-            ? (item.Condition == UsedCondition.Good ? "真品文物" : "仿制文物") : ConditionName(item.Condition);
-        public static long UsedValue(UsedItem i) => i.Product == ArtifactProduct
-            ? (i.Condition == UsedCondition.Good ? GenuineArtifactValue : ReplicaArtifactValue)
-            : (long)Math.Round(UsedValues[Math.Max(0,Math.Min(UsedValues.Length-1,i.Product))]*(i.Condition==UsedCondition.Good?1:i.Condition==UsedCondition.Flawed?.55:i.Condition==UsedCondition.Replica?.22:.03));
+        public static string UsedItemName(UsedItem item) => string.IsNullOrEmpty(item.MarketModelName)
+            ? UsedNames[item.Product] : item.MarketModelName;
+        public static string UsedItemPortrait(UsedItem item) =>
+            OldMarketHuntCatalog.Spot(item.MarketSpotId)?.Portrait ?? "used:" + item.Product;
+        public static long UsedListingPriceLimit(UsedItem item) =>
+            item.MarketReferencePrice > 0 && OldMarketHuntCatalog.ValidTier(item.MarketTier)
+                ? OldMarketHuntCatalog.PriceLimit(item.MarketTier) : 1000000;
+        public static string UsedConditionName(UsedItem item)
+        {
+            if (item.MarketReferencePrice > 0)
+                return item.RepairSucceeded ? "已修复" : OldMarketHuntCatalog.GradeNames[item.MarketGrade];
+            return item.Product == ArtifactProduct
+                ? (item.Condition == UsedCondition.Good ? "真品文物" : "仿制文物") : ConditionName(item.Condition);
+        }
+        public static long UsedValue(UsedItem item)
+        {
+            if (item.MarketReferencePrice > 0)
+            {
+                long value = item.MarketReferencePrice;
+                if (item.MarketGrade == 1 && item.Condition == UsedCondition.Good) value = (value * 5 + 2) / 4;
+                return Math.Min(value, UsedListingPriceLimit(item));
+            }
+            if (item.Product == ArtifactProduct)
+                return item.Condition == UsedCondition.Good ? GenuineArtifactValue : ReplicaArtifactValue;
+            return (long)Math.Round(UsedValues[Math.Clamp(item.Product, 0, UsedValues.Length - 1)]
+                * (item.Condition == UsedCondition.Good ? 1 : item.Condition == UsedCondition.Flawed ? .55
+                    : item.Condition == UsedCondition.Replica ? .22 : .03));
+        }
         public static double UsedSaleReputation(UsedItem item) =>
             item.Inspected && item.Product == ArtifactProduct && item.Condition == UsedCondition.Good ? ArtifactSaleReputation : 0;
         public static string SellerSpeech(UsedItem i) => SellerStatements[Math.Max(0,Math.Min(3,i.Statement))]
@@ -264,7 +290,7 @@ namespace PCShopSell.Core.Session
             var item = SpecialBusiness(shop.Place.Id).Used.FirstOrDefault(i => i.Id == id);
             blocker = SetUsedListing(shop, item, price);
             if (blocker != null) return false;
-            Say(UsedNames[item.Product] + "已按 ¥" + price + " 上架到二手转售品货架，等待顾客挑选、结账。");
+            Say(UsedItemName(item) + "已按 ¥" + price + " 上架到二手转售品货架，等待顾客挑选、结账。");
             return true;
         }
         public bool DiscardUsed(int id)

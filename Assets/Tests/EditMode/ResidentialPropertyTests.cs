@@ -108,7 +108,7 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 string id=Vacate(s);AtAgency(s,id);Assert.True(s.BuyResidentialHome(id,false,false));
-                Assert.False(s.SetCityPropertyRental(id,true));
+                Assert.Zero(s.PropertyAt(id).AskingRentCents);
                 int rents=s.Ledger.Entries.Count(e=>e.Category=="物业租金");Settle(s,(s.Clock.Today.TotalDays/30+1)*30);
                 Assert.AreEqual(rents,s.Ledger.Entries.Count(e=>e.Category=="物业租金"));
                 long principal=s.PropertyAt(id).MortgageCents;long cash=s.Ledger.Balance.Cents;

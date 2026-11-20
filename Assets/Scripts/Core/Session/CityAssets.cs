@@ -7,13 +7,16 @@ namespace PCShopSell.Core.Session
     public sealed partial class OwnedProperty
     {
         public int CitySchema;
-        public string UseMode; // self, npc, managed, vacant
+        public string UseMode; // self, npc, leased, vacant
         public string TenantName;
         public string TenantPersonId;
         public long MonthlyRentCents;
         public long WeeklyRentCents;
         public int CommercialRentFromDay;
         public int LeaseEndDay;
+        public long AskingRentCents;
+        public bool RecoverAtLeaseEnd;
+        public bool LegacyRentalDiscount;
         public int LastSettledMonth = -1;
     }
 

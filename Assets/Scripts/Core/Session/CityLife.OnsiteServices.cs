@@ -7,6 +7,11 @@ namespace PCShopSell.Core.Session
     {
         public const string BasketballVenueId = "life_court";
         public const string GolfVenueId = "life_golf";
+        public const string CommunityFootballVenueId = "life_court_mid";
+        public const string FootballPenaltyId = "football_pass_penalty";
+        public const int FootballPenaltyShots = 5;
+        public static int ManualPlayAttempts(int minutes, CityActivityDefinition definition) =>
+            definition?.Id == FootballPenaltyId ? FootballPenaltyShots : ManualPlayAttempts(minutes);
         public const int DrinkTastingMinutes = 90;
         public const int ManualAttemptMinutes = 40;
         public static int ManualPlayAttempts(int minutes) => System.Math.Max(1, (minutes + ManualAttemptMinutes - 1) / ManualAttemptMinutes);
@@ -20,7 +25,15 @@ namespace PCShopSell.Core.Session
             var all=new List<CityActivityDefinition>(source);
             var courtPrices = new[] { 300, 550, 800, 1000 };
             AddPasses("court", BasketballVenueId, "篮球", courtPrices);
-            AddPasses("court", "life_court_mid", "篮球", courtPrices);
+            AddPasses("court", CommunityFootballVenueId, "篮球", courtPrices);
+            all.Add(new CityActivityDefinition
+            {
+                Id = FootballPenaltyId, LogicalId = "football", Name = "足球点球 · 5 球",
+                VenueId = CommunityFootballVenueId, Minutes = 40, ServiceOptionCount = 1,
+                Choices = new[] { "足球点球 · 5 球" },
+                DefaultService = new CityVenueService(courtPrices[0], relation: 5),
+                StartText = "到社区运动场踢点球", MidText = "你在练习点球", EndText = "五球点球练习结束"
+            });
             AddPasses("court", "life_fitness", "篮球", courtPrices);
             AddPasses("golf", GolfVenueId, "高尔夫练习", new[] { 150, 280, 400, 500 });
             Add(51,"夏澄的新饮品品尝","life_bar",DrinkTastingMinutes,0,6);Add(52,"陶然的朋友聚会","life_bar",90,600,5);

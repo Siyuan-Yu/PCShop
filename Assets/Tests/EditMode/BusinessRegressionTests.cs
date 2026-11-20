@@ -184,8 +184,14 @@ namespace PCShopSell.Tests
             {
                 ListUnit(s);s.OpenVenture("tea","branch");Assert.True(s.BuyProperty("tea",false));Assert.True(s.CloseVenture("tea"));
                 Assert.NotNull(s.PropertyAt("tea"));Assert.False(s.IsVacant(s.City.GetPlace("tea")));Assert.False(s.Listings.Any(x=>x.PlaceId=="tea"));
-                Assert.AreEqual("vacant",s.PropertyAt("tea").UseMode);Assert.True(s.SetCityPropertyRental("tea",true));
-                Midnight(s,30);Assert.True(s.Ledger.Entries.Any(e=>e.Category=="物业租金" && e.Date.TotalDays==30));
+                var property = s.PropertyAt("tea");
+                var unit = s.City.GetPlace("tea");
+                Assert.AreEqual("vacant", property.UseMode);
+                Assert.True(s.ListPropertyForRent("tea", s.PropertyMinimumAskingRent(unit)));
+                Assert.AreEqual("vacant", property.UseMode);
+                for (int day = 1; day <= 14 && property.UseMode == "vacant"; day++) Midnight(s, day);
+                Assert.AreEqual("leased", property.UseMode);
+                Assert.True(s.Ledger.Entries.Any(e => e.Category == "物业租金" && e.Date == s.Clock.Today));
                 using(var l=Reload(s)){var count=l.Ledger.Entries.Count(e=>e.Category=="物业租金");l.Clock.Advance(1);Assert.AreEqual(count,l.Ledger.Entries.Count(e=>e.Category=="物业租金"));}
                 Assert.True(s.SellProperty("tea"));Assert.Null(s.PropertyAt("tea"));
             }

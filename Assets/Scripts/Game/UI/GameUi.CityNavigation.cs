@@ -11,7 +11,7 @@ namespace PCShopSell.Game.UI
         private sealed class ShortcutMenu
         {
             public int Kind;
-            public Dropdown Dropdown;
+            public ChoiceDropdown Dropdown;
             public Button Main;
             public Text Caption;
             public RectTransform Group;
@@ -30,9 +30,14 @@ namespace PCShopSell.Game.UI
             if (kind == SleepShortcut)
                 return new[] { S.Home }.Concat(S.RentedResidences)
                     .Concat(S.OwnedProperties.Where(p => S.City.HasPlace(p.PlaceId)).Select(p => S.City.GetPlace(p.PlaceId)))
-                    .Distinct().Where(S.CanSleepAt).ToArray();
+                    .Where(p => p.Kind == PlaceKind.Home).Distinct()
+                    .OrderBy(p => p == S.Home ? -1 : S.DistrictTierOf(p))
+                    .ThenBy(p => p.StreetId).ThenBy(p => p.Name).ToArray();
             if(kind==3)return S.City.PublicPlaces.ToArray();
-            if(kind==OwnedShopShortcut)return S.MyShops.Select(s=>s.Place).ToArray();
+            if (kind == OwnedShopShortcut)
+                return S.MyShops.Select(shop => shop.Place)
+                    .Concat(S.ManagedVentures.Where(venture => S.City.HasPlace(venture.PlaceId)).Select(venture => S.City.GetPlace(venture.PlaceId)))
+                    .Distinct().OrderBy(place => S.DistrictTierOf(place)).ThenBy(place => place.StreetId).ThenBy(place => place.Name).ToArray();
             if(kind==2)return S.City.Places.Where(p=>p.Kind==PlaceKind.Agency).ToArray();
             return S.City.Places.Where(p=>p.Id=="stall_cpu"||p.Business==GameSession.FarmBusiness||S.HasRetailWholesale(p)).ToArray();
         }
@@ -50,8 +55,20 @@ namespace PCShopSell.Game.UI
             string id = ShortcutSelection(kind);
             if (kind == 3 && S.City.HasPlace(id) && S.City.GetPlace(id) is Place counter && counter.IsElectronicsCounter)
                 return places.FirstOrDefault(p => p.Kind == PlaceKind.Wholesaler && p.NodeId == counter.NodeId);
-            return places.FirstOrDefault(p => p.Id == id) ?? (kind == 3 ? null : places.FirstOrDefault());
+            if (kind == SleepShortcut) return places.FirstOrDefault(p => p.Id == id && S.CanSleepAt(p)) ?? S.Home;
+            if (kind == OwnedShopShortcut && !places.Any(p => p.Id == id) && S.MainShop.Rented && S.DistrictAccessBlocker(S.MainShop.Place) == null)
+                return S.MainShop.Place;
+            return places.FirstOrDefault(p => p.Id == id)
+                ?? (kind == 3 ? null : places.FirstOrDefault(p => S.DistrictAccessBlocker(p) == null));
         }
+        // Already being inside still allows reopening the service or walking to the bed.
+        private string ShortcutTravelBlocker(Place place) =>
+            S.CityDestinationTravelBlocker(place, out _, out _, allowCurrentPlace: true);
+        private string HomeShortcutBlocker(Place place) =>
+            S.DistrictAccessBlocker(place) ?? (!S.CanSleepAt(place) ? "有租户，当前不可入住" : ShortcutTravelBlocker(place));
+
+        private string ShortcutBlocker(int kind, Place place) =>
+            kind == SleepShortcut ? HomeShortcutBlocker(place) : ShortcutTravelBlocker(place);
         private void SelectShortcut(int kind,Place place)
         {
             if(kind==OwnedShopShortcut)S.SetCityShopShortcut(place.Id);
@@ -68,7 +85,7 @@ namespace PCShopSell.Game.UI
         {
             var target=SelectedShortcut(kind);
             if(target==null&&kind==3){OpenCustomDestinationPicker();return;}
-            if(target==null){Toast("当前没有可前往的地点。");return;}
+            if(ShortcutBlocker(kind,target) is string blocker){Toast(blocker);return;}
             if (kind == SleepShortcut) _ctrl.GoHomeToSleep(target);
             else _ctrl.GoToPlace(target);
         }
@@ -82,8 +99,9 @@ namespace PCShopSell.Game.UI
             caption.resizeTextForBestFit=true;caption.resizeTextMinSize=13;caption.resizeTextMaxSize=17;
             main.Tip(() =>
             {
-                if (kind == OwnedShopShortcut && S.MyShopCount == 0) return "尚无店铺，租下或购入店铺后可使用。";
+                if (kind == OwnedShopShortcut && S.MyShopCount == 0 && S.ManagedVentures.Count == 0) return "尚无经营中的商铺。";
                 var place = SelectedShortcut(kind);
+                if (place != null && ShortcutBlocker(kind, place) is string blocker) return blocker;
                 string address = place == null ? "暂无" : ShortcutPlaceAddress(kind, place);
                 return "当前目的地：" + address + (kind == SleepShortcut
                     ? "\n点主按钮前往并走到床边，右侧小三角可切换住宅。"
@@ -99,8 +117,15 @@ namespace PCShopSell.Game.UI
             }
             var dropdown=Ui.Choice(group,new[]{"暂无目的地"},0,index=>
             {
-                if(index>=0&&index<menu.Places.Length)SelectShortcut(kind,menu.Places[index]);
+                if (index < 0 || index >= menu.Places.Length) return;
+                var place = menu.Places[index];
+                if (place == null) return;
+                if (ShortcutBlocker(kind, place) == null) SelectShortcut(kind, place);
+                else menu.Dropdown.SetValueWithoutNotify(ShortcutOptionIndex(menu.Places, SelectedShortcut(kind)));
             });
+            dropdown.OptionHeader = index => index < menu.Places.Length && menu.Places[index] == null;
+            dropdown.OptionBlocker = index => index < menu.Places.Length && menu.Places[index] is Place place
+                ? ShortcutBlocker(kind, place) : null;
             menu.Dropdown=dropdown;dropdown.name="ShortcutArrow_"+kind;Ui.Size(dropdown,26,42);
             dropdown.captionText.gameObject.SetActive(false);
             var item = dropdown.itemText;
@@ -114,7 +139,8 @@ namespace PCShopSell.Game.UI
             // Open above the bottom bar without changing the width of the shortcut button.
             var template=dropdown.template;
             template.anchorMin=template.anchorMax=new Vector2(1,1);template.pivot=new Vector2(1,0);
-            template.anchoredPosition=new Vector2(0,4);template.sizeDelta=new Vector2(360,260);
+            bool addressList = kind is SleepShortcut or OwnedShopShortcut;
+            template.anchoredPosition=new Vector2(0,4);template.sizeDelta=new Vector2(addressList ? 455 : 360,addressList ? 350 : 260);
             dropdown.Tip("选择目的地（只切换，不立即出发）");
             _shortcutMenus.Add(menu);
         }
@@ -123,6 +149,7 @@ namespace PCShopSell.Game.UI
             if (kind == SleepShortcut) return place == S.Home ? S.HomeTitle : place?.Name ?? "回家睡觉";
             if(place==null)return kind==3?"自定目的地":kind==OwnedShopShortcut?"我的店铺":kind==1?"批发市场":"中介";
             if(S.ShopAt(place) is OwnedShop shop)return S.ShopTitle(shop);
+            if (kind == OwnedShopShortcut && S.VentureAt(place.Id) != null) return S.PlaceTitle(place);
             return place.Id=="stall_cpu"?"电子批发市场":place.Name;
         }
         private string ShortcutPlaceAddress(int kind, Place place)
@@ -135,6 +162,25 @@ namespace PCShopSell.Game.UI
 
         private string[] ShortcutOptionLabels(int kind, Place[] places)
         {
+            if (kind is SleepShortcut or OwnedShopShortcut)
+                return places.Select((place, index) =>
+                {
+                    if (place == null)
+                    {
+                        string streetId = places[index + 1].StreetId;
+                        string district = S.City.AgencyDistrictFor(streetId)?.name;
+                        string address = S.City.StreetName(streetId);
+                        return string.IsNullOrEmpty(district) ? address : district + " · " + address;
+                    }
+                    string name = ShortcutPlaceName(kind, place), street = S.City.StreetName(place.StreetId);
+                    string Shorten(string value) => value.StartsWith(street + " · ", System.StringComparison.Ordinal)
+                        ? value.Substring(street.Length + 3) : value;
+                    if (kind == OwnedShopShortcut)
+                        return name == place.Name ? Shorten(name) : name + " · " + Shorten(place.Name);
+                    string status = place == S.Home ? "主住所" : S.DistrictAccessBlocker(place) != null ? "片区未开放"
+                        : !S.CanSleepAt(place) ? "有租户" : S.HasResidentialLease(place) ? "已租" : "已购";
+                    return Shorten(name) + " · " + status;
+                }).ToArray();
             var names = places.Select(place => ShortcutPlaceName(kind, place)).ToArray();
             var duplicates = new HashSet<string>(names.GroupBy(name => name)
                 .Where(group => group.Count() > 1).Select(group => group.Key));
@@ -143,9 +189,12 @@ namespace PCShopSell.Game.UI
                 string name = names[index];
                 if (duplicates.Contains(name))
                     name += " · " + (S.IsMyShop(place) || name == place.Name ? S.City.StreetName(place.StreetId) : place.Name);
-                return kind == SleepShortcut && place == S.Home ? name + " · 主住所" : name;
+                return name;
             }).ToArray();
         }
+
+        private static int ShortcutOptionIndex(Place[] places, Place destination) =>
+            Mathf.Max(0, System.Array.IndexOf(places, destination));
 
         private void RefreshShortcutMenus()
         {
@@ -154,16 +203,26 @@ namespace PCShopSell.Game.UI
             {
                 var places=ShortcutPlaces(menu.Kind);
                 var destination=SelectedShortcut(menu.Kind, places);
+                if (menu.Kind is SleepShortcut or OwnedShopShortcut)
+                    places = places.GroupBy(place => place.StreetId).SelectMany(group => new Place[] { null }.Concat(group)).ToArray();
+                bool canTravel = destination == null ? menu.Kind == 3 : ShortcutBlocker(menu.Kind, destination) == null;
+                if (menu.Stamp == null || menu.Main.interactable != canTravel)
+                {
+                    menu.Main.interactable = canTravel;
+                    if (menu.Kind == OwnedShopShortcut)
+                        Ui.SetButtonFill(menu.Main, canTravel ? Ui.ButtonHot : Ui.ButtonBg);
+                }
                 string selected=destination?.Id;
                 string caption=destination==null?(menu.Kind==3?"选择目的地":ShortcutPlaceName(menu.Kind,null)):"前往 "+ShortcutPlaceName(menu.Kind,destination);
                 var labels = menu.Dropdown == null ? System.Array.Empty<string>() : ShortcutOptionLabels(menu.Kind, places);
-                string stamp=string.Join("|",places.Select(p=>p.Id))+"/"+string.Join("|",labels)+"/"+selected+"/"+caption;
-                if(menu.Stamp==stamp)continue;
+                string stamp=string.Join("|",places.Select(p=>p?.Id))+"/"+string.Join("|",labels)+"/"+selected+"/"+caption;
+                if (menu.Stamp == stamp)
+                {
+                    menu.Dropdown?.RefreshOptionAvailability();
+                    continue;
+                }
                 menu.Stamp=stamp;menu.Places=places;
                 menu.Caption.text=caption;
-                menu.Main.interactable=menu.Kind==3||destination!=null;
-                if (menu.Kind == OwnedShopShortcut)
-                    Ui.SetButtonFill(menu.Main, menu.Main.interactable ? Ui.ButtonHot : Ui.ButtonBg);
                 // Keep room for the other shortcuts when all destinations have long names.
                 float maxWidth = menu.Kind == SleepShortcut ? 124 : 172;
                 float width=Mathf.Clamp(menu.Caption.preferredWidth+20,Mathf.Max(100,menu.MinimumWidth),maxWidth);
@@ -171,8 +230,9 @@ namespace PCShopSell.Game.UI
                 if(menu.Dropdown==null)continue;
                 menu.Dropdown.ClearOptions();
                 menu.Dropdown.AddOptions(places.Length==0?new List<string>{"暂无目的地"}:labels.ToList());
-                menu.Dropdown.SetValueWithoutNotify(Mathf.Max(0,System.Array.FindIndex(places,p=>p.Id==selected)));
+                menu.Dropdown.SetValueWithoutNotify(ShortcutOptionIndex(places, destination));
                 menu.Dropdown.RefreshShownValue();menu.Dropdown.interactable=places.Length>0;
+                menu.Dropdown.RefreshOptionAvailability();
             }
         }
         private void OpenCityPlacePeople(PCShopSell.Core.World.Place place)

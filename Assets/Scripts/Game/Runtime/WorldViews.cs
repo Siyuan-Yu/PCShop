@@ -204,7 +204,7 @@ namespace PCShopSell.Game.Runtime
             bool publicSpace=s.CurrentPlace!=null&&((s.CurrentPlace.Business??"").StartsWith("venue_",System.StringComparison.Ordinal)||((s.CurrentPlace.Business=="服装"||s.IsCityActivityVenue(s.CurrentPlace))&&s.ShopAt(s.CurrentPlace.Id)==null));
             publicSpace |= s.RunningCityActivity != null && s.RunningCityActivity.VenueId == s.CurrentPlace?.Id;
             bool nightRide = s.RunningCityActivity?.DefinitionId == "race_night";
-            bool visible = s.CurrentPlace == null || publicSpace;
+            bool visible = (s.CurrentPlace == null || publicSpace) && !GameSession.IsVenueFootball(s.RunningCityActivity);
             _root.SetActive(visible);
             if (!visible) return;
             if (_dressed != s.EquippedOutfit)

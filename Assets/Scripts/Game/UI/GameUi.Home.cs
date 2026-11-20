@@ -264,7 +264,7 @@ namespace PCShopSell.Game.UI
         /// <summary>背包里的一叠东西（占若干格）。</summary>
         private sealed class BagStack
         {
-            public string Key, Name, Kind;
+            public string Key, Name, Kind, Portrait;
             public int Count;
             public double Kg, Space;
             public Color Color;
@@ -279,6 +279,17 @@ namespace PCShopSell.Game.UI
             var stacks = CollectStacks(S.Backpack, S.Cargo);
             if (!includeQuestPages) return stacks;
 
+            foreach (var item in S.CarriedMarketFinds)
+            {
+                double kg = GameSession.UsedWeight(item);
+                stacks.Add(new BagStack
+                {
+                    Key = "market-find:" + item.Id, Name = GameSession.UsedItemName(item),
+                    Portrait = GameSession.UsedItemPortrait(item),
+                    Kind = $"{GameSession.UsedConditionName(item)} · 参考价 ¥{GameSession.UsedValue(item):N0} · 可带到自家的二手店入库",
+                    Count = 1, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = Ui.Accent
+                });
+            }
             for (int i = 0; i < 3; i++)
             {
                 if (!S.CommunityHasPiece(i)) continue;
@@ -398,7 +409,7 @@ namespace PCShopSell.Game.UI
                         title.fontStyle = FontStyle.Bold;
                         float band = expiry.HasValue ? .2f : .02f;
                         title.rectTransform.Anchor(0, band, 1, band + .21f, 2, 0, 2, 0);
-                        FillItemPortrait(cell.transform, st.Key).Anchor(.18f, band + .21f, .82f, .98f);
+                        FillItemPortrait(cell.transform, st.Portrait ?? st.Key).Anchor(.18f, band + .21f, .82f, .98f);
                         string amount = st.Key == "rice" ? $"{st.Kg * count / st.Count:0.##}kg" : count > 0 ? $"×{count}" : "…";
                         var quantity = Ui.FlatPanel(cell.transform, "BagQuantity", Ui.PanelBg, Ui.FlatWellEdge);
                         quantity.raycastTarget = false;
@@ -442,6 +453,9 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, $"{S.CurrentVehicle.Name}　负重 {carried:0.##}/{limit:0.##} 千克", 17, heavy ? Ui.Warn : Ui.Dim)
                     .Tip($"1 格 = {Backpack.KgPerSpace:0.##} 千克。\n营养 {S.Player.Nutrition:0.##}/100 · 心情 {S.Player.Mood:0.##}/100。\n选中饭菜后可吃指定饭菜；每天 12:00、18:30 或饱腹低于 25 时自动进餐，先吃最早到期的。\n摆有纸箱的家或店里，按 B 使用后仓。");
                 Ui.Bar(w.Content, (float)(limit <= 0 ? 0 : carried / limit), heavy ? Ui.Warn : Ui.Accent, 700, 10);
+                if (S.PendingMarketFind != null)
+                    Ui.Size(Ui.Button(w.Content, "领取淘到的旧物", () => { if (S.ClaimMarketFind()) w.Rebuild(); },
+                        17, Ui.ButtonHot), -1, 39);
 
                 var stacks = CollectBag(includeQuestPages: true);
                 BagGrid(w.Content, stacks, Mathf.CeilToInt((float)S.CurrentVehicle.CargoCapacity), _bagSel, key =>

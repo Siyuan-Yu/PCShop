@@ -47,12 +47,15 @@ namespace PCShopSell.Core.Session
                 SaveOutdoorBatch(d);
                 SaveCustomerBatch(d);
                 SaveOldMarket(d);
+                SaveMarketHunt(d);
                 SaveShopEventBatch(d);
                 SaveFinanceBatch(d);
                 SaveMoneyBatch(d);
                 SaveLifeBatch(d);
                 SaveNeighborhood(d);
                 SaveOnsitePlay(d);
+                SaveParkRowing(d);
+                SaveLeisurePlay(d);
                 return d;
             }
             finally
@@ -348,12 +351,15 @@ namespace PCShopSell.Core.Session
             RestoreCustomerBatch(d);
             RestoreLegacyShopSales(d);
             RestoreOldMarket(d);
+            RestoreMarketHunt(d);
             RestoreShopEventBatch(d);
             RestoreFinanceBatch(d);
             RestoreMoneyBatch(d);
             RestoreLifeBatch(d);
             RestoreNeighborhood(d);
             RestoreOnsitePlay(d);
+            RestoreParkRowing(d);
+            RestoreLeisurePlay(d);
             InitializeExpansionResidents();
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);

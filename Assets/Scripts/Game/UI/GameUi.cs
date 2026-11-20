@@ -178,6 +178,7 @@ namespace PCShopSell.Game.UI
             if (S == null) return;
             UpdateFishingInteraction(dt);
             UpdateOnsitePlay(dt);
+            MaybeResumeLeisure();
             EnsureQuarterlyExpoWindow();
             _expoHudGate.interactable=!ExpoHudOpen;
             _labelCanvas.enabled=!ExpoHudOpen&&!_ctrl.PetFocusActive;
@@ -627,7 +628,8 @@ namespace PCShopSell.Game.UI
             var venture = S.VentureAt(p.Id);
             if (venture != null) return S.PlaceTitle(p) + (venture.Paused ? "\n<size=13><color=#9C4634>停业 · 点击管理</color></size>" : "\n<size=13>营业中 · 点击管理</size>");
             if (p.Id == S.ParkPlaceId) return "电脑乐园\n<size=13>点击查看布局</size>";
-            if (S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p)) return "我的物业\n<size=13>托管出租中</size>";
+            if (S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p))
+                return p.Name + "\n<size=13>已购 · " + OwnedPropertyStatus(p) + "</size>";
             switch (p.Kind)
             {
                 case PlaceKind.Wholesaler:
@@ -1199,7 +1201,12 @@ namespace PCShopSell.Game.UI
                 }
                 else if (choice.Details == null)
                 {
-                    if (S.ResolveEvent(index)) w.Close();
+                    bool scratchLottery = def.Id == "money_win_lottery";
+                    int? previousTicket = scratchLottery ? S.ScratchTicket?.Id : null;
+                    if (!S.ResolveEvent(index)) return;
+                    w.Close();
+                    if (scratchLottery && S.ScratchTicket is { Paid: false } ticket && ticket.Id != previousTicket)
+                        OpenEventScratch();
                 }
                 else
                 {

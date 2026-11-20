@@ -1,5 +1,6 @@
 using System;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Session;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
@@ -21,13 +22,22 @@ namespace PCShopSell.Game.Runtime
             }
         }
         public static float VenueHeight(Place p)=>p.Business=="venue_expo"?9:p.Business=="服装"?5.5f:p.Business=="venue_ktv"?7+p.Tier*2:p.Business=="venue_bar"?5+p.Tier*1.5f:5.5f+p.Tier*1.7f;
-        public static bool HasExterior(Place p)=>p.Business=="服装"||p.Business=="venue_restaurant"||p.Business=="venue_ktv"||p.Business=="venue_bar"||p.Business=="venue_expo";
+        public static bool HasExterior(Place p)=>p.Business=="服装"||p.Business=="venue_restaurant"||p.Business=="venue_ktv"||p.Business=="venue_bar"||p.Business=="venue_expo"||CityLifeCatalog.LeisureAt(p.Id)!=LeisureGame.None;
         public static void Venue(Transform root,Place p,float w,float d)
         {
             float h=VenueHeight(p);string kind=p.Business??"";
             StreetLife(root,w,d,h,p.Name.Length,true);
             Color wall=p.Tier>=2?ArtDirection.Hex("D9CBB8"):ArtDirection.Hex("D6BC9D");
             Color accent=p.Model=="warehouse"?ArtDirection.Blue:kind=="venue_ktv"?ArtDirection.Hex("776088"):kind=="venue_bar"?ArtDirection.Hex("394B50"):kind=="venue_expo"?ArtDirection.Blue:ArtDirection.Clay;
+            accent = CityLifeCatalog.LeisureAt(p.Id) switch
+            {
+                LeisureGame.Pachinko => ArtDirection.Hex("81584F"),
+                LeisureGame.Poker => ArtDirection.Hex("606258"),
+                LeisureGame.Claw => ArtDirection.Hex("567D7B"),
+                LeisureGame.Billiards => ArtDirection.Hex("4F7058"),
+                LeisureGame.Cinema => ArtDirection.Hex("745D79"),
+                _ => accent
+            };
             Box(root,"HallBack",new Vector3(0,h/2,d-.2f),new Vector3(w,h,.4f),wall,true);
             foreach(int side in new[]{-1,1})Box(root,"HallSide",new Vector3(side*(w/2-.2f),h/2,d/2),new Vector3(.4f,h,d),wall,true);
             // A genuine frontage, with an open central doorway, rather than an empty room and sign.

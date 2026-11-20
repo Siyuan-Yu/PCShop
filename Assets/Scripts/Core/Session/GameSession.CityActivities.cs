@@ -33,7 +33,10 @@ namespace PCShopSell.Core.Session
             return City.HasPlace(id) ? id : null;
         }
         public string CityShopShortcut { get; private set; }
-        public void SetCityShopShortcut(string placeId) {if(MyShops.Any(s=>s.Place.Id==placeId))CityShopShortcut=placeId;}
+        public void SetCityShopShortcut(string placeId)
+        {
+            if (ShopAt(placeId) != null || VentureAt(placeId) != null) CityShopShortcut = placeId;
+        }
         public IReadOnlyList<string> CityFavorites => _cityFavorites;
         public IReadOnlyList<string> CityRecent => _cityRecent;
         public IReadOnlyList<CityActivity> CityActivities => _cityActivities;
@@ -225,6 +228,9 @@ namespace PCShopSell.Core.Session
             string logicalId = def.LogicalId ?? definitionId;
             if(logicalId.StartsWith("expo_")&&!CityExpoDay(start,logicalId=="expo_comic"))return "不在本届展期，下一届按固定月历开放";
             var ids=(persons??Array.Empty<string>()).Where(id=>!string.IsNullOrEmpty(id)).Distinct().ToArray();
+            if (def.Id == ParkRowingActivityId && ids.Length > 1) return "一条小船可坐两人（含玩家）。";
+            if (ids.Length > 1 && CityLifeCatalog.LeisureAt(venue.Id) is LeisureGame.Poker or LeisureGame.Billiards)
+                return "本场只约一位同行者。";
             if(ids.Length>5)return "一个活动最多六人（含玩家）";
             if(IsOwnedVenue(venue)&&ids.Length+1>VenueCapacity(venue))return "该场地最多容纳 "+VenueCapacity(venue)+" 人（含玩家），请减少同行人数";
             long end=start+def.Minutes;
@@ -563,6 +569,8 @@ namespace PCShopSell.Core.Session
                     StartFishingActivity(a);
                     StartOutdoorBatch(a);
                     StartOnsitePlay(a);
+                    StartParkRowing(a);
+                    StartLeisurePlay(a);
                     foreach(var shop in _shops)shop.Sim.PlayerPresent=false;
                     if (a.ServiceConfirmed && a.ServiceChoice >= 0 && a.DefinitionId != "fishing" && !IsVenueSport(a)
                         && !IsCookTasting(a) && !IsAutomaticMeal(a))
@@ -700,7 +708,9 @@ namespace PCShopSell.Core.Session
             var a=_cityActivities.FirstOrDefault(x=>x.Id==id&&x.Active);if(a==null)return false;
             if (a.State == CityActivityPhase.Running && UsesManualVenuePass(a))
                 return SettleManualAttempts(a, UsedManualAttempts(a));
-            bool freeWalk = CityActivityService(a)?.Id == "hike" && a.EntryCostCents == 0;
+            if (a.State == CityActivityPhase.Running && IsParkRowing(a))
+                return SettleParkRowing(a);
+            bool freeWalk = IsParkWalk(CityActivityService(a)) && a.EntryCostCents == 0;
             EndCityActivity(a,a.State==CityActivityPhase.Running?CityActivityPhase.Interrupted:CityActivityPhase.Cancelled,
                 IsInteractiveFishingActivity(a) && a.EntryPaid ? "已收竿，带走的鱼获仍在背包"
                     : freeWalk ? a.State == CityActivityPhase.Running ? "已提前结束散步" : "已取消散步"
@@ -765,6 +775,8 @@ namespace PCShopSell.Core.Session
                 foreach (var participant in a.Participants)
                     AwardCityActivityRelation(a, participant.PersonId, reward);
             }
+            RecordActivityFarewells(a, phase);
+            EndLeisurePlay(a);
             EndFishingActivity(a);
             foreach(var participant in a.Participants)
             {
@@ -809,7 +821,7 @@ namespace PCShopSell.Core.Session
                 a.PlayerStatsAfter=CityActivityPlayerStats();
                 string attendance=a.Participants.Length==0?"你独自":"你和"+string.Join("、",a.Participants.Select(p=>CityPerson(p.PersonId)?.Name??"朋友"));
                 string route = VenueServiceName(def, Math.Max(0, a.ServiceChoice));
-                string serviceSummary = def?.Id == "hike" && a.EntryCostCents == 0 ? "散步路线：" + route
+                string serviceSummary = IsParkWalk(def) && a.EntryCostCents == 0 ? "散步路线：" + route
                     : "本次服务：" + route + " · 支出 " + (a.EntryCostRecorded ? Money.FromCents(a.EntryCostCents) : Money.FromYuan(def?.PriceYuan ?? 0));
                 var lines=new List<string> {attendance+"在"+City.GetPlace(a.VenueId).Name+"参加了"+(def?.Name??"活动")+"。",
                     serviceSummary,

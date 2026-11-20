@@ -53,6 +53,7 @@ namespace PCShopSell.Game.UI
         private float _cameraDistance = DefaultCameraDistance;
         private Bounds _cityBounds;
         private Vector2[] _districtOutline;
+        private bool _assetOverview;
         private HashSet<string> _placeIds;
         private HashSet<string> _selectableIds;
         private bool _dragged;
@@ -80,9 +81,9 @@ namespace PCShopSell.Game.UI
         }
 
         public void Initialize(GameController game, ViewState state, Place[] units, float width, float height,
-            bool residential = false,IReadOnlyList<PedestrianBand> pedestrianBands = null)
+            bool residential = false,IReadOnlyList<PedestrianBand> pedestrianBands = null, bool assetOverview = false)
         {
-            _game = game; _state = state; _rect = (RectTransform)transform;
+            _game = game; _state = state; _rect = (RectTransform)transform; _assetOverview = assetOverview;
             Width = width; Height = height;
             _camera = new GameObject("AgencyStreetCamera").AddComponent<Camera>();
             _camera.enabled = false;
@@ -95,11 +96,12 @@ namespace PCShopSell.Game.UI
             var extra = _camera.GetUniversalAdditionalCameraData();
             extra.renderPostProcessing = false;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
-            _camera.transform.rotation = Quaternion.Euler(52, 45, 0);
+            _camera.transform.rotation = assetOverview ? Quaternion.Euler(68, 5, 0) : Quaternion.Euler(60, 45, 0);
             _placeIds = new HashSet<string>(units.Select(p => p.Id));
-            _selectableIds = new HashSet<string>(units.Where(p => residential ? p.Kind == PlaceKind.Home
-                : CanSelectCommercial(p)).Select(p => p.Id));
-            FrameDistrict(units);
+            _selectableIds = new HashSet<string>(units.Where(p => assetOverview || (residential ? p.Kind == PlaceKind.Home
+                : CanSelectCommercial(p))).Select(p => p.Id));
+            if (assetOverview) FrameWholeCity();
+            else FrameDistrict(units);
             _texture = new RenderTexture(Mathf.RoundToInt(width), Mathf.RoundToInt(height), 24)
             { name = "AgencyStreetOverview", filterMode = FilterMode.Bilinear };
             _camera.targetTexture = _texture;
@@ -112,6 +114,32 @@ namespace PCShopSell.Game.UI
         private bool CanSelectCommercial(Place place) => IsDistrictOverviewPlace(place)
             || (place.Kind == PlaceKind.Shop && (_game.Session.IsMyShop(place)
                 || _game.Session.VentureAt(place.Id) != null || _game.Session.PropertyAt(place.Id) != null));
+
+        private void FrameWholeCity()
+        {
+            _districtOutline = null;
+            _cityBounds = _game.World.CityBounds;
+            var footprint = new Bounds(new Vector3(_cityBounds.center.x, 0, _cityBounds.center.z),
+                new Vector3(_cityBounds.size.x, 0, _cityBounds.size.z));
+            var projected = ProjectedBuildingBounds(new[] { footprint }, _camera.transform.rotation);
+            _overview = footprint.center;
+            _overviewSize = Mathf.Max(projected.extents.y, projected.extents.x / _camera.aspect) * 1.08f;
+            _cameraDistance = Mathf.Max(DefaultCameraDistance, _overviewSize * 2.2f);
+            _camera.farClipPlane = _cameraDistance + Mathf.Max(DefaultFarClip, footprint.size.magnitude);
+        }
+
+        public void FrameAssetRegion(LayoutAgencyDistrictData district, bool reset = true)
+        {
+            if (district == null) FrameWholeCity();
+            else
+            {
+                FrameDistrict(_game.Session.City.PublicPlaces.Where(place => district.streets.Contains(place.StreetId)).ToArray());
+                _districtOutline = null;
+                _cityBounds = _game.World.CityBounds;
+            }
+            if (reset) ResetView();
+            else RequestMapRender();
+        }
 
         private void FrameDistrict(Place[] units)
         {
@@ -349,20 +377,22 @@ namespace PCShopSell.Game.UI
             var intensities = suns.Select(l => l.intensity).ToArray();
             var colors = suns.Select(l => l.color).ToArray();
             var rotations = suns.Select(l => l.transform.rotation).ToArray();
-            // Hide other streets only during this camera capture; restore the live world below.
-            var outside = _game.World.Places.Values.Where(p => !_placeIds.Contains(p.Place.Id) && p.Root.activeSelf).ToArray();
             bool worldWasActive = _game.World.Root.activeSelf;
             try
             {
                 _game.World.Root.SetActive(true);
                 if (_pedestrianOverlay != null) _pedestrianOverlay.SetActive(true);
                 foreach (var c in canvases) c.enabled = false;
-                foreach (var place in outside) place.Root.SetActive(false);
                 if (_rentalGlow != null) _rentalGlow.SetActive(false);
                 RenderSettings.fog = false;
                 RenderSettings.ambientMode = AmbientMode.Flat;
-                RenderSettings.ambientLight = new Color(.48f, .56f, .65f);
-                foreach (var sun in suns) { sun.intensity = 1.35f; sun.color = new Color(1, .97f, .90f); sun.transform.rotation=Quaternion.Euler(52,-32,0); }
+                RenderSettings.ambientLight = _assetOverview ? new Color(.39f, .45f, .49f) : new Color(.48f, .56f, .65f);
+                foreach (var sun in suns)
+                {
+                    sun.intensity = _assetOverview ? 1.12f : 1.35f;
+                    sun.color = new Color(1, .97f, .90f);
+                    sun.transform.rotation = Quaternion.Euler(52, -32, 0);
+                }
                 _camera.Render();
             }
             finally
@@ -374,7 +404,6 @@ namespace PCShopSell.Game.UI
                 RenderSettings.ambientLight = ambient;
                 for (int i = 0; i < suns.Length; i++) { suns[i].intensity = intensities[i]; suns[i].color = colors[i]; suns[i].transform.rotation=rotations[i]; }
                 foreach (var c in canvases) if (c != null) c.enabled = true;
-                foreach (var place in outside) if (place.Root != null) place.Root.SetActive(true);
                 _game.World.Root.SetActive(worldWasActive);
             }
         }
@@ -382,7 +411,24 @@ namespace PCShopSell.Game.UI
         internal Bounds BoundsOf(PlaceVisual building)
         {
             if (!_buildingBounds.TryGetValue(building, out var bounds))
-                _buildingBounds.Add(building, bounds = BuildingBounds(building));
+            {
+                var block = _game.Session.City.Blocks.FirstOrDefault(candidate => candidate.homeId == building.Place.Id);
+                if (block == null) bounds = BuildingBounds(building);
+                else
+                {
+                    // Static batching shares a large mesh across homes. Use this lot's own footprint.
+                    var transform = building.Root.transform;
+                    float w = (float)block.width, d = (float)block.depth, h = Mathf.Max(4, (float)block.height);
+                    bounds = new Bounds(transform.position, Vector3.zero);
+                    foreach (int side in new[] { -1, 1 })
+                    foreach (float depth in new[] { 0, d })
+                    {
+                        bounds.Encapsulate(transform.TransformPoint(side * w / 2, 0, depth));
+                        bounds.Encapsulate(transform.TransformPoint(side * w / 2, h, depth));
+                    }
+                }
+                _buildingBounds.Add(building, bounds);
+            }
             return bounds;
         }
 

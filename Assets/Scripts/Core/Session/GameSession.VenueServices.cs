@@ -18,6 +18,9 @@ namespace PCShopSell.Core.Session
             string item = def.Choices != null && choice < def.Choices.Length ? def.Choices[choice] : def.Name;
             return def.Id == "ktv" ? "练歌包间 · " + item : item;
         }
+        public static bool IsBarDrinkService(CityActivityDefinition def)
+            => def?.Id is "bar" or "bar_tier2" or "bar_tier3" or "bar_tier4";
+
         public string VenuePriceRange(CityActivityDefinition def)
         {
             if (def.ServiceCount < 2) return VenuePlayerPrice(def, 0).ToString();
@@ -40,6 +43,8 @@ namespace PCShopSell.Core.Session
             if (IsCookTasting(activity))
                 return "继续试吃，尝完每道菜再给罗师傅评价。";
             var def = CityActivityService(activity);
+            if (IsBarDrinkService(def) && activity.BarHoneyAdded)
+                return activity.ServiceChoice == 0 ? "柠檬还带一点酸，蜂蜜把酸味收柔和了。" : "乌龙里多了淡淡的蜜香。";
             return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
         }
         public const int CityArrivalWindowMinutes = 60;
@@ -164,6 +169,7 @@ namespace PCShopSell.Core.Session
             if (matchingPass || def?.EventOnly == true && booking?.DefinitionId == def.Id) def = def.AtVenue(booking.VenueId);
             if (def == null || CurrentPlace?.Id != def.VenueId) return "到场后才能选择服务";
             if (choice < 0 || choice >= def.ServiceCount) return "请选择菜单或服务项目";
+            if (LeisureServiceBlocker(def.VenueId) is string leisureBlocker) return leisureBlocker;
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束正在进行的事情";
             int duration = matchingPass ? booking.Duration : def.Minutes;
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, duration)) return "该服务无法在闭店前完成";
@@ -207,22 +213,25 @@ namespace PCShopSell.Core.Session
             if (booking.DefinitionId == "social_70" && !HasOpenedComputerShop) return "请先开办可交付的电脑店";
             var definition = CityActivityService(booking);
             if (definition == null) return "找不到预约的活动";
+            if (LeisureServiceBlocker(booking.VenueId) is string leisureBlocker) return leisureBlocker;
             var price = CityActivityEntryPrice(definition, booking.ServiceChoice, booking);
             return !booking.EntryPaid && price.IsPositive && !Ledger.CanAfford(price) ? $"现金不足，需要 {price}" : null;
         }
 
-        public bool StartVenueAppointment(string activityId)
+        public bool StartVenueAppointment(string activityId, bool? barHoneyAdded = null)
         {
             if (string.IsNullOrEmpty(activityId)) return Fail("预约当前无法开始");
             var booking = FindPendingVenueActivity(CurrentPlace, activityId);
             if (booking == null || !booking.ServiceConfirmed) return Fail("预约当前无法开始");
             PrepareVenueCompanions(CurrentPlace, activityId);
             if (VenueAppointmentStartBlocker(booking) is string why) return Fail(why);
+            if (barHoneyAdded.HasValue && IsBarDrinkService(CityActivityService(booking)))
+                booking.BarHoneyAdded = barHoneyAdded.Value;
             TickCityActivities(Clock.Now.TotalMinutes, booking.Id);
             return booking.State == CityActivityPhase.Running;
         }
 
-        public bool SelectVenueService(string definitionId, int choice, string activityId = null)
+        public bool SelectVenueService(string definitionId, int choice, string activityId = null, bool barHoneyAdded = false)
         {
             PrepareVenueCompanions(CurrentPlace, activityId);
             string why = VenueServiceBlocker(definitionId, choice, activityId);
@@ -233,10 +242,11 @@ namespace PCShopSell.Core.Session
             if (booking == null) return false;
             booking.ServiceDefinitionId = definitionId;
             booking.ServiceChoice = choice;
+            booking.BarHoneyAdded = IsBarDrinkService(def) && barHoneyAdded;
             booking.ServiceConfirmed = true;
             PrepareVenueCompanions(CurrentPlace, booking.Id);
             TickCityActivities(Clock.Now.TotalMinutes, IsInteractiveFishingActivity(booking) ? booking.Id : null);
-            if (def.Id == "hike")
+            if (IsParkWalk(def))
                 Say("已选择" + VenueServiceName(def, choice) + "，免费散步。");
             else if (!UsesManualVenuePass(booking))
                 Say("已选择" + VenueServiceName(def, choice) + (booking.HostPays ? "，由邀请人请客。"

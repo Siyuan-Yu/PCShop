@@ -47,7 +47,7 @@ namespace PCShopSell.Game.UI
         }
         private Window ShowBusinessPanel(bool agencyOnly)
         {
-            if (_businessTab == 0) { OpenAssetWorkspace(); return null; }
+            if (_businessTab == 0) { OpenCityFinanceOverview(); return null; }
             if (_businessTab == 1) { OpenProcurementAgreement(); return null; }
             if (_businessTab == 5) { OpenCityResidence(); return null; }
             S.RefreshEnterpriseOffer();

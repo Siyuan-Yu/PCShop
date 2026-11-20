@@ -21,6 +21,7 @@ namespace PCShopSell.Game.Runtime
         private float _furnitureSeatHeight, _furnitureSeatBlend;
         private Vector3 _reachTarget;
         private float _reachWeight, _reachCrouch;
+        private float _kickFollowThrough;
         private int _reachArm = 1;
         private FigureWorkAction _workAction;
         private GameObject _spatula, _screwdriver;
@@ -88,6 +89,13 @@ namespace PCShopSell.Game.Runtime
             _reachWeight = weight;
             _reachCrouch = crouch;
             _reachArm = leftHand ? 0 : 1;
+            ApplyPose();
+        }
+
+        internal void SetKickPose(float followThrough)
+        {
+            if (Mathf.Approximately(_kickFollowThrough, followThrough)) return;
+            _kickFollowThrough = followThrough;
             ApplyPose();
         }
 
@@ -233,6 +241,16 @@ namespace PCShopSell.Game.Runtime
                 const float armSpread = 1.5f;
                 _arms[i].localRotation = Quaternion.Euler(armSwing * 14f * _blend, 0, i == 0 ? -armSpread : armSpread);
                 SetElbow(i, 6 + (4 - 3 * armSwing) * _blend);
+            }
+            if (_kickFollowThrough > 0)
+            {
+                float kick = _kickFollowThrough;
+                _hips[1].localRotation = Quaternion.Euler(-62 * kick, 0, 0);
+                _knees[1].localRotation = Quaternion.Euler(12 * kick, 0, 0);
+                _feet[1].localRotation = Quaternion.Euler(-13 * kick, 0, 0);
+                _arms[0].localRotation = Quaternion.Euler(-28 * kick, 0, -22 * kick);
+                _arms[1].localRotation = Quaternion.Euler(17 * kick, 0, 24 * kick);
+                return;
             }
             if (_reachWeight > 0)
             {

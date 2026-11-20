@@ -459,7 +459,7 @@ namespace PCShopSell.Core.Session
                     var listed = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Where(item => item.Product != ArtifactProduct).Take(count).ToArray();
                     if (listed.Length < count) return null;
                     quote.UsedIds = listed.Select(item => item.Id).ToArray();
-                    quote.ProductName = string.Join("、", listed.Select(item => UsedNames[item.Product]));
+                    quote.ProductName = string.Join("、", listed.Select(item => item.ProductName ?? UsedNames[item.Product]));
                     price = Money.FromYuan(listed.Sum(item => item.Price));
                     break;
                 default:

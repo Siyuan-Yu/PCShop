@@ -27,12 +27,19 @@ namespace PCShopSell.Game.UI
         // Selection is local UI state. Looking at a property never moves the player or signs a lease.
         private void BuildAgency(Window w, Place agency)
         {
-            if(_agencyMapDistrictId!=agency.Id){_agencyMapDistrictId=agency.Id;_agencyViewState=new AgencyStreetMap.ViewState();}
+            if(_agencyMapDistrictId!=agency.Id){_agencyMapDistrictId=agency.Id;_agencyViewState=new AgencyStreetMap.ViewState();_agencyMyProperties=false;}
             var versions = Ui.Row(w.Content, 42, 8);
-            Ui.Size(Ui.Button(versions,"商铺",()=>{_agencyResidential=false;w.Rebuild();},21,Ui.SelectedButton(!_agencyResidential)),-1,42,1).name="AgencyCommercialTab";
-            Ui.Size(Ui.Button(versions,"住宅",()=>{_agencyResidential=true;w.Rebuild();},21,Ui.SelectedButton(_agencyResidential)),-1,42,1).name="AgencyResidentialTab";
+            Ui.Size(Ui.Button(versions,"商铺",()=>{_agencyMyProperties=false;_agencyResidential=false;w.Rebuild();},21,Ui.SelectedButton(!_agencyMyProperties&&!_agencyResidential)),-1,42,1).name="AgencyCommercialTab";
+            Ui.Size(Ui.Button(versions,"住宅",()=>{_agencyMyProperties=false;_agencyResidential=true;w.Rebuild();},21,Ui.SelectedButton(!_agencyMyProperties&&_agencyResidential)),-1,42,1).name="AgencyResidentialTab";
+            Ui.Size(Ui.Button(versions,"我的房产",()=>{_agencyMyProperties=true;_agencyMyResidences=_agencyResidential;w.Rebuild();},21,
+                Ui.SelectedButton(_agencyMyProperties)),-1,42,1).name="AgencyOwnedTab";
             System.Action refreshProperty = null;
             BuildAgencyHeader(w, agency, () => refreshProperty?.Invoke());
+            if (_agencyMyProperties)
+            {
+                BuildAgencyOwnedProperties(w, agency);
+                return;
+            }
             if (_agencyResidential)
             {
                 refreshProperty = BuildResidentialAgency(w, agency);
@@ -90,7 +97,7 @@ namespace PCShopSell.Game.UI
                 summary.text = $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#655E52>{detail}</color></size>";
             }
 
-            if (_agencyResidential || !BusinessUnlocked || S.DistrictAccessBlocker(agency) != null) return;
+            if (_agencyMyProperties || _agencyResidential || !BusinessUnlocked || S.DistrictAccessBlocker(agency) != null) return;
             void OpenSection(int section)
             {
                 var business = OpenBusinessSection(section);
@@ -114,18 +121,25 @@ namespace PCShopSell.Game.UI
         private static (RectTransform map, RectTransform detail) AgencyPropertyColumns(Transform parent, string mapName, string detailName)
         {
             var body = Ui.Row(parent, 740, 14);
+            body.GetComponent<LayoutElement>().preferredHeight = -1;
+            var layout = body.GetComponent<HorizontalLayoutGroup>();
+            layout.childForceExpandHeight = false;
+            layout.childAlignment = TextAnchor.UpperLeft;
             var map = Ui.Panel(body, mapName, Ui.PanelBg2).rectTransform;
             Ui.Size(map, 1120, 740);
             map.GetComponent<LayoutElement>().minWidth = 1120;
             var detailPanel = Ui.Panel(body, detailName, Ui.PanelBg2).rectTransform;
-            Ui.Size(detailPanel, -1, 740, 1);
-            Ui.VList(detailPanel, 10, 10);
+            Ui.Size(detailPanel, -1, -1, 1).GetComponent<LayoutElement>().minHeight = 740;
+            Ui.VList(detailPanel, 8, 10);
             return (map, detailPanel);
         }
 
         private static void AgencyPropertyHeading(Transform parent, string title, string status)
         {
-            Para(parent, $"<b>{title}</b>", 23);
+            var heading = Ui.Size(Ui.Label(parent, $"<b>{title}</b>", 23), -1, 32);
+            heading.resizeTextForBestFit = true;
+            heading.resizeTextMinSize = 17;
+            heading.resizeTextMaxSize = 23;
             Ui.Size(Ui.Label(parent, status, 17, color: Ui.Accent), -1, 22);
         }
 
@@ -184,18 +198,18 @@ namespace PCShopSell.Game.UI
         private string AgencyStatus(Place p, ShopListing listing)
         {
             if (p.Kind == PlaceKind.Agency) return "房产中介 · 你在这里";
-            if (OwnsAgencyCommercialProperty(p)) return S.IsMyShop(p) ? "我的产权 · 自营" : "我的产权";
-            if (S.IsMyShop(p)) return S.ShopAt(p) == S.MainShop ? "我的主店" : S.PlaceTitle(p);
-            if (S.IsPendingShop(p)) return $"已提前签下 · {S.ShopHandoverText(S.PendingLease.StartDay)}";
-            if (S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null) return "我的经营资产";
+            if (OwnsPropertyAt(p)) return "已购 · " + OwnedPropertyStatus(p);
+            if (S.IsPendingShop(p)) return $"已租 · {S.ShopHandoverText(S.PendingLease.StartDay)}";
+            if (LeasesPropertyAt(p)) return "已租 · 经营";
             if (listing == null) return S.IsVacant(p) ? "空置 · 暂未挂牌" : "营业中 · 暂未挂牌";
             return S.IsAdvance(listing) ? S.ShopHandoverText(listing.OpenDay) : "正在出租";
         }
 
         private Color AgencyColor(Place p, ShopListing listing)
         {
-            if (S.IsMyShop(p) || S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null || p.Kind == PlaceKind.Agency)
-                return new Color32(81, 111, 126, 255);
+            if (OwnsPropertyAt(p)) return PropertyOwnedColor;
+            if (LeasesPropertyAt(p)) return PropertyRentedColor;
+            if (p.Kind == PlaceKind.Agency) return AgencyLocationColor;
             if (listing == null) return new Color32(190, 193, 177, 255);
             return listing.OpenDay > S.Clock.Today.TotalDays ? AgencyFuture : Ui.ButtonHot;
         }
@@ -225,13 +239,11 @@ namespace PCShopSell.Game.UI
                 Para(facts, $"{GameSession.ShelfLimit(p.Size)} 个货架 · {GameSession.StaffLimit(p.Size)} 名员工", 16, Ui.Dim);
             else
                 Para(facts, "专用场地 · " + S.VenueBusinessName(p), 16, Ui.Dim);
-            var footfall = Ui.FlatPanel(overview, "AgencyFootfall", Ui.FlatWell, Ui.FlatWellEdge);
-            Ui.Size(footfall, -1, 44);
+            var overviewActions = Ui.Row(overview, 38, 8);
             var entrants = S.ExpectedDailyShopEntrants(p, CompetitionPreviewKind(p));
-            var dailyEntrants = Ui.Label(footfall.transform, $"预计每日入店　<size=27><b><color=#386047>{entrants:N0}</color></b></size> 人", 18);
+            var dailyEntrants = Ui.Size(Ui.Label(overviewActions, $"预计每日入店 <b><color=#386047>{entrants:N0}</color></b> 人", 17), 0, 38, 1);
             dailyEntrants.name = "AgencyDailyEntrants";
-            dailyEntrants.rectTransform.Fill(10);
-            Ui.Size(Ui.Button(overview, dedicatedVenue ? "场地详情 ›" : "商圈详情与试算 ›", () =>
+            Ui.Size(Ui.Button(overviewActions, dedicatedVenue ? "场地详情 ›" : "商圈详情与试算 ›", () =>
             {
                 if (dedicatedVenue)
                     OpenWindow("场地详情 · " + p.Name, 660, 470, details =>
@@ -240,17 +252,21 @@ namespace PCShopSell.Game.UI
                         Para(details.Content, $"只能延续原有服务。接手后需自己值守或另行招聘。每日维护 ¥{S.VenueMaintenanceYuan(p)}，租金及工资另计。", 17);
                     });
                 else OpenShopCompetition(p, agencyDetails: true);
-            }, 16), -1, 32);
+            }, 15), 146, 38);
             BuildCommercialSettlement(AgencyPropertyCard(parent, "AgencySettlement"), p, w);
         }
 
         private void BuildCommercialSettlement(Transform settlement, Place p, Window w)
         {
+            if (S.PropertyAt(p.Id) is OwnedProperty property)
+            {
+                BuildCommercialPropertyActions(settlement, p, property, w);
+                return;
+            }
             ShopListing l = AgencyListing(p);
             var own = S.ShopAt(p);
             bool pending = S.IsPendingShop(p);
-            var property = S.PropertyAt(p.Id);
-            var purchase = property == null ? S.PreviewCityPropertyPurchase(p.Id, false) : null;
+            var purchase = S.PreviewCityPropertyPurchase(p.Id, false);
             bool managesLease = own != null && !own.OwnsProperty;
             bool hasRental = l != null || managesLease || pending;
             Line(settlement, purchase != null ? (hasRental ? "办理结算" : "全款购买结算") :
@@ -299,9 +315,8 @@ namespace PCShopSell.Game.UI
                 AgencyFeeLine(settlement, "已交押金", S.PendingLease.Deposit.ToString());
                 Line(settlement, $"{S.ShopHandoverText(S.PendingLease.StartDay)} · 等待期间照常计租", 16, Ui.Warn).name = "AgencyEntryCountdown";
             }
-            else if (property == null)
+            else
                 Para(settlement, S.VentureAt(p.Id) != null ? "这间铺面已纳入你的资产。" : "这间铺面目前没有租购报价。", 17, Ui.Dim);
-            if (property != null) BuildCommercialPropertyActions(settlement, p, property, w);
         }
 
         private void BuildAgencyShopNotes(Transform parent, Place place)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Session;
@@ -129,13 +129,16 @@ namespace PCShopSell.Game.Runtime
         private void UpdateCityPresentation(float dt, bool visible)
         {
             if (_citySession == null) return;
+            var activity = _citySession.RunningCityActivity;
+            var footballKeeper = GameSession.IsVenueFootball(activity) ? activity.Participants.FirstOrDefault()?.PersonId : null;
             foreach (var pair in _cityWalkers)
             {
                 var view = pair.Value;
                 if (view.Go == null) continue;
                 var state = _citySession.CityPersonState(pair.Key);
                 bool nightRide = IsNightRider(_citySession, state);
-                bool show = visible && state != null && (nightRide || !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state) && !_expoPresented.Contains(state.PersonId));
+                bool show = visible && state != null && pair.Key != footballKeeper
+                    && (nightRide || !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state) && !_expoPresented.Contains(state.PersonId));
                 if (view.Go.activeSelf != show) view.Go.SetActive(show);
                 if (!show) continue;
                 if (nightRide && view.NightBike == null)

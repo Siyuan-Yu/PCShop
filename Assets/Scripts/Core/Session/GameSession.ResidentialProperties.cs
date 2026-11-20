@@ -71,7 +71,7 @@ namespace PCShopSell.Core.Session
         {
             if (place == null || DistrictAccessBlocker(place) != null) return false;
             return place == Home || (place.Kind == PlaceKind.Home && (HasResidentialLease(place) || PropertyAt(place.Id)?.UseMode == "vacant")
-                && !_cityPeople.Values.Any(p => p.HomePlaceId == place.Id && p.PersonId != CityLifeCatalog.InvitationTestPersonId));
+                && !HasResidentialOccupants(place.Id));
         }
 
         private string ResidentialAgencyBlocker(string id)
@@ -250,7 +250,7 @@ namespace PCShopSell.Core.Session
                 if(tenants.Length>0)return "已有NPC居住，不能租住或直接搬入；可以带住户购买产权";
                 if(HomePriceCents>0&&(!keepCurrentResidence||place==Home))return place==Home?"这是你的自有住宅":"请先出售当前自住房，再更换自住住宅";
                 if(!purchase&&place==Home)return "当前已租住这里";
-                if(owned!=null&&owned.UseMode=="managed")return "住宅已有租约，不能直接搬入";
+                if(owned!=null&&owned.UseMode=="leased")return "住宅已有租约，不能直接搬入";
                 if(purchase&&owned!=null)return "已持有产权，请选择搬入自有空房";
             }
             Money due=!selfUse||purchase?ResidentialPurchaseDue(id,mortgage,selfUse,keepCurrentResidence)

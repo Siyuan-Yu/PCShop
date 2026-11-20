@@ -169,16 +169,17 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content, S.City.StreetName(place.StreetId) + " · " + CityMapPlaceType(place), 21, Ui.Accent);
                 Line(w.Content, "开放：" + CityPlaceHours(place), 19);
-                int minutes = S.CityTravelMinutes(place);
-                Line(w.Content, minutes >= int.MaxValue / 8 ? "当前路线不可达，请换一处目的地。" : "当前交通方式预计 " + minutes + " 游戏分钟；按真实路线出发。", 18, minutes >= int.MaxValue / 8 ? Ui.Warn : Ui.Dim);
-                if (S.ClosedReason(place) != null) Para(w.Content, S.ClosedReason(place) + "。可以走到门口，抵达后会再次检查进入条件。", 17, Ui.Warn);
-                Ui.Size(Ui.Button(w.Content, "前往" + CityMapPlaceName(place), () => { CloseAllWindows(); _ctrl.GoToPlace(place); }, 20, Ui.ButtonHot, minutes < int.MaxValue / 8), -1, 48);
+                string blocker = S.CityDestinationTravelBlocker(place, out int minutes, out _, allowCurrentPlace: true);
+                bool canTravel = blocker == null;
+                Line(w.Content, blocker ?? (S.CurrentPlace == place ? "已在此处" : "当前交通方式预计 " + minutes + " 游戏分钟；按真实路线出发。"), 18, canTravel ? Ui.Dim : Ui.Warn);
+                if (canTravel && S.ClosedReason(place) is string closed) Para(w.Content, closed + "。可以走到门口，抵达后会再次检查进入条件。", 17, Ui.Warn);
+                Ui.Size(Ui.Button(w.Content, "前往" + CityMapPlaceName(place), () => { CloseAllWindows(); _ctrl.GoToPlace(place); }, 20, Ui.ButtonHot, canTravel), -1, 48);
                 bool favorite = S.CityFavorites.Contains(place.Id);
                 Ui.Size(Ui.Button(w.Content, favorite ? "取消收藏" : "收藏地点（最多5个）", () => { S.SetCityFavorite(place.Id, !favorite); w.Rebuild(); }, 18), -1, 44);
-                Ui.Size(Ui.Button(w.Content, "设为底栏自定目的地", () => { S.SetCityDefault(place.Id); RefreshShortcutMenus(); CloseAllWindows(); }, 18), -1, 44);
+                Ui.Size(Ui.Button(w.Content, "设为底栏自定目的地", () => { S.SetCityDefault(place.Id); RefreshShortcutMenus(); CloseAllWindows(); }, 18, interactable: canTravel), -1, 44);
                 var shortcuts = Ui.Row(w.Content, 44, 8);
-                Ui.Size(Ui.Button(shortcuts, "替换中介快捷位", () => { S.SetCityShortcut(place.Id, true); Toast("快捷位已保存。"); }, 17), -1, 44, 1);
-                Ui.Size(Ui.Button(shortcuts, "替换农贸快捷位", () => { S.SetCityShortcut(place.Id, false); Toast("快捷位已保存。"); }, 17), -1, 44, 1);
+                Ui.Size(Ui.Button(shortcuts, "替换中介快捷位", () => { S.SetCityShortcut(place.Id, true); Toast("快捷位已保存。"); }, 17, interactable: canTravel), -1, 44, 1);
+                Ui.Size(Ui.Button(shortcuts, "替换农贸快捷位", () => { S.SetCityShortcut(place.Id, false); Toast("快捷位已保存。"); }, 17, interactable: canTravel), -1, 44, 1);
                 foreach (var a in S.CityActivities.Where(a => a.Active && a.VenueId == place.Id))
                 { string id = a.Id; Ui.Size(Ui.Button(w.Content, "查看此处邀约：" + S.CityActivityService(a)?.Name, () => OpenCityActivityDetail(id), 18), -1, 42); }
                 if (CityLifeCatalog.Activities.Any(a => !a.EventOnly && a.VenueId == place.Id)) Ui.Size(Ui.Button(w.Content, "场所活动详情", () => OpenCityVenue(place), 18), -1, 44);
@@ -317,6 +318,7 @@ namespace PCShopSell.Game.UI
         public void OpenCityVenue(Place place, string activityId = null)
         {
             if (place == null) return;
+            if (TryOpenLeisureVenue(place, activityId)) return;
             if (S.AutomaticMealAt(place, activityId)) return;
             if (TryOpenSignHelp(place, activityId)) return;
             if (place.Id == GameSession.FishingVenueId) { OpenFishingVenue(place, activityId); return; }
@@ -333,9 +335,14 @@ namespace PCShopSell.Game.UI
             var running = S.RunningCityActivity;
             bool here = S.CurrentPlace?.Id == place.Id;
             if (TryOpenCookTasting(place, activityId)) return;
-            if (here && running?.VenueId == place.Id && S.CityActivityService(running)?.Id == "hike")
+            if (here && running?.VenueId == place.Id && GameSession.IsParkWalk(S.CityActivityService(running)))
             {
                 OpenCityActivityDetail(running.Id);
+                return;
+            }
+            if (here && S.ParkRowingActive)
+            {
+                OpenParkRowing();
                 return;
             }
             if (here && running?.VenueId == place.Id && GameSession.IsOutdoorMarketVisit(running))
@@ -391,7 +398,8 @@ namespace PCShopSell.Game.UI
             {
                 case "dinner": case "bar": return 1;
                 case "ktv": return 2;
-                case "court": case "golf": case "hike": case "fishing": return 3;
+                case "court": case "football": case "golf": case "hike": case "fishing": case "boat": case "park": return 3;
+                case "leisure": return CityLifeCatalog.LeisureAt(activity.VenueId) == LeisureGame.Billiards ? 3 : 2;
                 case "market": case "old": case "oldmarket": case "expo": return 4;
                 default: return 2;
             }
@@ -411,8 +419,10 @@ namespace PCShopSell.Game.UI
                 case "bar": keywords = new[] { "饮品", "调酒" }; break;
                 case "ktv": keywords = new[] { "唱歌", "歌唱", "合唱", "旋律" }; break;
                 case "court": keywords = new[] { "篮球", "打球", "社区运动" }; break;
+                case "football": keywords = new[] { "足球", "踢球", "点球", "社区运动" }; break;
                 case "golf": keywords = new[] { "高尔夫" }; break;
-                case "hike": keywords = new[] { "徒步", "散步", "户外", "生态" }; break;
+                case "hike": case "park_walk": keywords = new[] { "徒步", "散步", "户外", "生态" }; break;
+                case "boat": keywords = new[] { "划船", "沿河", "湖边", "户外" }; break;
                 case "fishing": keywords = new[] { "钓鱼", "垂钓" }; break;
                 case "oldmarket_visit": keywords = new[] { "旧收音机", "老唱片", "淘旧物", "淘旧电子" }; break;
                 case "expo_comic": keywords = new[] { "原创模型", "潮玩" }; break;
@@ -624,6 +634,7 @@ namespace PCShopSell.Game.UI
             {
                 var reveal = animateOnOpen ? NewUiReveal() : null;
                 animateOnOpen = false;
+                BuildActivityFarewellCards(w.Content, activity);
                 var overview = Ui.Row(w.Content, illustration != null ? 84 : 98, 14);
                 var heading = SettlementCard(overview, "ActivityOverview", 2);
                 reveal?.Fade(heading, 0f);
@@ -631,7 +642,7 @@ namespace PCShopSell.Game.UI
                 string venue = S.City.HasPlace(activity.VenueId) ? S.City.GetPlace(activity.VenueId).Name : activity.VenueId;
                 Para(heading, venue + " · " + service, 16, Ui.Dim);
 
-                if (definition?.Id != "hike" || activity.EntryCostCents > 0)
+                if (!GameSession.IsParkWalk(definition) || activity.EntryCostCents > 0)
                 {
                     var cost = SettlementCard(overview, "ActivityCost");
                     reveal?.Fade(cost, .04f);
@@ -712,6 +723,28 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(footer, solo ? "完成" : "收好这段回忆", w.Close, 18, Ui.ButtonHot), 200, 44);
                 PlayUiReveal(reveal);
             }, onClosed: () => OpenCommunityActivityClue(activityId), fitContent: true);
+        }
+
+        private void BuildActivityFarewellCards(Transform parent, CityActivity activity)
+        {
+            var speakers = activity.Participants.Where(p => !string.IsNullOrEmpty(p.FarewellLine)).ToArray();
+            for (int i = 0; i < speakers.Length; i += 2)
+            {
+                var row = Ui.Row(parent, -1, 8);
+                row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                foreach (var speaker in speakers.Skip(i).Take(2))
+                {
+                    var card = SettlementCard(row, "CompanionFarewell");
+                    var bubble = Ui.Row(card, -1, 10);
+                    bubble.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                    var avatar = Ui.Size(Ui.FlatPanel(bubble, "FarewellPortrait"), 52, 66);
+                    FitPortrait(avatar.rectTransform, speaker.PersonId, 2);
+                    var words = Ui.Size(Ui.Rect(bubble, "FarewellWords"), 0, -1, 1);
+                    Ui.VList(words, 1, 0);
+                    Line(words, S.CityPerson(speaker.PersonId)?.Name ?? "同行者", 17, Ui.Accent);
+                    Para(words, speaker.FarewellLine, 19);
+                }
+            }
         }
 
         private void OpenCityActivityNoShow(CityActivity activity)
@@ -835,6 +868,11 @@ namespace PCShopSell.Game.UI
                 OpenOutdoorMarketVisit(running);
                 return;
             }
+            if (running?.Id == activityId && S.ParkRowingActive)
+            {
+                OpenParkRowing();
+                return;
+            }
             if (running?.Id == activityId && S.FishingActive)
             {
                 OpenFishing();
@@ -861,7 +899,7 @@ namespace PCShopSell.Game.UI
                     Line(w.Content,"邀请人："+S.CityPerson(a.HostId).Name,18,Ui.Accent);
                 foreach (var p in a.Participants) Line(w.Content, (S.CityPerson(p.PersonId)?.Name ?? "同行者") + " · " + CityParticipantText(p.Phase), 18);
                 bool signHelp = a.DefinitionId == GameSession.SignHelpActivityId;
-                bool parkWalk = def?.Id == "hike";
+                bool parkWalk = GameSession.IsParkWalk(def);
                 bool freeWalk = parkWalk && a.EntryCostCents == 0;
                 string payment = a.HostPays ? "邀请人请客" : a.EntryPaid ? "费用已支付" : a.PlayerTreat ? "你请客 · 到场点单后支付" : "费用尚未支付";
                 if (def?.EventOnly == true && !a.EntryPaid)
@@ -1040,7 +1078,7 @@ namespace PCShopSell.Game.UI
             RefreshWorldHintVisibility();
             if (a == null) return;
             var def = S.CityActivityService(a);
-            bool parkWalk = def?.Id == "hike";
+            bool parkWalk = GameSession.IsParkWalk(def);
             bool running = a.State == CityActivityPhase.Running;
             bool onsite = GameSession.IsOnsiteActivity(a) || GameSession.IsVenueSport(a);
             bool raceAid = GameSession.IsRaceAidActivity(a);

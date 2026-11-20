@@ -9,6 +9,55 @@ namespace PCShopSell.Game.UI
     public class FishingWaterGraphic : MaskableGraphic
     {
         public FishingState State;
+        public bool Illustrated;
+        private static readonly float[] Piers = { .232f, .490f, .715f };
+        private static readonly float[] PierHeights = { .320f, .333f, .352f };
+
+        public float DockCenter(int spot) => Illustrated ? Piers[spot] : .289f + spot * .17f;
+
+        private Vector2 RodBase
+        {
+            get
+            {
+                int spot = State?.Spot ?? 0;
+                return Illustrated ? new Vector2(DockCenter(spot), PierHeights[spot])
+                    : new Vector2(DockCenter(spot) + .012f, .407f);
+            }
+        }
+
+        private Vector2 RodTip
+        {
+            get
+            {
+                var pivot = RodBase;
+                if (State?.Phase == FishingPhase.Charging)
+                    return pivot + new Vector2(-.042f * (float)State.CastPower, .114f);
+                return pivot + (Illustrated
+                    ? new Vector2(State?.Spot == 2 ? -.042f : .049f, .161f)
+                    : new Vector2(.043f, .073f));
+            }
+        }
+
+        public Vector2 BobberPosition
+        {
+            get
+            {
+                if (State == null) return RodTip;
+                float time = (float)(State.PhaseSeconds + State.FightSeconds);
+                float flight = State.Phase == FishingPhase.Casting ? Mathf.Clamp01((float)State.PhaseSeconds / .8f) : 1;
+                float distance = Mathf.Clamp01((float)State.CastDistance / 30);
+                float x = DockCenter(State.Spot);
+                var landing = Illustrated
+                    ? new Vector2(x + (.055f + distance * .085f) * (State.Spot == 2 ? -1 : 1), .392f + distance * .164f)
+                    : new Vector2(x + .07f + distance * .16f, .49f + distance * .29f);
+                var bobber = Vector2.Lerp(RodTip, landing, flight);
+                bobber.y += Mathf.Sin(flight * Mathf.PI) * .14f;
+                if (State.Phase == FishingPhase.Waiting) bobber.y += Mathf.Sin(time * 3) * .003f;
+                if (State.Phase == FishingPhase.Bite) bobber.y -= .012f + Mathf.Sin(time * 18) * .008f;
+                if (State.Phase == FishingPhase.Fighting) bobber.x += ((float)State.FishPosition - .5f) * .09f;
+                return bobber;
+            }
+        }
         protected Vector2 P(float x, float y) => new Vector2(rectTransform.rect.xMin + rectTransform.rect.width * x, rectTransform.rect.yMin + rectTransform.rect.height * y);
         protected void Quad(VertexHelper vh, float x, float y, float w, float h, Color c)
         {
@@ -47,7 +96,13 @@ namespace PCShopSell.Game.UI
         }
         protected override void OnPopulateMesh(VertexHelper vh)
         {
-            vh.Clear(); Quad(vh, 0, 0, 1, 1, new Color(.39f, .49f, .31f));
+            vh.Clear();
+            if (Illustrated)
+            {
+                DrawRodAndFloat(vh);
+                return;
+            }
+            Quad(vh, 0, 0, 1, 1, new Color(.39f, .49f, .31f));
             for (int i = 0; i < 75; i++)
             {
                 float x = (i * .137f) % 1, y = .23f + (i * .173f) % .77f;
@@ -94,31 +149,54 @@ namespace PCShopSell.Game.UI
             Oval(vh, playerX, .425f, .009f, .015f, new Color(.86f, .70f, .48f));
             Oval(vh, playerX, .434f, .014f, .007f, new Color(.78f, .65f, .39f));
             Quad(vh, playerX + .028f, .365f, .015f, .024f, new Color(.32f, .40f, .42f));
-            var pivot = new Vector2(playerX + .012f, .407f);
-            var tip = new Vector2(playerX + .055f, .48f);
-            if (State?.Phase == FishingPhase.Charging) tip = new Vector2(playerX - .03f * (float)State.CastPower, .45f + .04f * (float)State.CastPower);
-            Stroke(vh, pivot, tip, 4, new Color(.84f, .67f, .38f));
-            if (State == null || State.Phase == FishingPhase.Ready || State.Phase == FishingPhase.Charging || State.Phase == FishingPhase.Ended) return;
-            float flight = State.Phase == FishingPhase.Casting ? Mathf.Clamp01((float)State.PhaseSeconds / .8f) : 1;
-            float distance = (float)State.CastDistance / 30;
-            var landing = new Vector2(playerX + .07f + distance * .16f, .49f + distance * .29f);
-            var bobber = Vector2.Lerp(tip, landing, flight);
-            bobber.y += Mathf.Sin(flight * Mathf.PI) * .14f;
-            if (State.Phase == FishingPhase.Waiting) bobber.y += Mathf.Sin(time * 3) * .002f;
-            if (State.Phase == FishingPhase.Bite) bobber.y -= .007f + Mathf.Sin(time * 18) * .004f;
-            if (State.Phase == FishingPhase.Fighting) bobber.x += ((float)State.FishPosition - .5f) * .07f;
-            Stroke(vh, tip, bobber, 1.6f, new Color(.92f, .92f, .79f));
-            Oval(vh, bobber.x, bobber.y - .007f, .012f + Mathf.Sin(time * 2) * .002f, .004f, new Color(.65f, .83f, .75f, .45f));
-            Quad(vh, bobber.x - .002f, bobber.y - .008f, .004f, .016f, Ui.TextColor);
-            Quad(vh, bobber.x - .002f, bobber.y, .004f, .008f, Ui.Warn);
-            if (State.Phase == FishingPhase.Bite)
-            { Quad(vh, bobber.x - .002f, bobber.y + .025f, .004f, .026f, Ui.Accent); Quad(vh, bobber.x - .002f, bobber.y + .015f, .004f, .005f, Ui.Accent); }
-            if (State.Phase == FishingPhase.Fighting || State.Phase == FishingPhase.Landed)
+            DrawRodAndFloat(vh);
+        }
+
+        private void DrawRodAndFloat(VertexHelper vh)
+        {
+            var tip = RodTip;
+            var pivot = RodBase;
+            if (Illustrated && State?.Phase == FishingPhase.Ended) return;
+            Stroke(vh, pivot, tip, Illustrated ? 5 : 4, new Color(.29f, .19f, .13f));
+            Stroke(vh, Vector2.Lerp(pivot, tip, .16f), tip, 2, new Color(.85f, .69f, .44f));
+            if (State == null || State.Phase is FishingPhase.Ready or FishingPhase.Charging or FishingPhase.Ended) return;
+
+            var bobber = BobberPosition;
+            Stroke(vh, tip, bobber, 2, new Color(.12f, .30f, .30f, .64f));
+            Stroke(vh, tip, bobber, 1, new Color(.94f, .96f, .83f, .84f));
+            bool biting = State.Phase == FishingPhase.Bite;
+            if (State.Phase != FishingPhase.Casting)
             {
-                float fx = State.Phase == FishingPhase.Landed ? playerX + .035f : bobber.x;
-                float fy = State.Phase == FishingPhase.Landed ? .40f : bobber.y - .02f;
-                Oval(vh, fx, fy, .011f, .005f, new Color(.66f, .77f, .65f));
-                Stroke(vh, new Vector2(fx - .011f, fy), new Vector2(fx - .016f, fy + .006f), 3, new Color(.66f, .77f, .65f));
+                float time = (float)State.PhaseSeconds;
+                int rings = biting ? 3 : 1;
+                for (int ring = 0; ring < rings; ring++)
+                {
+                    float wave = Mathf.Repeat(time * (biting ? 1.9f : .9f) + ring / 3f, 1);
+                    float radius = (biting ? .018f : .008f) + wave * (biting ? .047f : .018f);
+                    var tint = new Color(.96f, 1f, .89f, (1 - wave) * (biting ? .88f : .47f));
+                    var previous = bobber + new Vector2(radius, 0);
+                    for (int segment = 1; segment <= 32; segment++)
+                    {
+                        float angle = segment * Mathf.PI * 2 / 32;
+                        var point = bobber + new Vector2(radius * Mathf.Cos(angle), radius * .53f * Mathf.Sin(angle));
+                        Stroke(vh, previous, point, biting ? 2.2f : 1.25f, tint);
+                        previous = point;
+                    }
+                }
+            }
+            float top = biting ? .005f : .017f;
+            Oval(vh, bobber.x, bobber.y - .003f, .007f, .003f, new Color(.11f, .29f, .31f, .6f));
+            Stroke(vh, bobber - new Vector2(0, .004f), bobber + new Vector2(-.003f, top), 9, new Color(.22f, .28f, .25f));
+            Stroke(vh, bobber, bobber + new Vector2(-.003f, top), 6, new Color(1f, .95f, .70f));
+            Stroke(vh, bobber + new Vector2(-.0014f, top * .45f), bobber + new Vector2(-.003f, top), 6,
+                new Color(.95f, .36f, .16f));
+            if (State.Phase is FishingPhase.Fighting or FishingPhase.Landed)
+            {
+                float fx = State.Phase == FishingPhase.Landed ? pivot.x + .035f : bobber.x;
+                float fy = State.Phase == FishingPhase.Landed ? pivot.y : bobber.y - .02f;
+                var fish = new Color(.65f, .84f, .68f, .76f);
+                Oval(vh, fx, fy, .011f, .005f, fish);
+                Stroke(vh, new Vector2(fx - .011f, fy), new Vector2(fx - .016f, fy + .006f), 3, fish);
             }
         }
     }

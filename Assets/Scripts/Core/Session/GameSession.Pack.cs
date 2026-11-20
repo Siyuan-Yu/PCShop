@@ -521,14 +521,14 @@ namespace PCShopSell.Core.Session
         public double CarryLimitKg => CurrentVehicle.CargoCapacity * Backpack.KgPerSpace;
 
         /// <summary>现在身上的货（进货的配件 + 背包里的东西）合计多少千克。</summary>
-        public double CarriedKg => Cargo.UsedSpace * Backpack.KgPerSpace + Backpack.WeightKg;
+        public double CarriedKg => Cargo.UsedSpace * Backpack.KgPerSpace + Backpack.WeightKg + CarriedMarketFindKg;
 
         public double FreeKg => Math.Max(0, CarryLimitKg - CarriedKg);
 
         /// <summary>背包里的东西占了载货的一部分，进货能装的格子相应少一点。</summary>
         public void ApplyCargoLimit()
         {
-            Cargo.Capacity = Math.Max(0, CurrentVehicle.CargoCapacity - Backpack.Space);
+            Cargo.Capacity = Math.Max(0, CurrentVehicle.CargoCapacity - Backpack.Space - CarriedMarketFindKg / Backpack.KgPerSpace);
         }
 
         private bool CanCarry(double kg)
