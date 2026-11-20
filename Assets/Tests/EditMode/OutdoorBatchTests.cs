@@ -18,14 +18,8 @@ namespace PCShopSell.Tests
         private static readonly string[] Ids = { "act_fishing_grandpa", "act_hike_luqiao", "act_hike_gardener", "act_hike_shiyang", "act_snack_moxin", "act_snack_maoning", "act_snack_rider", "act_market_zhou", "act_market_li", "act_market_wang" };
         private static GameSession Make(bool shop = true, int? hikeClosingMinute = null)
         {
-            using var fixture = DistrictProgressionTests.Make();
+            using var fixture = DistrictProgressionTests.Make(hikeClosingMinute);
             var city = fixture.City;
-            if (hikeClosingMinute.HasValue)
-            {
-                var layout = JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text);
-                layout.places.Single(p => p.id == "life_hike").closeMinute = hikeClosingMinute.Value;
-                city = CityLayout.FromData(layout);
-            }
             using var first = new GameSession(city, 417, Money.FromYuan(1000000), GameTimestamp.From(new GameDate(42), 600),
                 starterStock: false, smartphone: false, startWithShop: shop);
             first.Tick(0); var data = first.CreateSave(); data.districtProgress = new DistrictProgress { UnlockedTier = 3 };
@@ -64,7 +58,6 @@ namespace PCShopSell.Tests
             var booking = s.CityActivities.Single(a => a.Active);
             var time = new GameTimestamp(booking.ScheduledStart);
             Assert.That(time.Date.IsWeekend, Is.True);
-            Assert.That(time.MinuteOfDay + booking.Duration, Is.LessThanOrEqualTo(20 * 60));
             Assert.That(booking.Duration, Is.EqualTo(180));
             Assert.That(booking.PlayerTreat, Is.True);
         }

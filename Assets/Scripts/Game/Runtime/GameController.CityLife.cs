@@ -34,7 +34,12 @@ namespace PCShopSell.Game
             {
                 _communityRevealPending = false;
                 var places = City.Places.Where(p => Session.DistrictTierOf(p) == 1).ToArray();
-                if (places.Length == 0) { ShowCommunityUnlocked(); return true; }
+                if (places.Length == 0)
+                {
+                    Ui.CloseAllWindows();
+                    ShowCommunityUnlocked();
+                    return true;
+                }
                 _communityBounds = new Bounds(World.NodeWorld(places[0].NodeId), Vector3.zero);
                 foreach (var place in places)
                 {
@@ -69,6 +74,7 @@ namespace PCShopSell.Game
                 _communityRevealZoom = _rig.Size;
                 _communityRevealTime = 0;
                 _communityRevealActive = true;
+                Session.Time.Hold();
                 Session.SetSteer(0, 0);
                 Ui.CloseAllWindows();
                 Ui.BeginCommunityReveal();
@@ -82,7 +88,6 @@ namespace PCShopSell.Game
                 return true;
             }
 
-            Session.Tick(dt);
             float travel = Ease(CommunityDeparture, CommunityOverviewArrival);
             float pushIn = Ease(CommunityPushIn, CommunityAgencyArrival);
             CameraRig.Yaw = Mathf.LerpAngle(Mathf.LerpAngle(_communityStartAngles.x, CommunityOverviewYaw, travel), _communityAgencyYaw, pushIn);
@@ -116,13 +121,18 @@ namespace PCShopSell.Game
             if (!_communityRevealActive) return;
             _communityRevealActive = false;
             Ui.EndCommunityReveal();
+            Session.Time.Release();
             CameraRig.Yaw = _communityRestoreAngles.x;
             CameraRig.Pitch = _communityRestoreAngles.y;
             _rig.Snap(FocusPoint(_communityRevealZoom), _communityRevealZoom);
         }
 
-        private void ShowCommunityUnlocked() =>
+        private void ShowCommunityUnlocked()
+        {
+            // An event already raised before the reveal remains pending behind the unlock notice.
+            if (Session.PendingEvent is EventDef pending) OnEventRaised(pending);
             Ui.Popup("第二章 · 社区片区已解锁", "通往社区片区的道路已开放。现在可以去社区逛街、看房和选店址。");
+        }
 
         private void RememberRealProgress()
         {

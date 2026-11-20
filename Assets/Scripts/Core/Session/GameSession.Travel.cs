@@ -88,7 +88,7 @@ namespace PCShopSell.Core.Session
         /// <summary>出发去某节点。途中改目的地时，从当前位置重新选路。打车先付车费。</summary>
         public bool GoTo(string targetNode) => GoTo(targetNode, null);
 
-        private bool GoTo(string targetNode, MapPoint? end)
+        private bool GoTo(string targetNode, MapPoint? end, bool requireUnlockedRoute = false)
         {
             if (IsWorking) return Fail("正在打工，收工后才能出行。");
             if (IsGameOver) return false;
@@ -106,10 +106,15 @@ namespace PCShopSell.Core.Session
             var planned = PlanTrip(targetNode, end, out double routeMeters);
             if (planned == null) return Fail("到不了那里。");
             VehicleSpec v = CurrentVehicle;
-            if (v.Kind == VehicleKind.Taxi)
+            if (requireUnlockedRoute || v.Kind == VehicleKind.Taxi)
             {
                 int blocked = BlockedDistrictOnTrip(planned);
-                if(blocked>0)return Fail("通往"+DistrictName(blocked)+"的道路尚未开放，出租车暂不发车，也不收取车费。");
+                if (blocked > 0) return Fail(v.Kind == VehicleKind.Taxi
+                    ? "通往" + DistrictName(blocked) + "的道路尚未开放，出租车暂不发车，也不收取车费。"
+                    : "沿途通往" + DistrictName(blocked) + "的道路尚未开放。");
+            }
+            if (v.Kind == VehicleKind.Taxi)
+            {
                 Money fare = Vehicles.TaxiFare(routeMeters);
                 if (!Ledger.TryDebit(Clock.Today, "交通", fare, "打车")) return Fail($"打车要 {fare}，钱不够。");
                 Say($"打车 {fare}");

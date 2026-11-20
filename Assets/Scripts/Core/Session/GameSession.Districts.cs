@@ -236,21 +236,33 @@ namespace PCShopSell.Core.Session
                 return DistrictMeetingBlocker??("与"+contact+"交谈，确认“"+CurrentDistrictNode.Title+"”。");
             }
         }
-        public Place DistrictPersonWaitingPlace(string id)
+        public Place DistrictPersonCurrentPlace(CityPersonState person)
         {
-            var person=CityPersonState(id);if(person==null)return null;
-            if(person.Route==null&&person.LocationPlaceId==person.HomePlaceId&&City.HasPlace(person.HomePlaceId)
-                &&HomeVisitBlocker(City.GetPlace(person.HomePlaceId))!=null&&City.HasPlace(person.WorkPlaceId))
+            if (person == null || person.Route != null || !City.HasPlace(person.LocationPlaceId)) return null;
+            return City.GetPlace(person.LocationPlaceId);
+        }
+
+        public MapPoint DistrictPersonPosition(CityPersonState person) =>
+            person.Route?.Position(Clock.Now.TotalMinutes + Time.FractionalMinute) ?? new MapPoint(person.X, person.Y);
+
+        public bool GoToDistrictPerson(string id)
+        {
+            var person = CityPersonState(id);
+            if (person == null) return false;
+            if (CitySamePlace(id)) return true;
+            var place = DistrictPersonCurrentPlace(person);
+            if (DistrictAccessBlocker(place) is string blocked) return Fail(blocked);
+            if (place != null && CityPersonInside(person))
             {
-                var work=City.GetPlace(person.WorkPlaceId);
-                if(work.Kind!=PlaceKind.Home&&DistrictAccessBlocker(work)==null)return work;
+                if (CityDestinationTravelBlocker(place, out _, out _) is string travelBlocker) return Fail(travelBlocker);
+                return BeginCityTravel(place.Id, enter: false);
             }
-            if(person.Route?.TargetPlaceId==person.HomePlaceId&&City.HasPlace(person.HomePlaceId)
-                &&DistrictAccessBlocker(City.GetPlace(person.HomePlaceId))==null)return City.GetPlace(person.HomePlaceId);
-            string location=person.LocationPlaceId??person.Route?.TargetPlaceId;
-            if(!City.HasPlace(location)||DistrictAccessBlocker(City.GetPlace(location))==null)return null;
-            return City.HasPlace(person.HomePlaceId)&&DistrictAccessBlocker(City.GetPlace(person.HomePlaceId))==null
-                ?City.GetPlace(person.HomePlaceId):null;
+
+            var point = DistrictPersonPosition(person);
+            string node = City.NearestNode(point.X, point.Y);
+            if (!GoTo(node, point, requireUnlockedRoute: true)) return false;
+            CancelCityTravel();
+            return true;
         }
 
         public string DistrictMeetingDescription

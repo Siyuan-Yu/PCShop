@@ -47,11 +47,9 @@ namespace PCShopSell.Core.Session
         public CityActivity PendingVenueActivity(Place place, string activityId = null) => FindPendingVenueActivity(place, activityId);
 
         public static bool IsAutomaticMeal(CityActivity activity) => activity != null
-            && ((string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId)
+            && (string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId)
                 is "social_41" or "social_45" or "social_46" or "social_47"
-                or "social_65" or "social_65_private" or "social_66" or "social_66_before" or "social_67" or "social_67_private" or "race_bet_meal"
-                || (IsCommunityLeadDinner(activity) || activity.DefinitionId == "dinner" && activity.HostPays)
-                    && (activity.EntryPaid || activity.ServiceConfirmed && activity.ServiceDefinitionId == "dinner"));
+                or "social_65" or "social_65_private" or "social_66" or "social_66_before" or "social_67" or "social_67_private" or "race_bet_meal";
 
         public bool AutomaticMealAt(Place place, string activityId = null) => place != null && CurrentPlace == place
             && (RunningCityActivity is CityActivity meal

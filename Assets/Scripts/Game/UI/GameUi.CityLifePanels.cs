@@ -51,7 +51,8 @@ namespace PCShopSell.Game.UI
             if (shop == null && GameSession.SupplierClosesOnWeekend(p)) return S.OpeningHoursText(p);
             int open = shop?.Sim.OpenMinute ?? (p.ExplicitEntrance ? p.OpenMinute : 0);
             int close = shop?.Sim.CloseMinute ?? (p.ExplicitEntrance ? p.CloseMinute : 0);
-            if (open == close || open == 0 && close == 1440) return "24小时营业";
+            if (open == close || open == 0 && close == GameTimestamp.MinutesPerDay)
+                return p.Business is "venue_hike" or "venue_park" ? "全天开放" : "24小时营业";
             return $"{open / 60:00}:{open % 60:00}—{(close < open ? "次日 " : "")}{close / 60:00}:{close % 60:00}";
         }
         private bool CityMapTypeMatches(Place p) => _cityMapType == null
@@ -882,7 +883,8 @@ namespace PCShopSell.Game.UI
                         : "预计剩余 " + remaining + " 游戏分钟；世界时间按原倍速推进。", 19);
                     if (a.ServiceConfirmed)
                         Line(w.Content, (parkWalk ? "散步路线 · " : "已选项目 · ") + GameSession.VenueServiceName(def, a.ServiceChoice), 18, Ui.Good);
-                    Para(w.Content, a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a), 19);
+                    Para(w.Content, a.DefinitionId == "dinner" ? DinnerActivityProgress(a)
+                        : a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a), 19);
                     BuildPartnerActivityChoices(w, a);
                     BuildOutdoorBatchStatus(w, a);
                     if (!parkWalk)
@@ -973,6 +975,9 @@ namespace PCShopSell.Game.UI
 
         private static string CityParticipantText(CityParticipantPhase p) => p == CityParticipantPhase.NotDeparted ? "尚未出发" : p == CityParticipantPhase.Travelling ? "正在赴约" : p == CityParticipantPhase.Waiting ? "已到场等候" : p == CityParticipantPhase.Participating ? "正在参加" : "已离场";
 
+        private static string DinnerActivityProgress(CityActivity activity) =>
+            activity.MealApplied ? "菜已上桌，正在用餐。" : "已入座，正在等上菜。";
+
         private void BuildCityLifeHud()
         {
             _cityActivityHud = Ui.Panel(_invitationCanvas.transform, "CityActivityHud", Ui.PanelBg).rectTransform;
@@ -1041,6 +1046,7 @@ namespace PCShopSell.Game.UI
             bool raceAid = GameSession.IsRaceAidActivity(a);
             _cityActivityDetails.GetComponentInChildren<Text>().text = parkWalk && running ? "散步详情"
                 : onsite && running ? "继续现场活动"
+                : running && a.DefinitionId == "dinner" ? "用餐详情"
                 : S.ActivityPartnerId(a) != null ? "约会详情"
                 : a.State == CityActivityPhase.Running ? a.HostPays ? "活动详情" : "本次消费" : "日程详情";
             _cityActivityEnd.GetComponentInChildren<Text>().text = running ? parkWalk ? "结束散步" : "提前离开" : "取消邀约";
@@ -1069,6 +1075,7 @@ namespace PCShopSell.Game.UI
             string hint;
             if (automaticMeal && here) hint = running ? "正在用餐。" : S.AutomaticMealAt(S.CurrentPlace, a.Id)
                 ? "同行者到齐后直接开饭。" : "请在约定时间前后 1 小时到场。";
+            else if (running && a.DefinitionId == "dinner") hint = DinnerActivityProgress(a);
             else if (a.State == CityActivityPhase.Running) hint = manual ? "完成现场操作后结算时间。" : a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a);
             else if (travelling) hint = S.Trip is Trip trip
                 ? $"约 {trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟到达 · 按 WASD 随时接管"

@@ -60,8 +60,7 @@ namespace PCShopSell.Game.UI
                 string objective=S.DistrictPersonObjective(id);var state=S.CityPersonState(id);
                 if(objective==null||state==null)continue;
                 bool inside=S.CityPersonInside(state);
-                var point=state.Route!=null?state.Route.Position(S.Clock.Now.TotalMinutes+S.Time.FractionalMinute)
-                    :new PCShopSell.Core.World.MapPoint(state.X,state.Y);
+                var point = S.DistrictPersonPosition(state);
                 if(inside && state.LocationPlaceId!=null && S.City.HasPlace(state.LocationPlaceId))point=S.StandOf(S.City.GetPlace(state.LocationPlaceId));
                 Vector3 sp=cam.WorldToViewportPoint(StreetWorldBuilder.ToWorld(point,3.3f));
                 if(sp.z<=0||sp.x<0||sp.x>1||sp.y<0||sp.y>1)continue;
@@ -252,52 +251,28 @@ namespace PCShopSell.Game.UI
             {
                 Para(body,name+"就在附近。关闭任务窗口，走到本人身边按 F 交谈。",16,Ui.Good);return;
             }
-            var waitingHome=S.DistrictPersonWaitingPlace(id);
-            if(waitingHome!=null)
+            var place = S.DistrictPersonCurrentPlace(person);
+            string blocker = S.DistrictAccessBlocker(place);
+            if (place != null)
             {
-                string location=person.LocationPlaceId??person.Route?.TargetPlaceId;
-                int end=S.CityPerson(id)?.WorkEnd??1080;
-                bool waitingAtWork=waitingHome.Id==person.WorkPlaceId&&location==person.HomePlaceId;
-                if(waitingAtWork)
-                {
-                    int start=S.CityPerson(id)?.WorkStart??540;
-                    Para(body,name+"现在在家，当前关系还不能入户。可以在上班时间到"+waitingHome.Name+"找他，不必为交付另外提高好感。",17,Ui.Good);
-                    Para(body,"通常工作时间 "+(start/60)+":"+(start%60).ToString("00")+"–"+(end/60)+":"+(end%60).ToString("00")+"；到达后可刷新位置。",16);
-                    if(S.NearbyPlace?.Id!=waitingHome.Id&&S.CurrentPlace?.Id!=waitingHome.Id)
-                        Ui.Size(Ui.Button(body,"前往工作地点等候 · "+name,()=>NavigateToDistrictPerson(id),
-                            17,Ui.ButtonHot),-1,40).name="DistrictFindPerson_"+id;
-                    return;
-                }
-                bool returning=person.Route?.TargetPlaceId==waitingHome.Id;
-                Para(body,returning?name+"正在返回"+waitingHome.Name+"。":name+"目前在"+S.City.GetPlace(location).Name+"，该片区尚未开放。",17,returning?Ui.Good:Ui.Warn);
-                Para(body,(returning?"": "通常 "+(end/60)+":"+(end%60).ToString("00")+" 下班，之后还需返程。")+"可到"+waitingHome.Name+"附近等候；刷新任务页查看他是否回来。",16);
-                if(S.NearbyPlace?.Id!=waitingHome.Id&&S.CurrentPlace?.Id!=waitingHome.Id)
-                    Ui.Size(Ui.Button(body,"前往住处附近等候 · "+name,()=>NavigateToDistrictPerson(id),
-                        17,Ui.ButtonHot),-1,40).name="DistrictFindPerson_"+id;
-                return;
-            }
-            bool inside=S.CityPersonInside(person);
-            string placeId=inside?person.LocationPlaceId:null;
-            if(placeId!=null&&S.City.HasPlace(placeId))
-            {
-                var place=S.City.GetPlace(placeId);
-                Para(body,name+"目前在："+place.Name+"内。",17,Ui.Good);
-                if(place.Kind==PCShopSell.Core.World.PlaceKind.Home&&place!=S.Home)
+                Para(body, $"{name}目前在{place.Name}。", 17, Ui.Good);
+                if (blocker != null) Para(body, GameSession.DistrictName(S.DistrictTierOf(place)) + "片区尚未开放。", 16, Ui.Warn);
+                else if (place.Kind == PCShopSell.Core.World.PlaceKind.Home && place != S.Home)
                     Para(body,S.HomeVisitBlocker(place)??"到门口按 F 查看住户，再进屋拜访。",15,Ui.Dim);
             }
             else
             {
-                var pos=person.Route?.Position(S.Clock.Now.TotalMinutes+S.Time.FractionalMinute)
-                    ??new PCShopSell.Core.World.MapPoint(person.X,person.Y);
+                var pos = S.DistrictPersonPosition(person);
                 var landmark=S.City.Places.OrderBy(p=>
                 {
                     var point=S.StandOf(p);return (point.X-pos.X)*(point.X-pos.X)+(point.Y-pos.Y)*(point.Y-pos.Y);
                 }).FirstOrDefault();
                 Para(body,name+"目前在："+(landmark?.Name??"街道")+"附近"+(person.Route!=null?"，正在途中。":"。"),17,Ui.Good);
             }
-            Ui.Size(Ui.Button(body,"前往寻找 · "+name,()=>NavigateToDistrictPerson(id),17,Ui.ButtonHot),-1,40).name="DistrictFindPerson_"+id;
+            Ui.Size(Ui.Button(body,"前往寻找 · "+name,()=>NavigateToDistrictPerson(id),17,Ui.ButtonHot,blocker == null)
+                .Tip(blocker),-1,40).name="DistrictFindPerson_"+id;
             if (person.Route != null)
-                Para(body, "对方仍在途中。若目的地可达，导航会带你去目的地等候。", 15, Ui.Dim);
+                Para(body, "对方仍在移动，导航使用出发时的位置。", 15, Ui.Dim);
         }
 
         private void NavigateToDistrictMeeting(string placeId)
@@ -309,27 +284,7 @@ namespace PCShopSell.Game.UI
 
         private void NavigateToDistrictPerson(string id)
         {
-            var person = S.CityPersonState(id);
-            if (person == null) return;
-            CloseAllWindows();
-            if (S.CitySamePlace(id)) return;
-
-            var destination = S.DistrictPersonWaitingPlace(id);
-            string placeId = person.Route?.TargetPlaceId ?? (S.CityPersonInside(person) ? person.LocationPlaceId : null);
-            if (destination == null && S.City.HasPlace(placeId))
-            {
-                var place = S.City.GetPlace(placeId);
-                if (S.DistrictAccessBlocker(place) == null) destination = place;
-            }
-            if (destination != null)
-            {
-                S.BeginCityTravel(destination.Id, enter: false);
-                return;
-            }
-
-            var position = person.Route?.Position(S.Clock.Now.TotalMinutes + S.Time.FractionalMinute)
-                ?? new PCShopSell.Core.World.MapPoint(person.X, person.Y);
-            S.GoTo(S.City.NearestNode(position.X, position.Y));
+            if (S.GoToDistrictPerson(id)) CloseAllWindows();
         }
 
         // Main-quest actions belong to the existing character conversation, never the tracker.

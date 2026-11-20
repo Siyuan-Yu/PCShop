@@ -59,6 +59,8 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(venue, s.CurrentPlace);
                 Assert.False(a.EntryPaid);
                 Assert.True(s.SelectVenueService(a.DefinitionId, 1, a.Id), s.VenueServiceBlocker(a.DefinitionId, 1, a.Id));
+                Step(s);
+                Assert.AreEqual(CityActivityPhase.Running, a.State);
                 for(int i=0;i<60000&&a.Active;i++)Step(s);
                 Assert.AreEqual(CityActivityPhase.Completed,a.State,a.EndReason);
                 Assert.AreEqual(1, a.ServiceChoice);

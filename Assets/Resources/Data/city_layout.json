@@ -10333,8 +10333,8 @@
       "depth": 24.151990542006818,
       "heading": 111.25460593876795,
       "tradable": false,
-      "openMinute": 360,
-      "closeMinute": 1380,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "model": "park",
       "tier": 2
     },
@@ -10373,8 +10373,8 @@
       "depth": 15.457273946884364,
       "heading": 158.55592122244548,
       "tradable": false,
-      "openMinute": 360,
-      "closeMinute": 1200,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "model": "park",
       "tier": 0
     },

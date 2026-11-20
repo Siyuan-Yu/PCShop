@@ -305,13 +305,16 @@ namespace PCShopSell.Game.UI
                 return;
             }
             bool nearby = S.CitySamePlace(id);
-            var waiting = S.DistrictPersonWaitingPlace(id);
-            string place = S.CityPersonState(id)?.Route?.TargetPlaceId ?? S.CityPersonState(id)?.LocationPlaceId;
-            if (status == null && (waiting != null || S.City.HasPlace(place)))
-                status = (waiting ?? S.City.GetPlace(place)).Name + (nearby ? " · 已到达" : " · " + person.Name);
+            var state = S.CityPersonState(id);
+            var place = S.DistrictPersonCurrentPlace(state);
+            bool locked = S.DistrictAccessBlocker(place) != null;
+            if (status == null && place != null)
+                status = place.Name + (nearby ? " · 已到达" : locked ? " · " + GameSession.DistrictName(S.DistrictTierOf(place)) + "片区尚未开放" : "");
+            else if (status == null && state?.Route != null)
+                status = person.Name + "正在途中";
             next += "\n" + (nearby ? $"走到{person.Name}身边按 F 交谈。"
                 : allowPhone ? DistrictContactHint(id, person.Name) : $"请当面与{person.Name}交谈。");
-            bool showNavigation = !nearby && S.CityPersonState(id) != null;
+            bool showNavigation = !nearby && state != null && !locked;
             SetQuestCard(heading, title, next, status, progress, showNavigation ? "寻找" + person.Name : null,
                 showNavigation ? () => NavigateToDistrictPerson(id) : null, completion);
         }

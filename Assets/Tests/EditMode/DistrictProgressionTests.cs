@@ -14,9 +14,16 @@ namespace PCShopSell.Tests
 {
     public sealed class DistrictProgressionTests
     {
-        internal static GameSession Make()
+        internal static GameSession Make(int? hikeClosingMinute = null)
         {
-            var city=CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
+            var layout = JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text);
+            if (hikeClosingMinute.HasValue)
+            {
+                var trail = layout.places.Single(p => p.id == "life_hike");
+                trail.openMinute = 6 * 60;
+                trail.closeMinute = hikeClosingMinute.Value;
+            }
+            var city = CityLayout.FromData(layout);
             var s=new GameSession(city,7,Money.FromYuan(5000),GameTimestamp.From(new GameDate(40),600),true,false,false);
             s.EventsEnabled=false;return s;
         }
@@ -71,6 +78,12 @@ namespace PCShopSell.Tests
                 var price = s.CityActivityEntryPrice(s.CityActivityService(activity), 1, activity);
                 Assert.True(s.SelectVenueService(def, 1, activity.Id), s.VenueServiceBlocker(def, 1, activity.Id));
                 s.Tick(.05);
+                Assert.AreEqual(CityActivityPhase.Running, activity.State);
+                Assert.False(s.CommunityHasOuting(index));
+                Advance(s, activity.ActualStart + activity.Duration / 3);
+                Assert.True(activity.MealApplied);
+                Assert.AreEqual(CityActivityPhase.Running, activity.State);
+                Advance(s, activity.ActualStart + activity.Duration);
                 Assert.AreEqual(CityActivityPhase.Completed, activity.State, activity.EndReason);
                 Assert.AreEqual(1, activity.ServiceChoice);
                 Assert.AreEqual(price.Cents, activity.EntryCostCents);
@@ -212,16 +225,19 @@ namespace PCShopSell.Tests
             }
         }
 
-        [Test] public void LowAffinityQuestContactAtHomeHasPublicWorkplaceWaitingRoute()
+        [Test] public void QuestContactNavigationUsesCurrentWorkplace()
         {
             using(var s=Make())
             {
-                var person=s.CityPersonState("keeper_agent");
-                person.Route=null;person.LocationPlaceId=person.HomePlaceId;person.Task=CityPersonTask.Home;
-                Assert.Less(s.Relation(person.PersonId),GameSession.HomeVisitMinRelation);
-                Assert.AreEqual(person.WorkPlaceId,s.DistrictPersonWaitingPlace(person.PersonId)?.Id);
-                person.LocationPlaceId=person.WorkPlaceId;person.Task=CityPersonTask.Working;
-                Assert.IsNull(s.DistrictPersonWaitingPlace(person.PersonId));
+                var person = s.CityPersonState("zhou");
+                var workplace = s.City.GetPlace(person.WorkPlaceId);
+                person.Route = null;
+                person.LocationPlaceId = workplace.Id;
+                person.Task = CityPersonTask.Working;
+                Assert.AreEqual(workplace, s.DistrictPersonCurrentPlace(person));
+                Assert.True(s.GoToDistrictPerson(person.PersonId));
+                Assert.AreEqual(workplace.Id, s.CityIntent.TargetPlaceId);
+                Assert.False(s.CityIntent.EnterOnArrival);
             }
         }
 
@@ -240,18 +256,41 @@ namespace PCShopSell.Tests
             }
         }
 
-        [Test] public void LockedDistrictLeadDirectsPlayerToAccessibleHomeInsteadOfCheckpoint()
+        [Test] public void LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome()
         {
             using(var s=Make())
             {
                 var person=s.CityPersonState("lin");person.Route=null;person.LocationPlaceId=person.WorkPlaceId;
                 Assert.NotNull(s.DistrictAccessBlocker(s.City.GetPlace(person.WorkPlaceId)));
-                var waiting=s.DistrictPersonWaitingPlace("lin");
-                Assert.NotNull(waiting);Assert.AreEqual(person.HomePlaceId,waiting.Id);
-                Assert.IsNull(s.DistrictAccessBlocker(waiting));
+                Assert.AreEqual(person.WorkPlaceId, s.DistrictPersonCurrentPlace(person).Id);
+                Assert.False(s.GoToDistrictPerson("lin"));
+                Assert.IsNull(s.CityIntent);
+                Assert.IsNull(s.Trip);
                 person.LocationPlaceId=person.HomePlaceId;
-                Assert.IsNull(s.DistrictPersonWaitingPlace("lin"));
+                Assert.AreEqual(person.HomePlaceId, s.DistrictPersonCurrentPlace(person).Id);
             }
+        }
+
+        [Test] public void ReturningQuestContactNavigationUsesStreetPositionBeforeArrival()
+        {
+            using var s = Make();
+            var person = s.CityPersonState("zhou");
+            var current = s.City.ViewPosition(s.City.GetPlace(person.WorkPlaceId).NodeId);
+            var home = s.StandOf(s.City.GetPlace(person.HomePlaceId));
+            person.LocationPlaceId = null;
+            person.Route = new CityRoute
+            {
+                TargetPlaceId = person.HomePlaceId,
+                X = new[] { current.X, home.X },
+                Y = new[] { current.Y, home.Y },
+                Meters = new[] { 200d },
+                DepartMinute = s.Clock.Now.TotalMinutes,
+                ArriveMinute = s.Clock.Now.TotalMinutes + 60,
+                Transport = VehicleKind.Walk
+            };
+            Assert.True(s.GoToDistrictPerson(person.PersonId));
+            Assert.IsNull(s.CityIntent);
+            Assert.AreEqual(current, s.Trip.Points.Last());
         }
 
         [Test] public void HomeWorkingLeadUsesAssignedResidenceInsteadOfOldAuthoredAddress()
@@ -580,17 +619,21 @@ namespace PCShopSell.Tests
                 s.AddRelation("landlady",30);AskLeadLocally(s,0);Assert.True(s.CommunityHasClue(0));
             }
         }
-        [Test] public void ServiceEndingExactlyAtClosingCountsAsCompleted()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TrailActivityCompletesAtClosingOrAcrossMidnight(bool allDay)
         {
-            using(var s=Make())
+            using(var s=Make(allDay ? (int?)null : 20 * 60))
             {
                 var venue=s.City.GetPlace("life_hike");
-                s.Clock.Restore(s.Clock.Today,venue.CloseMinute-105);
+                s.Clock.Restore(s.Clock.Today, allDay ? 23 * 60 + 15 : venue.CloseMinute - 105);
                 long start=s.Clock.Now.TotalMinutes+15;At(s,venue);
+                Assert.That(s.ClosedReason(venue), Is.Null);
                 var a=s.ScheduleCityActivity("hike",Array.Empty<string>(),start);Assert.NotNull(a);
                 At(s,venue);Advance(s,start);Assert.True(s.SelectVenueService("hike",0));
                 s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;
-                Advance(s,start+90);Assert.AreEqual(venue.CloseMinute,s.Clock.MinuteOfDay);
+                Advance(s,start+90);
+                Assert.AreEqual(allDay ? 60 : venue.CloseMinute, s.Clock.MinuteOfDay);
                 Assert.AreEqual(CityActivityPhase.Completed,a.State);Assert.True(a.RewardApplied);
             }
         }

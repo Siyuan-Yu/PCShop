@@ -550,7 +550,7 @@ namespace PCShopSell.Game
                 _rain.SetPaused(true);
                 return;
             }
-            if (!scooterTutorialPaused) _worldVisualTime += dt;
+            if (!scooterTutorialPaused && !_communityRevealActive) _worldVisualTime += dt;
             Shader.SetGlobalFloat(WorldVisualTimeId, _worldVisualTime);
             bool interior = InInterior;
             bool room = InRoom;
@@ -610,7 +610,7 @@ namespace PCShopSell.Game
                 && World.Places.TryGetValue(Session.CurrentPlace.Id, out var venue)
                 && venue.VenueInterior != null && venue.VenueInterior.activeInHierarchy;
             UpdateWeather(room, room || insideVenue);
-            _rain.SetPaused(scooterTutorialPaused);
+            _rain.SetPaused(scooterTutorialPaused || _communityRevealActive);
 
             bool chasing = Session.Police.AnyChasing;
             if (chasing && !_wasChasing) Ui.Toast("被交警发现了！");
@@ -1248,6 +1248,7 @@ namespace PCShopSell.Game
 
         private void OnEventRaised(EventDef def)
         {
+            if (_communityRevealPending || _communityRevealActive) return;
             SoundFx.Play(Sfx.Notification);
             Ui.ShowEvent(def);
         }
