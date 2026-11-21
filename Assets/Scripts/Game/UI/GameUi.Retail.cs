@@ -216,7 +216,7 @@ namespace PCShopSell.Game.UI
                     ()=>S.HasSmartphone?0:Math.Max(0,1-S.CartAmount("phone")));
                 var workbench = FurnitureCatalog.Get(GameSession.HomeWorkbenchId);
                 string key = "furn:" + workbench.Id;
-                Offer(key, workbench.Name, "居家设备", workbench.WeightKg, workbench.Price, "货车送到家 · " + workbench.Description,
+                Offer(key, workbench.Name, "居家设备", workbench.WeightKg, workbench.Price, "货车配送至所选住宅 · " + workbench.Description,
                     () => S.CartAddFurniture(workbench.Id), () => S.OwnsHomeWorkbench ? 0 : 1 - S.CartAmount(key),
                     blocker: () => S.HomeWorkbenchPurchaseBlocker);
             }

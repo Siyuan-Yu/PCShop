@@ -21,7 +21,7 @@ namespace PCShopSell.Game
         public static string PathOf => Path.Combine(SaveDirectory, "save1.json");
         public static string AutoPath => Path.Combine(SaveDirectory, "autosave.json");
         public static string CityTestPath => Path.Combine(SaveDirectory,"city-life-test.json");
-        public const int SlotCount = 9;
+        public const int SlotCount = 20;
         public const int AutomaticSlot = 0;
 
         private static string SlotPath(int slot, bool automatic)

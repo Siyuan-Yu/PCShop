@@ -259,7 +259,7 @@ namespace PCShopSell.Game.UI
                         {
                             AgencyFeeLine(fees, "首周租金", l.Rent.ToString());
                             AgencyFeeLine(fees, "押金", RealEstate.Deposit(l.Rent).ToString());
-                            AgencyFeeLine(fees, "中介费", S.AgentFeeFor(l.Rent).ToString());
+                            AgencyFeeLine(fees, "中介费", S.AgentFeeFor(l.Rent, S.ListingPlace(l)).ToString());
                             AgencyFeeLine(fees, "装修设备", Money.FromYuan(chosen.Capital).ToString());
                             AgencyFeeLine(fees, "周转金", Money.FromYuan(5000).ToString());
                         }, terms, false, () =>

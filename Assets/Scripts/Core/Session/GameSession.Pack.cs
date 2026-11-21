@@ -200,7 +200,8 @@ namespace PCShopSell.Core.Session
         public Backpack ShopLocker => _focus.Locker;
 
         /// <summary>现在站的地方的储物处：家里、店里都是后仓；别处为 null。</summary>
-        public bool HasWarehouseHere => AtHome ? HomeBoxes > 0 : InPlayerShop && (ShopBoxes > 0 || RestaurantIngredientsOnly(_focus));
+        public bool HasWarehouseHere => AtHome ? HomeBoxes > 0 : HasSecondaryResidenceWarehouse
+            || InPlayerShop && (ShopBoxes > 0 || RestaurantIngredientsOnly(_focus));
         public string StorageName => HasWarehouseHere ? "后仓" : null;
 
         /// <summary>
@@ -225,8 +226,8 @@ namespace PCShopSell.Core.Session
             bool chilled = AutoChillRestaurantIngredients(Backpack);
             var packagedIngredients = Backpack.GiftLines.Where(item => IsRawIngredientProduct(item.Key)).ToArray();
 
-            var storage=InPlayerShop?ShopLocker:HomeBox;
-            var parts=InPlayerShop?PlayerShop.Stock:HomeBoxParts;
+            var storage = WarehouseBagHere;
+            var parts = WarehousePartsHere;
             foreach(var line in Cargo.Lines().ToArray())
                 if(Cargo.TryRemove(line.Part,line.Boxed,line.Count))parts.ForceAdd(line.Part,line.Boxed,line.Count);
             MergeStorage(Backpack,storage,includeFood:false);
@@ -245,15 +246,15 @@ namespace PCShopSell.Core.Session
         {
             if (key == null || count <= 0) return false;
             bool shop = InPlayerShop;
-            if (!AtHome && !shop) return Fail("要在家里或自己的店里才能放东西。");
+            if (!AtHome && !shop && !HasSecondaryResidenceWarehouse) return Fail("要在家里或自己的店里才能放东西。");
             StoredKey sk = ParseStored(key);
             if (sk == null) return false;
             if (!HasWarehouseHere) return Fail("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");
             const string storeName = "后仓";
-            Backpack store = shop ? ShopLocker : HomeBox;
-            Stock storeParts = shop ? PlayerShop.Stock : HomeBoxParts;
+            Backpack store = WarehouseBagHere;
+            Stock storeParts = WarehousePartsHere;
             double limit = shop ? ShopLockerLimitKg : HomeBoxLimitKg;
-            double storeKg = shop ? ShopLocker.WeightKg : HomeBoxKg;
+            double storeKg = store.WeightKg + (shop ? 0 : storeParts.UsedSpace * Backpack.KgPerSpace);
             Backpack from = intoBox ? Backpack : store, to = intoBox ? store : Backpack;
             Stock fromParts = intoBox ? Cargo : storeParts, toParts = intoBox ? storeParts : Cargo;
             double have = StoredHave(sk, from, fromParts);

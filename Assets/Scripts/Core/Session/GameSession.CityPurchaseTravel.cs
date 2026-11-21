@@ -61,12 +61,13 @@ namespace PCShopSell.Core.Session
         }
         private CityRoute[] BuildCityPurchaseLegs(EmployeePurchaseTrip trip,CityPersonState person)
         {
-            var shop=DeliveryShop(trip.ShopId);if(shop==null)return Array.Empty<CityRoute>();
+            var shop = trip.DeliverHome && City.HasPlace(trip.ShopId) ? City.GetPlace(trip.ShopId) : DeliveryShop(trip.ShopId)?.Place;
+            if (shop == null) return Array.Empty<CityRoute>();
             var origins = (trip.Items ?? Array.Empty<PurchaseLine>()).Where(i => i != null && City.HasPlace(i.SourceId))
                 .GroupBy(i => PurchaseDestination(City.GetPlace(i.SourceId))).ToArray();
             if(origins.Length==0)return Array.Empty<CityRoute>();
-            var probe=person.Copy();var home=StandOf(shop.Place);
-            probe.X=home.X;probe.Y=home.Y;probe.LocationPlaceId=shop.Place.Id;
+            var probe=person.Copy();var home=StandOf(shop);
+            probe.X=home.X;probe.Y=home.Y;probe.LocationPlaceId=shop.Id;
             var routes=new List<CityRoute>();var offsets=new List<(long start,long end)>();
             long offset=0;
             var worker=FindEmployee(trip.EmployeeId)?.Person;
@@ -89,7 +90,7 @@ namespace PCShopSell.Core.Session
                 routes[i].DepartMinute=trip.DepartAt+offsets[i].start*span/Math.Max(1,offset);
                 routes[i].ArriveMinute=trip.DepartAt+offsets[i].end*span/Math.Max(1,offset);
             }
-            var back=PlanCityRoute(probe,shop.Place.Id,trip.BoughtAt);if(back==null)return Array.Empty<CityRoute>();
+            var back=PlanCityRoute(probe,shop.Id,trip.BoughtAt);if(back==null)return Array.Empty<CityRoute>();
             back.IntentId="purchase:"+trip.OrderId+":"+trip.EmployeeId+":return";
             back.Transport=trip.Transport;
             back.DepartMinute=trip.BoughtAt;back.ArriveMinute=trip.ReturnAt;routes.Add(back);

@@ -84,7 +84,7 @@ namespace PCShopSell.Game.UI
             _fishingPower = _fishingProgress = _fishingTension = null;
             _fishingStatus = _fishingReadout = null;
             _fishingBiteHint = null;
-            bool illustrated = BuildLeisureBackdrop(w.Content, "event_fishing_pond", fill: false);
+            bool illustrated = BuildLeisureBackdrop(w.Content, "event_fishing_pond_play", fill: false);
             var water = Ui.Rect(w.Content, "FishingPondScene"); water.Fill();
             _fishingWater = water.gameObject.AddComponent<FishingWaterGraphic>(); _fishingWater.raycastTarget = true;
             _fishingWater.Illustrated = illustrated;
@@ -93,6 +93,16 @@ namespace PCShopSell.Game.UI
             var header = Ui.Panel(w.Content, "FishingSceneHeader", Ui.Chrome);
             header.rectTransform.Anchor(0, 1, 1, 1, 0, -88, 0, 0);
             Ui.Label(header.transform, "青湾垂钓场", 32, color: Ui.Accent).rectTransform.Anchor(0, 0, .33f, 1, 34, 12, 0, 12);
+            var companions = S.FishingCompanions;
+            if (companions.Length > 0)
+            {
+                var roster = Ui.Row(w.Content, 40, 8).Anchor(.02f, 1, .42f, 1, 0, -142, 0, 96);
+                foreach (string person in companions)
+                {
+                    PortraitThumb(roster, person, 34, null);
+                    Ui.Size(Ui.Label(roster, S.CityPerson(person)?.Name ?? "同行者", 16, color: Ui.Accent), 78, 38);
+                }
+            }
             Ui.Label(header.transform, $"剩余 {S.ManualAttemptsLeft} 次 · 本场钓获 {fish?.Catches ?? 0} 条 · 时间暂停", 18, TextAnchor.MiddleCenter)
                 .rectTransform.Anchor(.32f, 0, .76f, 1, 0, 12, 0, 12);
             void FinishFishing()
@@ -217,27 +227,35 @@ namespace PCShopSell.Game.UI
             var shade = Ui.Panel(w.Content, "FishingCatchBackdrop", Ui.WorldShade);
             shade.rectTransform.Fill();
             var result = Ui.Panel(shade.transform, "FishingCatchResult", Ui.PanelBg2).rectTransform;
-            result.Anchor(.26f, .33f, .74f, .67f);
-            var layout = Ui.VList(result, 10, 26);
-            layout.childAlignment = TextAnchor.MiddleCenter;
+            result.Anchor(.32f, .5f, .68f, .5f);
+            Ui.VList(result, 10, 22);
+            result.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            const int portraitSize = 208;
+            var summary = Ui.Row(result, fish == null ? 92 : portraitSize, 18);
+            if (fish != null) ItemPortrait(summary, fish.Id, portraitSize);
+            var details = Ui.Size(Ui.Rect(summary, "FishingCatchDetails"), 0, -1, 1);
+            Ui.VList(details, 4, 0).childAlignment = TextAnchor.MiddleLeft;
             void Caption(string text, int font, int height, Color color)
-                => Ui.Size(Ui.Label(result, text, font, TextAnchor.MiddleCenter, color), -1, height);
-            Caption("本次鱼获", 21, 28, Ui.Dim);
-            if (fish == null) Caption("鱼已上岸", 44, 60, Ui.Accent);
-            else ItemLabel(result, fish.Id, fish.Name, 36, 56, Ui.Accent);
+                => Ui.Size(Ui.Label(details, text, font, TextAnchor.MiddleLeft, color), -1, height);
+            Caption("本次鱼获", 16, 23, Ui.Dim);
+            Caption(fish?.Name ?? "鱼已上岸", 24, 34, Ui.Accent);
             if (fish != null)
-                Caption($"{fish.Rarity}  ·  {fish.Kg:0.##} 千克  ·  回收价 {Money.FromYuan(fish.SalePrice)}", 22, 32, Ui.TextColor);
+            {
+                Caption($"{fish.Rarity} · {fish.Kg:0.##} 千克", 17, 25, Ui.TextColor);
+                Caption($"回收价 {Money.FromYuan(fish.SalePrice)}", 17, 25, Ui.TextColor);
+            }
 
             var actions = Ui.Row(result, 48, 12);
             bool canKeep = fish != null && fish.Kg <= S.FreeKg + 1e-9;
-            Ui.Size(Ui.Button(actions, "带走 · 放入背包", () => { if (S.KeepCaughtFish()) w.Rebuild(); }, 20,
+            Ui.Size(Ui.Button(actions, "带走 · 放入背包", () => { if (S.KeepCaughtFish()) w.Rebuild(); }, 17,
                 Ui.ButtonHot, canKeep).Tip(canKeep ? "放进背包食材。" : "背包负重不足。"), 0, 48, 1);
-            Ui.Size(Ui.Button(actions, "放生 · 心情 +1", () => { if (S.ReleaseCaughtFish()) w.Rebuild(); }, 20), 0, 48, 1);
+            Ui.Size(Ui.Button(actions, "放生 · 心情 +1", () => { if (S.ReleaseCaughtFish()) w.Rebuild(); }, 17), 0, 48, 1);
             var companions = S.FishingCompanions;
             if (companions.Length == 0) return;
             var gifts = Ui.Row(result, 42, 8);
             foreach (string id in companions)
-                Ui.Size(Ui.Button(gifts, "送给 " + S.CityPerson(id)?.Name, () => { if (S.GiveCaughtFish(id)) w.Rebuild(); }, 18), 0, 42, 1);
+                Ui.Size(Ui.Button(gifts, "送给 " + S.CityPerson(id)?.Name, () => { if (S.GiveCaughtFish(id)) w.Rebuild(); }, 17), 0, 42, 1);
         }
         private static Image FishingMeter(Transform parent, string name, Color color)
         {

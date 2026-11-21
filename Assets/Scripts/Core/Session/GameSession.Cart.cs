@@ -68,17 +68,22 @@ namespace PCShopSell.Core.Session
 
         private readonly List<CartLine> _cart = new List<CartLine>();
         private readonly List<CartLine> _truck = new List<CartLine>();
+        private Place _cartResidence;
 
         public IReadOnlyList<CartLine> Cart => _cart;
         public IReadOnlyList<CartLine> TruckLoad => _truck;
 
         private void ClearCarts()
         {
-            _cart.Clear();
+            ClearCart();
             _truck.Clear();
         }
 
-        public void ClearCart() => _cart.Clear();
+        public void ClearCart()
+        {
+            _cart.Clear();
+            _cartResidence = null;
+        }
         public void ClearTruckLoad() => _truck.Clear();
 
         public double CartAmount(string key) => _cart.Find(l => l.Key == key)?.Amount ?? 0;
@@ -91,6 +96,7 @@ namespace PCShopSell.Core.Session
         public double CartBagKg => _cart.Sum(l => l.BagKg);
         public double CartTruckKg => _cart.Sum(l => l.TruckKg);
         public bool CartRequiresHomeDelivery => _cart.Any(line => line.HomeDeliveryOnly);
+        private Place CartDeliveryResidence => CartRequiresHomeDelivery ? _cartResidence ?? Home : null;
         public double TruckKg => _truck.Sum(l => l.Kg);
         public Money CartGoods => _cart.Aggregate(Money.Zero, (sum, l) => sum + l.Price);
 
@@ -158,16 +164,16 @@ namespace PCShopSell.Core.Session
             list.Add(proto);
         }
 
-        private int CarsFor(List<CartLine> lines, OwnedShop dest) =>
-            CarsFor(lines.Where(l => l.ByTruck > 1e-9).Select(l => (l.ByWeight, l.UnitKg, l.ByTruck)), dest);
+        private int CarsForCart(OwnedShop dest, Place residence) =>
+            CarsFor(_cart.Where(line => line.ByTruck > 1e-9).Select(line => (line.ByWeight, line.UnitKg, line.ByTruck)), dest, residence);
 
         /// <summary>购物车里叫车的部分要几辆新车（-1 = 有单件超过一辆车）。</summary>
-        public int CartCars(bool defaultToShop) => CarsFor(_cart, CourierShop(defaultToShop));
+        public int CartCars(bool defaultToShop) => CarsForCart(CourierShop(defaultToShop), CartDeliveryResidence);
 
         public Money CartFreight(bool defaultToShop)
         {
-            int cars = CartCars(defaultToShop);
-            return cars <= 0 ? Money.Zero : CourierQuote(CourierShop(defaultToShop)).fee * cars;
+            var quote = QuoteCart(defaultToShop);
+            return quote.cars <= 0 ? Money.Zero : quote.fee * quote.cars;
         }
 
         // ---------- 往购物车里放 ----------
@@ -283,7 +289,7 @@ namespace PCShopSell.Core.Session
                 {
                     Key = key, Name = d.Name, UnitKg = d.WeightKg, UnitPrice = () => d.Price,
                     Furniture = d, HomeDeliveryOnly = true, Blocker = () => HomeWorkbenchPurchaseBlocker,
-                    Run = _ => BuyHomeWorkbench()
+                    Run = _ => BuyHomeWorkbench(CartDeliveryResidence)
                 }, 1);
                 return true;
             }
@@ -336,20 +342,22 @@ namespace PCShopSell.Core.Session
 
         // ---------- 结账 ----------
 
-        public (OwnedShop destination, int cars, Money goods, Money fee, int minutes, string blocker) QuoteCart(bool defaultToShop)
+        public (OwnedShop destination, int cars, Money goods, Money fee, int minutes, string blocker, Place residence) QuoteCart(bool defaultToShop)
         {
             var dest = CourierShop(defaultToShop);
+            var residence = CartDeliveryResidence;
             bool needsTruck = CartTruckKg > 1e-9;
-            int cars = needsTruck ? CarsFor(_cart, dest) : 0;
-            (Money fee, int minutes) = needsTruck ? CourierQuote(dest) : (Money.Zero, 0);
+            int cars = needsTruck ? CarsForCart(dest, residence) : 0;
+            (Money fee, int minutes) = needsTruck ? CourierQuoteTo(residence ?? dest?.Place ?? Home) : (Money.Zero, 0);
             Money goods = CartGoods;
-            return (dest, cars, goods, fee, minutes, Blocker());
+            return (dest, cars, goods, fee, minutes, Blocker(), residence);
 
             string Blocker()
             {
                 if (_cart.Count == 0) return "购物车是空的";
                 foreach (var line in _cart)
                     if (line.Blocker?.Invoke() is string reason) return reason;
+                if (residence != null && CartResidenceBlocker(residence) is string deliveryBlocker) return deliveryBlocker;
                 double bagKg = CartBagKg, free = FreeKg;
                 if (bagKg > free + 1e-9)
                     return $"背包放不下：拖进背包的有 {bagKg:0.##} 千克，{CurrentVehicle.Name}还能背 {free:0.##} 千克。拖一些回去叫车";
@@ -372,7 +380,7 @@ namespace PCShopSell.Core.Session
             if (truck) SetCourierDest(dest);
             bool keep = SendByCourier;
             if (CurrentPlace?.Kind == PlaceKind.Wholesaler) _stallCheckoutMinutes = 0;
-            try { return RunLines(_cart, dest, quote.cars, "结账", (quote.fee, quote.minutes)); }
+            try { return RunLines(_cart, dest, quote.cars, "结账", (quote.fee, quote.minutes), quote.residence); }
             finally
             {
                 SendByCourier = keep;
@@ -384,10 +392,10 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>一行行去做（背包栏的部分和叫车的部分分开）；先一起付好车钱，没用上的车退钱；最后只报一次总账。</summary>
-        private bool RunLines(List<CartLine> lines, OwnedShop dest, int cars, string title, (Money fee, int minutes)? quote = null)
+        private bool RunLines(List<CartLine> lines, OwnedShop dest, int cars, string title, (Money fee, int minutes)? quote = null, Place residence = null)
         {
             (Money fee, int minutes) = quote ?? CourierQuote(dest);
-            string destName = CourierDestName(dest);
+            string destName = residence != null ? PlaceTitle(residence) : CourierDestName(dest);
             if (cars > 0) Ledger.TryDebit(Clock.Today, "运费", fee * cars, $"叫 {cars} 辆车从{CurrentPlace?.Name ?? "街上"}送到{destName}");
             Money before = Ledger.Balance;
             _prepaidCars = cars;
@@ -440,18 +448,63 @@ namespace PCShopSell.Core.Session
 
         // ---------- 打电话叫货车搬东西 ----------
 
-        /// <summary>货车送到哪：在自己店里默认送家里，别处默认送当前这家店（没店只能送家里）。</summary>
-        public OwnedShop TruckDest => ResolveCourierShop(CourierDest, !InPlayerShop);
+        private string _truckDestinationId;
 
-        /// <summary>选的地方就是这里时不能叫。</summary>
-        public string TruckDestBlocker =>
-            TruckDest == null && AtHome ? "你就在家里，选个别的地方"
-            : TruckDest != null && CurrentPlace == TruckDest.Place ? "你就在这家店里，选个别的地方"
-            : null;
+        public OwnedShop TruckDest => ShopAt(TruckDestination);
 
-        public int TruckCars => CarsFor(_truck, TruckDest);
+        public Place TruckDestination => City.HasPlace(_truckDestinationId) ? City.GetPlace(_truckDestinationId)
+            : ResolveCourierShop(CourierDest, !InPlayerShop)?.Place ?? Home;
 
-        public Money TruckFreight => TruckCars <= 0 ? Money.Zero : CourierQuote(TruckDest).fee * TruckCars;
+        public IEnumerable<Place> TruckDestinations => ResidentialPlaces.Where(CanSleepAt)
+            .OrderBy(place => place != Home).ThenBy(DistrictTierOf).ThenBy(place => place.Name)
+            .Concat(MyShops.Select(shop => shop.Place));
+
+        public string CartResidenceBlocker(Place place) => place?.Kind != PlaceKind.Home
+            ? "请选择可收货的自家住宅" : TruckDestinationBlocker(place);
+
+        public bool SelectCartResidence(Place place)
+        {
+            if (!CartRequiresHomeDelivery) return false;
+            if (CartResidenceBlocker(place) is string blocker) return Fail(blocker + "。");
+            _cartResidence = place;
+            return true;
+        }
+
+        public string TruckDestinationBlocker(Place place)
+        {
+            if (place == null) return "请选择送货地址";
+            if (place == CurrentPlace) return "你就在这里，选个别的地方";
+            if (DistrictAccessBlocker(place) is string locked) return locked;
+            if (place.Kind == PlaceKind.Home ? !CanSleepAt(place) : ShopAt(place)?.Rented != true)
+                return "这里目前不能收货";
+            var route = PlanTrip(place.NodeId, StandOf(place), out _);
+            if (route == null) return "货车无法到达这里";
+            int blocked = BlockedDistrictOnTrip(route);
+            return blocked > 0 ? "路线经过尚未开放的" + DistrictName(blocked) + "片区" : null;
+        }
+
+        public bool SelectTruckDestination(Place place)
+        {
+            if (TruckDestinationBlocker(place) is string blocker) return Fail(blocker + "。");
+            _truckDestinationId = place.Id;
+            return true;
+        }
+
+        public (Money fee, int minutes) TruckQuote(Place place) => CourierQuoteTo(place);
+        public string TruckDestBlocker => TruckDestinationBlocker(TruckDestination);
+
+        public int TruckCars
+        {
+            get
+            {
+                var place = TruckDestination;
+                string key = place.Kind == PlaceKind.Home ? RunKey(null, place) : RunKey(ShopAt(place));
+                double free = _openRuns.TryGetValue(key, out var run) ? run.FreeKg : 0;
+                return CarsFor(_truck.Where(line => line.ByTruck > 1e-9).Select(line => (line.ByWeight, line.UnitKg, line.ByTruck)), free);
+            }
+        }
+
+        public Money TruckFreight => TruckCars <= 0 ? Money.Zero : TruckQuote(TruckDestination).fee * TruckCars;
 
         public string TruckBlocker
         {
@@ -521,7 +574,9 @@ namespace PCShopSell.Core.Session
             string why = TruckBlocker;
             if (why != null) return Fail(why + "。");
             bool keep = SendByCourier;
-            try { return RunLines(_truck, TruckDest, TruckCars, $"{TruckDriverName}把东西装上车了"); }
+            var place = TruckDestination;
+            try { return RunLines(_truck, ShopAt(place), TruckCars, $"{TruckDriverName}把东西装上车了",
+                TruckQuote(place), place.Kind == PlaceKind.Home ? place : null); }
             finally
             {
                 SendByCourier = keep;
@@ -535,7 +590,7 @@ namespace PCShopSell.Core.Session
             {
                 case "bag": return true;
                 case "temp": return AtHome || InPlayerShop;
-                case "box": return AtHome;
+                case "box": return AtHome || HasSecondaryResidenceWarehouse;
                 case "shop":
                 case "locker": return InPlayerShop;
                 default: return false;
@@ -557,13 +612,13 @@ namespace PCShopSell.Core.Session
         private Backpack TempHere => AtHome ? HomeTemp : InPlayerShop ? ShopTemp : null;
 
         private Pantry FoodOf(string src) =>
-            src == "bag" ? Backpack.Food : src == "box" ? HomeBox.Food : src == "locker" ? ShopLocker.Food : src == "temp" ? TempHere?.Food : null;
+            src == "bag" ? Backpack.Food : src == "box" ? WarehouseBagHere.Food : src == "locker" ? ShopLocker.Food : src == "temp" ? TempHere?.Food : null;
 
         private Backpack BagOf(string src) =>
-            src == "bag" ? Backpack : src == "box" ? HomeBox : src == "locker" ? ShopLocker : src == "temp" ? TempHere : null;
+            src == "bag" ? Backpack : src == "box" ? WarehouseBagHere : src == "locker" ? ShopLocker : src == "temp" ? TempHere : null;
 
         private Stock PartsOf(string src) =>
-            src == "bag" ? Cargo : src == "box" ? HomeBoxParts : src == "shop" ? PlayerShop.Stock : src == "temp" && AtHome ? HomeTempParts : null;
+            src == "bag" ? Cargo : src == "box" ? WarehousePartsHere : src == "shop" ? PlayerShop.Stock : src == "temp" && AtHome ? HomeTempParts : null;
 
         private MovableItem DescribeMove(string key, out CourierItem unit)
         {
@@ -679,10 +734,11 @@ namespace PCShopSell.Core.Session
                     break;
             }
             ApplyCargoLimit();
-            OwnedShop dest = TruckDest;
+            var place = TruckDestination;
+            var dest = ShopAt(place);
             bool ok = true;
             foreach (CourierItem it in items)
-                if (!Ship(dest, null, Money.Zero, m.Name, it, "装了"))
+                if (!Ship(dest, null, Money.Zero, m.Name, it, "装了", place.Kind == PlaceKind.Home ? place : null))
                 {
                     PutBack(src, it);
                     ok = false;

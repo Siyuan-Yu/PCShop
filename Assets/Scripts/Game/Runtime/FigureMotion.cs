@@ -5,7 +5,7 @@ namespace PCShopSell.Game.Runtime
 {
     public enum FigureWorkAction { None, Cook, Plate, Serve, Clear, Assemble }
 
-    /// <summary>Procedural walking for the miniature figures. Only the visual rig moves; gameplay roots stay on the ground.</summary>
+    /// <summary>Procedural poses for the miniature figures. Only the visual rig moves; gameplay roots stay on the ground.</summary>
     public sealed class FigureMotion : MonoBehaviour
     {
         private const float WalkCycleDistance = .88f;
@@ -18,6 +18,7 @@ namespace PCShopSell.Game.Runtime
         private float _phase, _blend, _idleTime, _scale;
         private bool _sampled, _locomotion = true;
         private bool _seated;
+        private Transform _scooter;
         private float _furnitureSeatHeight, _furnitureSeatBlend;
         private Vector3 _reachTarget;
         private float _reachWeight, _reachCrouch;
@@ -54,6 +55,15 @@ namespace PCShopSell.Game.Runtime
             _furnitureSeatHeight = height;
             _furnitureSeatBlend = blend;
             ApplyPose();
+        }
+
+        internal void SetScooterPose(Transform scooter)
+        {
+            if (ReferenceEquals(_scooter, scooter)) return;
+            _scooter = scooter;
+            if (scooter == null)
+                foreach (var hand in _hands) hand.localRotation = Quaternion.identity;
+            ResetMotion();
         }
 
         public float WalkBlend => _blend;
@@ -152,7 +162,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Advance(float dt, bool animateIdle = true)
         {
-            if (_visual == null || dt <= 0) return;
+            if (_visual == null || _scooter != null || dt <= 0) return;
             Vector3 position = transform.position;
             if (!_sampled)
             {
@@ -187,12 +197,17 @@ namespace PCShopSell.Game.Runtime
 
         private void ApplyPose()
         {
-            bool working = !_seated && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
+            bool working = _scooter == null && !_seated && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
             const float hipHeight = PlayerCharacterModel.HipHeight;
             const float segment = PlayerCharacterModel.LegSegment;
             const float ankle = PlayerCharacterModel.AnkleHeight;
             if (_spatula != null) _spatula.SetActive(working && _workAction == FigureWorkAction.Cook);
             if (_screwdriver != null) _screwdriver.SetActive(working && _workAction == FigureWorkAction.Assemble);
+            if (_scooter != null)
+            {
+                ApplyScooterPose();
+                return;
+            }
             if (_furnitureSeatBlend > 0)
             {
                 ApplyFurnitureSeatPose();
@@ -332,6 +347,49 @@ namespace PCShopSell.Game.Runtime
             float forward = Mathf.SmoothStep(-halfTravel, halfTravel, swing);
             float lift = Mathf.Sin(swing * Mathf.PI);
             return new Vector2(forward, .10f * lift * lift);
+        }
+
+        private void ApplyScooterPose()
+        {
+            Vector3 pelvis = Vector3.up * PlayerCharacterModel.HipHeight;
+            _visual.localPosition = transform.InverseTransformPoint(_scooter.TransformPoint(MotorVisual.ScooterPelvis)) - pelvis * _scale;
+            Torso.localRotation = Quaternion.Euler(15, 0, 0);
+            Torso.localPosition = pelvis - Torso.localRotation * pelvis;
+
+            Vector3 deck = new Vector3(0, MotorVisual.ScooterDeckHeight, MotorVisual.ScooterAnkleDepth);
+            Vector3 ankle = _visual.InverseTransformPoint(_scooter.TransformPoint(deck));
+            const float shoeSole = .014f;
+            ankle.y += PlayerCharacterModel.AnkleHeight - shoeSole;
+            for (int i = 0; i < 2; i++)
+            {
+                float side = i == 0 ? -1f : 1f;
+                ankle.x = _hips[i].localPosition.x * 1.25f;
+                AimLimb(_hips[i], _knees[i], _feet[i], ankle, Vector3.forward);
+                _feet[i].localRotation = Quaternion.Inverse(_hips[i].localRotation * _knees[i].localRotation);
+
+                Vector3 grip = Torso.InverseTransformPoint(_scooter.TransformPoint(MotorVisual.ScooterGrip(side)));
+                Quaternion handRotation = Quaternion.Euler(-25, 0, 0);
+                Vector3 palmOffset = new Vector3(side * .006f, -.035f, .003f);
+                AimLimb(_arms[i], _elbows[i], _hands[i], grip - handRotation * palmOffset, new Vector3(side * .4f, -1, 0));
+                _hands[i].localRotation = Quaternion.Inverse(_arms[i].localRotation * _elbows[i].localRotation) * handRotation;
+            }
+        }
+
+        // Solve the two segments in the upper joint's parent space so scaled figures reach the same contact points.
+        private static void AimLimb(Transform upper, Transform joint, Transform end, Vector3 target, Vector3 bendDirection)
+        {
+            Vector3 reach = target - upper.localPosition;
+            Vector3 direction = reach.normalized;
+            float upperLength = joint.localPosition.magnitude;
+            float lowerLength = end.localPosition.magnitude;
+            float distance = Mathf.Clamp(reach.magnitude, Mathf.Abs(upperLength - lowerLength) + .001f, upperLength + lowerLength - .001f);
+            float projected = (upperLength * upperLength - lowerLength * lowerLength + distance * distance) / (2f * distance);
+            float offset = Mathf.Sqrt(Mathf.Max(0, upperLength * upperLength - projected * projected));
+            Vector3 bend = Vector3.ProjectOnPlane(bendDirection, direction).normalized;
+            Vector3 jointOffset = direction * projected + bend * offset;
+            upper.localRotation = Quaternion.FromToRotation(joint.localPosition, jointOffset);
+            joint.localRotation = Quaternion.FromToRotation(end.localPosition,
+                Quaternion.Inverse(upper.localRotation) * (direction * distance - jointOffset));
         }
 
         private void ApplyFurnitureSeatPose()

@@ -95,6 +95,69 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.SellOldMarketGoods("oldmarket:watch")); Assert.AreEqual(cash - Money.FromYuan(900), s.Ledger.Balance);
             Assert.IsFalse(s.SellOldMarketGoods("oldmarket:watch")); Assert.IsFalse(s.SellOldMarketGoods("wine"));
         }
+        [TestCase(false)]
+        [TestCase(true)]
+        public void MarketGiftKeepsTheRemainingSearchesUntilTheLastFindIsHandled(bool mainStory)
+        {
+            using var s = Make();
+            if (mainStory)
+                typeof(GameSession).GetField("_district", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .SetValue(s, new DistrictProgress { Chapter = 1, NodeId = "community.search", CommunityMapQuest = true,
+                        CommunitySearchVersion = 2, CommunityAcceptedAt = s.Clock.Now.TotalMinutes });
+
+            At(s);
+            var companions = mainStory ? new[] { "zhou" } : new[] { "zhou", "lin" };
+            foreach (string id in companions)
+            {
+                s.Meet(id, 65);
+                var person = s.CityPersonState(id);
+                person.WorkPlaceId = null;
+                person.LocationPlaceId = GameSession.OldMarketVenueId;
+                person.Route = null;
+                person.Task = CityPersonTask.Waiting;
+                var entrance = s.StandOf(s.CurrentPlace);
+                person.X = entrance.X;
+                person.Y = entrance.Y;
+            }
+            long start = s.Clock.Now.TotalMinutes + 30;
+            var outing = mainStory ? s.ScheduleCityActivityInvitation("oldmarket_visit", "zhou", start, false)
+                : s.ScheduleCityActivity("oldmarket_visit", companions, start);
+            Assert.NotNull(outing, s.CityActivityBlocker("oldmarket_visit", companions, start));
+            s.PrepareVenueCompanions(s.CurrentPlace, outing.Id);
+            s.AdvanceClock(30);
+            if (outing.State != CityActivityPhase.Running)
+            {
+                if (mainStory) Assert.True(s.StartVenueAppointment(outing.Id), s.VenueAppointmentStartBlocker(outing));
+                else Assert.True(s.SelectVenueService("oldmarket_visit", 0, outing.Id), s.VenueServiceBlocker("oldmarket_visit", 0, outing.Id));
+            }
+            Assert.AreEqual(CityActivityPhase.Running, outing.State);
+            long beforeSearch = s.Clock.Now.TotalMinutes;
+            var cash = s.Ledger.Balance;
+
+            Assert.True(s.BuyMarketHuntPass(0, 3), s.MarketHuntPassBlocker(0, 3));
+            Assert.True(s.BeginMarketHunt("watch-box"));
+            CollectionAssert.AreEquivalent(companions, s.MarketHuntGiftRecipients.ToArray());
+            Assert.False(s.GiftMarketFindToCompanion("landlady"));
+            Assert.NotNull(s.PendingMarketFind);
+            Assert.True(s.GiftMarketFindToCompanion(mainStory ? "zhou" : "lin"));
+            Assert.False(s.GiftMarketFindToCompanion("zhou"));
+            Assert.AreEqual(2, s.MarketHuntRemaining);
+            Assert.AreEqual(CityActivityPhase.Running, outing.State);
+            Assert.False(s.CanFinishManualCityActivity(outing.Id));
+            Assert.False(s.CommunityHasClue(2));
+            Assert.AreEqual(beforeSearch, s.Clock.Now.TotalMinutes);
+            Assert.True(s.BeginMarketHunt("radio"));
+            Assert.True(s.ClaimMarketFind());
+            Assert.True(s.BeginMarketHunt("headphones"));
+            Assert.AreEqual(CityActivityPhase.Running, outing.State);
+            Assert.True(s.ClaimMarketFind());
+            Assert.AreEqual(CityActivityPhase.Completed, outing.State);
+            Assert.AreEqual(beforeSearch + 120, s.Clock.Now.TotalMinutes);
+            Assert.AreEqual(2, s.CarriedMarketFindCount);
+            Assert.AreEqual(cash - Money.FromYuan(1500), s.Ledger.Balance);
+            Assert.AreEqual(mainStory, s.CommunityHasClue(2));
+        }
+
         [TestCase(71, "act_oldmarket_guwen")] [TestCase(72, "act_oldmarket_leiming")]
         public void InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(int n, string eventId)
         {

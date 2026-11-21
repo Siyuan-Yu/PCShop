@@ -94,9 +94,15 @@ namespace PCShopSell.Tests
             {
                 Assert.True(s.StartVenueAppointment(activity.Id), s.VenueAppointmentStartBlocker(activity));
                 Assert.False(s.CommunityHasOuting(index));
-                var gift = OldMarketCatalog.All.OrderBy(item => item.Price).First();
-                Assert.True(s.BuyCommunityMarketGift(gift.Id));
-                Assert.AreEqual(0, s.Backpack.GiftCount(OldMarketCatalog.ItemId(gift)));
+                var cash = s.Ledger.Balance;
+                Assert.True(s.BuyMarketHuntPass(0, 1), s.MarketHuntPassBlocker(0, 1));
+                Assert.True(s.BeginMarketHunt("watch-box"), s.MarketHuntSearchBlocker(OldMarketHuntCatalog.Spot("watch-box")));
+                string recipient = GameSession.CommunityLeadPerson(index);
+                CollectionAssert.Contains(s.MarketHuntGiftRecipients.ToArray(), recipient);
+                Assert.True(s.GiftMarketFindToCompanion(recipient));
+                Assert.IsNull(s.PendingMarketFind);
+                Assert.AreEqual(0, s.CarriedMarketFindCount);
+                Assert.AreEqual(cash - Money.FromYuan(OldMarketHuntCatalog.Prices[0]), s.Ledger.Balance);
                 Assert.AreEqual(CityActivityPhase.Completed, activity.State, activity.EndReason);
                 Assert.True(s.CommunityHasOuting(index));
                 return;
@@ -644,7 +650,7 @@ namespace PCShopSell.Tests
             Street(s, s.City.ViewPosition(landmark.NodeId), landmark.NodeId);
             s.Player.Health = 100; s.Player.Hunger = 100; s.Player.Energy = 100;
             s.Time.SetSpeed(8);
-            Assert.True(s.GoTo(s.CommunityBoxNode(index)));
+            Assert.True(s.GoToCommunityBox(index));
             for (int i = 0; i < 1200 && s.Trip != null; i++) s.Tick(.05);
             Assert.AreEqual(index, s.NearbyCommunityBox);
             Assert.IsNull(s.NearbyPlace, "Picking up a box must not overlap a building entrance");

@@ -681,6 +681,12 @@ namespace PCShopSell.Core.Session
             SpoilBackpackFood(today.TotalDays);
             List<string> boxLost = HomeBox.Food.Spoil(today.TotalDays);
             if (boxLost.Count > 0) Say("后仓里放坏扔掉了：" + string.Join("、", boxLost) + "。");
+            foreach (var entry in _residenceFreight)
+            {
+                var residenceLost = entry.Value.Box.Food.Spoil(today.TotalDays);
+                if (residenceLost.Count > 0 && City.HasPlace(entry.Key))
+                    Say(PlaceTitle(City.GetPlace(entry.Key)) + "后仓里放坏扔掉了：" + string.Join("、", residenceLost) + "。");
+            }
             List<string> tempLost = HomeTemp.Food.Spoil(today.TotalDays);
             if (tempLost.Count > 0) Say("家里临时存放的放坏扔掉了：" + string.Join("、", tempLost) + "。");
             foreach (OwnedShop s in _shops)
@@ -776,6 +782,11 @@ namespace PCShopSell.Core.Session
                 cookReadyMinute = Pantry.Cooking == null ? 0 : Pantry.Cooking.ReadyMinute,
                 packLunch = ToSave(Backpack.Food.Packed),
                 couriers = SaveCouriers(),
+                residentialFreight = _residenceFreight.Where(entry => !entry.Value.IsEmpty).Select(entry => new SaveResidentialFreight
+                {
+                    residenceId = entry.Key,
+                    storage = ToSaveStorage(entry.Value.Box, entry.Value.Parts),
+                }).ToArray(),
                 furnitureBuybacks = _furnitureBuybacks.Select(order => order.Copy()).ToArray(),
                 nextFurnitureBuybackId = _nextFurnitureBuybackId,
                 sendByCourier = SendByCourier,
@@ -844,6 +855,14 @@ namespace PCShopSell.Core.Session
             _mallStash.Clear();
             SaveHome h = d.home;
             RestoreCouriers(h?.couriers);
+            _truckDestinationId = null;
+            _residenceFreight.Clear();
+            foreach (var entry in h?.residentialFreight ?? Array.Empty<SaveResidentialFreight>())
+            {
+                if (string.IsNullOrEmpty(entry?.residenceId)) continue;
+                var storage = FreightStorageAt(City.CanonicalPlaceId(entry.residenceId));
+                FromSaveStorage(entry.storage, storage.Box, storage.Parts);
+            }
             RestoreFurnitureBuybacks(h);
             SendByCourier = h != null && h.sendByCourier;
             FromSaveStorage(h?.homeFridge, HomeFridge);

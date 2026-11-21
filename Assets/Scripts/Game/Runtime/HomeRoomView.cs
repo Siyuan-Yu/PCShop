@@ -433,12 +433,20 @@ namespace PCShopSell.Game.Runtime
                     furniture[1].Id = "wardrobe_wood";
                     furniture.Add(new PlacedFurniture { Id = "sofa", X = 1.2, Z = .65 });
                 }
+                if (canSleep) furniture.Add(new PlacedFurniture { Id = FurnitureCatalog.HomeBox, X = .62, Z = 1.5 });
                 _furniture.Sync(furniture, Room);
                 _spots.Clear();
                 _spots.Add(new Spot { Id = Door, Area = _doorArea, Height = 2.5f });
                 RectD footprint = RoomPlanner.Footprint(Room, FurnitureCatalog.Get(bed.Id), bed);
                 _spots.Add(new Spot { Id = Bed, Label = "睡觉 / 小睡", Height = 1.1f,
                     Area = new Rect((float)footprint.MinX, (float)footprint.MinZ, (float)(footprint.MaxX - footprint.MinX), (float)(footprint.MaxZ - footprint.MinZ)) });
+                if (canSleep)
+                {
+                    var box = furniture[furniture.Count - 1];
+                    RectD area = RoomPlanner.Footprint(Room, FurnitureCatalog.Get(box.Id), box);
+                    _spots.Add(new Spot { Id = Storage, Label = "纸箱：存取东西", Height = 1f,
+                        Area = new Rect((float)area.MinX, (float)area.MinZ, (float)(area.MaxX - area.MinX), (float)(area.MaxZ - area.MinZ)) });
+                }
                 ApplyFinish(home.Tier);
             }
 
@@ -482,12 +490,16 @@ namespace PCShopSell.Game.Runtime
             var owner = _owner.transform.localPosition;
             if (canSleep)
             {
-                var bed = _spots[1];
-                if (DistToRect(new Vector2(owner.x, owner.z), bed.Area) <= .6f)
+                float nearestFurniture = .6f;
+                for (int i = 1; i < _spots.Count; i++)
                 {
-                    NearbyId = Bed;
-                    NearbyLabel = bed.Label;
-                    NearbyWorld = Origin + new Vector3(bed.Area.center.x, bed.Height, bed.Area.center.y);
+                    var spot = _spots[i];
+                    float distance = DistToRect(new Vector2(owner.x, owner.z), spot.Area);
+                    if (distance > nearestFurniture) continue;
+                    nearestFurniture = distance;
+                    NearbyId = spot.Id;
+                    NearbyLabel = spot.Label;
+                    NearbyWorld = Origin + new Vector3(spot.Area.center.x, spot.Height, spot.Area.center.y);
                 }
             }
             if (DistToRect(new Vector2(owner.x, owner.z), _doorArea) <= .75f)

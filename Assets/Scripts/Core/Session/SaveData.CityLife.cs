@@ -49,7 +49,7 @@ namespace PCShopSell.Core.Session
             d.payrollDays=_employeePayroll.Select(p=>p.Copy()).ToArray();
             d.pendingDisplays=_shops.Where(s=>s.PendingDisplayTier>=0).Select(s=>new CityPendingDisplay{ShopId=s.Place.Id,Tier=s.PendingDisplayTier,Minutes=s.PendingDisplayMinutes}).ToArray();
             d.cityLastAutomaticMealMinute=_lastAutomaticMealMinute;
-            d.cityLifeVersion=4;d.cityLifeTest=IsCityLifeTest;d.cityPeople=_cityPeople.Values.Select(p=>p.Copy()).ToArray();
+            d.cityLifeVersion=5;d.cityLifeTest=IsCityLifeTest;d.cityPeople=_cityPeople.Values.Select(p=>p.Copy()).ToArray();
             d.cityExtraPeople=_cityExtraDefinitions.Values.ToArray();d.cityNextVisit=_nextCityVisit;
             d.cityActivities=_cityActivities.Select(a=>a.Copy()).ToArray();d.cityStories=_cityStories.Select(a=>a.Copy()).ToArray();
             d.cityRomanceStateRecorded = true;
@@ -82,7 +82,6 @@ namespace PCShopSell.Core.Session
                 // Even a deleted route target must not teleport the saved physical person.
                 if(copy.Route!=null&&(!City.HasPlace(copy.Route.TargetPlaceId)||copy.Route.X==null||copy.Route.Y==null||copy.Route.X.Length<2||copy.Route.Y.Length!=copy.Route.X.Length))
                     copy.Route=null;
-                RefreshElectronicsMarketWorkplace(copy);
                 if (copy.PersonId == CityLifeCatalog.BankTellerId && (copy.WorkPlaceId == null || d.cityLifeVersion < 4)
                     && BankPlace is Place bank)
                 {
@@ -150,7 +149,7 @@ namespace PCShopSell.Core.Session
                 Trip=PCShopSell.Core.Session.Trip.RestoreCityTrip(d.cityTrip,City,CurrentVehicle);
                 if(Trip!=null){CurrentPlace=null;_free=null;}
             }
-            else if(d.cityPlayerOffNode&&CurrentPlace==null)_free=new MapPoint(d.cityPlayerX,d.cityPlayerY);
+            else if(d.cityPlayerOffNode&&CurrentPlace==null)_free=OutsideResidenceWalls(new MapPoint(d.cityPlayerX,d.cityPlayerY));
             LoadCityStories(d);
             LoadCityVisits(d);
             if(d.cityLifeVersion<2)MigrateCityAppointments();
@@ -158,24 +157,61 @@ namespace PCShopSell.Core.Session
             // Restore only; do not replay time, charge a fee or grant rewards during load.
             foreach(var p in _cityPeople.Values)if(p.ActivityId!=null&&!_cityActivities.Any(a=>a.Id==p.ActivityId&&a.Active)
                 &&!(d.venueBusinesses??Array.Empty<VenueBusiness>()).Any(v=>v!=null&&ShopAt(v.PlaceId)!=null&&(v.CustomersHere??Array.Empty<VenueCustomer>()).Any(c=>c.PersonId==p.PersonId&&c.ReservationId==p.ActivityId)))p.ActivityId=null;
+            var employed = Employees.Select(row => PersonIdOf(row.Person)).ToHashSet();
+            foreach (var person in _cityPeople.Values)
+            {
+                if (employed.Contains(person.PersonId)) continue;
+                var definition = CityPerson(person.PersonId);
+                RestoreCityNpcHomeDistrict(person, definition);
+                RefreshCityNpcWorkplace(person, definition);
+            }
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
             PositionStreetServicePeople();
         }
 
-        private void RefreshElectronicsMarketWorkplace(CityPersonState person)
+        private void RestoreCityNpcHomeDistrict(CityPersonState person, CityPersonDefinition definition)
         {
-            if (!City.HasPlace(person.WorkPlaceId) || !City.HasPlace(Stalls.Cpu)) return;
-            var oldWork = City.GetPlace(person.WorkPlaceId);
-            if (!SharesWholesaleMarket(City.GetPlace(Stalls.Cpu), oldWork)) return;
-            string newWork = CityPerson(person.PersonId)?.WorkId;
-            if (!City.HasPlace(newWork) || City.CanonicalPlaceId(newWork) == oldWork.Id
-                || Employees.Any(row => PersonIdOf(row.Person) == person.PersonId)) return;
+            if (!City.IsLakeCity || CityLifeCatalog.Person(person.PersonId) == null || !City.HasPlace(definition?.HomeId)
+                || !City.HasPlace(person.HomePlaceId) || person.ActivityId != null || person.VisitId != null) return;
+            var currentHome = City.GetPlace(person.HomePlaceId);
+            var authoredHome = City.GetPlace(definition.HomeId);
+            int tier = DistrictTierOf(authoredHome);
+            int currentTier = DistrictTierOf(currentHome);
+            if (tier == currentTier) return;
 
-            person.WorkPlaceId = City.CanonicalPlaceId(newWork);
-            if (person.Route != null || person.ActivityId != null || person.VisitId != null || person.LocationPlaceId != oldWork.Id
-                || (person.Task != CityPersonTask.Working && person.Task != CityPersonTask.Waiting)) return;
+            bool earlyStoryContact = person.PersonId is Npcs.Lin or Npcs.Landlady or Npcs.Zhou;
+            bool restoreLocalHome = earlyStoryContact && currentTier > tier;
+            bool restoreHomeForJob = currentTier < tier && CityNpcWorkplace(definition, currentHome.Id) == null
+                && CityNpcWorkplace(definition, authoredHome.Id) != null;
+            if (!restoreLocalHome && !restoreHomeForJob) return;
+
+            bool Available(Place home) => home.Kind == PlaceKind.Home && home != Home && !home.InitiallyVacant
+                && !HasResidentialLease(home) && PropertyAt(home.Id) == null;
+            var home = Available(authoredHome) ? authoredHome : City.Places.FirstOrDefault(p => DistrictTierOf(p) == tier && Available(p));
+            if (home == null) return;
+            if (City.CanonicalPlaceId(person.Route?.TargetPlaceId) == currentHome.Id
+                && person.LeisureTargetId != currentHome.Id)
+            {
+                person.Route = null;
+                person.LocationPlaceId = currentHome.Id;
+                person.Task = CityPersonTask.Home;
+                person.TaskLabel = "在家休息";
+            }
+            MoveCityHome(person, home);
+        }
+
+        private void RefreshCityNpcWorkplace(CityPersonState person, CityPersonDefinition definition)
+        {
+            string oldWork = City.CanonicalPlaceId(person.WorkPlaceId);
+            person.WorkPlaceId = CityNpcWorkplace(definition, person.HomePlaceId);
+            if (oldWork == null || person.WorkPlaceId == oldWork || person.ActivityId != null || person.VisitId != null) return;
+            bool commuting = City.CanonicalPlaceId(person.Route?.TargetPlaceId) == oldWork && person.LeisureTargetId != oldWork;
+            bool atWork = person.Route == null && City.CanonicalPlaceId(person.LocationPlaceId) == oldWork
+                && person.Task is CityPersonTask.Working or CityPersonTask.Waiting;
+            if (!commuting && !atWork) return;
 
             bool working = AuthoredCityWorkAt(person, Clock.Now.TotalMinutes);
+            person.Route = null;
             person.LocationPlaceId = working ? person.WorkPlaceId : person.HomePlaceId;
             person.Task = working ? CityPersonTask.Working : CityPersonTask.Home;
             person.TaskLabel = working ? "当班工作" : "在家休息";

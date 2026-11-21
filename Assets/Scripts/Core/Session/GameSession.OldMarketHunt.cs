@@ -96,12 +96,15 @@ namespace PCShopSell.Core.Session
     public sealed class OldMarketHuntState
     {
         public int Tier, PassSize, Remaining, NextItemId = 1;
+        public string ActivityId;
+        public int ActivitySearchMinutes;
         public UsedItem Pending;
         public List<UsedItem> Carried = new List<UsedItem>();
 
         public OldMarketHuntState Copy() => new OldMarketHuntState
         {
             Tier = Tier, PassSize = PassSize, Remaining = Remaining, NextItemId = NextItemId,
+            ActivityId = ActivityId, ActivitySearchMinutes = ActivitySearchMinutes,
             Pending = Pending?.Copy(),
             Carried = (Carried ?? new List<UsedItem>()).Where(item => item != null).Select(item => item.Copy()).ToList()
         };
@@ -116,13 +119,35 @@ namespace PCShopSell.Core.Session
         public UsedItem PendingMarketFind => _marketHunt.Pending?.Copy();
         public UsedItem[] CarriedMarketFinds => _marketHunt.Carried.Select(item => item.Copy()).ToArray();
         public int CarriedMarketFindCount => _marketHunt.Carried.Count;
+        public static bool IsOldMarketVisit(CityActivity activity) =>
+            activity?.DefinitionId == "oldmarket_visit" && activity.VenueId == OldMarketVenueId;
+
+        public IEnumerable<string> MarketHuntGiftRecipients
+        {
+            get
+            {
+                var activity = RunningCityActivity;
+                if (_marketHunt.Pending == null || activity?.VenueId != OldMarketVenueId
+                    || CurrentPlace?.Id != OldMarketVenueId || _marketHunt.ActivityId != activity.Id
+                    || IsGameOver || _sleeping || IsWorking) yield break;
+                foreach (var participant in activity.Participants)
+                    if (participant.Phase == CityParticipantPhase.Participating && CitySamePlace(participant.PersonId))
+                        yield return participant.PersonId;
+            }
+        }
+
         private double CarriedMarketFindKg => _marketHunt.Carried.Sum(UsedWeight);
+        private int MarketHuntMinutes(CityActivity activity) => activity != null && _marketHunt.ActivityId == activity.Id
+            ? _marketHunt.ActivitySearchMinutes : 0;
+        private long MarketHuntStartMinute => Clock.Now.TotalMinutes + MarketHuntMinutes(RunningCityActivity);
 
         private string MarketHuntVisitBlocker()
         {
+            if (CurrentPlace?.Id == OldMarketVenueId && NpcVenueStaffingBlocker(CurrentPlace) is string staffing) return staffing;
             if (!AtOldMarket) return "请到营业中的青湾旧物市场。";
-            if (IsGameOver || IsWorking || _sleeping || ManualActivityClockPaused || BrandExpoExclusive)
+            if (IsGameOver || IsWorking || _sleeping || ManualActivityClockPaused && !OldMarketActivityRunning || BrandExpoExclusive)
                 return "请先完成正在进行的活动。";
+            if (OutdoorState(RunningCityActivity)?.Pending != null) return "请先完成同行活动中的当前互动。";
             if (_oldMarket.Pending != null) return "请先完成市场里的查看或维修。";
             if (_marketHunt.Pending != null) return "请先领取上一次淘到的旧物。";
             return null;
@@ -134,7 +159,7 @@ namespace PCShopSell.Core.Session
                 return "请选择一个档位和次数。";
             return MarketHuntVisitBlocker()
                 ?? (_marketHunt.Remaining > 0 ? "请先用完已买的次数。"
-                    : !CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, attempts * OldMarketHuntCatalog.MinutesPerSearch)
+                    : !CityVenueFits(CurrentPlace, MarketHuntStartMinute, attempts * OldMarketHuntCatalog.MinutesPerSearch)
                         ? "距打烊时间不足，可以选择更少的次数。"
                     : !Ledger.CanAfford(Money.FromYuan(OldMarketHuntCatalog.Prices[tier] * attempts)) ? "现金不足。" : null);
         }
@@ -155,7 +180,7 @@ namespace PCShopSell.Core.Session
             if (spot == null) return "请先选一个物件。";
             return MarketHuntVisitBlocker()
                 ?? (_marketHunt.Remaining <= 0 ? "请先买淘货次数。"
-                    : !CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, OldMarketHuntCatalog.MinutesPerSearch)
+                    : !CityVenueFits(CurrentPlace, MarketHuntStartMinute, OldMarketHuntCatalog.MinutesPerSearch)
                         ? "快打烊了，这次只能逛逛。"
                     : spot.Weight > FreeKg + 1e-9 ? "背包剩余负重不足。" : null);
         }
@@ -169,7 +194,19 @@ namespace PCShopSell.Core.Session
             _marketHunt.Pending = OldMarketHuntCatalog.Draw(spot, _marketHunt.Tier, Random.Next(0, 1000),
                 Random.Next(0, 3), _marketHunt.NextItemId++);
             _marketHunt.Remaining--;
-            AdvanceClock(OldMarketHuntCatalog.MinutesPerSearch);
+            if (OldMarketActivityRunning)
+            {
+                var activity = RunningCityActivity;
+                int used = MarketHuntMinutes(activity);
+                _marketHunt.ActivityId = activity.Id;
+                _marketHunt.ActivitySearchMinutes = used + OldMarketHuntCatalog.MinutesPerSearch;
+            }
+            else
+            {
+                _marketHunt.ActivityId = null;
+                _marketHunt.ActivitySearchMinutes = 0;
+                AdvanceClock(OldMarketHuntCatalog.MinutesPerSearch);
+            }
             return true;
         }
 
@@ -180,7 +217,32 @@ namespace PCShopSell.Core.Session
             _marketHunt.Carried.Add(item);
             _marketHunt.Pending = null;
             ApplyCargoLimit();
+            FinishMarketHuntIfDone();
             return true;
+        }
+
+        public bool GiftMarketFindToCompanion(string personId)
+        {
+            if (!MarketHuntGiftRecipients.Contains(personId)) return Fail("请送给本次活动中仍在场的同行者。");
+            var activity = RunningCityActivity;
+            string item = UsedItemName(_marketHunt.Pending);
+            string name = CityPerson(personId)?.Name ?? "同行者";
+            _marketHunt.Pending = null;
+            RecordCommunityMarketGift(activity, personId);
+            string note = $"把「{item}」送给了{name}。";
+            activity.EventSettlementNote = string.IsNullOrEmpty(activity.EventSettlementNote)
+                ? note : activity.EventSettlementNote + "\n" + note;
+            RememberSocial(personId, $"在青湾旧物市场送给对方「{item}」。");
+            Say($"{name}收下了「{item}」。");
+            FinishMarketHuntIfDone();
+            return true;
+        }
+
+        private void FinishMarketHuntIfDone()
+        {
+            var activity = RunningCityActivity;
+            if (_marketHunt.Remaining == 0 && IsOldMarketVisit(activity) && _marketHunt.ActivityId == activity.Id)
+                FinishManualCityActivity(activity.Id);
         }
 
         public bool StoreMarketFindAtUsedShop(int id)

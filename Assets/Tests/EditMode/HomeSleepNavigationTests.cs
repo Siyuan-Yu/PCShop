@@ -50,7 +50,7 @@ namespace PCShopSell.Tests
             session.DebugAddCash(1000000);
             typeof(GameSession).GetField("_district", Private).SetValue(session, new DistrictProgress { UnlockedTier = 3, Chapter = 3 });
             var home = session.Home;
-            var inhabited = session.ResidentialPlaces.Where(p => session.ResidentialTenants(p.Id).Length > 0).Take(2).ToArray();
+            var inhabited = session.ResidentialPlaces.Where(p => p.Name.Contains(" · ") && session.ResidentialTenants(p.Id).Length > 0).Take(2).ToArray();
             var vacant = inhabited[0];
             var occupied = inhabited[1];
             foreach (var tenant in session.ResidentialTenants(vacant.Id))
@@ -74,18 +74,22 @@ namespace PCShopSell.Tests
                 var button = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
                     .Single(b => b.name == "ShortcutGo_4");
                 var caption = button.GetComponentInChildren<Text>();
-                Assert.AreEqual("前往 " + s.HomeTitle, caption.text);
+                Assert.AreEqual(HorizontalWrapMode.Overflow, caption.horizontalOverflow);
+                Assert.AreEqual(VerticalWrapMode.Truncate, caption.verticalOverflow);
+                Assert.That(caption.preferredWidth, Is.LessThanOrEqualTo(button.GetComponent<LayoutElement>().preferredWidth - 16));
                 string LabelName(PCShopSell.Core.World.Place place) => place.Name.Split(new[] { " · " }, StringSplitOptions.None).Last();
                 StringAssert.Contains(s.City.StreetName(s.Home.StreetId), dropdown.options[0].text);
                 Assert.True(dropdown.options.Any(option => option.text.EndsWith(LabelName(s.Home) + " · 主住所")));
                 Assert.True(dropdown.options.Any(option => option.text.EndsWith(LabelName(occupied) + " · 有租户")));
                 Assert.AreEqual(VerticalWrapMode.Truncate, dropdown.itemText.verticalOverflow);
                 var tip = button.GetComponent<TipTarget>();
+                StringAssert.Contains(s.HomeTitle, tip.Text());
                 StringAssert.Contains(s.City.StreetName(s.Home.StreetId), tip.Text());
                 int index = dropdown.options.FindIndex(o => o.text.EndsWith(LabelName(vacant) + " · 已购"));
                 Assert.Greater(index, 0);
                 dropdown.value = index;
-                Assert.AreEqual("前往 " + vacant.Name, caption.text);
+                Assert.AreEqual("前往 " + LabelName(vacant), caption.text);
+                StringAssert.Contains(vacant.Name, tip.Text());
                 Assert.AreEqual(index, dropdown.value);
                 Assert.IsNull(s.CityIntent);
                 Assert.IsNull(s.Trip);

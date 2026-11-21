@@ -58,6 +58,47 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.Trip, "手动走路不产生 Trip");
         }
 
+        [TestCase(1)]
+        [TestCase(8)]
+        public void ApproachingNumber22StopsAtTheWallAndKeepsTheDoorReachable(int speed)
+        {
+            using var s = DistrictProgressionTests.Make();
+            var residence = s.City.GetPlace("residence_s_oldhomes_22");
+            var door = s.DoorOf(residence);
+            var street = s.City.ViewPosition(residence.NodeId);
+            s.Leave();
+            s.ArriveAtNode(residence.NodeId);
+            s.Time.SetSpeed(speed);
+            Walk(s, door.X - street.X, door.Y - street.Y, 30);
+
+            var stop = s.PlayerPosition;
+            double yaw = residence.Heading * Math.PI / 180;
+            double depth = (stop.X - door.X) * Math.Sin(yaw) + (stop.Y - door.Y) * Math.Cos(yaw);
+            Assert.That(depth, Is.InRange(-.3, -.001));
+            Assert.AreSame(residence, s.NearbyPlace);
+        }
+
+        [Test]
+        public void SaveInsideNumber22RestoresOutsideTheWall()
+        {
+            using var s = DistrictProgressionTests.Make();
+            var residence = s.City.GetPlace("residence_s_oldhomes_22");
+            var door = s.DoorOf(residence);
+            double yaw = residence.Heading * Math.PI / 180;
+            var save = s.CreateSave();
+            save.currentPlace = null;
+            save.playerNode = residence.NodeId;
+            save.cityPlayerOffNode = true;
+            save.cityPlayerX = door.X + Math.Sin(yaw);
+            save.cityPlayerY = door.Y + Math.Cos(yaw);
+            using var restored = GameSession.Load(s.City, save);
+
+            var stop = restored.PlayerPosition;
+            double depth = (stop.X - door.X) * Math.Sin(yaw) + (stop.Y - door.Y) * Math.Cos(yaw);
+            Assert.That(depth, Is.InRange(-.3, -.001));
+            Assert.AreSame(residence, restored.NearbyPlace);
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(bool automatic)

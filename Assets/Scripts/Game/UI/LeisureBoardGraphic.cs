@@ -27,40 +27,79 @@ namespace PCShopSell.Game.UI
             if (Billiards != null) DrawBilliards(mesh, rect, Billiards);
         }
 
+        private static readonly Color[] PachinkoColors =
+        {
+            ArtDirection.Hex("DB976F"), ArtDirection.Hex("E7E8EA"),
+            ArtDirection.Hex("E7C05D"), ArtDirection.Hex("C8A5EB")
+        };
+
+        public static Color PachinkoBeadColor(int tier) => PachinkoColors[tier];
+
+        private static readonly Color[] PachinkoFelt =
+        {
+            ArtDirection.Hex("344F47"), ArtDirection.Hex("3F4C62"), ArtDirection.Hex("5A4145")
+        };
+
         private static void DrawPachinko(VertexHelper mesh, Rect rect, PachinkoPlay play)
         {
             float left = rect.xMin + rect.width * .12f, width = rect.width * .76f;
             float bottom = rect.yMin + rect.height * .065f, height = rect.height * .88f;
             Vector2 P(double x, double y) => new Vector2(left + width * (float)x, bottom + height * (1 - (float)y));
-            void Plate(float x, float y, float w, float h, string shade)
-                => Quad(mesh, P(x,y+h), P(x+w,y), ArtDirection.Hex(shade));
-            Plate(-.043f,-.045f,1.086f,1.11f,"39392C");
-            Plate(-.017f,-.022f,1.034f,1.064f,"907658");
-            Plate(0,0,1,1,"294137");
-            Plate(.035f,.074f,.93f,.88f,"385849");
-            var brass = ArtDirection.Hex("BB975F");
-            var path = new[] { P(.965,.95), P(.965,.27), P(.92,.154), P(.84,.09), P(.75,.055), P(.24,.055), P(.12,.10), P(.05,.22), P(.05,.95) };
-            for (int i = 1; i < path.Length; i++) Segment(mesh, path[i - 1], path[i], 3, brass);
-            for (int row = 0; row < 10; row++)
-            for (int col = 0; col < 10; col++)
+            void Plate(double x, double y, double w, double h, Color shade)
+                => Quad(mesh, P(x, y + h), P(x + w, y), shade);
+
+            var board = play.Board;
+            var brass = ArtDirection.Hex("C5A36D");
+            var dark = ArtDirection.Hex("242B29");
+            Plate(-.043, -.04, 1.086, 1.08, ArtDirection.Hex("302924"));
+            Plate(-.017, -.02, 1.034, 1.04, ArtDirection.Hex("907658"));
+            Plate(0, 0, 1, 1, PachinkoFelt[play.Machine]);
+            Segment(mesh, P(.053, .071), P(.053, PachinkoBoard.SlotY), 4, brass);
+            Segment(mesh, P(.947, .071), P(.947, PachinkoBoard.SlotY), 4, brass);
+            Segment(mesh, P(.053, .071), P(.947, .071), 4, brass);
+
+            foreach (var peg in board.Pegs)
             {
-                var pin = P(PachinkoPlay.PegX(row,col), PachinkoPlay.PegY(row));
-                Disc(mesh, pin + Vector2.down * 1.5f, height * .010f, ArtDirection.Hex("1F372D"), 8);
-                Disc(mesh, pin, height * .0076f, brass, 10);
+                var point = P(peg.X, peg.Y);
+                Disc(mesh, point + Vector2.down * 1.5f, height * .010f, dark, 8);
+                Disc(mesh, point, height * (float)PachinkoBoard.PegRadius, brass, 10);
             }
-            var gate = play.RewardFlash > 0 ? ArtDirection.Hex("FBE3A1") : ArtDirection.Hex("C6A166");
-            float gateWidth = (float)PachinkoPlay.RewardWidth;
-            Quad(mesh, P(.5f - gateWidth * .5f,.958f), P(.5f + gateWidth * .5f,.925f), gate);
-            Segment(mesh,P(.36,.898),P(.46,.933),3,brass);
-            Segment(mesh,P(.64,.898),P(.54,.933),3,brass);
+            for (int i = 0; i < board.BarCount; i++)
+            {
+                var bar = board.Bar(i, play.BoardTime);
+                var from = P(bar.X1, bar.Y1);
+                var to = P(bar.X2, bar.Y2);
+                Segment(mesh, from + Vector2.down * 2, to + Vector2.down * 2, height * .022f, dark);
+                Segment(mesh, from, to, height * .014f, ArtDirection.Hex("E5CA8E"));
+            }
+
+            var pivot = P(PachinkoBoard.OutletX, PachinkoBoard.OutletY);
+            var tip = P(play.LaunchX, play.LaunchY);
+            Segment(mesh, pivot, tip, height * .046f, dark);
+            Segment(mesh, pivot, tip, height * .026f, brass);
+            Disc(mesh, pivot, height * .028f, ArtDirection.Hex("8B724B"), 18);
+            Disc(mesh, tip, height * .015f, PachinkoBeadColor(play.Tier), 12);
+
+            Plate(.053, PachinkoBoard.SlotY, .894, .10, dark);
+            for (int i = 0; i < board.Slots.Length; i++)
+            {
+                var slot = board.Slots[i];
+                double edge = slot.Width * .5;
+                double y = PachinkoBoard.SlotY;
+                var glow = play.RewardFlash > 0 && play.LastSlot == i ? ArtDirection.Hex("FFF2BE") : brass;
+                Plate(slot.X - edge, y - .021, slot.Width, .056, ArtDirection.Hex("172420"));
+                Segment(mesh, P(slot.X - edge, y - .022), P(slot.X - edge, y + .035), 4, glow);
+                Segment(mesh, P(slot.X + edge, y - .022), P(slot.X + edge, y + .035), 4, glow);
+                Segment(mesh, P(slot.X - edge, y + .035), P(slot.X + edge, y + .035), 4, glow);
+            }
             foreach (var ball in play.Balls)
             {
-                var point = P(ball.X,ball.Y);
-                Segment(mesh, P(ball.X-ball.VX*.043,ball.Y-ball.VY*.043), point, 3, ArtDirection.Hex("C5CEBA"));
-                Disc(mesh, point, height * .0155f, ArtDirection.Hex("CED5C9"), 14);
-                Disc(mesh, point + new Vector2(-2,2), height * .006f, ArtDirection.Hex("FFF2CE"), 9);
+                var point = P(ball.X, ball.Y);
+                Color color = PachinkoBeadColor(ball.Tier);
+                Segment(mesh, P(ball.X - ball.VX * .037, ball.Y - ball.VY * .037), point, 3, color);
+                Disc(mesh, point, height * (float)PachinkoPlay.BallRadius, color, 14);
+                Disc(mesh, point + new Vector2(-2, 2), height * .004f, ArtDirection.Hex("FFF5DF"), 9);
             }
-            Segment(mesh,P(.07,.988),P(.93,.988),4,brass);
         }
 
         private static void DrawBilliards(VertexHelper mesh, Rect rect, BilliardsPlay pool)

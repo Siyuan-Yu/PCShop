@@ -176,22 +176,24 @@ namespace PCShopSell.Core.Session
             return space > free + 1e-9 ? $"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。" : null;
         }
 
-        public (Money UnitPrice, Money Discount, Money Total, string Blocker) QuoteOnlinePartOrder(PartDef part, int count, OwnedShop destination)
+        public (Money UnitPrice, Money Discount, Money Total, string Blocker) QuoteOnlinePartOrder(PartDef part, int count,
+            OwnedShop destination, int maxQuantity = OnlinePartOrderLimit)
         {
             Money unit = OnlinePrice(Online1788.Shopping, part);
+            int limit = Math.Min(maxQuantity, OnlinePartOrderLimit);
+            if (count < 1 || count > limit) return (unit, Money.Zero, Money.Zero, $"请选择 1–{limit} 件。");
             Money goods = unit * count;
             Money discount = EventProcurementCouponQuote(goods, false);
             Money total = goods + Online1788.ShippingFee - discount;
-            string blocker = count < 1 || count > OnlinePartOrderLimit ? $"请选择 1–{OnlinePartOrderLimit} 件。"
-                : destination == null || !destination.Rented || ShopAt(destination.Place.Id) != destination ? "收货门店已不可用。"
+            string blocker = destination == null || !destination.Rented || ShopAt(destination.Place.Id) != destination ? "收货门店已不可用。"
                 : AppBlocker(PhoneApps.Shop) ?? OnlineSpaceBlocker(destination, Stock.SpaceOf(part, true, count));
             if (blocker == null && !Ledger.CanAfford(total)) blocker = "现金不足。";
             return (unit, discount, total, blocker);
         }
 
-        private bool PlaceOnlinePartOrder(PartDef part, int count, OwnedShop destination)
+        private bool PlaceOnlinePartOrder(PartDef part, int count, OwnedShop destination, int maxQuantity)
         {
-            var quote = QuoteOnlinePartOrder(part, count, destination);
+            var quote = QuoteOnlinePartOrder(part, count, destination, maxQuantity);
             if (quote.Blocker != null) return Fail(quote.Blocker);
             return PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (part, count) }, destination);
         }

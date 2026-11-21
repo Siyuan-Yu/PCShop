@@ -87,7 +87,72 @@ namespace PCShopSell.Core.Session
             public double Scale; // 游戏米 / 画面米
         }
 
+        private readonly struct ResidenceFootprint
+        {
+            private const double Clearance = .12;
+            private readonly MapPoint _door;
+            private readonly double _cos, _sin, _halfWidth, _back, _reach;
+
+            public ResidenceFootprint(Place place, MapPoint door)
+            {
+                _door = door;
+                double yaw = place.Heading * Math.PI / 180;
+                _cos = Math.Cos(yaw);
+                _sin = Math.Sin(yaw);
+                _halfWidth = place.Width / 2 + Clearance;
+                _back = place.Depth + Clearance;
+                _reach = _halfWidth + _back;
+            }
+
+            // The building starts at its door plane and extends along Unity's local +Z.
+            private MapPoint ToLocal(MapPoint point)
+            {
+                double x = point.X - _door.X, y = point.Y - _door.Y;
+                return new MapPoint(_cos * x - _sin * y, _sin * x + _cos * y);
+            }
+
+            public MapPoint MoveOutside(MapPoint point)
+            {
+                var local = ToLocal(point);
+                double side = _halfWidth - Math.Abs(local.X);
+                double front = local.Y + Clearance;
+                double back = _back - local.Y;
+                if (side <= 0 || front <= 0 || back <= 0) return point;
+
+                double width = local.X, depth = local.Y;
+                if (side < Math.Min(front, back)) width = (width < 0 ? -1 : 1) * (_halfWidth + .001);
+                else depth = front <= back ? -Clearance - .001 : _back + .001;
+                return new MapPoint(_door.X + _cos * width + _sin * depth, _door.Y - _sin * width + _cos * depth);
+            }
+
+            public double FirstHit(MapPoint from, MapPoint to, out MapPoint normal)
+            {
+                normal = default;
+                if (Math.Min(from.X, to.X) > _door.X + _reach || Math.Max(from.X, to.X) < _door.X - _reach
+                    || Math.Min(from.Y, to.Y) > _door.Y + _reach || Math.Max(from.Y, to.Y) < _door.Y - _reach)
+                    return 1;
+                var start = ToLocal(from);
+                var target = ToLocal(to);
+                double dx = target.X - start.X, dy = target.Y - start.Y;
+                double side = FaceHit(start.X, dx, -_halfWidth, _halfWidth, start.Y, dy, -Clearance, _back);
+                double end = FaceHit(start.Y, dy, -Clearance, _back, start.X, dx, -_halfWidth, _halfWidth);
+                normal = side < end ? new MapPoint(_cos, -_sin) : new MapPoint(_sin, _cos);
+                return Math.Min(side, end);
+            }
+
+            private static double FaceHit(double position, double motion, double min, double max,
+                double across, double acrossMotion, double acrossMin, double acrossMax)
+            {
+                if (Math.Abs(motion) < 1e-9) return 1;
+                double time = ((motion > 0 ? min : max) - position) / motion;
+                if (time < 0 || time >= 1) return 1;
+                double crossing = across + time * acrossMotion;
+                return crossing >= acrossMin && crossing <= acrossMax ? time : 1;
+            }
+        }
+
         private List<Corridor> _corridors;
+        private List<ResidenceFootprint> _residenceFootprints;
         private MapPoint? _free;
         private bool _steering;
         private double _steerX, _steerY;
@@ -214,6 +279,49 @@ namespace PCShopSell.Core.Session
             return clamped;
         }
 
+        private List<ResidenceFootprint> ResidenceFootprints()
+        {
+            if (_residenceFootprints != null) return _residenceFootprints;
+            _residenceFootprints = new List<ResidenceFootprint>();
+            if (City.LayoutVersion >= 7)
+                foreach (var place in City.OfKind(PlaceKind.Home))
+                    if (place.ExplicitEntrance && place.Width > 0 && place.Depth > 0)
+                        _residenceFootprints.Add(new ResidenceFootprint(place, DoorOf(place)));
+            return _residenceFootprints;
+        }
+
+        private MapPoint OutsideResidenceWalls(MapPoint point)
+        {
+            foreach (var footprint in ResidenceFootprints()) point = footprint.MoveOutside(point);
+            return point;
+        }
+
+        private MapPoint StopAtResidenceWall(MapPoint from, MapPoint to, out MapPoint normal)
+        {
+            double first = 1;
+            normal = default;
+            foreach (var footprint in ResidenceFootprints())
+            {
+                double hit = footprint.FirstHit(from, to, out var wallNormal);
+                if (hit >= first) continue;
+                first = hit;
+                normal = wallNormal;
+            }
+            if (first >= 1) return to;
+            double safe = Math.Max(0, first - .0001);
+            return new MapPoint(from.X + (to.X - from.X) * safe, from.Y + (to.Y - from.Y) * safe);
+        }
+
+        private MapPoint SlideAlongResidenceWall(MapPoint from, MapPoint to)
+        {
+            var stop = StopAtResidenceWall(from, to, out var normal);
+            if (normal.X == 0 && normal.Y == 0) return stop;
+            double dx = to.X - stop.X, dy = to.Y - stop.Y;
+            double againstWall = dx * normal.X + dy * normal.Y;
+            var slide = Constrain(new MapPoint(stop.X + dx - againstWall * normal.X, stop.Y + dy - againstWall * normal.Y));
+            return StopAtResidenceWall(stop, slide, out _);
+        }
+
         private string NearestNodeTo(MapPoint p)
         {
             string best = PlayerNodeId;
@@ -245,7 +353,7 @@ namespace PCShopSell.Core.Session
         private bool StepManual(double scaledSeconds)
         {
             VehicleSpec v = CurrentVehicle;
-            MapPoint from = PlayerPosition, res = from;
+            MapPoint from = PlayerPosition, res = OutsideResidenceWalls(from);
             double budget = CityTravelTiming.PlayerScaledSecondsMeters(v, scaledSeconds, Time.SecondsPerMinuteAt1x);
             // Small spatial steps prevent 8x movement from crossing a wall or skipping an entire short road.
             for (int step = 0; budget > 1e-8 && step < 4096; step++)
@@ -253,6 +361,7 @@ namespace PCShopSell.Core.Session
                 double scale = Math.Max(1e-6, NearestCorridorScale(new MapPoint(res.X + _steerX * .01, res.Y + _steerY * .01)));
                 double view = Math.Min(.75, budget / scale);
                 MapPoint next = Constrain(new MapPoint(res.X + _steerX * view, res.Y + _steerY * view));
+                next = SlideAlongResidenceWall(res, next);
                 if (TryDistrictRoadStop(res, next, out MapPoint gateStop, out int gateTier))
                 {
                     res = gateStop; _steering = false; NotifyDistrictRoadStop(gateTier); break;

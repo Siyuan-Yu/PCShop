@@ -297,7 +297,9 @@ namespace PCShopSell.Core.Session
             if (activity.DefinitionId == "social_49")
             {
                 Ledger.Credit(Clock.Today, "试听劳务", Money.FromYuan(AudioHelpPayment), "傅知的音响调试");
-                activity.EventSettlementNote = "试听劳务报酬已到账 ¥1,500。";
+                activity.EventSettlementNote = string.IsNullOrEmpty(activity.EventSettlementNote)
+                    ? "试听劳务报酬已到账 ¥1,500。"
+                    : activity.EventSettlementNote + "\n试听劳务报酬已到账 ¥1,500。";
                 if (activity.Choices.Contains("audio-finding"))
                 {
                     int relation = AwardCityActivityRelation(activity, "resident_fuzhi", 2);

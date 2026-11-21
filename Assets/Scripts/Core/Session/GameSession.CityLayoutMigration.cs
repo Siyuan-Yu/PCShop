@@ -7,11 +7,26 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
+        private const int RelocatedLeisureLayoutVersion = 16;
+        private const int RelocatedOldMarketLayoutVersion = 17;
+        private const int RelocatedSuburbanParkLayoutVersion = 18;
+
         // A geometry migration does not replay time, payments, inventory or activity stages.
         // Walking routes are subsequently recalibrated so new geometry cannot force sprinting.
         private void MigrateCityGeometry(SaveData data)
         {
             if(City.LayoutVersion<7 || data.cityLayoutVersion>=City.LayoutVersion)return;
+            if (City.LayoutVersion is RelocatedLeisureLayoutVersion or RelocatedOldMarketLayoutVersion or RelocatedSuburbanParkLayoutVersion
+                && data.cityLayoutVersion >= RelocatedLeisureLayoutVersion - 1)
+            {
+                bool leisureMoved = data.cityLayoutVersion < RelocatedLeisureLayoutVersion;
+                bool oldMarketMoved = City.LayoutVersion >= RelocatedOldMarketLayoutVersion && data.cityLayoutVersion < RelocatedOldMarketLayoutVersion;
+                bool parkMoved = City.LayoutVersion >= RelocatedSuburbanParkLayoutVersion;
+                MigrateRelocatedSites(id => City.HasPlace(id)
+                    && (leisureMoved && CityLifeCatalog.LeisureAt(id) != LeisureGame.None
+                        || oldMarketMoved && id == OldMarketVenueId || parkMoved && id == CommunityBoxPlace(0)), data.districtProgress);
+                return;
+            }
             long now=Clock.Now.TotalMinutes;
             foreach(var person in _cityPeople.Values)
             {
@@ -45,15 +60,7 @@ namespace PCShopSell.Core.Session
             foreach(var order in _employeeTrips)
                 foreach(var leg in order.TravelLegs??Array.Empty<CityRoute>())RebaseCityRoute(leg);
             foreach(var activity in _cityActivities.Where(a=>a.Active))
-            {
-                if(!City.HasPlace(activity.VenueId))continue;
-                if(activity.PlayerVenueRoute!=null)
-                {
-                    var point=CityActivityAnchor(City.GetPlace(activity.VenueId),activity.Seat);
-                    activity.PlayerVenueRoute.X=new[]{point.X,point.X};activity.PlayerVenueRoute.Y=new[]{point.Y,point.Y};
-                    activity.PlayerVenueRoute.Meters=new[]{0d};activity.PlayerVenueRoute.Nodes=Array.Empty<string>();
-                }
-            }
+                RebaseVenueActivityPosition(activity);
             if(CurrentPlace==null && data.cityTrip!=null)
             {
                 string target=CityIntent!=null && City.HasPlace(CityIntent.TargetPlaceId)?City.GetPlace(CityIntent.TargetPlaceId).NodeId:data.cityTrip.target;
@@ -64,6 +71,70 @@ namespace PCShopSell.Core.Session
                 }
             }
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
+        }
+
+        private void MigrateRelocatedSites(Func<string, bool> relocated, DistrictProgress savedProgress)
+        {
+            if (relocated(CurrentPlace?.Id))
+            {
+                PlayerNodeId = CurrentPlace.NodeId;
+                ClearEdge();
+            }
+            else if (Trip != null)
+            {
+                string targetId = CityIntent?.TargetPlaceId;
+                if (targetId == null && Trip.TargetNode == "oldmarket_entrance") targetId = OldMarketVenueId;
+                MapPoint? end = null;
+                if (targetId == null && Trip.TargetNode == "s_market_2" && relocated(CommunityBoxPlace(0)))
+                {
+                    // The old park was the only entrance on this node. The green box sat on the node itself.
+                    bool atOldRoad = DistanceCity(Trip.Points[Trip.Points.Count - 1], City.ViewPosition(Trip.TargetNode)) < .1;
+                    bool goingToBox = atOldRoad && savedProgress?.NodeId == "community.search"
+                        && (savedProgress.CommunityClues & 1) != 0 && (savedProgress.CommunityPieces & 1) == 0;
+                    if (!atOldRoad || goingToBox) targetId = CommunityBoxPlace(0);
+                    if (goingToBox) end = CommunityBoxPosition(0);
+                }
+                if (relocated(targetId))
+                {
+                    var target = City.GetPlace(targetId);
+                    Trip = PlanTrip(target.NodeId, end ?? StandOf(target), out _) ?? Trip;
+                }
+            }
+
+            long now = Clock.Now.TotalMinutes;
+            foreach (var person in _cityPeople.Values)
+            {
+                if (relocated(person.Route?.TargetPlaceId))
+                {
+                    RebaseCityRoute(person.Route);
+                    var point = person.Route.Position(now);
+                    person.X = point.X;
+                    person.Y = point.Y;
+                }
+                else if (person.Route == null && relocated(person.LocationPlaceId))
+                {
+                    var point = StandOf(City.GetPlace(person.LocationPlaceId));
+                    person.X = point.X;
+                    person.Y = point.Y;
+                }
+            }
+            foreach (var order in _employeeTrips)
+                foreach (var leg in order.TravelLegs ?? Array.Empty<CityRoute>())
+                    if (relocated(leg?.TargetPlaceId)) RebaseCityRoute(leg);
+            foreach (var activity in _cityActivities)
+                if (activity.Active && relocated(activity.VenueId)) RebaseVenueActivityPosition(activity);
+            foreach (var shop in _shops) shop.Sim.PlayerPresent = CityPlayerCanWork(shop);
+        }
+
+        private void RebaseVenueActivityPosition(CityActivity activity)
+        {
+            var route = activity.PlayerVenueRoute;
+            if (route == null || !City.HasPlace(activity.VenueId)) return;
+            var point = CityActivityAnchor(City.GetPlace(activity.VenueId), activity.Seat);
+            route.X = new[] { point.X, point.X };
+            route.Y = new[] { point.Y, point.Y };
+            route.Meters = new[] { 0d };
+            route.Nodes = Array.Empty<string>();
         }
         private static void EnforceNpcWalkingPace(CityRoute route)
         {

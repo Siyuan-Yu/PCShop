@@ -36,6 +36,7 @@ namespace PCShopSell.Core.Session
         private readonly List<EventFlashSale> _eventFlashSales = new List<EventFlashSale>();
         private readonly List<EventFlashReservation> _eventFlashReservations = new List<EventFlashReservation>();
         private EventPurchaseCoupon _eventCoupon;
+        private const int HotItemRumorPurchaseLimit = 20;
         public EventMember[] EventMembers => _eventMembers.Select(m => m.Copy()).ToArray();
         public EventFlashSale[] EventFlashSales => _eventFlashSales.Where(f => FlashScheduled(f)).Select(f => f.Copy()).ToArray();
         public EventPurchaseCoupon EventCoupon => _eventCoupon?.Copy();
@@ -107,10 +108,13 @@ namespace PCShopSell.Core.Session
             if (n == 95)
             {
                 var shop = ShopBatchShop(); var part = PartCatalog.Get("gpu1"); var price = OnlinePrice(Online1788.Shopping, part);
-                string Buy(int count) => PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (part, count) }, shop) ? "已按实时采购价下单，次日到货；涨价传闻不保证收益。" : "未下单，请检查现金、容量和采购条件。";
-                return ShopEventScene(template, shop, "听说" + part.Name + "可能涨价。当前网购单价" + price + "，另计实际运费；传闻没有保本承诺。",
+                string Buy(int count) => PlaceOnlinePartOrder(part, count, shop, HotItemRumorPurchaseLimit)
+                    ? "已按实时采购价下单，次日到货。涨价传闻不保证收益。"
+                    : "未下单，请检查现金、容量和采购条件。";
+                return ShopEventScene(template, shop,
+                    $"听说{part.Name}可能涨价。当前网购单价{price}，另计运费。本次限购 {HotItemRumorPurchaseLimit} 件，传闻没有保本承诺。",
                     Choose("少量试单 · 1件", _ => Buy(1)), Choose("备货 · 3件", _ => Buy(3)),
-                    new EventChoice { Text = "自选采购数量", OnlinePurchase = (part, shop) },
+                    new EventChoice { Text = "自选采购数量", OnlinePurchase = (part, shop, HotItemRumorPurchaseLimit) },
                     Choose("先不囤货", _ => "未采购，也没有额外收益。"));
             }
             if (n == 96)

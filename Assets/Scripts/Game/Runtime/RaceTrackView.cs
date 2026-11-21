@@ -440,6 +440,13 @@ namespace PCShopSell.Game.Runtime
     }
     public static class MotorVisual
     {
+        internal static readonly Vector3 ScooterPelvis = new Vector3(0, .96f, -.14f);
+        private const float ScooterGripOffset = .33f;
+        internal const float ScooterDeckHeight = .43f;
+        internal const float ScooterAnkleDepth = .22f;
+
+        internal static Vector3 ScooterGrip(float side) => new Vector3(side * ScooterGripOffset, 1.19f, .34f);
+
         public static Color Paint(string modelId)
         {
             switch(modelId)
@@ -472,9 +479,26 @@ namespace PCShopSell.Game.Runtime
                 return car;
             }
             var root=new GameObject(model.Name).transform;root.SetParent(parent,false);bool three=model.Kind==VehicleKind.Tricycle;
-            Prims.Box(root,"Frame",new Vector3(0,.5f,0),new Vector3(.45f,.3f,1.7f),Mats.Lit(color));
-            Prims.Box(root,"Seat",new Vector3(0,.8f,-.35f),new Vector3(.55f,.16f,.7f),Mats.Lit(ArtDirection.Ink));
-            Prims.Box(root,"Handlebar",new Vector3(0,1.1f,.65f),new Vector3(.9f,.12f,.12f),Mats.Lit(ArtDirection.Ink));
+            var body = Mats.Lit(color);
+            var trim = Mats.Lit(ArtDirection.Ink);
+            Prims.Box(root,"Seat",new Vector3(0,.8f,-.35f),new Vector3(.55f,.16f,.7f),trim);
+            if (three)
+            {
+                Prims.Box(root, "Frame", new Vector3(0, .5f, 0), new Vector3(.45f, .3f, 1.7f), body);
+                Prims.Box(root, "Handlebar", new Vector3(0, 1.1f, .65f), new Vector3(.9f, .12f, .12f), trim);
+            }
+            else
+            {
+                Prims.Box(root, "Frame", new Vector3(0, .32f, 0), new Vector3(.45f, .16f, 1.7f), body);
+                Prims.Box(root, "Footboard", new Vector3(0, ScooterDeckHeight - .0275f, .09f), new Vector3(.53f, .055f, .66f), trim);
+                Prims.Box(root, "SeatBase", new Vector3(0, .56f, -.47f), new Vector3(.49f, .34f, .62f), body);
+                var grip = ScooterGrip(0);
+                Prims.Box(root, "SteeringStem", new Vector3(0, 1.04f, .44f), new Vector3(.13f, .36f, .14f), body)
+                    .transform.localRotation = Quaternion.Euler(-34, 0, 0);
+                Prims.Box(root, "Handlebar", grip, new Vector3(ScooterGripOffset * 2, .06f, .065f), trim);
+                Prims.Box(root, "LeftGrip", ScooterGrip(-1), new Vector3(.16f, .074f, .076f), trim);
+                Prims.Box(root, "RightGrip", ScooterGrip(1), new Vector3(.16f, .074f, .076f), trim);
+            }
             for(int i=0;i<(three?3:2);i++)
             {
                 var wheel=Prims.Shape(PrimitiveType.Cylinder,root,"Wheel",new Vector3(three&&i>0?(i==1?-.65f:.65f):0,.3f,i==0?.7f:-.7f),new Vector3(.58f,.12f,.58f),Mats.Lit(ArtDirection.Ink));wheel.transform.localRotation=Quaternion.Euler(0,0,90);

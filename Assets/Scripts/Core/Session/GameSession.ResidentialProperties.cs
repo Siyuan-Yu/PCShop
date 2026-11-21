@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
+using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
@@ -28,6 +30,47 @@ namespace PCShopSell.Core.Session
         private string _residentialHomeId;
         private readonly Dictionary<string, (Money rent, int signedDay)> _additionalResidentialLeases =
             new Dictionary<string, (Money rent, int signedDay)>();
+        private sealed class ResidenceFreightStorage
+        {
+            public readonly Backpack Box = new Backpack();
+            public readonly Stock Parts = new Stock(double.MaxValue);
+            public bool IsEmpty => Box.IsEmpty && Parts.IsEmpty;
+        }
+
+        private readonly Dictionary<string, ResidenceFreightStorage> _residenceFreight = new Dictionary<string, ResidenceFreightStorage>();
+
+        private ResidenceFreightStorage FreightStorageAt(string id)
+        {
+            if (!_residenceFreight.TryGetValue(id, out var storage))
+                _residenceFreight[id] = storage = new ResidenceFreightStorage();
+            return storage;
+        }
+
+        public bool HasSecondaryResidenceWarehouse => CurrentPlace?.Kind == PlaceKind.Home && !AtHome && CanSleepAt(CurrentPlace);
+        public Backpack WarehouseBagHere => InPlayerShop ? ShopLocker
+            : HasSecondaryResidenceWarehouse ? FreightStorageAt(CurrentPlace.Id).Box : HomeBox;
+        public Stock WarehousePartsHere => InPlayerShop ? PlayerShop.Stock
+            : HasSecondaryResidenceWarehouse ? FreightStorageAt(CurrentPlace.Id).Parts : HomeBoxParts;
+
+        private string ResidenceFreightBlocker(Place place)
+        {
+            if (place?.Kind != PlaceKind.Home || place == Home) return null;
+            if (_residenceFreight.TryGetValue(place.Id, out var storage) && !storage.IsEmpty) return "请先清空这套住宅的后仓";
+            return _couriers.Any(run => !run.ToShop && run.ResidenceId == place.Id) ? "还有货车正在送来，请等到货后搬走" : null;
+        }
+
+        private void ConsolidateHomeFreight()
+        {
+            foreach (var id in _residenceFreight.Keys.ToArray())
+            {
+                var residence = City.HasPlace(id) ? City.GetPlace(id) : null;
+                if (residence != Home && (HasResidentialLease(residence) || OwnsResidence(residence))) continue;
+                var storage = _residenceFreight[id];
+                MergeStorage(storage.Box, HomeBox);
+                foreach (var line in storage.Parts.Lines()) HomeBoxParts.ForceAdd(line.Part, line.Boxed, line.Count);
+                _residenceFreight.Remove(id);
+            }
+        }
         public string CityHomeShortcut { get; private set; }
         public void SetCityHomeShortcut(Place place)
         {
@@ -127,6 +170,7 @@ namespace PCShopSell.Core.Session
             if (why != null) return why;
             var place = City.GetPlace(id);
             if (!HasResidentialLease(place)) return "你没有租下这套住宅";
+            if (ResidenceFreightBlocker(place) is string freight) return freight;
             return NextResidenceAfterEndingLease(place) == null ? "至少保留一处可入住住宅，请先租下或买下一套" : null;
         }
 
@@ -151,6 +195,7 @@ namespace PCShopSell.Core.Session
                 if (property != null) _properties.Remove(property);
             }
             _additionalResidentialLeases.Remove(place.Id);
+            ConsolidateHomeFreight();
             if (CityHomeShortcut == place.Id) CityHomeShortcut = Home.Id;
             Say($"已退租{place.Name}。默认住处：{HomeTitle}。");
             return true;
@@ -265,6 +310,7 @@ namespace PCShopSell.Core.Session
             if(!PayForResidenceMove(ResidentialTier(place),"搬家",due,owned==null?place.Name+"首周租金及搬家费":place.Name+"搬家费"))return false;
             _additionalResidentialLeases.Remove(place.Id);
             _residentialHomeId=place.Id;
+            ConsolidateHomeFreight();
             _homeLeaseRentCents=owned==null?ResidentialRent(place).Cents:0;
             _homeLeaseSignedDay=Clock.Today.TotalDays;
             if(owned!=null)
@@ -286,6 +332,7 @@ namespace PCShopSell.Core.Session
                 bool sameHome=place==Home;
                 if(!PayForResidenceMove(ResidentialTier(place),"购置住宅",due,place.Name,attribution))return false;
                 _residentialHomeId=place.Id;HomePriceCents=price.Cents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
+                ConsolidateHomeFreight();
                 Say(sameHome?"已购入"+HomeTitle+"，该住宅不再缴周租。":"已购入并搬入"+HomeTitle+"，不再缴周租；家具与储物保留。");
             }
             else
@@ -305,6 +352,7 @@ namespace PCShopSell.Core.Session
         {
             var property=PropertyAt(id);
             if(property==null||!City.HasPlace(id)||City.GetPlace(id).Kind!=PlaceKind.Home||IsGameOver||!InAgency||!AgencyServes(CurrentPlace,City.GetPlace(id)))return Fail("请到住宅所属中介办理出售");
+            if (ResidenceFreightBlocker(City.GetPlace(id)) is string freight) return Fail(freight + "。");
             Money net=PropertySaleNet(property);
             if(net.IsPositive)Ledger.Credit(Clock.Today,"住宅出售",net,City.GetPlace(id).Name,LedgerAttribution.ForAsset(id,"residential:sale:"+id+":"+Clock.Now.TotalMinutes));
             _properties.Remove(property);Say("产权已出售，原住户和住所、人物关系保留。");return true;

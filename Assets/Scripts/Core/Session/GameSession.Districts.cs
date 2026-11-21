@@ -28,6 +28,7 @@ namespace PCShopSell.Core.Session
             }
         }
         private const string FirstChapterTrialCompletedFlag = "trial:first-chapter-completed";
+        private const string CommunityIntroCallShownFlag = "district:community-intro-call-shown";
         public bool FirstChapterTrialCompleted => FirstChapterTrial && Flags.Contains(FirstChapterTrialCompletedFlag);
         public event Action CommunityUnlocked;
         public int DistrictAccessTier => FirstChapterTrial ? 0 : _district.UnlockedTier;
@@ -70,6 +71,13 @@ namespace PCShopSell.Core.Session
             TenderStoryChain
         };
         public DistrictNarrativeNode CurrentDistrictNode => DistrictNarrativeCatalog.Nodes.FirstOrDefault(n => n.Id == _district.NodeId);
+        public bool CommunityIntroAwaitingReply => _district.NodeId == "community.intro";
+        public bool CommunityIntroCallWaiting => CommunityIntroAwaitingReply && !Flags.Contains(CommunityIntroCallShownFlag);
+        public void MarkCommunityIntroCallShown()
+        {
+            if (CommunityIntroAwaitingReply) Flags.Add(CommunityIntroCallShownFlag);
+        }
+
         public string DistrictInvitationStatus
         {
             get
@@ -163,7 +171,8 @@ namespace PCShopSell.Core.Session
             _district.NodeId = ActiveDistrictChain(chapter)[0];
             string sender=chapter==1?"李秀兰":chapter==2?"任帆":"沈远";
             Say(sender+"主动联系了你：“"+CurrentDistrictNode.Title+"”。");
-            Show(sender+"发来主线邀请",CurrentDistrictNode.Dialogue+"\n\n打开任务界面的「主线消息」回复邀请；现在不用立刻赴约。");
+            if (chapter > 1)
+                Show(sender+"发来主线邀请",CurrentDistrictNode.Title+"\n\n打开任务界面的「主线消息」查看会面安排。");
         }
         public string DistrictMeetingContact
         {

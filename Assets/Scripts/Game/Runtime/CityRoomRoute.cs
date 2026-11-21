@@ -92,7 +92,7 @@ namespace PCShopSell.Game.Runtime
             return null;
         }
 
-        private static bool CanTraverse(Vector3 from, Vector3 to, IReadOnlyList<Rect> blockers)
+        internal static bool CanTraverse(Vector3 from, Vector3 to, IReadOnlyList<Rect> blockers)
         {
             var start = new Vector2(from.x, from.z);
             var end = new Vector2(to.x, to.z);

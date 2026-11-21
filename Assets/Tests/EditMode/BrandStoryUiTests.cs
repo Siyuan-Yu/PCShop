@@ -91,11 +91,23 @@ namespace PCShopSell.Tests
                     Assert.Greater(((RectTransform)scroll.transform).rect.height,300);
                     RectTransform Area(string name) => ui.Canvases.SelectMany(c => c.GetComponentsInChildren<RectTransform>()).Single(r => r.name == name);
                     Assert.Greater(Area("DialogueSpeech").rect.width, 3 * Area("DialogueIdentity").rect.width);
-                    var chat = Find("聊聊").GetComponent<RectTransform>();
-                    var end = Find("结束对话").GetComponent<RectTransform>();
-                    Assert.AreSame(chat.parent, end.parent);
-                    Assert.That(chat.rect.width, Is.EqualTo(end.rect.width).Within(.1f));
-                    Assert.That(chat.rect.height, Is.EqualTo(end.rect.height).Within(.1f));
+                    float readingHeight = Area("DialogueReadingPanel").rect.height;
+                    void AssertFixedDialogueLayout()
+                    {
+                        Canvas.ForceUpdateCanvases();
+                        var end = (RectTransform)Find("结束对话").transform;
+                        var panel = (RectTransform)end.GetComponentInParent<WindowFit>().transform;
+                        var bottomRight = panel.InverseTransformPoint(end.TransformPoint(new Vector3(end.rect.xMax, end.rect.yMin)));
+                        Assert.That(panel.rect.width, Is.EqualTo(930f).Within(.1f));
+                        Assert.That(panel.rect.height, Is.EqualTo(520f).Within(.1f));
+                        Assert.That(Area("DialogueReadingPanel").rect.height, Is.EqualTo(readingHeight).Within(.1f));
+                        Assert.That(panel.rect.xMax - bottomRight.x, Is.EqualTo(16f).Within(.1f));
+                        Assert.That(bottomRight.y - panel.rect.yMin, Is.EqualTo(16f).Within(.1f));
+                        Assert.That(end.rect.width, Is.EqualTo(146f).Within(.1f));
+                        Assert.That(end.rect.height, Is.EqualTo(40f).Within(.1f));
+                        Assert.AreEqual(Ui.WarningSurface, end.GetComponent<Image>().color);
+                    }
+                    AssertFixedDialogueLayout();
                     var knownBefore = p.KnownTopics.ToArray();
                     Find("聊聊").onClick.Invoke();
                     Assert.IsTrue(s.HasGreeted("momo"));
@@ -136,7 +148,9 @@ namespace PCShopSell.Tests
                     var optionRow = Find("聊聊").transform.parent;
                     var optionWidths = optionRow.GetComponentsInChildren<Button>().Select(b => b.GetComponent<RectTransform>().rect.width).ToArray();
                     Assert.That(optionWidths.Max() - optionWidths.Min(), Is.LessThan(.1f));
+                    AssertFixedDialogueLayout();
                     Find("谈谈分手").onClick.Invoke();
+                    AssertFixedDialogueLayout();
                     Find("确认分手").onClick.Invoke();
                     Assert.IsFalse(s.IsPlayerPartner("momo"));
                     Assert.IsFalse(Has("聊聊心事"));
@@ -149,8 +163,13 @@ namespace PCShopSell.Tests
                     Assert.True(s.CommunityHasClue(0));
                     ui.OpenCityActivitySettlement(outing.Id);
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="记下线索"));
-                    Find("收好这段回忆").onClick.Invoke();
+                    Find("继续交谈").onClick.Invoke();
+                    var farewellWindow = Find("继续").GetComponentInParent<WindowFit>();
+                    Assert.NotNull(farewellWindow);
+                    AssertFixedDialogueLayout();
+                    Find("继续").onClick.Invoke();
                     Assert.NotNull(Find("记下线索"));
+                    Assert.AreSame(farewellWindow,Find("记下线索").GetComponentInParent<WindowFit>());
                     Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text.Contains(GameSession.CommunityLeadHint(0))));
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="返回上一级"));
                     Find("记下线索").onClick.Invoke();

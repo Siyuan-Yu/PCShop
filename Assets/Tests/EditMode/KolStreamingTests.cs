@@ -146,7 +146,8 @@ namespace PCShopSell.Tests
             {
                 long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("momo",31,1,remote:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
                 var c=Sign(s);before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador(c.PersonId,90,1,remote:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
-                Assert.False(s.SetKolSchedule(c.Id,1080,1080,true));Assert.False(s.SetKolSchedule(c.Id,0,900,true));Assert.False(s.SetKolSchedule(c.Id,1081,120,true));
+                Assert.False(s.SetKolSchedule(c.Id,1080,1080,true));Assert.False(s.SetKolSchedule(c.Id,0,975,true));Assert.False(s.SetKolSchedule(c.Id,1081,120,true));
+                Assert.IsNull(s.KolScheduleBlocker(c.Id, c.BrandId, 660, 180, true, 1, s.Clock.Today.TotalDays + 1));
                 Assert.AreEqual(1080,s.KolStreaming.Contracts.Single().StartMinute);
             }
             using(var s=DistrictProgressionTests.Make())
@@ -216,6 +217,7 @@ namespace PCShopSell.Tests
             {
                 var c = Sign(s);
                 int first = s.Clock.Today.TotalDays + 1;
+                first += ((int)GameWeekday.Friday - first % GameDate.DaysPerWeek + GameDate.DaysPerWeek) % GameDate.DaysPerWeek;
                 Assert.True(s.SetKolSchedule(c.Id, 1080, 120, true, frequency, first));
                 using (var loaded = Reload(s))
                 {
@@ -267,7 +269,7 @@ namespace PCShopSell.Tests
                 s.AdvanceClock(1);
                 Assert.True(s.TipKolRoom("qiao", 100));
                 Assert.False(s.TipKolRoom("qiao", 100));
-                s.AdvanceClock(89);
+                s.AdvanceClock(KolMarket.Get("qiao").PublicDurationMinutes - 1);
                 Assert.Greater(s.KolStreaming.Rivals.Single(r => r.Kind == "computer").Influence, 0);
                 Assert.AreEqual(ownedFame, Brand(s).Influence);
 
@@ -278,6 +280,41 @@ namespace PCShopSell.Tests
                 long cash = s.Ledger.Balance.Cents;
                 Assert.True(s.TipKolRoom("momo", 10, room.Session.Id));
                 Assert.AreEqual(cash - 1000, s.Ledger.Balance.Cents);
+            }
+        }
+
+        [Test] public void PersonalSchedulesSkipRestDaysAndRetainAnOvernightBroadcastOnReload()
+        {
+            using (var s = Make())
+            {
+                var ake = KolMarket.Get("ake");
+                int today = s.Clock.Today.TotalDays;
+                int monday = today + (GameDate.DaysPerWeek - today % GameDate.DaysPerWeek) % GameDate.DaysPerWeek;
+                long tuesdayStart = (monday + 1) * 1440L + 660;
+                s.Clock.Restore(new GameDate(monday), 720);
+                var room = s.GetKolRoom(ake.Id);
+                Assert.False(room.IsLive);
+                Assert.AreEqual(tuesdayStart, room.NextStart);
+                Assert.AreEqual(tuesdayStart + 960, room.NextEnd);
+
+                s.Clock.Restore(new GameDate(monday + 1), 660);
+                Ready(s, ake.Id);
+                s.AdvanceClock(1);
+                var live = s.GetKolRoom(ake.Id);
+                Assert.True(live.IsLive);
+                Assert.NotNull(live.Session);
+                Assert.AreEqual(tuesdayStart + 960, live.EndAt);
+
+                s.Clock.Restore(new GameDate(monday + 2), 179);
+                using (var loaded = Reload(s))
+                {
+                    Assert.AreEqual(live.SessionId, loaded.GetKolRoom(ake.Id).SessionId);
+                    loaded.AdvanceClock(1);
+                    var ended = loaded.GetKolRoom(ake.Id);
+                    Assert.False(ended.IsLive);
+                    Assert.AreEqual(tuesdayStart + 2 * 1440L, ended.NextStart);
+                    Assert.True(loaded.KolSessionResult(live.SessionId).Settled);
+                }
             }
         }
 
@@ -342,7 +379,9 @@ namespace PCShopSell.Tests
             {
                 s.SetSmartphone(true);
                 Assert.True(s.UninstallApp(PhoneApps.Live));
-                At(s, 1140);
+                int today = s.Clock.Today.TotalDays;
+                int monday = today + (GameDate.DaysPerWeek - today % GameDate.DaysPerWeek) % GameDate.DaysPerWeek;
+                s.Clock.Restore(new GameDate(monday), 1140);
                 Ready(s, "momo");
                 s.AdvanceClock(1);
                 var previous = UnityEngine.EventSystems.EventSystem.current;
@@ -376,14 +415,13 @@ namespace PCShopSell.Tests
                     Assert.False(Find("KolOpenGifts").interactable);
 
                     ui.CloseAllWindows();
-                    int today = s.Clock.Today.TotalDays;
-                    int friday = today + (4 - today % 7 + 7) % 7;
+                    int friday = monday + (int)GameWeekday.Friday;
                     s.Clock.Restore(new GameDate(friday), KolMarket.Get("qiao").PublicStartMinute);
                     Ready(s, "qiao");
                     ui.OpenKolLobby();
                     Find("KolRoom_qiao").onClick.Invoke();
                     int ownInfluence = Brand(s).Influence;
-                    s.AdvanceClock(90);
+                    s.AdvanceClock(KolMarket.Get("qiao").PublicDurationMinutes);
                     ui.RebuildWindows();
                     var labels = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Text>()).Select(label => label.text).ToArray();
                     CollectionAssert.Contains(labels, "本场品牌结算 · " + s.BrandRivalName("computer"));

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
@@ -13,13 +14,23 @@ namespace PCShopSell.Core.Session
         public static string VenueServiceName(CityActivityDefinition def, int choice = 0)
         {
             if (def == null) return "服务";
-            if (def.Id == "dinner") return choice == 0 ? "清淡家常菜套餐" : "招牌炖菜套餐";
+            if (RideFor(def.Id) != AmusementRide.None) return def.Name;
+            if (def.Id is "dinner" or "dinner_tier2" or "dinner_tier3" or "dinner_tier4")
+                return choice == 0 ? "清淡家常菜套餐" : "招牌炖菜套餐";
             if (def.Id == "snack") return choice == 0 ? "汤面套餐" : "家常小菜套餐";
             string item = def.Choices != null && choice < def.Choices.Length ? def.Choices[choice] : def.Name;
             return def.Id == "ktv" ? "练歌包间 · " + item : item;
         }
         public static bool IsBarDrinkService(CityActivityDefinition def)
-            => def?.Id is "bar" or "bar_tier2" or "bar_tier3" or "bar_tier4";
+            => def != null && def.Service(0).BarDrink != BarDrinkStyle.None;
+        public static bool IsBarVisit(CityActivity activity) => activity?.DefinitionId == "bar"
+            || activity?.DefinitionId?.StartsWith("bar_", StringComparison.Ordinal) == true;
+
+        public CityPersonState BartenderAt(Place place) => place?.Business != "venue_bar" ? null : PeopleInPlace(place.Id)
+            .Where(person => IsOnDutyVenueNpc(place, person)
+                && CityPerson(person.PersonId)?.Role?.Contains("吧台") == true)
+            .OrderBy(person => person.PersonId != "life_bartender")
+            .FirstOrDefault();
 
         public string VenuePriceRange(CityActivityDefinition def)
         {
@@ -32,11 +43,39 @@ namespace PCShopSell.Core.Session
         public Money CityActivityEntryPrice(CityActivityDefinition def, int choice, CityActivity booking = null, bool? playerTreat = null)
         {
             if (booking?.HostPays == true) return Money.Zero;
+            return VenueServicePayment(def, choice, (booking?.Participants.Length ?? 0) + 1,
+                playerTreat ?? (booking?.PlayerTreat == true));
+        }
+
+        public Money VenueServiceTotal(CityActivityDefinition def, int choice, int people)
+        {
             Money price = VenuePlayerPrice(def, choice);
-            int people = (booking?.Participants.Length ?? 0) + 1;
-            bool treat = playerTreat ?? (booking?.PlayerTreat == true);
-            if (def.FixedGroupPrice) return treat ? price : Money.FromCents((price.Cents + people - 1) / people);
-            return treat ? price * people : price;
+            return def.FixedGroupPrice ? price : price * people;
+        }
+
+        public Money VenueServicePayment(CityActivityDefinition def, int choice, int people, bool playerTreat)
+        {
+            Money total = VenueServiceTotal(def, choice, people);
+            return playerTreat ? total : Money.FromCents((total.Cents + people - 1) / people);
+        }
+
+        private const string WalkInBookingLocked = "本次按原预约名单参加";
+
+        public string WalkInVenueCompanionBlocker(string personId, CityActivityDefinition definition)
+        {
+            var person = CityPersonState(personId);
+            if (definition == null || CurrentPlace?.Id != definition.VenueId || CityPerson(personId) == null || person == null
+                || person.Route != null || person.LocationPlaceId != definition.VenueId)
+                return "对方当前不在场";
+            if (person.Task == CityPersonTask.Working) return "对方正在值班";
+            if (!string.IsNullOrEmpty(person.ActivityId) || person.Task == CityPersonTask.Participating)
+                return "对方正在参加其他活动";
+            long now = Clock.Now.TotalMinutes, end = now + definition.Minutes;
+            var employee = Employees.FirstOrDefault(row => PersonIdOf(row.Person) == personId)?.Person;
+            if (employee != null ? EmployeeTrip(employee.Id) != null || EmployeeShiftOverlaps(employee, now, end)
+                    : AuthoredCityWorkOverlaps(person, now, end))
+                return "对方这段时间有工作安排";
+            return RaceInviteOverlaps(personId, now, end) ? "对方这段时间有比赛安排" : null;
         }
         public string CityActivityMidText(CityActivity activity)
         {
@@ -44,12 +83,27 @@ namespace PCShopSell.Core.Session
                 return "继续试吃，尝完每道菜再给罗师傅评价。";
             var def = CityActivityService(activity);
             if (IsBarDrinkService(def) && activity.BarHoneyAdded)
-                return activity.ServiceChoice == 0 ? "柠檬还带一点酸，蜂蜜把酸味收柔和了。" : "乌龙里多了淡淡的蜜香。";
+                return def.Service(activity.ServiceChoice).BarDrink switch
+                {
+                    BarDrinkStyle.LemonSoda => "柠檬还带一点酸，蜂蜜把酸味收柔和了。",
+                    BarDrinkStyle.HotOolong => "乌龙里多了淡淡的蜜香。",
+                    _ => "加了一点蜂蜜，喝起来更柔和。"
+                };
             return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
         }
         public const int CityArrivalWindowMinutes = 60;
         private const int CityDepartureLeadHours = 6;
         public CityActivity PendingVenueActivity(Place place, string activityId = null) => FindPendingVenueActivity(place, activityId);
+        public static bool IsRestaurantMeal(CityActivity activity)
+        {
+            if (activity == null) return false;
+            if (activity.SourceId?.StartsWith("walk-in:meal:", StringComparison.Ordinal) == true) return true;
+            string venue = activity.VenueId;
+            if (venue != "life_restaurant" && venue?.StartsWith("life_restaurant_tier", StringComparison.Ordinal) != true)
+                return false;
+            string serviceId = string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId;
+            return CityLifeCatalog.Activity(serviceId) is { EventOnly: false };
+        }
 
         public static bool IsAutomaticMeal(CityActivity activity) => activity != null
             && (string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId)
@@ -160,10 +214,15 @@ namespace PCShopSell.Core.Session
             if (CityActivityExclusive) return "正在参加活动，请先结束当前活动";
             return LeaveBlocker ?? (checkDepartureTime ? CityActivityEarlyDepartureHint(a) : null);
         }
-        public string VenueServiceBlocker(string definitionId, int choice, string activityId = null)
+        public string VenueServiceBlocker(string definitionId, int choice, string activityId = null,
+            IReadOnlyList<string> walkInCompanions = null, bool playerTreat = false, bool checkPrice = true)
         {
             var def = CityLifeCatalog.Activity(definitionId);
             var booking = PendingVenueActivity(CurrentPlace, activityId);
+            bool walkIn = walkInCompanions != null;
+            if (walkIn && (activityId != null || PendingVenueActivity(CurrentPlace) != null || OnsiteActivityAt(CurrentPlace) != null))
+                return WalkInBookingLocked;
+            if (activityId != null && booking == null) return "本次预约当前无法开始";
             bool reservedPass = UsesManualVenuePass(booking);
             bool matchingPass = reservedPass && CityActivityService(booking)?.Id == definitionId;
             if (matchingPass || def?.EventOnly == true && booking?.DefinitionId == def.Id) def = def.AtVenue(booking.VenueId);
@@ -171,6 +230,7 @@ namespace PCShopSell.Core.Session
             if (choice < 0 || choice >= def.ServiceCount) return "请选择菜单或服务项目";
             if (LeisureServiceBlocker(def.VenueId) is string leisureBlocker) return leisureBlocker;
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束正在进行的事情";
+            if (NpcVenueStaffingBlocker(CurrentPlace) is string staffing) return staffing;
             int duration = matchingPass ? booking.Duration : def.Minutes;
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, duration)) return "该服务无法在闭店前完成";
             if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, (def.LogicalId ?? def.Id) == "expo_comic")) return "本场展会尚未开放";
@@ -180,15 +240,28 @@ namespace PCShopSell.Core.Session
             if (definitionId == "fishing_pass_16h" && !matchingPass) return "请选择钓场在售的抛竿次数";
             if (CityLifeCatalog.Activity(booking?.DefinitionId)?.EventOnly == true && definitionId != booking.DefinitionId)
                 return "本次为已约定的专属活动，请按原日程参加";
-            if (CityActivityService(booking)?.Id == "dinner" && definitionId != "dinner")
+            string reservedService = CityActivityService(booking)?.Id;
+            if (reservedService is ("dinner" or "hotpot") && definitionId != reservedService)
                 return "请从本次饭局的菜单中点餐";
-            Money cost = CityActivityEntryPrice(def, choice, booking);
-            if (cost.IsPositive && !Ledger.CanAfford(cost)) return $"现金不足，需要 {cost}";
+            int people = 1 + (walkInCompanions?.Count ?? booking?.Participants.Length ?? 0);
+            if (RideFor(def.Id) != AmusementRide.None && people > def.WalkInCapacity(choice)) return "这个项目最多四人（含玩家）。";
+            if (def.VenueId == CityLifeCatalog.GardenAmusementVenue && booking == null && GardenParty is { Length: > 0 } party
+                && (walkInCompanions == null || !walkInCompanions.SequenceEqual(party))) return "本次游园沿用原来的同行名单。";
+            if (walkIn)
+            {
+                if (people > def.WalkInCapacity(choice)) return $"这个项目最多 {def.WalkInCapacity(choice)} 人（含你）";
+                if (walkInCompanions.Any(string.IsNullOrEmpty) || walkInCompanions.Distinct().Count() != walkInCompanions.Count)
+                    return "请重新选择同行者";
+            }
+            Money cost = walkIn ? VenueServicePayment(def, choice, people, playerTreat) : CityActivityEntryPrice(def, choice, booking);
+            if (checkPrice && cost.IsPositive && !Ledger.CanAfford(cost)) return $"现金不足，需要 {cost}";
             if (booking?.ServiceConfirmed == true) return "本次已选好服务";
             if(IsOwnedVenue(CurrentPlace))
             {
-                if(VenueOperation(CurrentPlace.Id).CustomersHere.Length+1+(booking?.Participants.Length??0)>VenueCapacity(CurrentPlace))return "场地容量已满，请等待顾客结束后再使用";
+                if(VenueOperation(CurrentPlace.Id).CustomersHere.Length+people>VenueCapacity(CurrentPlace))return "场地容量已满，请等待顾客结束后再使用";
             }
+            if (walkIn) return CityActivityBlockerForVenue(def, walkInCompanions, Clock.Now.TotalMinutes, false,
+                CurrentPlace, startOnSite: true);
             if (booking == null) return CityActivityBlocker(definitionId, Array.Empty<string>(), Clock.Now.TotalMinutes);
             if (reservedPass && !matchingPass) return "请按已预约的项目开始";
             if (booking.Duration != duration) return "请选择与本次日程时长一致的服务";
@@ -206,6 +279,7 @@ namespace PCShopSell.Core.Session
                 return "请从该活动的现场入口开始";
             if (IsGameOver || _sleeping || IsWorking || Racing || CityActivityExclusive) return "请先结束当前活动";
             if (DistrictAccessBlocker(CurrentPlace) is string access) return access;
+            if (NpcVenueStaffingBlocker(CurrentPlace) is string staffing) return staffing;
             if (!VenueRendezvousReady(booking)) return "等同行者到齐后开始";
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, booking.Duration)) return "距离场所打烊太近，无法开始";
             if (!string.IsNullOrEmpty(booking.EventGiftId) && !booking.EventGiftDelivered && Backpack.GiftCount(booking.EventGiftId) == 0)
@@ -231,15 +305,20 @@ namespace PCShopSell.Core.Session
             return booking.State == CityActivityPhase.Running;
         }
 
-        public bool SelectVenueService(string definitionId, int choice, string activityId = null, bool barHoneyAdded = false)
+        public bool SelectVenueService(string definitionId, int choice, string activityId = null, bool barHoneyAdded = false,
+            IReadOnlyList<string> walkInCompanions = null, bool playerTreat = false)
         {
-            PrepareVenueCompanions(CurrentPlace, activityId);
-            string why = VenueServiceBlocker(definitionId, choice, activityId);
+            if (walkInCompanions == null) PrepareVenueCompanions(CurrentPlace, activityId);
+            string why = VenueServiceBlocker(definitionId, choice, activityId, walkInCompanions, playerTreat);
             if (why != null) return Fail(why);
             var def = CityLifeCatalog.Activity(definitionId);
+            string source = walkInCompanions != null && CurrentPlace?.Business == "venue_restaurant"
+                ? "walk-in:meal:" : "walk-in:";
             var booking = PendingVenueActivity(CurrentPlace, activityId)
-                ?? ScheduleCityActivity(definitionId, Array.Empty<string>(), Clock.Now.TotalMinutes, sourceId: "walk-in:" + _nextCityActivity);
+                ?? ScheduleCityActivityAt(definitionId, walkInCompanions ?? Array.Empty<string>(), Clock.Now.TotalMinutes,
+                    false, source + _nextCityActivity, null, startOnSite: walkInCompanions != null);
             if (booking == null) return false;
+            if (walkInCompanions != null) booking.PlayerTreat = playerTreat;
             booking.ServiceDefinitionId = definitionId;
             booking.ServiceChoice = choice;
             booking.BarHoneyAdded = IsBarDrinkService(def) && barHoneyAdded;
@@ -250,7 +329,7 @@ namespace PCShopSell.Core.Session
                 Say("已选择" + VenueServiceName(def, choice) + "，免费散步。");
             else if (!UsesManualVenuePass(booking))
                 Say("已选择" + VenueServiceName(def, choice) + (booking.HostPays ? "，由邀请人请客。"
-                    : "，费用 " + VenuePlayerPrice(def, choice) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。"));
+                    : "，实付 " + CityActivityEntryPrice(def, choice, booking) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。"));
             return true;
         }
 

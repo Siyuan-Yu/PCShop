@@ -1060,7 +1060,7 @@ namespace PCShopSell.Game.UI
         private void BuildUpgrades()
         {
             Para(C, "店里还能添的设备。这里只是清单，要去对应的店里买，买了当天装好，搬店也跟着走。", 16, Ui.Dim);
-            Para(C, $"现在：{GameSession.SizeName(S.PlayerShop.Size)}，周租 {S.CurrentShopRent}。想换大铺子或者换个好位置：去「安居房产中介」再签一间，打电话叫货车把货搬过去，再回这里退租。", 15, Ui.Accent);
+            Para(C, $"现在是{GameSession.SizeName(S.PlayerShop.Size)}，周租 {S.CurrentShopRent}。想保留库存的话，可以先叫货车搬走。退租时会清空留下的货物和装修。", 15, Ui.Accent);
             if (S.CurrentShop.Rented)
             {
                 OwnedShop shop = S.CurrentShop;

@@ -199,7 +199,8 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_taxi.transform, "TaxiSign", new Vector3(0, 1.7f, -0.2f), new Vector3(0.6f, 0.2f, 0.3f), Mats.Glow(Color.white, new Color(2f, 2f, 1.5f), false));
         }
 
-        public void Update(GameSession s, float dt, StreetWorldBuilder streets = null)
+        public void Update(GameSession s, float dt, StreetWorldBuilder streets = null,
+            Vector3? roomPosition = null, Vector3 roomFacing = default)
         {
             bool publicSpace=s.CurrentPlace!=null&&((s.CurrentPlace.Business??"").StartsWith("venue_",System.StringComparison.Ordinal)||((s.CurrentPlace.Business=="服装"||s.IsCityActivityVenue(s.CurrentPlace))&&s.ShopAt(s.CurrentPlace.Id)==null));
             publicSpace |= s.RunningCityActivity != null && s.RunningCityActivity.VenueId == s.CurrentPlace?.Id;
@@ -213,7 +214,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Dress(_figure, _dressed);
             }
 
-            Vector3 p = streets?.StreetPosition(s.PlayerPosition) ?? StreetWorldBuilder.ToWorld(s.PlayerPosition);
+            Vector3 p = roomPosition ?? streets?.StreetPosition(s.PlayerPosition) ?? StreetWorldBuilder.ToWorld(s.PlayerPosition);
             _root.transform.position = p;
             var activity=publicSpace?s.RunningCityActivity:null;
             _motion.ActivityKind=activity!=null?s.CityActivityService(activity)?.LogicalId??s.CityActivityService(activity)?.Id:null;
@@ -235,7 +236,12 @@ namespace PCShopSell.Game.Runtime
                 }
             }
             if(_activityName!=null){_activityName.gameObject.SetActive(activity!=null);_activityName.rotation=CameraRig.Rotation;}
-            if (s.IsWalking)
+            if (roomPosition.HasValue)
+            {
+                _root.transform.rotation = Quaternion.Slerp(_root.transform.rotation, Quaternion.LookRotation(roomFacing),
+                    1f - Mathf.Exp(-dt * 12f));
+            }
+            else if (s.IsWalking)
             {
                 var dir = s.Trip != null ? new Vector3((float)s.Trip.DirX, 0, (float)s.Trip.DirY) : new Vector3((float)s.HeadingX, 0, (float)s.HeadingY);
                 if (dir.sqrMagnitude > 0.01f)
@@ -253,9 +259,10 @@ namespace PCShopSell.Game.Runtime
             }
             if(_commuteVehicle!=null)_commuteVehicle.SetActive(!publicSpace || nightRide);
             _taxi.SetActive(v == VehicleKind.Taxi && s.Trip != null);
-            _figure.SetActive(publicSpace || (!(v == VehicleKind.Taxi && s.Trip != null) && v != VehicleKind.Car && v != VehicleKind.Van));
-            float lift = nightRide || !publicSpace && (v == VehicleKind.EBike || v == VehicleKind.Tricycle) ? 0.35f : 0f;
-            _motion.LocomotionEnabled = !nightRide && (publicSpace || v == VehicleKind.Walk || v == VehicleKind.Taxi);
+            bool ridingScooter = _commuteVehicle != null && (nightRide || !publicSpace && v == VehicleKind.EBike);
+            _figure.SetActive(ridingScooter || publicSpace || (!(v == VehicleKind.Taxi && s.Trip != null) && v != VehicleKind.Car && v != VehicleKind.Van));
+            float lift = !publicSpace && !nightRide && v == VehicleKind.Tricycle ? .35f : 0f;
+            _motion.LocomotionEnabled = !nightRide && !ridingScooter && (publicSpace || v is VehicleKind.Walk or VehicleKind.Taxi or VehicleKind.EBike);
             if (nightRide)
             {
                 var route = activity.PlayerVenueRoute;
@@ -264,7 +271,8 @@ namespace PCShopSell.Game.Runtime
                 Vector3 direction = StreetWorldBuilder.ToWorld(route.Position(now + 1)) - _root.transform.position;
                 if (direction.sqrMagnitude > .001f) _root.transform.rotation = Quaternion.LookRotation(direction);
             }
-            _figure.transform.localPosition = new Vector3(0, lift, 0);
+            _figure.transform.localPosition = Vector3.up * lift;
+            _motion.SetScooterPose(ridingScooter ? _commuteVehicle.transform : null);
         }
     }
 

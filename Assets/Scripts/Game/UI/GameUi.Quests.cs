@@ -219,8 +219,8 @@ namespace PCShopSell.Game.UI
             string heading = "主线 · " + GameSession.DistrictName(state.Chapter) + "引荐";
             if (node.Id == "community.intro")
             {
-                SetQuestCard(heading, node.Title, "回复李秀兰，接下寻找旧街商铺图的委托。",
-                    "李秀兰的消息等待回复", actionLabel: "查看并回复", action: OpenDistrictStory);
+                SetQuestCard(heading, node.Title, "可在手机通讯录回复李秀兰，或当面和她聊聊。",
+                    "李秀兰的来电等待回复", actionLabel: "查看来电", action: OpenDistrictStory);
                 return;
             }
             if (S.CommunitySearchActive)
@@ -238,7 +238,7 @@ namespace PCShopSell.Game.UI
                 if (S.CommunityBoxAvailable(lead))
                 {
                     SetQuestCard(heading, node.Title, "去藏箱位置调查" + GameSession.CommunityPieceName(lead) + "。",
-                        progress: progress, actionLabel: "前往藏箱地点", action: () => S.GoTo(S.CommunityBoxNode(lead)), completion: found / 3f);
+                        progress: progress, actionLabel: "前往藏箱地点", action: () => S.GoToCommunityBox(lead), completion: found / 3f);
                 }
                 else
                 {

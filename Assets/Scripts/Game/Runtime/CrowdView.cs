@@ -70,8 +70,10 @@ namespace PCShopSell.Game.Runtime
             foreach (var state in session.CityPeople)
             {
                 var definition = session.CityPerson(state.PersonId); if (definition == null) continue;
-                Vector3 position = CityPresentationPosition(session, state);
-                bool privateInterior = !IsNightRider(session, state) && (session.CityPersonInside(state) || CityPersonInVehicle(state) || _expoPresented.Contains(state.PersonId));
+                bool atReception = TryLeisureReception(session, state, out Vector3 reception);
+                Vector3 position = atReception ? reception : CityPresentationPosition(session, state);
+                bool privateInterior = !atReception && !IsNightRider(session, state)
+                    && (session.CityPersonInside(state) || CityPersonInVehicle(state) || _expoPresented.Contains(state.PersonId));
                 if (privateInterior) continue;
                 if (camera != null)
                 {
@@ -117,16 +119,35 @@ namespace PCShopSell.Game.Runtime
         private static bool IsNightRider(GameSession session, CityPersonState person) => person != null
             && session.RunningCityActivity?.DefinitionId == "race_night" && session.RunningCityActivity.Id == person.ActivityId;
 
+        internal bool TryLeisureReception(GameSession session, CityPersonState person, out Vector3 position)
+        {
+            position = default;
+            if (session.CurrentPlace is not { } place || person?.LocationPlaceId != place.Id
+                || !session.IsLeisureVenueWorker(person) || _streets == null
+                || !_streets.Places.TryGetValue(place.Id, out var visual)) return false;
+            bool oldMarket = place.Id == GameSession.OldMarketVenueId;
+            var desk = oldMarket ? visual.Root.transform.Find("OldMarketStall_1")
+                : visual.VenueInterior?.transform.Find(LeisureVenueEntrance.Reception);
+            if (desk == null) return false;
+            // Overlapping Pachinko shifts use separate spots behind the same counter.
+            float offset = place.Id == CityLifeCatalog.PachinkoVenue ? session.CityPerson(person.PersonId).WorkStart switch
+            {
+                0 => -.72f, 480 => 0, 960 => .72f,
+                _ => (StableHash(person.PersonId) % 3 - 1) * .72f
+            } : 0;
+            position = desk.TransformPoint(new Vector3(offset, 0, oldMarket ? 1.12f : 0));
+            return true;
+        }
+
         private Vector3 CityPresentationPosition(GameSession session, CityPersonState person)
         {
             var point = person.Route != null
                 ? person.Route.Position(session.CityPersonRouteTime(person))
                 : new PCShopSell.Core.World.MapPoint(person.X, person.Y);
-            var result = _streets?.StreetPosition(point) ?? StreetWorldBuilder.ToWorld(point);
-            return result + (IsNightRider(session, person) ? Vector3.up * .35f : Vector3.zero);
+            return _streets?.StreetPosition(point) ?? StreetWorldBuilder.ToWorld(point);
         }
 
-        private void UpdateCityPresentation(float dt, bool visible)
+        private void UpdateCityPresentation(float dt, bool visible, Vector3? playerRoomPosition)
         {
             if (_citySession == null) return;
             var activity = _citySession.RunningCityActivity;
@@ -137,23 +158,25 @@ namespace PCShopSell.Game.Runtime
                 if (view.Go == null) continue;
                 var state = _citySession.CityPersonState(pair.Key);
                 bool nightRide = IsNightRider(_citySession, state);
+                bool atReception = TryLeisureReception(_citySession, state, out Vector3 reception);
                 bool show = visible && state != null && pair.Key != footballKeeper
-                    && (nightRide || !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state) && !_expoPresented.Contains(state.PersonId));
+                    && (atReception || nightRide || !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state) && !_expoPresented.Contains(state.PersonId));
                 if (view.Go.activeSelf != show) view.Go.SetActive(show);
                 if (!show) continue;
                 if (nightRide && view.NightBike == null)
                 {
                     var bike = MotorCatalog.Get("e_city");
                     view.NightBike = MotorVisual.Build(view.Go.transform, bike, MotorVisual.Paint(bike.Id), false);
-                    view.NightBike.localPosition = Vector3.down * .35f;
+                    view.NightBike.localScale = Vector3.one * .9f;
                 }
                 if (view.NightBike != null) view.NightBike.gameObject.SetActive(nightRide);
-                Vector3 position = CityPresentationPosition(_citySession, state);
+                Vector3 position = atReception ? reception : CityPresentationPosition(_citySession, state);
                 Vector3 direction = position - view.Go.transform.position;
                 view.Go.transform.position = position;
                 bool participating = state.Route == null && !string.IsNullOrEmpty(state.ActivityId)
                     && _citySession.RunningCityActivity?.Id == state.ActivityId;
-                if (participating) direction = StreetWorldBuilder.ToWorld(_citySession.PlayerPosition) - position;
+                if (participating || atReception)
+                    direction = (playerRoomPosition ?? StreetWorldBuilder.ToWorld(_citySession.PlayerPosition)) - position;
                 if (pair.Key == Talking && state.Route == null) direction = TalkFace - position;
                 direction.y = 0;
                 if (direction.sqrMagnitude > .00001f && dt > 0)
@@ -166,6 +189,7 @@ namespace PCShopSell.Game.Runtime
                     view.Motion.ActivityOption = participating ? _citySession.RunningCityActivity.ServiceChoice : -1;
                     view.Motion.LocomotionEnabled = state.Route != null && !nightRide;
                     view.Motion.Seated = participating && _citySession.City.GetPlace(_citySession.RunningCityActivity.VenueId).Business == "venue_restaurant";
+                    view.Motion.SetScooterPose(nightRide ? view.NightBike : null);
                 }
             }
         }
@@ -290,11 +314,11 @@ namespace PCShopSell.Game.Runtime
             _walkers.Add(w);
         }
 
-        public void Update(float dt, bool visible)
+        public void Update(float dt, bool visible, Vector3? playerRoomPosition = null)
         {
             if (_cityMode)
             {
-                UpdateCityPresentation(dt, visible);
+                UpdateCityPresentation(dt, visible, playerRoomPosition);
                 UpdateAmbient(dt, visible);
                 return;
             }

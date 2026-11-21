@@ -41,7 +41,7 @@ namespace PCShopSell.Game
         public bool InHome => Session != null && Session.CurrentPlace != null && Session.CurrentPlace == Session.Home;
         /// <summary>在任意室内场景（店里或家里）：街道隐藏，镜头跟着老板。</summary>
         public bool InRoom => InInterior || InHome || InVisit;
-        private int RoomKind => InInterior ? 1 : InHome ? 2 : InVisit ? 4 : CityCloseView!=null ? 3 : 0;
+        private int RoomKind => InInterior ? 1 : InHome ? 2 : InVisit ? 4 : InPachinkoRoom ? 5 : CityCloseView!=null ? 3 : 0;
 
         private CameraRig _rig;
         private DayNightLighting _lighting;
@@ -132,6 +132,7 @@ namespace PCShopSell.Game
             ResetCommunityReveal();
             if (PetFocusActive) ExitPetFocus();
             Ui?.CloseAllWindows();
+            ClearPachinkoRoom();
             if (Session != null)
             {
                 Session.Notice -= OnNotice;
@@ -513,19 +514,42 @@ namespace PCShopSell.Game
         }
 
         private readonly List<ShopBeacon> _beacons = new List<ShopBeacon>();
-        private ShopBeacon _homeBeacon;
+        private readonly List<ShopBeacon> _ownedResidenceBeacons = new List<ShopBeacon>();
+        private ShopBeacon _rentedHomeBeacon;
         public bool ShopBeaconVisible => _beacons.Exists(b => b.Visible);
 
-        /// <summary>每家自营店一圈光；店少了多出来的那几圈藏起来。</summary>
+        /// <summary>用当前会话的门店和产权同步街景外罩。</summary>
         private void UpdateBeacons(float dt)
         {
-            _homeBeacon ??= new ShopBeacon(World.Root.transform, residential: true);
-            _homeBeacon.Update(Session, World, Session.Home.Id, dt);
+            var home = Session.Home;
+            bool ownsHome = Session.OwnsResidence(home);
+            if (!ownsHome)
+                _rentedHomeBeacon ??= new ShopBeacon(World.Root.transform, ShopBeacon.Style.RentedResidence);
+            _rentedHomeBeacon?.Update(Session, World, ownsHome ? null : home.Id, dt);
+
+            int residenceCount = 0;
+            if (ownsHome) MarkOwnedResidence(home.Id);
+            var properties = Session.OwnedProperties;
+            for (int i = 0; i < properties.Count; i++)
+            {
+                string id = properties[i].PlaceId;
+                if (id != home.Id && World.Places.TryGetValue(id, out var building) && building.Place.Kind == PlaceKind.Home)
+                    MarkOwnedResidence(id);
+            }
+            for (int i = residenceCount; i < _ownedResidenceBeacons.Count; i++)
+                _ownedResidenceBeacons[i].Update(Session, World, null, dt);
 
             var shops = Session.MyShops;
             while (_beacons.Count < shops.Count) _beacons.Add(new ShopBeacon(World.Root.transform));
             for (int i = 0; i < _beacons.Count; i++)
                 _beacons[i].Update(Session, World, i < shops.Count ? shops[i].Place.Id : null, dt);
+
+            void MarkOwnedResidence(string id)
+            {
+                if (_ownedResidenceBeacons.Count == residenceCount)
+                    _ownedResidenceBeacons.Add(new ShopBeacon(World.Root.transform, ShopBeacon.Style.OwnedResidence));
+                _ownedResidenceBeacons[residenceCount++].Update(Session, World, id, dt);
+            }
         }
 
         private float _crowdSyncTimer;
@@ -562,7 +586,8 @@ namespace PCShopSell.Game
             VisitRoom?.SetActive(InVisit);
             World.Root.SetActive(!room);
             World.SetVenueFocus(Session.CurrentPlace?.Id);
-            _avatar.Update(Session, dt, World);
+            var pachinkoRoom = SyncPachinkoRoom();
+            _avatar.Update(Session, dt, World, pachinkoRoom?.OwnerWorld, pachinkoRoom?.OwnerFacing ?? Vector3.zero);
             SyncExpoView(dt);
             SyncShopEventViews();
             SyncLifeEventViews();
@@ -576,7 +601,7 @@ namespace PCShopSell.Game
                 _crowdSyncTimer = 0.25f;
                 _crowd.SyncCity(Session, _communityRevealActive ? _rig.Focus : FocusPoint(), Cam, World);
             }
-            _crowd.Update(worldDt, !room);
+            _crowd.Update(worldDt, !room, pachinkoRoom?.OwnerWorld);
             UpdateBeacons(dt);
             _shopFrontTimer -= dt;
             if (!room && (_shopFrontTimer <= 0 || _wasRoomKind != RoomKind))
@@ -609,7 +634,7 @@ namespace PCShopSell.Game
             bool insideVenue = Session.CurrentPlace != null
                 && World.Places.TryGetValue(Session.CurrentPlace.Id, out var venue)
                 && venue.VenueInterior != null && venue.VenueInterior.activeInHierarchy;
-            UpdateWeather(room, room || insideVenue);
+            UpdateWeather(room || InPachinkoRoom, room || insideVenue);
             _rain.SetPaused(scooterTutorialPaused || _communityRevealActive);
 
             bool chasing = Session.Police.AnyChasing;
@@ -655,7 +680,7 @@ namespace PCShopSell.Game
               var closeView=CityCloseView;
               if(ExpoView?.MonthlyOpen==true)return ExpoView.MonthlyFocus-CameraRig.Rotation*Vector3.right*(size*Cam.aspect*.16f);
               if(ExpoView?.Open==true)return ExpoCameraFocus(zoom>0?zoom:_rig.Size);
-              if(closeView!=null)return CityCloseFocus(closeView);
+              if(closeView!=null)return CityCloseFocus(closeView, overview);
             if (Session.CurrentPlace?.Id == GameSession.OldMarketVenueId && World.Places.TryGetValue(GameSession.OldMarketVenueId, out PlaceVisual marketView))
                 return marketView.Root.transform.TransformPoint(new Vector3(0, 1, (float)Session.CurrentPlace.Depth * .46f));
             Vector3 p = World.StreetPosition(Session.PlayerPosition);
@@ -699,6 +724,12 @@ namespace PCShopSell.Game
             var selected = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
             var input = selected != null ? selected.GetComponent<UnityEngine.UI.InputField>() : null;
             if (input != null && input.isFocused) return;
+            if (Ui.AmusementInputActive)
+            {
+                _orbiting = false;
+                if (Input.GetKeyDown(KeyCode.Escape)) Ui.CloseTopWindow();
+                return;
+            }
             if(Ui.ExpoHudOpen)
             {
                 if(!GameUi.PointerOverUi)_rig.Zoom(Input.mouseScrollDelta.y);
@@ -725,6 +756,7 @@ namespace PCShopSell.Game
             {
                 if (InVisit) InteractVisitRoom();
                 else if (InHome) HomeInteract(HomeRoom.NearbyId);
+                else if (InPachinkoRoom) InteractPachinkoRoom();
                 else if(Session.IsOwnedVenue(Session.CurrentPlace))Ui.OpenVenueManagement(Session.CurrentPlace);
                 else if (InInterior)
                 {
@@ -794,13 +826,10 @@ namespace PCShopSell.Game
         /// <summary>WASD / 方向键。相对镜头方向走：W 是屏幕往上（镜头怎么转，方向跟着转）。街上在街道范围内自由走，店里在店内走。</summary>
         private void HandleMovement(float dt)
         {
-            float h = (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f);
-            float v = (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow) ? 1f : 0f);
+            var direction = DirectionalInput.Held;
             // A held direction must not cancel a pause just triggered with Space.
-            bool newMovement = Session.Time.IsUserPaused && !Input.GetKeyDown(KeyCode.Space) &&
-                (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D) ||
-                 Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.RightArrow));
-            ApplyMovement(dt, h, v, newMovement);
+            bool newMovement = Session.Time.IsUserPaused && !Input.GetKeyDown(KeyCode.Space) && DirectionalInput.AnyPressed;
+            ApplyMovement(dt, direction.x, direction.y, newMovement);
         }
 
         private void ApplyMovement(float dt, float h, float v, bool newMovement)
@@ -813,7 +842,7 @@ namespace PCShopSell.Game
                 return;
             }
 
-            if (!InRoom && !Session.CanSteer)
+            if (!InRoom && !InPachinkoRoom && !Session.CanSteer)
             {
                 if (!_taxiHinted)
                 {
@@ -853,6 +882,12 @@ namespace PCShopSell.Game
                 MoveInResidence(dir, dt);
                 return;
             }
+            if (InPachinkoRoom)
+            {
+                Session.SetSteer(0, 0);
+                SyncPachinkoRoom()?.MoveOwner(dir, IndoorWalkDelta(dt));
+                return;
+            }
 
             if (Session.CurrentPlace != null)
             {
@@ -879,6 +914,7 @@ namespace PCShopSell.Game
             string target = VisitRoom?.NearbyId;
             if (target == HomeRoomView.Door) LeaveHome();
             else if (target == HomeRoomView.Bed && Session.CanSleepAt(Session.CurrentPlace)) Ui.OpenBedWindow();
+            else if (target == HomeRoomView.Storage && Session.HasSecondaryResidenceWarehouse) Ui.OpenStorageWindow();
             else if (target != null && Session.CitySamePlace(target) && VisitRoom.CanReachResident(target))
                 Ui.OpenCityPerson(target);
             else Ui.Toast("走近住户或房门，再按 F。");
@@ -930,6 +966,7 @@ namespace PCShopSell.Game
             world = Vector3.zero;
             label = null;
             if (Session == null || Session.IsGameOver || Ui.AnyModalOpen || Placing) return false;
+            if (InPachinkoRoom) return TryGetPachinkoInteract(out world, out label);
             if(Session.IsOwnedVenue(Session.CurrentPlace))
             {world=StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up*2;label="场馆管理（按 F 打开）";return true;}
             if (InHome || InVisit)
@@ -1159,11 +1196,12 @@ namespace PCShopSell.Game
 
         private void HandleClicks()
         {
-            if (Session.IsWorking) return;
+            if (Session.IsWorking || InPachinkoRoom) return;
             if (!Input.GetMouseButtonDown(0) || GameUi.PointerOverUi) return;
             CancelHomeBedTrip();
             Ray ray = Cam.ScreenPointToRay(Input.mousePosition);
-            foreach(var personHit in Physics.RaycastAll(ray,1000f))
+            var hits = Physics.RaycastAll(ray, 1000f);
+            foreach(var personHit in hits)
             {
                 var person=personHit.collider.GetComponentInParent<CityPersonMarker>();
                 if(person==null)continue;
@@ -1173,7 +1211,7 @@ namespace PCShopSell.Game
                 else Ui.Toast("走近这位居民后再交谈；地图不会把对方召唤过来。");
                 return;
             }
-            foreach (var passerbyHit in Physics.RaycastAll(ray, 1000f))
+            foreach (var passerbyHit in hits)
             {
                 var passerby = passerbyHit.collider.GetComponentInParent<AmbientPersonMarker>();
                 if (passerby == null) continue;
@@ -1299,7 +1337,8 @@ namespace PCShopSell.Game
             bool editing = Placing && _rig.Edit;
             if (editing) _rig.SetEdit(false);
             _rig.SetInterior(interior || home || closeView!=null);
-            if(closeView!=null)_rig.SetPlaceAngles(closeView.Root.transform.eulerAngles.y,61f);
+            if(closeView!=null)_rig.SetPlaceAngles(closeView.Root.transform.eulerAngles.y + (InPachinkoRoom ? 18f : 0f),
+                InPachinkoRoom ? 49f : 61f);
             else if(interior||home)_rig.SetPlaceAngles(CameraRig.DefaultYaw,CameraRig.DefaultPitch);
             _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
             float size = closeView!=null?9.5f:16f;
@@ -1315,6 +1354,11 @@ namespace PCShopSell.Game
                 float dock = Mathf.Min(.48f, GameUi.ShopDockWidth / Mathf.Max(1f, Ui.CanvasWidth));
                 size = Mathf.Max(ShopInteriorView.DefaultZoom, FrameRoom(Interior.Width,Interior.Depth,dock));
                 _rig.MaxSize = Mathf.Max(size,Interior.CameraSize);
+            }
+            else if (InPachinkoRoom && closeView != null)
+            {
+                size = Mathf.Max(9.5f, FrameRoom((float)closeView.Place.Width, (float)closeView.Place.Depth, 0));
+                _rig.MaxSize = Mathf.Max(size, _rig.MaxSize);
             }
             _roomOverviewSize = size;
             if(ExpoView?.Open==true)

@@ -9,11 +9,13 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private const KeyCode QuestHotkey = KeyCode.R;
+        private const KeyCode ContactsHotkey = KeyCode.K;
         private const KeyCode StockHotkey = KeyCode.J;
         private const KeyCode RacingHotkey = KeyCode.T;
 
         private RectTransform _hudTopRow;
         private RectTransform _hudFunctionBar;
+        private RectTransform _hudShortcutRow;
         private Button _hudFoldButton;
         private bool _hudFunctionsCollapsed;
         private bool HudFunctionsVisible => !_hudFunctionsCollapsed;
@@ -90,10 +92,13 @@ namespace PCShopSell.Game.UI
             _hudFunctionBar = Ui.Panel(parent, "HudFunctionBar", Ui.Chrome).rectTransform
                 .Anchor(0, 1, 1, 1, 12, -126, 12, 76);
             var row = Ui.Row(_hudFunctionBar, 46, 8).Fill();
+            _hudShortcutRow = row;
             row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 5, 5);
             HudPanelButton(row, "我的", KeyCode.M, OpenMyPanel, "个人资料、饮食、住处、我的资产与人物关系。");
             HudPanelButton(row, "背包", KeyCode.B, ToggleBackpack, "身上带的物品与负重。");
             HudPanelButton(row, "手机", KeyCode.P, OpenPhone, "通讯录与智能手机应用。");
+            var contacts = HudPanelButton(row, "联系人", ContactsHotkey, OpenContactsPanel, "直接打开手机里的通讯录。");
+            contacts.name = "HudContacts";
             HudPanelButton(row, "任务", QuestHotkey, OpenQuests, "当前任务与待办。");
             HudPanelButton(row, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
             HudPanelButton(row, "经营", KeyCode.H, OpenStoreManagement, "各门店的经营、员工、采购与补货。").name = "HudManagement";
@@ -121,6 +126,9 @@ namespace PCShopSell.Game.UI
                 _racingButton.Tip(() => S?.RacingAccessBlocker
                     ?? $"{racingDescription} 快捷键 {HotkeyLabel(RacingHotkey)}");
             }
+            // Reserve space for the icon, title and key hint before fitting the row into narrow windows.
+            foreach (RectTransform child in row)
+                child.GetComponent<LayoutElement>().minWidth = child == contacts.transform ? 128 : 104;
             _hudFunctionBar.gameObject.SetActive(HudFunctionsVisible);
         }
 
@@ -178,11 +186,17 @@ namespace PCShopSell.Game.UI
             float availableWidth = ((RectTransform)_hudTopRow.parent).rect.width;
             if (availableWidth <= 0 || Mathf.Approximately(availableWidth, _fittedHudWidth)) return;
             _fittedHudWidth = availableWidth;
+            FitHudRow(_hudTopRow, availableWidth);
+            FitHudRow(_hudShortcutRow, _hudFunctionBar.rect.width);
+        }
 
-            var layout = _hudTopRow.GetComponent<HorizontalLayoutGroup>();
+        private static void FitHudRow(RectTransform row, float availableWidth)
+        {
+            if (availableWidth <= 0) return;
+            var layout = row.GetComponent<HorizontalLayoutGroup>();
             float preferredWidth = layout.padding.horizontal;
             int visible = 0;
-            foreach (RectTransform child in _hudTopRow)
+            foreach (RectTransform child in row)
             {
                 if (!child.gameObject.activeSelf) continue;
                 preferredWidth += LayoutUtility.GetPreferredWidth(child);
@@ -190,8 +204,8 @@ namespace PCShopSell.Game.UI
             }
             preferredWidth += Mathf.Max(0, visible - 1) * layout.spacing;
             float rowWidth = Mathf.Max(availableWidth, preferredWidth);
-            _hudTopRow.sizeDelta = new Vector2(rowWidth - availableWidth, 0);
-            _hudTopRow.localScale = Vector3.one * (availableWidth / rowWidth);
+            row.sizeDelta = new Vector2(rowWidth - availableWidth, 0);
+            row.localScale = Vector3.one * (availableWidth / rowWidth);
         }
 
     }

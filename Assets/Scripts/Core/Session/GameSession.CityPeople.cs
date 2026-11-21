@@ -135,8 +135,32 @@ namespace PCShopSell.Core.Session
         public static bool CityWithinHours(int minute,int open,int close) => open==close || (close>open?minute>=open&&minute<close:minute>=open||minute<close);
         public const int HomeVisitMinRelation = 30;
 
+        private (Place Residence, string PersonId) _homeDoorConversation;
+
         public IEnumerable<CityPersonState> ResidentsAtHome(Place home) =>
             PeopleInPlace(home.Id).Where(person => person.HomePlaceId == home.Id && CityPersonInside(person));
+
+        public bool CanTalkAtHomeDoor(Place residence, string personId)
+        {
+            if (residence?.Kind != PlaceKind.Home || CurrentPlace != null || Trip != null || IsGameOver || IsWorking || _sleeping
+                || DistrictAccessBlocker(residence) != null || Dist(PlayerPosition, DoorOf(residence)) > DoorEnterRadius(residence))
+                return false;
+            var person = CityPersonState(personId);
+            return person?.HomePlaceId == residence.Id && person.LocationPlaceId == residence.Id && CityPersonInside(person);
+        }
+
+        public bool TryStartHomeDoorConversation(Place residence, string personId)
+        {
+            if (_homeDoorConversation.Residence != null || CityPerson(personId) == null || !CanTalkAtHomeDoor(residence, personId))
+                return false;
+            _homeDoorConversation = (residence, personId);
+            return true;
+        }
+
+        public void EndHomeDoorConversation(Place residence, string personId)
+        {
+            if (_homeDoorConversation == (residence, personId)) _homeDoorConversation = default;
+        }
 
         public string HomeVisitBlocker(Place home)
         {
@@ -159,6 +183,9 @@ namespace PCShopSell.Core.Session
                 return person.Route == null && (person.LocationPlaceId == CurrentPlace.Id
                     || City.HasPlace(person.LocationPlaceId) && SharesWholesaleMarket(CurrentPlace, City.GetPlace(person.LocationPlaceId)))
                     && (CurrentPlace.Kind != PlaceKind.Home || CurrentPlace == Home || CityPersonInside(person));
+            // Only the resident who answered the door is available for this conversation.
+            if (_homeDoorConversation.PersonId == personId && CanTalkAtHomeDoor(_homeDoorConversation.Residence, personId))
+                return true;
             if (CityPersonInside(person) || person.Route != null && person.Route.Transport != VehicleKind.Walk) return false;
             // A walking resident can be stopped for conversation. Match the rendered fractional
             // route position rather than rejecting everyone who is currently on their way somewhere.
@@ -177,7 +204,7 @@ namespace PCShopSell.Core.Session
                 string home=City.HasPlace(d.HomeId)?City.CanonicalPlaceId(d.HomeId):Home.Id;
                 var pos=StandOf(City.GetPlace(home));
                 var p=new CityPersonState {PersonId=d.Id,HomePlaceId=home,Address=City.GetPlace(home).Name+" "+(1+_cityPeople.Count/8)+"栋"+(101+_cityPeople.Count%8)+"室",
-                    WorkPlaceId=City.HasPlace(d.WorkId)?City.CanonicalPlaceId(d.WorkId):null,LocationPlaceId=home,Task=CityPersonTask.Home,X=pos.X,Y=pos.Y};
+                    WorkPlaceId=CityNpcWorkplace(d, home),LocationPlaceId=home,Task=CityPersonTask.Home,X=pos.X,Y=pos.Y};
                 _cityPeople.Add(p.PersonId,p);
                 if (d.Id == CityLifeCatalog.InvitationTestPersonId)
                 {
@@ -217,29 +244,26 @@ namespace PCShopSell.Core.Session
                 householdSize[original]++;
                 return true;
             });
-            foreach (bool sameDistrict in new[] { true, false })
+            remaining.RemoveAll(person =>
             {
-                remaining.RemoveAll(person =>
-                {
-                    var original = City.GetPlace(person.HomePlaceId);
-                    var point = City.ViewPosition(original.NodeId);
-                    var next = homes.Where(home => vacant.Contains(home) &&
-                            (!sameDistrict || DistrictTierOf(home) == DistrictTierOf(original)))
-                        .OrderBy(home => DistanceCity(City.ViewPosition(home.NodeId), point)).FirstOrDefault();
-                    if (next == null) return false;
-                    vacant.Remove(next);
-                    householdSize[next]++;
-                    MoveCityHome(person, next);
-                    return true;
-                });
-            }
+                var original = City.GetPlace(person.HomePlaceId);
+                var point = City.ViewPosition(original.NodeId);
+                var next = homes.Where(home => vacant.Contains(home) && DistrictTierOf(home) == DistrictTierOf(original))
+                    .OrderBy(home => DistanceCity(City.ViewPosition(home.NodeId), point)).FirstOrDefault();
+                if (next == null) return false;
+                vacant.Remove(next);
+                householdSize[next]++;
+                MoveCityHome(person, next);
+                return true;
+            });
             foreach (var person in remaining)
             {
                 var original = City.GetPlace(person.HomePlaceId);
                 var point = City.ViewPosition(original.NodeId);
-                var next = homes.OrderBy(home => householdSize[home])
-                    .ThenBy(home => DistrictTierOf(home) != DistrictTierOf(original))
-                    .ThenBy(home => DistanceCity(City.ViewPosition(home.NodeId), point)).First();
+                var next = homes.Where(home => DistrictTierOf(home) == DistrictTierOf(original))
+                    .OrderBy(home => householdSize[home])
+                    .ThenBy(home => DistanceCity(City.ViewPosition(home.NodeId), point)).FirstOrDefault();
+                if (next == null) continue;
                 householdSize[next]++;
                 MoveCityHome(person, next);
             }
@@ -259,7 +283,7 @@ namespace PCShopSell.Core.Session
                 if (!City.HasPlace(entry.homeId) || _cityPeople.ContainsKey(entry.id)) continue;
                 var home = City.GetPlace(entry.homeId);
                 var work = City.HasPlace(entry.workId) ? City.GetPlace(entry.workId) : null;
-                if (!IsCommercialPremises(work) || IsMyShop(work) || IsPendingShop(work) ||
+                if (!CityNpcWorkAllowed(work, home.Id) || !IsCommercialPremises(work) || IsMyShop(work) || IsPendingShop(work) ||
                     VentureAt(work.Id) != null || PropertyAt(work.Id) != null) work = null;
 
                 if (!Available(home))
@@ -322,6 +346,18 @@ namespace PCShopSell.Core.Session
             person.HomePlaceId = residence.Id;
             if(worksAtHome)person.WorkPlaceId=residence.Id;
             person.Address = residence.Name;
+        }
+
+        private bool CityNpcWorkAllowed(Place work, string homeId) => work != null && (!City.IsLakeCity
+            || City.HasPlace(homeId) && DistrictTierOf(work) <= DistrictTierOf(City.GetPlace(homeId)));
+
+        private string CityNpcWorkplace(CityPersonDefinition definition, string homeId)
+        {
+            if (definition == null || definition.Recruitable || definition.WorkId == null) return null;
+            string workId = definition.WorkId == definition.HomeId ? homeId : definition.WorkId;
+            if (!City.HasPlace(workId)) return null;
+            var work = City.GetPlace(workId);
+            return CityNpcWorkAllowed(work, homeId) ? work.Id : null;
         }
 
         public string PersonIdOf(Employee e)
@@ -391,10 +427,11 @@ namespace PCShopSell.Core.Session
             {
                 var d=CityPerson(p.PersonId); if(d==null)continue;
                 jobs.TryGetValue(p.PersonId,out var employment);
+                if (employment?.Shop == null) p.WorkPlaceId = CityNpcWorkplace(d, p.HomePlaceId);
                 var purchase=employment==null?null:EmployeeTrip(employment.Person.Id);
                 if(purchase!=null)
                 {
-                    p.WorkPlaceId=employment.Shop.Place.Id;
+                    p.WorkPlaceId=employment.Shop?.Place.Id;
                     ApplyCityPurchasePosition(purchase,p,now);
                     continue;
                 }
@@ -422,14 +459,13 @@ namespace PCShopSell.Core.Session
                 {
                     p.WorkPlaceId=work;
                 }
-                else p.WorkPlaceId=d.Recruitable?null:d.WorkId==d.HomeId&&City.HasPlace(p.HomePlaceId)?p.HomePlaceId:City.HasPlace(d.WorkId)?d.WorkId:null;
                 candidates.TryGetValue(p.PersonId,out var candidate);
                 bool shift=employee!=null?employee.OnDuty(Clock.Now):AuthoredCityWorkAt(p,now);
                 if (employee == null && shift && p.WorkPlaceId != p.HomePlaceId)
                 {
                     var workplace = City.GetPlace(p.WorkPlaceId);
-                    // The bank opens when a teller arrives, so its doors cannot gate their shift.
-                    if (workplace.Business != BankBusiness && !IsPlaceOpen(workplace)) shift = false;
+                    // At staffed venues the employee's shift opens the doors after arrival.
+                    if (workplace.Business != BankBusiness && !UsesNpcVenueRoster(workplace) && !IsPlaceOpen(workplace)) shift = false;
                 }
                 if (!CandidateAvailable(candidate) && TickRaceAttendee(p, now, employee != null && shift)) continue;
                 if (!CandidateAvailable(candidate) && TickPetOwnerVisit(p, now, shift)) continue;

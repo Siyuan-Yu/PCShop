@@ -12,7 +12,11 @@ namespace PCShopSell.Game.UI
         {
             var s = S.OutdoorActivityState(activity.Id); if (s == null) return;
             if (s.Number is 71 or 72)
-                Ui.Size(Ui.Button(w.Content, "打开旧物市场 · 看货 / 检测 / 购买 / 维修", () => OpenCityVenue(S.City.GetPlace(GameSession.OldMarketVenueId)), 18, Ui.ButtonHot), -1, 44);
+                Ui.Size(Ui.Button(w.Content, "去柜台淘旧物", () =>
+                {
+                    w.Close();
+                    OpenCityVenue(S.City.GetPlace(GameSession.OldMarketVenueId));
+                }, 18, Ui.ButtonHot), -1, 44);
             if (s.Number == 73)
                 Ui.Size(Ui.Button(w.Content, "查看真实采购渠道", OpenCityProcurement, 18, Ui.ButtonHot, S.HasOpenedComputerShop), -1, 42);
             if (s.Number == 74 && activity.ServiceDefinitionId == "social_74_work")

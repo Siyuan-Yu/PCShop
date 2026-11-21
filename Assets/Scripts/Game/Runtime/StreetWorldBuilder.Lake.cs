@@ -136,7 +136,19 @@ namespace PCShopSell.Game.Runtime
                 occupied.Add(Rect.MinMaxRect(bounds.min.x-4,bounds.min.z-4,bounds.max.x+4,bounds.max.z+4));
             }
             foreach(var b in _city.Blocks.Where(b => BuildsStreet(b.street)))Reserve(new Vector3((float)b.x,0,(float)b.y)/LakeScale,(float)b.width/LakeScale,(float)b.depth/LakeScale,(float)b.heading);
-            foreach(var p in _city.PublicPlaces.Where(BuildsPlace))Reserve(LakeNode(p.NodeId)+new Vector3((float)p.EntranceX,0,(float)p.EntranceY)/LakeScale,(float)p.Width/LakeScale,(float)p.Depth/LakeScale,(float)p.Heading);
+            foreach (var p in _city.PublicPlaces.Where(BuildsPlace))
+            {
+                var node = LakeNode(p.NodeId);
+                var door = node + new Vector3((float)p.EntranceX, 0, (float)p.EntranceY) / LakeScale;
+                Reserve(door, (float)p.Width / LakeScale, (float)p.Depth / LakeScale, (float)p.Heading);
+                // Long entrance paths can leave a gap between the road and plot clearances.
+                if (p.Id == "life_hike" && (door - node).sqrMagnitude > 14f * 14f)
+                {
+                    const float clearance = 4f;
+                    occupied.Add(Rect.MinMaxRect(Mathf.Min(node.x, door.x) - clearance, Mathf.Min(node.z, door.z) - clearance,
+                        Mathf.Max(node.x, door.x) + clearance, Mathf.Max(node.z, door.z) + clearance));
+                }
+            }
             foreach(var p in _city.LakeParcels)Reserve(new Vector3((float)p.x,0,(float)p.y)/LakeScale,(float)p.width/LakeScale,(float)p.depth/LakeScale,(float)p.heading);
             var roads=new List<(Vector3 a,Vector3 b)>();
             foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))

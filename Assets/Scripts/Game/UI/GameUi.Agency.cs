@@ -21,7 +21,7 @@ namespace PCShopSell.Game.UI
         private static readonly Color AgencyInk = Ui.TextColor;
         private static readonly Color AgencyMuted = Ui.Dim;
         private static readonly Color AgencyFuture = Ui.Accent;
-        private string AgencyDiscountPercent => $"{S.AgentDiscount * 100:0.#}%";
+        private static string AgencyDiscountPercent(int rapport) => $"{RealEstate.AgentDiscount(rapport) * 100:0.#}%";
         private static string NewShopHours => $"{Ui.Hm(ShopSimulation.DefaultOpenMinute)}–{Ui.Hm(ShopSimulation.DefaultCloseMinute)}";
 
         // Selection is local UI state. Looking at a property never moves the player or signs a lease.
@@ -68,22 +68,23 @@ namespace PCShopSell.Game.UI
         private void BuildAgencyHeader(Window w, Place agency, System.Action refreshProperty)
         {
             var header = Ui.Row(w.Content, 62, 12);
+            var agent = S.AgencyAgent(agency);
             Button talk = null;
-            if (agency.Id == "agency")
+            if (agent != null)
             {
                 var portrait = Ui.Rect(header, "AgentPortrait");
                 Ui.Size(portrait, 40, 54);
-                var image = FitPortrait(portrait, Rosters.AgentChen.Id);
+                var image = FitPortrait(portrait, agent.Id);
                 talk = image.gameObject.AddComponent<Button>();
                 talk.targetGraphic = image;
-                talk.Tip("和陈启明聊聊");
+                talk.Tip(CanTalkToScenePerson(agent.Id) ? $"和{agent.Name}交谈" : $"查看{agent.Name}的资料");
             }
             var district=S.City.AgencyDistrictFor(agency.StreetId);
             string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));
             var summary = Ui.Size(Ui.Label(header, "", 20), -1, 62, 1);
             RefreshSummary();
             if (talk != null)
-                talk.onClick.AddListener(() => OpenPersonDialogue(Rosters.AgentChen.Id, agency, onClosed: () =>
+                talk.onClick.AddListener(() => OpenPersonDialogue(agent.Id, agency, onClosed: () =>
                 {
                     if (w.Closed || summary == null) return;
                     RefreshSummary();
@@ -92,12 +93,22 @@ namespace PCShopSell.Game.UI
 
             void RefreshSummary()
             {
+                int rapport = S.AgencyRapport(agency);
                 string detail = _agencyResidential ? "当前住处：" + S.HomeTitle
-                    : $"与{Rosters.AgentChen.Name}的熟悉度 {S.AgentRapport} · 中介费减免 {AgencyDiscountPercent}";
-                summary.text = $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#655E52>{detail}</color></size>";
+                    : agent == null ? "按标准中介费办理" : $"熟悉度 {rapport} · 中介费减免 {AgencyDiscountPercent(rapport)}";
+                string coverageLine = agent == null ? $"负责：{coverage}" : $"负责人 {agent.Name} · 负责：{coverage}";
+                summary.text = $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>{coverageLine}\n<color=#655E52>{detail}</color></size>";
             }
 
-            if (_agencyMyProperties || _agencyResidential || !BusinessUnlocked || S.DistrictAccessBlocker(agency) != null) return;
+            if (_agencyMyProperties || _agencyResidential || S.DistrictAccessBlocker(agency) != null) return;
+            if (agency.Id == GameSession.PachinkoTransferAgencyId && S.PachinkoTransferUnlocked)
+            {
+                var place = S.City.GetPlace(CityLifeCatalog.PachinkoVenue);
+                if (!S.IsOwnedVenue(place))
+                    Ui.Size(Ui.Button(header, "购买" + place.Name, () => OpenPachinkoTransfer(w), 17, Ui.ButtonHot), 150)
+                        .name = "AgencyBuyPachinko";
+            }
+            if (!BusinessUnlocked) return;
             void OpenSection(int section)
             {
                 var business = OpenBusinessSection(section);
@@ -116,6 +127,28 @@ namespace PCShopSell.Game.UI
             if (canUsePark)
                 Ui.Size(Ui.Button(header, S.HasPark ? "园区管理" : "园区筹建", () => OpenSection(6), 16), 135)
                     .name = "AgencyOpenPark";
+        }
+
+        private void OpenPachinkoTransfer(Window agencyWindow)
+        {
+            var place = S.City.GetPlace(CityLifeCatalog.PachinkoVenue);
+            bool alreadyOwnsProperty = S.PropertyAt(place.Id) != null;
+            string blocker = S.PachinkoPurchaseBlocker;
+            OpenWindow("购买" + place.Name, 580, 300, w =>
+            {
+                Para(w.Content, $"{place.Name} · {S.City.StreetName(place.StreetId)}", 20);
+                Para(w.Content, "随店交付三台机台。接手后可在店内设置机台返奖和营业时间。", 17);
+                if (blocker != null) Para(w.Content, blocker, 17, Ui.Accent);
+                var row = Ui.Row(w.Content, 44, 8);
+                Ui.Size(Ui.Button(row, "返回", w.Close, 17), -1, 44, 1);
+                string action = alreadyOwnsProperty ? "确认自营" : $"确认购买 · {GameSession.PachinkoTransferPrice}";
+                Ui.Size(Ui.Button(row, action, () =>
+                {
+                    if (!S.PurchasePachinko()) return;
+                    w.Close();
+                    agencyWindow.Rebuild();
+                }, 17, Ui.ButtonHot, blocker == null), -1, 44, 2);
+            }, fitContent: true);
         }
 
         private static (RectTransform map, RectTransform detail) AgencyPropertyColumns(Transform parent, string mapName, string detailName)
@@ -197,21 +230,22 @@ namespace PCShopSell.Game.UI
 
         private string AgencyStatus(Place p, ShopListing listing)
         {
-            if (p.Kind == PlaceKind.Agency) return "房产中介 · 你在这里";
+            if (p.Kind == PlaceKind.Agency) return p == S.CurrentPlace ? "房产中介 · 你在这里" : "房产中介";
             if (OwnsPropertyAt(p)) return "已购 · " + OwnedPropertyStatus(p);
             if (S.IsPendingShop(p)) return $"已租 · {S.ShopHandoverText(S.PendingLease.StartDay)}";
             if (LeasesPropertyAt(p)) return "已租 · 经营";
-            if (listing == null) return S.IsVacant(p) ? "空置 · 暂未挂牌" : "营业中 · 暂未挂牌";
+            if (!GameSession.IsCommercialPremises(p)) return "不开放租购";
+            if (listing == null) return "未挂牌出租 · 暂不可租";
             return S.IsAdvance(listing) ? S.ShopHandoverText(listing.OpenDay) : "正在出租";
         }
 
-        private Color AgencyColor(Place p, ShopListing listing)
+        private Color? AgencyPropertyMapColor(Place p)
         {
             if (OwnsPropertyAt(p)) return PropertyOwnedColor;
             if (LeasesPropertyAt(p)) return PropertyRentedColor;
-            if (p.Kind == PlaceKind.Agency) return AgencyLocationColor;
-            if (listing == null) return new Color32(190, 193, 177, 255);
-            return listing.OpenDay > S.Clock.Today.TotalDays ? AgencyFuture : Ui.ButtonHot;
+            var listing = AgencyListing(p);
+            if (listing == null || S.IsMyShop(p) || S.IsPendingShop(p) || S.VentureAt(p.Id) != null) return null;
+            return S.IsAdvance(listing) ? AgencyStreetMap.RentalUpcoming : AgencyStreetMap.RentalAvailable;
         }
 
         private void BuildAgencyDetail(RectTransform parent, Place p, int number, Window w)
@@ -222,12 +256,13 @@ namespace PCShopSell.Game.UI
             AgencyPropertyHeading(overview, $"{number:00}　{(mine ? S.PlaceTitle(p) : l != null ? UnitName(p) : p.Name)}", AgencyStatus(p, l));
             if (p.Kind == PlaceKind.Agency)
             {
-                Para(overview, "点击地图上的房源查看户型与租购费用。", 18, Ui.Dim);
+                Para(overview, "中介办事处不开放租购。", 18, Ui.Dim);
                 return;
             }
-            if (p.Kind != PlaceKind.Shop)
+            string blocked = GameSession.CommercialPremisesBlocker(p);
+            if (blocked != null && !OwnsPropertyAt(p) && !LeasesPropertyAt(p))
             {
-                Para(overview, "这是本片区地点，不属于商铺租赁房源。请选择发出绿光或橙光的铺面。", 18, Ui.Dim);
+                Para(overview, blocked + "。", 18, Ui.Dim);
                 return;
             }
             bool dedicatedVenue = S.IsDedicatedVenue(p);
@@ -277,6 +312,8 @@ namespace PCShopSell.Game.UI
                 BuildCommercialSettlement(settlement, p, w);
             }, hasRental, purchase != null))
             {
+                if (purchase.HasTenant)
+                    Para(settlement, "购买的是产权，原商户继续经营。", 16, Ui.Dim);
                 AgencyFeeLine(settlement, "全款售价", purchase.Price.ToString());
                 AgencyFeeLine(settlement, "交易费", purchase.Fee.ToString());
                 if (purchase.DepositCredit.IsPositive) AgencyFeeLine(settlement, "抵扣押金", "− " + purchase.DepositCredit);
@@ -328,10 +365,13 @@ namespace PCShopSell.Game.UI
             var listing = AgencyListing(place);
             if (listing != null)
                 Line(parent, $"挂牌还剩 {listing.CloseDay - S.Clock.Today.TotalDays + 1} 天", 16, Ui.Dim);
+            var agent = S.AgencyAgent(S.AgencyFor(place));
+            string discount = agent == null ? ""
+                : $"与{agent.Name}的熟悉度每增加 1 点，中介费减免 {RealEstate.AgentDiscountPerRapport * 100:0.#} 个百分点，最多减免 {RealEstate.MaxAgentDiscount * 100:0.#}%。\n";
             HelpLink(parent, "租赁与客流说明",
                 $"新店按所选店型、{NewShopHours}正常营业估算。知名度、品牌口碑、街道人流、周末和同类分流会影响客流，实际人数也受开门和值守时长影响。餐馆还受座位周转影响。\n"
                 + "新租报价随地段、面积和周行情变化。签约付首周租金、一周押金和半周中介费，之后周日扣租。\n"
-                + $"与{Rosters.AgentChen.Name}的熟悉度每增加 1 点，中介费减免 {RealEstate.AgentDiscountPerRapport * 100:0.#} 个百分点，最多减免 {RealEstate.MaxAgentDiscount * 100:0.#}%。\n"
+                + discount
                 + "已签租金保留签约价。提前签约到交房日才能使用。退租前请清理库存，主动退租不退押金。");
         }
 
@@ -350,9 +390,13 @@ namespace PCShopSell.Game.UI
 
         private void AgencyQuote(Transform parent, ShopListing l, bool newShop)
         {
+            var place = S.ListingPlace(l);
+            var agency = S.AgencyFor(place);
+            int rapport = S.AgencyRapport(agency);
+            string feeLabel = S.AgencyAgent(agency) == null ? "中介费" : $"中介费（熟悉度 {rapport} · 减免 {AgencyDiscountPercent(rapport)}）";
             AgencyFeeLine(parent, "首周租金", l.Rent.ToString());
             AgencyFeeLine(parent, "押金（主动退租不退）", RealEstate.Deposit(l.Rent).ToString());
-            AgencyFeeLine(parent, $"中介费（熟悉度 {S.AgentRapport} · 减免 {AgencyDiscountPercent}）", S.AgentFeeFor(l.Rent).ToString());
+            AgencyFeeLine(parent, feeLabel, S.AgentFeeFor(l.Rent, place).ToString());
             if (S.HasShop && !newShop && !S.IsAdvance(l))
             {
                 AgencyFeeLine(parent, "搬家费", RealEstate.MoveFee.ToString());

@@ -20,6 +20,7 @@ namespace PCShopSell.Core.Session
         public int Count;
         public long Arrival;
         public string ShopId;
+        public bool DeliverHome;
         public DirectShipment Copy() => (DirectShipment)MemberwiseClone();
     }
     [Serializable] public sealed class EnterpriseContract

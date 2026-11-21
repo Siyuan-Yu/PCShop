@@ -58,10 +58,12 @@ namespace PCShopSell.Core.Session
             foreach(var t in titles)people.First(p=>p.Id==t.Key).StoryTitle=t.Value;
             Place("landlady","life_home_s_oldhomes","life_home_s_oldhomes",540,660);
             people.First(p => p.Id == Npcs.Landlady).LeisurePlaces = new[] { "life_hike" };
-            Place("lin","life_home_s_oldhomes","life_company",540,1080);
+            Place("lin","life_home_s_oldhomes","stall_cpu",540,1080);
             Place("zhou","life_home_s_oldhomes","stall_cpu",540,1020);
             Place("zhang","life_home_s_services","life_service",480,960);
-            Place("life_enterprise","life_home_s_services","life_company");
+            Place("life_enterprise","life_home_s_expo","life_company");
+            Place("life_golfer","life_home_s_night","life_golf");
+            Place("life_designer","life_home_s_creative","clothing_boutique",600,1260);
             Place("life_curator","life_home_s_sports","life_expo");
             Place("life_maker","life_home_s_creative","model_workshop");
             Place("life_creator","life_home_s_creative","life_studio",600,1080);

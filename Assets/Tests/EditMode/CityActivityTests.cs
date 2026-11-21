@@ -10,6 +10,42 @@ namespace PCShopSell.Tests
 {
     public sealed class CityActivityTests
     {
+        [Test] public void GardenRingTossSettlesOnceAndKeepsTheSamePartyForTheNextRide()
+        {
+            if (GameSession.FirstChapterTrial) Assert.Ignore("花园游乐园在完整地图中开放。");
+            using var session = DistrictProgressionTests.Make();
+            typeof(GameSession).GetField("_district", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(session, new DistrictProgress { UnlockedTier = 3 });
+            session.Clock.Restore(session.Clock.Today, 14 * 60);
+            const string garden = CityLifeCatalog.GardenAmusementVenue;
+            GameSessionTests.Teleport(session, garden);
+            var attendant = session.CityPersonState("life_leisure_staff_amusement_day");
+            attendant.WorkPlaceId = attendant.LocationPlaceId = garden;
+            attendant.Task = CityPersonTask.Working;
+            attendant.Route = null;
+            var guest = session.CityPersonState("landlady");
+            guest.LocationPlaceId = garden;
+            guest.Task = CityPersonTask.Leisure;
+            guest.Route = null;
+            guest.ActivityId = guest.VisitId = null;
+            var party = new[] { guest.PersonId };
+            var before = session.Ledger.Balance;
+            Assert.True(session.SelectVenueService("garden_ringtoss", 0, walkInCompanions: party, playerTreat: true));
+            var round = session.RunningCityActivity;
+            Assert.AreEqual(Money.FromYuan(100), before - session.Ledger.Balance);
+            Assert.False(session.FinishManualCityActivity(round.Id));
+            Assert.AreEqual(true, session.ThrowParkRing(round.Id, 0, .6));
+            Assert.IsNull(session.ThrowParkRing(round.Id, 0, .6));
+            Assert.IsTrue(session.ThrowCompanionParkRing(round.Id).HasValue);
+            Assert.AreEqual(true, session.ThrowParkRing(round.Id, 0, .6));
+            Assert.True(session.FinishManualCityActivity(round.Id));
+            Assert.False(session.FinishManualCityActivity(round.Id));
+            CollectionAssert.AreEqual(party, session.GardenParty);
+            Assert.AreEqual(1, session.Backpack.GiftCount("model:garden:mushroom"));
+            Assert.AreEqual("本次游园沿用原来的同行名单。",
+                session.VenueServiceBlocker("garden_ferris", 0, walkInCompanions: System.Array.Empty<string>()));
+        }
+
         [Test] public void AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks()
         {
             using(var s=Make())

@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -48,6 +49,7 @@ namespace PCShopSell.Game.UI
             var detail = Ui.Rect(stage, "PropertyList");
             detail.Anchor(1, 0, 1, 1, -301, 0, 0, 0);
             Ui.VList(detail, 5, 0);
+            var outlines = Ui.Rect(mapArea, "OwnedPropertyOutlines").Fill();
             var markers = Ui.Rect(mapArea, "PropertyMarkers").Fill();
             var controls = Ui.Panel(mapArea, "AssetMapZoom", Ui.PanelBg).rectTransform;
             controls.Anchor(0, 0, 0, 0, 12, 12, -176, -50);
@@ -72,17 +74,17 @@ namespace PCShopSell.Game.UI
 
             var popup = Ui.Panel(mapArea, "AssetBuildingInfo", Ui.PanelBg).rectTransform;
             popup.anchorMin = popup.anchorMax = popup.pivot = new Vector2(.5f, .5f);
-            popup.sizeDelta = new Vector2(354, residential ? 240 : 221);
-            var popupContent = Ui.Rect(popup, "BuildingInfoContent").Fill(10);
-            Ui.VList(popupContent, 4, 0);
+            popup.sizeDelta = new Vector2(354, 0);
+            Ui.VList(popup, 4, 10);
+            popup.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             popup.gameObject.SetActive(false);
             Place selected = null;
             bool popupOpen = false;
             var listButtons = new Dictionary<Place, Button>();
 
-            Vector2 ViewPoint(Place place)
+            Vector2 ViewPoint(Place place, out PlaceVisual visual)
             {
-                if (!_ctrl.World.Places.TryGetValue(place.Id, out var visual)) return new Vector2(-1, -1);
+                if (!_ctrl.World.Places.TryGetValue(place.Id, out visual)) return new Vector2(-1, -1);
                 var bounds = view.BoundsOf(visual);
                 var position = view.Project(new Vector3(bounds.center.x, bounds.max.y + .5f, bounds.center.z));
                 return new Vector2(position.x / view.Width, 1 - position.y / view.Height);
@@ -90,7 +92,7 @@ namespace PCShopSell.Game.UI
 
             void PositionPopup()
             {
-                var point = selected == null ? new Vector2(-1, -1) : ViewPoint(selected);
+                var point = selected == null ? new Vector2(-1, -1) : ViewPoint(selected, out _);
                 bool visible = popupOpen && point.x >= 0 && point.x <= 1 && point.y >= 0 && point.y <= 1;
                 popup.gameObject.SetActive(visible);
                 if (!visible) return;
@@ -114,34 +116,44 @@ namespace PCShopSell.Game.UI
                     RenderSide();
                 }
                 foreach (var pair in listButtons) Ui.SetButtonFill(pair.Value, Ui.SelectedButton(pair.Key == selected));
-                Ui.Clear(popupContent);
-                var head = Ui.Row(popupContent, 41, 5);
-                var name = Ui.Size(Ui.Label(head, AssetPropertyName(place), 18, TextAnchor.MiddleLeft, Ui.Accent), 0, 41, 1);
-                name.resizeTextForBestFit = true; name.resizeTextMinSize = 14;
+                Ui.Clear(popup);
+                string street = S.City.StreetName(place.StreetId);
+                var head = Ui.Row(popup, -1, 8);
+                var headLayout = head.GetComponent<HorizontalLayoutGroup>();
+                headLayout.childAlignment = TextAnchor.UpperLeft;
+                headLayout.childForceExpandHeight = false;
+                var name = Ui.Size(Ui.Label(head, NameWithoutStreetPrefix(AssetPropertyName(place), street), 19,
+                    TextAnchor.MiddleLeft, Ui.Accent), 0, -1, 1);
+                name.fontStyle = FontStyle.Bold;
+                name.supportRichText = false;
+                name.GetComponent<LayoutElement>().minHeight = 29;
                 Ui.Size(Ui.Button(head, "×", () => { popupOpen = false; PositionPopup(); }, 18), 29, 29);
-                var address = Ui.Row(popupContent, 25, 6);
+                var address = Ui.Row(popup, -1, 6);
+                address.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 Ui.Size(Ui.Button(address, mine ? "已购" : "已租", null, 14, mine ? PropertyOwnedColor : PropertyRentedColor), 49, 25);
-                Ui.Size(Ui.Label(address, S.City.StreetName(place.StreetId) + " · " + AssetUseStatus(place, mine), 14), 0, 25, 1);
+                Ui.Size(Ui.Label(address, street + " · " + AssetUseStatus(place, mine), 14), 0, -1, 1);
                 if (mine)
                 {
                     var property = S.PropertyAt(place.Id);
                     var value = place == S.Home ? S.HomePurchasePrice : S.PropertyMarketValue(property);
-                    Line(popupContent, "当前估值 " + value, 16);
-                    Line(popupContent, property?.AskingRentCents > 0 ? "挂牌周租 " + Money.FromCents(property.AskingRentCents)
+                    Line(popup, "当前估值 " + value, 16);
+                    Line(popup, property?.AskingRentCents > 0 ? "挂牌周租 " + Money.FromCents(property.AskingRentCents)
                         : "每周应收 " + S.PropertyRentReceivable(property), 16);
                 }
                 else
                 {
-                    Line(popupContent, "签约周租 " + Money.FromCents(AssetLeasedRent(place)), 16);
-                    Line(popupContent, "当前新租参考 " + S.PropertyReferenceRent(place), 16, Ui.Dim);
+                    Line(popup, "签约周租 " + Money.FromCents(AssetLeasedRent(place)), 16);
+                    Line(popup, "当前新租参考 " + S.PropertyReferenceRent(place), 16, Ui.Dim);
                 }
-                if (residential) BuildResidencePropertyActions(popupContent, place, w, includeRental: false);
-                var actions = Ui.Row(popupContent, 35, 5);
+                if (residential) BuildResidencePropertyActions(popup, place, w, showTravel: true);
+                var actions = Ui.Row(popup, 35, 5);
                 if (mine && S.PropertyAt(place.Id) != null)
                     Ui.Size(Ui.Button(actions, "出租管理", () => OpenOwnedPropertyRental(place, w), 15), 0, 35, 1);
                 if (!residential && (S.ShopAt(place) != null || S.VentureAt(place.Id) != null))
                     Ui.Size(Ui.Button(actions, "经营收支", () => OpenAssetFinance(place.Id), 15), 0, 35, 1);
                 Ui.Size(Ui.Button(actions, "前往所属中介", () => GoToPropertyAgency(place), 15), 0, 35, 1);
+                popup.gameObject.SetActive(true);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(popup);
                 RefreshMapOverlay();
             }
 
@@ -186,27 +198,45 @@ namespace PCShopSell.Game.UI
             {
                 zoom.text = $"{view.Zoom * 100:0}%";
                 foreach (var (id, button) in regionButtons) Ui.SetButtonFill(button, Ui.SelectedButton(id == _assetMapDistrict));
+                Ui.Clear(outlines);
                 Ui.Clear(markers);
                 foreach (var place in places.OrderBy(place => place == selected))
                 {
-                    Vector2 point = ViewPoint(place);
+                    Vector2 point = ViewPoint(place, out var building);
                     if (point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) continue;
-                    var dot = Ui.Panel(markers, "PropertyPin_" + place.Id, ownedSet.Contains(place.Id) ? PropertyOwnedColor : PropertyRentedColor);
-                    dot.sprite = CircleSprite();
-                    var rect = dot.rectTransform;
+                    bool mine = ownedSet.Contains(place.Id);
+                    bool highlighted = place == selected && popupOpen;
+                    Button button;
+                    if (mine)
+                    {
+                        AgencyMapGlow(outlines, view, "OwnedPropertyOutline_" + place.Id, building, PropertyOwnedColor, highlighted);
+                        button = Ui.Button(markers, "已购", null, 14, PropertyOwnedColor);
+                        Ui.FlatBorder(button.image, Ui.PanelBg, highlighted ? 2 : 1);
+                        var caption = button.GetComponentInChildren<Text>();
+                        caption.fontStyle = FontStyle.Bold;
+                        caption.rectTransform.Fill(2);
+                    }
+                    else
+                    {
+                        var dot = Ui.Panel(markers, "PropertyPin_" + place.Id, PropertyRentedColor);
+                        dot.sprite = CircleSprite();
+                        if (highlighted) Ui.FlatBorder(dot, Ui.PanelBg, 2);
+                        button = dot.gameObject.AddComponent<Button>();
+                        button.targetGraphic = dot;
+                    }
+                    button.name = "PropertyPin_" + place.Id;
+                    var rect = (RectTransform)button.transform;
                     rect.anchorMin = rect.anchorMax = point;
                     rect.anchoredPosition = Vector2.zero;
-                    rect.sizeDelta = Vector2.one * (place == selected && popupOpen ? 19 : 12);
-                    if (place == selected && popupOpen)
+                    rect.sizeDelta = mine ? new Vector2(44, 23) : Vector2.one * (highlighted ? 19 : 12);
+                    if (mine)
                     {
-                        var border = dot.gameObject.AddComponent<Outline>();
-                        border.effectColor = Ui.PanelBg;
-                        border.effectDistance = Vector2.one * 2;
+                        bool nearTop = point.y > .94f;
+                        rect.pivot = new Vector2(point.x < .025f ? 0 : point.x > .975f ? 1 : .5f, nearTop ? 1 : 0);
+                        rect.anchoredPosition = new Vector2(0, nearTop ? -5 : 5);
                     }
-                    var button = dot.gameObject.AddComponent<Button>();
-                    button.targetGraphic = dot;
                     button.onClick.AddListener(() => ShowInfo(place));
-                    button.Tip(AssetPropertyName(place) + " · " + (ownedSet.Contains(place.Id) ? "已购" : "已租"));
+                    button.Tip(AssetPropertyName(place) + " · " + (mine ? "已购" : "已租"));
                 }
                 PositionPopup();
             }
@@ -228,7 +258,7 @@ namespace PCShopSell.Game.UI
             }
             _assetFocusProperty = false;
             var legend = Ui.Label(stage, Ui.Emphasize("■", PropertyOwnedColor) + " 已购     "
-                + Ui.Emphasize("■", PropertyRentedColor) + " 已租     滚轮缩放 · 拖动查看 · 点击建筑查看详情", 15);
+                + Ui.Emphasize("●", PropertyRentedColor) + " 已租     滚轮缩放 · 拖动查看 · 点击标记或建筑查看详情", 15);
             legend.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 318, -25);
         }
 

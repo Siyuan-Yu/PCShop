@@ -42,7 +42,7 @@ namespace PCShopSell.Game.UI
         private const int KolLobbyCardHeight = 278;
         private static string KolRoomKey(KolRoomStatus room) => room.SessionId + ":" + room.Blocker;
         private static string KolLobbyRoomKey(KolRoomStatus room) =>
-            $"{KolRoomKey(room)}:{room.EndAt}:{room.NextStart}:{room.NextBrandId}:{room.NextSponsor}:{room.UpcomingBrandStart}:{room.UpcomingBrandName}";
+            $"{KolRoomKey(room)}:{room.EndAt}:{room.NextStart}:{room.NextEnd}:{room.NextBrandId}:{room.NextSponsor}:{room.UpcomingBrandStart}:{room.UpcomingBrandName}";
 
         public void OpenKolLobby()
         {
@@ -147,7 +147,8 @@ namespace PCShopSell.Game.UI
             string kind = room.NextBrandId != null ? "品牌直播 · " + room.NextSponsor
                 : room.NextSponsor != null ? "合作直播 · " + room.NextSponsor : "个人直播";
             Ui.Size(Ui.Label(next, "下一场 · " + kind, 16, color: room.NextSponsor != null ? Ui.Accent : Ui.TextColor), -1, 24);
-            Ui.Size(Ui.Label(next, KolTimestamp(room.NextStart), 15, color: Ui.Dim), -1, 23);
+            string end = (room.NextEnd / 1440 > room.NextStart / 1440 ? "次日 " : "") + KolTime((int)(room.NextEnd % 1440));
+            Ui.Size(Ui.Label(next, $"{KolTimestamp(room.NextStart)} – {end}", 15, color: Ui.Dim), -1, 23);
             if (room.NextBrandId != null)
                 Ui.Size(Ui.Label(next, "将播你的品牌内容", 14, color: Ui.Good), -1, 22);
             else if (room.UpcomingBrandStart > room.NextStart && room.UpcomingBrandName != null)

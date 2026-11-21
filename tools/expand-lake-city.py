@@ -115,14 +115,14 @@ if not BASELINE.exists():
     BASELINE.write_text(json.dumps(source,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 base = json.loads(BASELINE.read_text(encoding="utf-8-sig"))
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--occupancy-only", action="store_true", help="Update V15 occupants without rebuilding any geometry.")
+parser.add_argument("--occupancy-only", action="store_true", help="Update the expansion occupants without rebuilding any geometry.")
 if parser.parse_args().occupancy_only:
     current = json.loads(TARGET.read_text(encoding="utf-8-sig"))
-    if current["layoutVersion"] != 15:
-        raise ValueError("Occupancy updates require the existing V15 layout")
+    if current["layoutVersion"] not in (15, 16, 17, 18):
+        raise ValueError("Occupancy updates require a V15 through V18 layout")
     seed_expansion_occupancy(current, base)
     TARGET.write_text(json.dumps(current, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-    print("V15 occupancy written: 19 resident households and 12 merchants.")
+    print(f"V{current['layoutVersion']} occupancy written: 19 resident households and 12 merchants.")
     raise SystemExit(0)
 
 d = copy.deepcopy(base)

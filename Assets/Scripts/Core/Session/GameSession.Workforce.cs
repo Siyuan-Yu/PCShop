@@ -83,7 +83,7 @@ namespace PCShopSell.Core.Session
         public long DepartAt;
         public CityRoute[] TravelLegs;
         public long ChangeCents;
-        public bool Returned, Delivered;
+        public bool Returned, Delivered, DeliverHome;
         public PurchaseLine[] Items;
         public PurchaseLine[] RemainingItems;
         // Snapshot the paid quote: later market prices, plans and supplier names must not rewrite receipts.
@@ -93,7 +93,7 @@ namespace PCShopSell.Core.Session
         public EmployeePurchaseTrip Copy() => new EmployeePurchaseTrip
         {
             EmployeeId = EmployeeId, ShopId = ShopId, EmployeeName = EmployeeName, OrderId = OrderId, VehicleId=VehicleId, Transport = Transport, SkippedNote = SkippedNote,
-            BoughtAt = BoughtAt, ReturnAt = ReturnAt, DeliveryAt = DeliveryAt, Returned = Returned, Delivered = Delivered, ChangeCents = ChangeCents,
+            BoughtAt = BoughtAt, ReturnAt = ReturnAt, DeliveryAt = DeliveryAt, Returned = Returned, Delivered = Delivered, DeliverHome = DeliverHome, ChangeCents = ChangeCents,
             DepartAt=DepartAt,TravelLegs=TravelLegs?.Select(r=>r.Copy()).ToArray(),
             CostsRecorded=CostsRecorded,GoodsCents=GoodsCents,TravelCents=TravelCents,FreightCents=FreightCents,
             ReceiptLines=ReceiptLines?.Where(r=>r!=null).Select(r=>r.Copy()).ToArray(),
@@ -144,6 +144,8 @@ namespace PCShopSell.Core.Session
         public const string EmployeePurchaseIncompleteTitle = "分趟进货结束";
         private readonly List<EmployeePurchaseTrip> _employeeTrips = new List<EmployeePurchaseTrip>();
         public IReadOnlyList<EmployeePurchaseTrip> EmployeePurchaseTrips => _employeeTrips;
+
+        private OwnedShop EmployeePurchaseDestination(EmployeePurchaseTrip trip) => trip.DeliverHome ? null : DeliveryShop(trip.ShopId);
 
         public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : role == EmployeeRole.Chef ? "厨师" : role == EmployeeRole.Waiter ? "服务员" : role == EmployeeRole.Appraiser ? "收购师" : role == EmployeeRole.PetKeeper ? "饲养员" : role == EmployeeRole.Repairer ? "修复师" : role == EmployeeRole.ModelPainter ? "喷漆师" : "待安排";
         public static string PurchaseTransportName(VehicleKind kind) =>
@@ -641,7 +643,7 @@ namespace PCShopSell.Core.Session
                 }
                 if (!trip.Delivered && to.TotalMinutes >= trip.DeliveryAt)
                 {
-                    var dest = DeliveryShop(trip.ShopId);
+                    var dest = EmployeePurchaseDestination(trip);
                     var received = new List<string>();
                     WithShop(dest, () =>
                     {

@@ -66,7 +66,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenStorageWindow()
         {
-            if(S.CurrentPlace!=S.Home||!S.HasWarehouseHere){Toast("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");return;}
+            if((S.CurrentPlace!=S.Home && !S.HasSecondaryResidenceWarehouse)||!S.HasWarehouseHere){Toast("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");return;}
             OpenBackpackPanel();
         }
 
@@ -76,7 +76,7 @@ namespace PCShopSell.Game.UI
 
         private System.Collections.Generic.List<BagStack> CollectBox()
         {
-            if(!S.InPlayerShop)return CollectStacks(S.HomeBox,S.HomeBoxParts);
+            if(!S.InPlayerShop)return CollectStacks(S.WarehouseBagHere,S.WarehousePartsHere);
             var result=CollectStacks(S.ShopLocker,S.PlayerShop.Stock);
             foreach(var line in S.PlayerShop.Stock.GoodsLines())
             {
@@ -138,8 +138,11 @@ namespace PCShopSell.Game.UI
             {_boxSide="bag";_boxSel=key;w.Rebuild();},-1);
             bagGrid.parent.parent.name="WarehouseBackpackGrid";
 
-            Line(w.Content,"—— "+(shop?"本店后仓":"家中后仓")+" · 后仓容量不限 ——",18,Ui.Accent).name="WarehouseStoreHeading";
-            Line(w.Content,"本房间的 "+(shop?S.ShopBoxes:S.HomeBoxes)+" 个纸箱共用一个后仓。背包和运输仍有承重限制，成品保质期照常计算。",15,Ui.Dim);
+            bool otherResidence = S.HasSecondaryResidenceWarehouse;
+            string warehouse = shop ? "本店后仓" : otherResidence ? S.PlaceTitle(S.CurrentPlace) + " · 后仓" : "家中后仓";
+            Line(w.Content,"—— "+warehouse+" · 后仓容量不限 ——",18,Ui.Accent).name="WarehouseStoreHeading";
+            if (!otherResidence)
+                Line(w.Content,"本房间的 "+(shop?S.ShopBoxes:S.HomeBoxes)+" 个纸箱共用一个后仓。背包和运输仍有承重限制，成品保质期照常计算。",15,Ui.Dim);
             var boxStacks=CollectBox();
             var boxGrid=BagGrid(w.Content,boxStacks,8,_boxSide=="box"?_boxSel:null,key=>
             {_boxSide="box";_boxSel=key;w.Rebuild();},-1,true);
@@ -193,7 +196,7 @@ namespace PCShopSell.Game.UI
             int n = pick.Count;
             string one = key == "rice" ? "1 千克" : "一份";
             string unit = key == "rice" ? "千克" : "份";
-            if (_boxSide != "bag" && key.StartsWith("furn:"))
+            if (!otherResidence && _boxSide != "bag" && key.StartsWith("furn:"))
             {
                 string fid = key.Substring(5);
                 Ui.Size(Ui.Button(bottom, "摆出来", () => PlaceFromStorage(shop, fid), 16, Ui.ButtonBg), 90);

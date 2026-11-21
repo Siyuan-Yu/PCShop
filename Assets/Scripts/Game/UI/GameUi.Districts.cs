@@ -12,6 +12,46 @@ namespace PCShopSell.Game.UI
         private RectTransform _communityRevealOverlay;
         private CanvasGroup _communityRevealTitle;
         private bool[] _communityRevealCanvasStates;
+        private Window _communityIntroCallWindow;
+
+        private void ShowPendingCommunityIntroCall()
+        {
+            if (!S.CommunityIntroCallWaiting || AnyModalOpen || S.PendingEvent != null || S.IsWorking
+                || S.IsGameOver || S.Racing || S.CityActivityExclusive || S.OpeningAgencyGuidePending
+                || OpeningMealRestricted || _ctrl.Placing || _ctrl.PetFocusActive) return;
+            OpenCommunityIntroCall(incoming: true);
+        }
+
+        private void OpenCommunityIntroCall(bool incoming = false)
+        {
+            if (!S.CommunityIntroAwaitingReply || _communityIntroCallWindow is { Closed: false }) return;
+            if (incoming) SoundFx.Play(Sfx.PhoneRing);
+            _communityIntroCallWindow = OpenDialogue("landlady", S.CityPerson("landlady")?.Name ?? "李秀兰",
+                S.CityPersonRole("landlady") + " · 电话", "", null, remote: true,
+                start: ctx => StartCommunityIntroDialogue(ctx, endCall: true));
+            _popups.Add(_communityIntroCallWindow);
+        }
+
+        private void StartCommunityIntroDialogue(TalkCtx ctx, bool endCall)
+        {
+            var session = S;
+            var node = session.CurrentDistrictNode;
+            if (node?.Id != "community.intro") return;
+            session.MarkCommunityIntroCallShown();
+            ctx.Continue("你那几家店都开起来了吧？我前两天去问租约，听陈启明提起隔壁街那边在找做生意的人。", () =>
+                ctx.Show("他认识那边负责商户事务的唐蔚。你要是想见她，我先跟陈启明打声招呼，你再跟他约个时间。",
+                    new TalkOpt { Id = "DistrictChoice_accept", Label = node.Choices.First(c => c.Id == "accept").Label, Hot = true, Act = () =>
+                    {
+                        if (S != session || !session.BeginDistrictMeeting(node.Id, "accept")) return;
+                        if (endCall) ctx.W.Close();
+                        else ctx.Show("好，我跟他说一声。你去找他就行。");
+                    } },
+                    new TalkOpt { Id = "DistrictChoice_later", Label = "晚点再聊", Act = () =>
+                    {
+                        if (endCall) ctx.W.Close();
+                        else ctx.Show("好，等你有空再说。");
+                    } }));
+        }
 
         public void BeginCommunityReveal()
         {
@@ -114,6 +154,12 @@ namespace PCShopSell.Game.UI
         public void OpenDistrictStory()
         {
             S.RefreshDistrictNarrative();
+            if (S.CommunityIntroAwaitingReply)
+            {
+                _districtStoryWindow?.Close();
+                OpenCommunityIntroCall();
+                return;
+            }
             if(_districtStoryWindow!=null){_districtStoryWindow.Rebuild();return;}
             _districtStoryWindow=OpenWindow(GameSession.FirstChapterTrial ? "城郊经营目标" : "主线 · 街区引荐",820,700,w=>
             {
@@ -143,23 +189,16 @@ namespace PCShopSell.Game.UI
                 if(S.DistrictCommerceActive)BuildDistrictCommerceProgress(body,w);
                 var person=S.DistrictMeetingContact ?? (state.MeetingNodeId==node.Id?node.People.FirstOrDefault():DistrictNavigationContact(node.People));
                 if(node.Id!="community.search"&&person!=null)PortraitCard(body,person,S.CityPerson(person)?.Name??person,"",84,()=>{},tagText:null);
-                if(node.Id=="community.intro")
-                {
-                    Line(body,"李秀兰发来的消息 · 等待你的回复",18,Ui.Good);
-                    Para(body,node.Dialogue,19);
-                    Para(body,$"回复后，亲自找到{Ui.Emphasize("陈启明")}，请他帮忙约{Ui.Emphasize("唐蔚")}。约好后才会显示会面时间和地点。",17);
-                    Ui.Size(Ui.Button(body,"回复李秀兰：好，麻烦你帮我联系陈启明",()=>
-                    {
-                        S.BeginDistrictMeeting(node.Id,"accept");w.Rebuild();
-                    },18,Ui.ButtonHot),-1,46).name="DistrictChoice_accept";
-                    Ui.Size(Ui.Button(body,"暂不回复，稍后再看",w.Close,17),-1,42).name="DistrictChoice_later";
-                    Para(w.Content,"这是主线消息回复。尚未约好见面，不用现在去中介；邀请会保留。",16,Ui.Dim);
-                    return;
-                }
                 if(node.Id!="community.search")
                 {
-                    if(S.AtCurrentDistrictMeeting && S.DistrictMeetingBlocker==null)
-                        Para(body,node.Dialogue,19);
+                    if (S.AtCurrentDistrictMeeting && S.DistrictMeetingBlocker == null && person != null)
+                    {
+                        if (S.CitySamePlace(person))
+                            Ui.Size(Ui.Button(body, "与" + (S.CityPerson(person)?.Name ?? person) + "交谈",
+                                () => OpenPersonDialogue(person, parent: w), 18, Ui.ButtonHot), -1, 42);
+                        else
+                            Para(body, "走到主线联系人身边，再和对方交谈。", 19);
+                    }
                     else Para(body,state.MeetingNodeId==node.Id
                         ? (S.AtCurrentDistrictMeeting?"你已到达会面点，请留意下方约定时间。":"已约好见面。请按约定前往，双方到场后再交谈。")
                         : node.Id=="community.trial" ? "唐蔚会到城郊中介旁收取图页。若她还在忙，请关闭窗口等待约见安排。" : node.Id=="community.meeting" ? "联系陈启明，请他帮忙约唐蔚出来。" : "联系对方约好时间，再前往会面点。",19);
@@ -193,7 +232,7 @@ namespace PCShopSell.Game.UI
                             Ui.Size(Ui.Button(body, "前往藏箱地点", () =>
                             {
                                 CloseAllWindows();
-                                S.GoTo(S.CommunityBoxNode(lead));
+                                S.GoToCommunityBox(lead);
                             }, 16), -1, 38);
                         if(S.CommunityHasClue(lead))continue;
                         var completedOuting=S.CommunityLeadCompletedActivity(lead);
@@ -258,7 +297,7 @@ namespace PCShopSell.Game.UI
                 Para(body, $"{name}目前在{place.Name}。", 17, Ui.Good);
                 if (blocker != null) Para(body, GameSession.DistrictName(S.DistrictTierOf(place)) + "片区尚未开放。", 16, Ui.Warn);
                 else if (place.Kind == PCShopSell.Core.World.PlaceKind.Home && place != S.Home)
-                    Para(body,S.HomeVisitBlocker(place)??"到门口按 F 查看住户，再进屋拜访。",15,Ui.Dim);
+                    Para(body, "到门口按 F，点击在家住户的头像交谈。", 15, Ui.Dim);
             }
             else
             {
@@ -337,11 +376,11 @@ namespace PCShopSell.Game.UI
                 return "先在这儿等会儿吧，人到齐了再说。";
 
             if (isBroker) return "唐蔚到了。你过去跟她聊吧，我就不打扰了。";
-            if (personId != S.DistrictMeetingContact) return "人齐了，咱们说正事吧。";
+            if (personId != S.DistrictMeetingContact)
+                return DistrictCharacterLine(node, personId) ?? "人齐了，咱们说正事吧。";
             return node.Id switch
             {
-                "community.meeting" => DistrictCharacterLine(node, personId)
-                    ?? "你好，我是唐蔚。陈启明跟我说过你，有件事正想请你帮忙。",
+                "community.meeting" => "你好，我是唐蔚。陈启明跟我说你对旧街熟，有件和那边的小店有关的事，想请你帮忙。",
                 "community.clue" => "你来了。唐蔚把找图的事跟你说了吧？那天搬家的事，我还记得。",
                 "community.trial" => "你把图带来了？拿给我看看，三页都在吗？",
                 _ => DistrictCharacterLine(node, personId) ?? "你来了，咱们说正事吧。"
@@ -398,16 +437,22 @@ namespace PCShopSell.Game.UI
         private string DistrictConversationResult(DistrictNarrativeNode node, string personId) => node.Id switch
         {
             "community.meeting" => "那就拜托你了。先去问问李秀兰吧，那几个箱子托给了谁，她最清楚。",
-            "community.clue" => DistrictCharacterLine(node, personId)
-                ?? "三页没丢，我、林远航和周维成各收着一页。我把他俩的号码发你了，你可以跟他们约时间。",
+            "community.clue" => "远航和维成的号码给你发过去了。哪天你想去公园走走，跟我说一声。",
             "community.trial" => DistrictCharacterLine(node, personId) ?? "三页都齐了。谢谢你，我这就把那些小店补进名册。",
             _ => "好，那就这么定了。"
         };
 
-        private void AddDistrictDialogue(List<TalkOpt> options,string personId,bool remote,bool near,System.Action<string> reply)
+        private void AddDistrictDialogue(List<TalkOpt> options,string personId,bool remote,bool near,TalkCtx ctx,System.Action<string> reply)
         {
             var node=S.CurrentDistrictNode;var state=S.DistrictStoryState;
-            if(node==null||node.Id=="community.intro"||S.CommunitySearchActive||S.DistrictCommerceGameplay)return;
+            if (S.CommunityIntroAwaitingReply)
+            {
+                if (personId == "landlady")
+                    options.Add(new TalkOpt { Label = "聊聊隔壁街的事", Mainline = true, Hot = true,
+                        Blocker = remote || near ? null : "对方已离开。", Act = () => StartCommunityIntroDialogue(ctx, endCall: false) });
+                return;
+            }
+            if(node==null||S.CommunitySearchActive||S.DistrictCommerceGameplay)return;
             if(personId!=S.DistrictMeetingContact)return;
             string local=remote||!near?"请走到本人身边，当面商谈。":null;
             if(S.DistrictCommerceActive&&node.Id.EndsWith(".invitation"))
@@ -443,7 +488,7 @@ namespace PCShopSell.Game.UI
                 }});
                 return;
             }
-            string action=node.Id=="community.meeting"?"接受寻找三页商铺图的委托"
+            string action=node.Id=="community.meeting"?"听听唐蔚找这张图做什么"
                 :node.Id=="community.clue"?"询问三页图分别由谁保管"
                 :node.Id=="community.trial"?"交付三份图页，完成引荐"
                 :node.Id.EndsWith(".invitation")?"接受邀请，开始准备"
@@ -451,16 +496,39 @@ namespace PCShopSell.Game.UI
             string meetingBlocker = S.DistrictMeetingBlocker;
             string unavailable = meetingBlocker == null ? S.DistrictCommerceBlocker
                 : S.Clock.Now.TotalMinutes < state.MeetingAt ? "会面时间还没到" : "会面条件还没满足";
-            options.Add(new TalkOpt{Label=action,Mainline=true,Hot=true,SeparateBlocker=true,Blocker=local??unavailable,
-                Act=()=>
+            void FinishMeeting()
+            {
+                if (S.ActDistrictNode(node.Id)) reply(DistrictConversationResult(node, personId));
+                else reply("这事还没办妥，咱们一会儿再说。");
+            }
+            options.Add(new TalkOpt { Label = action, Mainline = true, Hot = true, SeparateBlocker = true, Blocker = local ?? unavailable,
+                Act = () =>
                 {
-                    if (!S.ActDistrictNode(node.Id))
-                    {
-                        reply("这事还没办妥，咱们一会儿再说。");
-                        return;
-                    }
-                    reply(DistrictConversationResult(node, personId));
-                }});
+                    if (node.Id is "community.meeting" or "community.clue")
+                        StartCommunityMeetingDialogue(ctx, node.Id, FinishMeeting);
+                    else
+                        FinishMeeting();
+                } });
+        }
+
+        private static void StartCommunityMeetingDialogue(TalkCtx ctx, string nodeId, System.Action finish)
+        {
+            if (nodeId == "community.meeting")
+            {
+                ctx.Continue("我在准备街区介绍会。新名册上漏了几家还在做生意的老铺子，有的连门牌都换过，照着新名册去找根本找不着。", () =>
+                    ctx.Continue("以前有人沿街走了一遍，把店名和出入口画在三张纸上。搬家那天图拆开装箱了，我只知道李秀兰在场。", () =>
+                        ctx.Show("我走不开，你愿意替我去问问李秀兰，把那三页找齐吗？",
+                            new TalkOpt { Label = "接受寻找三页商铺图的委托", Hot = true, Act = finish },
+                            new TalkOpt { Label = "我再想想", Act = () => ctx.Show("好。你想清楚了，再过来找我。") })));
+                return;
+            }
+
+            void SharePlans() => ctx.Show("我想去城郊公园走走，远航想约你在街坊餐厅吃顿饭。维成爱淘旧物，你陪他去青湾旧物市场逛一趟，挑件合他心意的东西送他。",
+                new TalkOpt { Label = "记下联系方式", Hot = true, Act = finish });
+            ctx.Show("那天要清空屋子，东西太多，人又都往不同地方走。三张图后来我、林远航、周维成各收了一张。",
+                new TalkOpt { Label = "为什么分开保管？", Act = () =>
+                    ctx.Continue("那三张当时已经拆开了，又赶上下雨。我们就各把一张夹进手边的资料箱，想着等安顿好了再拼回去。", SharePlans) },
+                new TalkOpt { Label = "我怎么联系他们？", Hot = true, Act = SharePlans });
         }
 
 #if UNITY_EDITOR

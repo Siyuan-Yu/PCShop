@@ -62,12 +62,19 @@ namespace PCShopSell.Game.UI
             AgencyMapControl(map, "放大这间", "AgencyFocusUnit", 932, 172,
                 () => { Place p = units.FirstOrDefault(u => u.Id == _agencySelectedId); if (p != null) view.Focus(p); });
             view.Changed();
+            BuildAgencyMapLegend(map, residential: false);
+        }
+
+        private static void BuildAgencyMapLegend(Transform map, bool residential)
+        {
             AgencyMapText(map, "房源标记", 14, 16, 703, 90, 24, Ui.Dim);
-            AgencyMapKey(map, 120, AgencyStreetMap.RentalAvailable, "绿光：现在可租");
-            AgencyMapKey(map, 286, AgencyStreetMap.RentalUpcoming, "橙光：之后可租");
-            AgencyMapKey(map, 452, PropertyOwnedColor, "已购");
-            AgencyMapKey(map, 550, PropertyRentedColor, "已租");
-            AgencyMapKey(map, 650, AgencyLocationColor, "当前中介");
+            AgencyMapKey(map, 120, AgencyStreetMap.RentalAvailable, residential ? "空房" : "现在可租");
+            AgencyMapKey(map, 246, AgencyStreetMap.RentalUpcoming, residential ? "有住户，可购产权" : "之后可租");
+            AgencyMapKey(map, 432, PropertyOwnedColor, "已购");
+            AgencyMapKey(map, 532, PropertyRentedColor, "已租");
+            AgencyMapKey(map, 632, AgencyLocationColor, "当前中介", pin: true);
+            AgencyMapText(map, residential ? "点击住宅标记查看租购条件" : "点击建筑、名称或圆点查看租购条件",
+                14, 780, 702, 324, 26, Ui.Dim, TextAnchor.MiddleRight);
         }
 
         private static void AgencyMapControl(Transform parent, string label, string name, float x, float width, System.Action action)
@@ -77,9 +84,10 @@ namespace PCShopSell.Game.UI
             AgencyAt((RectTransform)button.transform, x, 7, width, 32);
         }
 
-        private static void AgencyMapKey(Transform parent, float x, Color color, string text)
+        private static void AgencyMapKey(Transform parent, float x, Color color, string text, bool pin = false)
         {
-            AgencyBlock(parent, "Legend", color, x, 709, 12, 12);
+            var swatch = AgencyBlock(parent, "Legend", color, x, 709, 12, 12);
+            if (pin) swatch.sprite = CircleSprite();
             AgencyMapText(parent, text, 14, x + 19, 702, 210, 26, Ui.TextColor);
         }
 
@@ -87,9 +95,11 @@ namespace PCShopSell.Game.UI
             Color color, bool emphasized = false)
         {
             var rect = Ui.Rect(overlay, name);
-            AgencyAt(rect, 0, 0, view.Width, view.Height);
+            rect.pivot = new Vector2(0, 1);
+            rect.Fill();
             rect.gameObject.AddComponent<AgencyBuildingGlow>().Initialize(
-                AgencyStreetMap.Corners(view.BoundsOf(building)).Select(view.Project).ToArray(), color, emphasized);
+                AgencyStreetMap.Corners(view.BoundsOf(building)).Select(view.Project).ToArray(), color, emphasized,
+                crispOutline: true, projectionSize: new Vector2(view.Width, view.Height));
         }
 
         private void BuildAgencyMapAnnotations(RectTransform overlay, AgencyStreetMap view, Place[] units, Place agency)
@@ -97,23 +107,17 @@ namespace PCShopSell.Game.UI
             Ui.Clear(overlay);
             if (_agencySelectedId != null && S.City.HasPlace(_agencySelectedId))
                 AddCompetitionRing(overlay, view, S.City.GetPlace(_agencySelectedId));
-            foreach(var place in units)
+            foreach (var place in units)
             {
-                if (!view.CanSelect(place.Id) || !_ctrl.World.Places.TryGetValue(place.Id, out var building)) continue;
-                bool owned = OwnsPropertyAt(place);
-                if (owned || LeasesPropertyAt(place))
-                {
-                    AgencyMapGlow(overlay, view, "MyPropertyGlow_" + place.Id, building, owned ? PropertyOwnedColor : PropertyRentedColor, place.Id == _agencySelectedId);
-                    continue;
-                }
-                var listing=AgencyListing(place);
-                if(listing==null||S.IsMyShop(place)||S.IsPendingShop(place)||S.VentureAt(place.Id)!=null)continue;
-                AgencyMapGlow(overlay, view, "RentalGlow_"+place.Id,building,listing.OpenDay>S.Clock.Today.TotalDays?AgencyStreetMap.RentalUpcoming:AgencyStreetMap.RentalAvailable);
+                if (place.Kind == PlaceKind.Agency || !view.CanSelect(place.Id)
+                    || !_ctrl.World.Places.TryGetValue(place.Id, out var building)) continue;
+                var color = AgencyPropertyMapColor(place);
+                bool selected = place.Id == _agencySelectedId;
+                if (color.HasValue || selected)
+                    AgencyMapGlow(overlay, view, "PropertyOutline_" + place.Id, building, color ?? AgencyInk, selected);
             }
             if(_ctrl.World.Places.TryGetValue(agency.Id,out var agentBuilding))AgencyMapGlow(overlay, view, "CurrentAgencyGlow",agentBuilding,AgencyLocationColor);
-            if(_agencySelectedId!=null&&_ctrl.World.Places.TryGetValue(_agencySelectedId,out var selected)
-                && !OwnsPropertyAt(selected.Place) && !LeasesPropertyAt(selected.Place))
-                AgencyMapGlow(overlay, view, "SelectedBuildingGlow",selected,Ui.PanelBg,true);
+            var pins = Ui.Rect(overlay, "AgencyPlacePins").Fill();
             var occupied=new List<Rect>();
             void Badge(PlaceVisual building,string name,string text,Color color,Color ink,float width)
             {
@@ -132,27 +136,42 @@ namespace PCShopSell.Game.UI
                 Badge(agentBuilding,"CurrentAgencyMarker","<b>● 当前中介 · 你在这里</b>\n"+agency.Name,AgencyLocationColor,Color.white,286);
             if(_agencySelectedId!=null&&_ctrl.World.Places.TryGetValue(_agencySelectedId,out var chosen)&&chosen.Place.Kind!=PlaceKind.Agency)
             {
-                bool owned = OwnsPropertyAt(chosen.Place), rented = LeasesPropertyAt(chosen.Place);
+                string status = AgencyStatus(chosen.Place, AgencyListing(chosen.Place));
                 Badge(chosen,"SelectedPropertyMarker",
-                    (owned ? "<b>✓ 已选中 · 已购</b>\n" : rented ? "<b>✓ 已选中 · 已租</b>\n" : "<b>✓ 已选中房源</b>\n")
+                    $"<b>✓ 已选中 · {status}</b>\n"
                     +(S.IsMyShop(chosen.Place)?S.PlaceTitle(chosen.Place):chosen.Place.Name),
-                    owned ? PropertyOwnedColor : rented ? PropertyRentedColor : Ui.PanelBg,AgencyInk,300);
+                    AgencyPropertyMapColor(chosen.Place) ?? Ui.PanelBg,AgencyInk,300);
             }
             foreach(var place in units)
             {
                 if (!view.CanSelect(place.Id) || place.Id == agency.Id || place.Id == _agencySelectedId) continue;
                 bool owned = OwnsPropertyAt(place), rented = LeasesPropertyAt(place);
-                if(view.Zoom<1.6f&&!owned&&!rented&&AgencyListing(place)==null)continue;
+                var listing = AgencyListing(place);
                 if(!_ctrl.World.Places.TryGetValue(place.Id,out var building))continue;
                 var bounds=view.BoundsOf(building);
                 Vector2 roof=view.Project(new Vector3(bounds.center.x,bounds.max.y+.6f,bounds.center.z));
                 if(roof.x<0||roof.x>view.Width||roof.y<0||roof.y>view.Height)continue;
                 string name=S.IsMyShop(place)?S.PlaceTitle(place):place.Name;
+                string tip = name + "\n" + AgencyStatus(place, listing);
+                if (view.Zoom < 1.6f && !owned && !rented && listing == null)
+                {
+                    var pin = AgencyBlock(pins, "AgencyPlacePin_" + place.Id, Ui.PanelBg, roof.x - 7, roof.y - 7, 14, 14);
+                    pin.sprite = CircleSprite();
+                    pin.type = Image.Type.Simple;
+                    pin.raycastTarget = true;
+                    var border = pin.gameObject.AddComponent<Outline>();
+                    border.effectColor = AgencyInk;
+                    var target = pin.gameObject.AddComponent<Button>();
+                    target.targetGraphic = pin;
+                    target.onClick.AddListener(() => view.Selected?.Invoke(place.Id));
+                    target.Tip(tip);
+                    continue;
+                }
                 float width=Mathf.Clamp(name.Length*13+18,70,170);
                 Rect box=AgencyNameBox(roof,width,occupied,view.Width,view.Height);occupied.Add(box);
                 Color badgeColor = owned ? PropertyOwnedColor : rented ? PropertyRentedColor : new Color(.1f,.18f,.14f,.94f);
                 var button=Ui.Button(overlay,name,()=>view.Selected?.Invoke(place.Id),13,badgeColor);
-                if (owned || rented) button.Tip((owned ? "已购 · " : "已租 · ") + name);
+                button.Tip(tip);
                 button.name="AgencyName_"+place.Id;
                 AgencyAt((RectTransform)button.transform,box.x,box.y,box.width,box.height);
                 button.GetComponentInChildren<Text>().rectTransform.Fill(2);

@@ -30,6 +30,24 @@ namespace PCShopSell.Core.Session
         private readonly Dictionary<string,VenueBusiness> _venueBusinesses=new Dictionary<string,VenueBusiness>();
         public bool IsDedicatedVenue(Place p)=>(p?.Business??"").StartsWith("venue_",StringComparison.Ordinal);
         public bool IsOwnedVenue(Place p)=>IsDedicatedVenue(p)&&ShopAt(p)!=null;
+
+        private bool UsesNpcVenueRoster(Place place) => place != null && !IsOwnedVenue(place)
+            && (place.Id == FishingVenueId || place.Business is "venue_restaurant" or "venue_bar" or "venue_ktv"
+                or "venue_court" or "venue_golf" or "venue_expo" or "venue_oldmarket" or "venue_ferris" or "venue_amusement"
+                || CityLifeCatalog.LeisureAt(place.Id) != LeisureGame.None);
+
+        public bool IsOnDutyVenueNpc(Place place, CityPersonState person) => place != null && person?.Task == CityPersonTask.Working
+            && person.WorkPlaceId == place.Id && person.LocationPlaceId == place.Id && person.Route == null
+            && string.IsNullOrEmpty(person.ActivityId) && string.IsNullOrEmpty(person.VisitId)
+            && AuthoredCityWorkAt(person, Clock.Now.TotalMinutes);
+
+        private bool VenueHasNpcOnDuty(Place place) => place.Business == "venue_bar" ? BartenderAt(place) != null
+            : PeopleInPlace(place.Id).Any(person => IsOnDutyVenueNpc(place, person));
+
+        public string NpcVenueStaffingBlocker(Place place) => UsesNpcVenueRoster(place)
+            && CityVenueFits(place, Clock.Now.TotalMinutes, 1) && !VenueHasNpcOnDuty(place)
+                ? "暂时没有店员在岗，暂停营业。" : null;
+
         public string VenueBusinessName(Place p)
         {
             switch(p?.Business)
@@ -44,14 +62,16 @@ namespace PCShopSell.Core.Session
         }
         public int VenueCapacity(Place p)=>p?.Business=="venue_court"?6:p?.Business=="venue_golf"?3:12;
         public int VenueMaintenanceYuan(Place p)=>p?.Business=="venue_golf"?40:20;
+        private static long VenueCustomerBasePriceCents(string id) => id == CityLifeCatalog.PachinkoVenue
+            ? PachinkoCustomerVisitPriceYuan * 100L
+            : (CityLifeCatalog.Activities.FirstOrDefault(a => !a.EventOnly && a.VenueId == id)?.PriceYuan ?? 30) * 100L;
         public VenueBusiness VenueOperation(string id)
         {
             var shop=ShopAt(id);if(shop==null||!IsDedicatedVenue(shop.Place))return null;
             if(!_venueBusinesses.TryGetValue(id,out var state))
             {
-                var def=CityLifeCatalog.Activities.FirstOrDefault(a=>!a.EventOnly&&a.VenueId==id);
                 state=new VenueBusiness{PlaceId=id,Open=shop.Place.OpenMinute,Close=shop.Place.CloseMinute,
-                    PriceCents=(def?.PriceYuan??30)*100L,Day=Clock.Today.TotalDays,MaintenanceDay=Clock.Today.TotalDays};
+                    PriceCents=VenueCustomerBasePriceCents(id),Day=Clock.Today.TotalDays,MaintenanceDay=Clock.Today.TotalDays};
                 _venueBusinesses[id]=state;
             }
             return state;
@@ -125,7 +145,7 @@ namespace PCShopSell.Core.Session
                 state.LastPulse=now/10;
                 int ownerSeats=_cityActivities.Where(a=>a.Active&&a.VenueId==shop.Place.Id&&a.RendezvousReady).Sum(a=>1+a.Participants.Length);
                 if(state.CustomersHere.Length+ownerSeats>=VenueCapacity(shop.Place))continue;
-                double basePrice=(CityLifeCatalog.Activities.FirstOrDefault(a=>!a.EventOnly&&a.VenueId==shop.Place.Id)?.PriceYuan??30)*100;
+                double basePrice=VenueCustomerBasePriceCents(shop.Place.Id);
                 double appeal = shop.Place.Id == CityLifeCatalog.PachinkoVenue ? PachinkoCustomerInterest(state) : 1;
                 if(!Random.Chance(Math.Min(.8,.45*appeal*basePrice/state.PriceCents*FootfallOf(shop.Place).DailyPassers/300.0)
                     * ShopPowerTraffic(shop, Clock.Now)))continue;
@@ -161,7 +181,17 @@ namespace PCShopSell.Core.Session
             _venueBusinesses.Clear();
             foreach(var state in data.venueBusinesses??Array.Empty<VenueBusiness>())
                 if(state!=null&&ShopAt(state.PlaceId)!=null&&IsDedicatedVenue(ShopAt(state.PlaceId).Place))
-                {_venueBusinesses[state.PlaceId]=state.Copy();}
+                {
+                    var restored = state.Copy();
+                    if (state.PlaceId == CityLifeCatalog.PachinkoVenue && City.LayoutVersion >= RelocatedLeisureLayoutVersion
+                        && data.cityLayoutVersion < RelocatedLeisureLayoutVersion && state.Open == 600 && state.Close == 1380)
+                    {
+                        var place = City.GetPlace(state.PlaceId);
+                        restored.Open = place.OpenMinute;
+                        restored.Close = place.CloseMinute;
+                    }
+                    _venueBusinesses[state.PlaceId] = restored;
+                }
             foreach(var shop in MyShops.Where(s=>IsDedicatedVenue(s.Place)))
             {
                 VenueOperation(shop.Place.Id);shop.Sim.TradingEnabled=false;shop.Sim.ClearCustomers();

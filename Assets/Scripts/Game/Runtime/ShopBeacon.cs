@@ -3,16 +3,16 @@ using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
-    /// <summary>
-    /// 玩家租下的铺子在街上的醒目标记：整栋铺子被一层青色光晕包住——楼体十二条边是发亮的霓虹灯管，
-    /// 脚下地面一圈光，外面套一层半透明的光壳（缓慢呼吸），门前还有一盏青色点光源。白天晚上都看得见。
-    /// 每家自营店一个，跟着那家店的铺子走（搬店就换栋）。
-    /// </summary>
+    /// <summary>标记街景中的自营门店、当前租住处和已购住宅。</summary>
     public sealed class ShopBeacon
     {
+        public enum Style { Shop, RentedResidence, OwnedResidence }
+
+        internal const int StreetPropertyEffectLayer = 29;
         private readonly GameObject _root;
         private readonly Light _light;
-        private readonly bool _residential;
+        private readonly Style _style;
+        private bool Residential => _style != Style.Shop;
         private Material _shell;
         private Material _ground;
         private string _placeId;
@@ -23,15 +23,21 @@ namespace PCShopSell.Game.Runtime
 
         public bool Visible => _root != null && _root.activeSelf;
 
-        public ShopBeacon(Transform parent, bool residential = false)
+        public ShopBeacon(Transform parent, Style style = Style.Shop)
         {
-            _residential = residential;
-            _root = new GameObject(residential ? "MyHomeOutline" : "MyShopGlow");
+            _style = style;
+            _root = new GameObject(style switch
+            {
+                Style.RentedResidence => "MyHomeOutline",
+                Style.OwnedResidence => "OwnedResidenceOutline",
+                _ => "MyShopGlow"
+            });
+            _root.layer = StreetPropertyEffectLayer;
             _root.transform.SetParent(parent, false);
             _root.SetActive(false);
-            if (residential) return;
+            if (Residential) return;
 
-            var lgo = new GameObject("GlowLight");
+            var lgo = new GameObject("GlowLight") { layer = StreetPropertyEffectLayer };
             lgo.transform.SetParent(_root.transform, false);
             _light = lgo.AddComponent<Light>();
             _light.type = LightType.Point;
@@ -41,24 +47,26 @@ namespace PCShopSell.Game.Runtime
             _light.shadows = LightShadows.None;
         }
 
-        /// <summary>按铺子楼体的范围重建一圈光。</summary>
+        /// <summary>按建筑的实际外观范围重建外罩。</summary>
         private void Rebuild(Bounds b)
         {
             for (int i = _root.transform.childCount - 1; i >= 0; i--)
             {
                 Transform c = _root.transform.GetChild(i);
                 if (_light != null && c.gameObject == _light.gameObject) continue;
+                c.gameObject.SetActive(false);
                 if (Application.isPlaying) Object.Destroy(c.gameObject); else Object.DestroyImmediate(c.gameObject);
             }
 
-            Material tube = _residential
-                ? Mats.Unlit(new Color(.61f, .82f, 1f, .66f))
+            bool ownedResidence = _style == Style.OwnedResidence;
+            Material tube = Residential
+                ? Mats.Unlit(ownedResidence ? new Color(.82f, .65f, 1f) : new Color(.61f, .82f, 1f, .66f))
                 : Mats.Glow(new Color(0.3f, 1f, 0.95f), new Color(1.6f, 5f, 4.6f), false);
 
             Vector3 mn = b.min - new Vector3(0.12f, 0, 0.12f);
             Vector3 mx = b.max + new Vector3(0.12f, 0.12f, 0.12f);
             Vector3 c0 = (mn + mx) * 0.5f, size = mx - mn;
-            float t = _residential ? .13f : .22f;
+            float t = Residential ? .13f : .22f;
 
             // 楼体十二条边做成霓虹灯管
             foreach (float y in new[] { mn.y+0.1f, mx.y })
@@ -72,33 +80,70 @@ namespace PCShopSell.Game.Runtime
                 foreach (float z in new[] { mn.z, mx.z })
                     Prims.Box(_root.transform, "Pillar", new Vector3(x, c0.y, z), new Vector3(t, size.y, t), tube);
 
-            if (_residential)
+            if (Residential)
             {
-                var homeShell = Mats.Unlit(new Color(.48f, .75f, 1f, .18f));
-                Prims.Box(_root.transform, "HomeShell", c0, size, homeShell);
-                return;
+                if (!ownedResidence)
+                    Prims.Box(_root.transform, "HomeShell", c0, size, Mats.Unlit(new Color(.48f, .75f, 1f, .18f)));
             }
+            else
+            {
+                Material soft = Mats.Glow(new Color(0.05f, 0.5f, 0.45f), new Color(0.5f, 3.2f, 2.8f), false);
+                _shell = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.13f));
+                _ground = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.30f));
+                Prims.Box(_root.transform, "GroundGlow", new Vector3(c0.x, mn.y+0.04f, c0.z), new Vector3(size.x + 3.2f, 0.02f, size.z + 3.2f), _ground);
+                Prims.Box(_root.transform, "Ring", new Vector3(c0.x, mn.y+0.07f, mn.z - 0.5f), new Vector3(size.x + 1f, 0.03f, 0.3f), soft);
 
-            Material soft = Mats.Glow(new Color(0.05f, 0.5f, 0.45f), new Color(0.5f, 3.2f, 2.8f), false);
-            _shell = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.13f));
-            _ground = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.30f));
-            Prims.Box(_root.transform, "GroundGlow", new Vector3(c0.x, mn.y+0.04f, c0.z), new Vector3(size.x + 3.2f, 0.02f, size.z + 3.2f), _ground);
-            Prims.Box(_root.transform, "Ring", new Vector3(c0.x, mn.y+0.07f, mn.z - 0.5f), new Vector3(size.x + 1f, 0.03f, 0.3f), soft);
+                // 外面一层半透明光壳，整栋楼像被光包住
+                Prims.Box(_root.transform, "Shell", c0, size + new Vector3(0.5f, 0.5f, 0.5f), _shell);
 
-            // 外面一层半透明光壳，整栋楼像被光包住
-            Prims.Box(_root.transform, "Shell", c0, size + new Vector3(0.5f, 0.5f, 0.5f), _shell);
-
-            _light.transform.localPosition = new Vector3(c0.x, mn.y+Mathf.Max(3f, size.y * 0.6f), mn.z - 2.5f);
+                _light.transform.localPosition = new Vector3(c0.x, mn.y+Mathf.Max(3f, size.y * 0.6f), mn.z - 2.5f);
+            }
+            foreach (Transform part in _root.transform) part.gameObject.layer = StreetPropertyEffectLayer;
         }
 
-        /// <summary>每帧：罩住 placeId 那家店（null = 隐藏）；搬店后换楼；光壳缓慢呼吸。</summary>
+        private static Bounds ResidenceBounds(PlaceVisual building)
+        {
+            var root = building.Root.transform;
+            var bounds = new Bounds();
+            bool found = false;
+            // 楼体碰撞盒随单栋建筑保存，街区的静态合批不会改变它们的范围。
+            foreach (var box in root.GetComponentsInChildren<BoxCollider>(true))
+            {
+                if (box.isTrigger || box.GetComponent<PlaceMarker>()?.PlaceId != building.Place.Id) continue;
+                var toLocal = root.worldToLocalMatrix * box.transform.localToWorldMatrix;
+                var half = box.size * .5f;
+                for (int x = -1; x <= 1; x += 2)
+                for (int y = -1; y <= 1; y += 2)
+                for (int z = -1; z <= 1; z += 2)
+                {
+                    var corner = toLocal.MultiplyPoint3x4(box.center + new Vector3(x * half.x, y * half.y, z * half.z));
+                    if (found) bounds.Encapsulate(corner);
+                    else { bounds = new Bounds(corner, Vector3.zero); found = true; }
+                }
+            }
+            if (!found)
+            {
+                float width = (float)building.Place.Width;
+                float depth = (float)building.Place.Depth;
+                float height = Mathf.Max(4f, (float)(building.ResidentialBlock?.height ?? 6));
+                bounds = new Bounds(new Vector3(0, height / 2, depth / 2), new Vector3(width, height, depth));
+            }
+            // 碰撞盒覆盖墙体。留出少量屋檐和屋顶空间。
+            bounds.Expand(new Vector3(.7f, 0, .7f));
+            bounds.Encapsulate(bounds.max + Vector3.up * 1.75f);
+            return bounds;
+        }
+
+        /// <summary>同步外罩与建筑的位置，placeId 为空时隐藏。</summary>
         public void Update(GameSession s, StreetWorldBuilder world, string placeId, float dt)
         {
-            bool show = s != null && placeId != null && world.Places.ContainsKey(placeId) && world.Places[placeId].Root!=null;
-            if (_root.activeSelf != show) _root.SetActive(show);
-            if (!show) return;
-
-            var building=world.Places[placeId];var transform=building.Root.transform;
+            if (s == null || placeId == null || !world.Places.TryGetValue(placeId, out var building) || building.Root == null)
+            {
+                if (_root.activeSelf) _root.SetActive(false);
+                return;
+            }
+            if (!_root.activeSelf) _root.SetActive(true);
+            var transform = building.Root.transform;
             // Match the building's local coordinate system as a sibling, so geometry scans cannot include this glow.
             if(_root.transform.parent!=transform.parent)_root.transform.SetParent(transform.parent,false);
             _root.transform.localPosition=transform.localPosition;
@@ -108,10 +153,10 @@ namespace PCShopSell.Game.Runtime
             {
                 _placeId = placeId;
                 _building=building.Root;
-                Rebuild(building.BuildingBounds(transform));
+                Rebuild(Residential ? ResidenceBounds(building) : building.BuildingBounds(transform));
             }
 
-            if (_residential) return;
+            if (Residential) return;
 
             _time += dt;
             float k = 0.5f + 0.5f * Mathf.Sin(_time * 2f);

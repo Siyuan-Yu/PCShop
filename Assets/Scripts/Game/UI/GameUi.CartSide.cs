@@ -118,7 +118,6 @@ namespace PCShopSell.Game.UI
                     bool over = bagKg > free + 1e-9;
                     var bag = CartGroup(side, "CartBag", "装进背包", $"{bagKg:0.##} / {free:0.##} 千克", Ui.FlatCardEdge,
                         free <= 0 ? (bagKg > 0 ? 1 : 0) : (float)(bagKg / free), over, out var bagList);
-                    var dest = quote.destination;
                     int cars = quote.cars;
                     var truck = CartGroup(side, "CartTruck", "叫车送",
                         truckKg > 1e-9 ? $"{truckKg:0.##} 千克 → {(cars < 0 ? "一车装不下" : cars == 0 ? "装上刚叫的车" : cars + " 辆面包车")}" : "（没有）",
@@ -136,9 +135,7 @@ namespace PCShopSell.Game.UI
                     if (truckKg > 1e-9)
                     {
                         Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
-                        if (S.CartRequiresHomeDelivery)
-                            Ui.Size(Ui.Label(destRow, "家里 · 居家办公台配送", 15, color: Ui.Accent), -1, 32, 1);
-                        else Ui.Size(CourierDestinationButton(destRow, w, dest, 15), -1, 32, 1);
+                        Ui.Size(CourierDestinationButton(destRow, w, quote.destination, 15, quote.residence), -1, 32, 1);
                         Ui.Size(Ui.Label(destRow, $"约 {quote.minutes} 分钟", 14, TextAnchor.MiddleRight, Ui.Dim), 80);
                     }
                     else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);

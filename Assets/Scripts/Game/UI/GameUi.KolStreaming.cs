@@ -159,7 +159,7 @@ namespace PCShopSell.Game.UI
                 cursor = next + 1;
             }
             Line(body, upcoming.Count == 0 ? "暂无后续品牌直播" : "接下来的品牌直播 · " + string.Join("  ·  ", upcoming), 16, Ui.Good);
-            Para(body, "每场至少 3 小时。其他日子同一时段可播个人内容或休息，个人直播不收取品牌直播费。", 16, Ui.Dim);
+            Para(body, $"品牌场可排 {GameSession.KolMinimumLiveMinutes / 60} 至 {GameSession.KolMaximumLiveMinutes / 60} 小时。主播也有自己的直播排班，撞档时优先排品牌场。", 16, Ui.Dim);
 
             string blocker = S.KolScheduleBlocker(contract.Id, draft.BrandId, draft.StartMinute, draft.EndMinute, draft.Enabled, draft.FrequencyDays, draft.FirstDay);
             if (blocker != null) Line(body, blocker, 16, Ui.Warn);

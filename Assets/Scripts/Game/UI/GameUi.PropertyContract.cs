@@ -111,6 +111,7 @@ namespace PCShopSell.Game.UI
         }
     }
 
+    [RequireComponent(typeof(CanvasRenderer))]
     internal sealed class ContractSignatureGraphic : MaskableGraphic
     {
         private static readonly Vector2[][] Strokes =

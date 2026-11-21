@@ -14,6 +14,7 @@ namespace PCShopSell.Core.Session
         private readonly List<KolLiveSession> _openKolSessions = new List<KolLiveSession>();
         public KolStreamingState KolStreaming=>_kol.Copy();
         public const int KolMinimumLiveMinutes = 180;
+        public const int KolMaximumLiveMinutes = 16 * 60;
         public bool BrandManagementUnlocked => !FirstChapterTrial;
         public string KolAmbassadorAccessBlocker => DistrictAccessTier < 1 ? "解锁社区片区后开放品牌代言" : null;
         public static int KolCapacity(int level)=>level>=2?12:level==1?7:3;
@@ -167,8 +168,9 @@ namespace PCShopSell.Core.Session
                     return "该代言人已安排参展，参展结束后可更改品牌";
             }
             int duration = (end - start + 1440) % 1440;
-            if (start < 0 || start >= 1440 || end < 0 || end >= 1440 || start % 15 != 0 || end % 15 != 0 || duration < KolMinimumLiveMinutes || duration > 720)
-                return "直播时间按15分钟选择，每场3至12小时，可跨午夜";
+            if (start < 0 || start >= 1440 || end < 0 || end >= 1440 || start % 15 != 0 || end % 15 != 0
+                || duration < KolMinimumLiveMinutes || duration > KolMaximumLiveMinutes)
+                return $"品牌直播按 15 分钟排班，每场 {KolMinimumLiveMinutes / 60} 至 {KolMaximumLiveMinutes / 60} 小时，可跨午夜";
             if (frequencyDays != 1 && frequencyDays != 2 && frequencyDays != 7)
                 return "请选择每天、隔天或每周一次";
             if (enabled && (firstDay < 0 || firstDay * 1440L + start >= c.EndAt))
@@ -290,23 +292,23 @@ namespace PCShopSell.Core.Session
             long brandStart = KolScheduledStart(contract, at);
             if (brandStart >= 0)
                 return new KolSlot(talent.Id, contract, null, brandStart, Math.Min(contract.EndAt, brandStart + KolDuration(contract)));
-            if (contract != null)
-            {
-                long personalStart = KolWindowStart(at, contract.StartMinute);
-                long personalEnd = personalStart + KolDuration(contract);
-                if (personalStart < Math.Max(contract.SignedAt, contract.ScheduleEffectiveAt) || at >= personalEnd) return null;
-                return new KolSlot(talent.Id, null, null, personalStart, personalEnd);
-            }
 
-            if (!City.IsLakeCity) return null;
+            if (!City.IsLakeCity && contract == null) return null;
             long start = KolWindowStart(at, talent.PublicStartMinute);
             long day = start / 1440;
-            long end = start + KolMinimumLiveMinutes;
-            if (start < 0 || at >= end) return null;
+            long end = start + talent.PublicDurationMinutes;
+            if (start < 0 || at >= end || !talent.BroadcastsOn(day)) return null;
+            var applicableContract = contract ?? KolPersonContract(talent.Id, start);
+            if (applicableContract != null)
+            {
+                long nextBrandStart = KolNextSpecialStart(applicableContract, start);
+                if (KolScheduledStart(applicableContract, start) >= 0 || nextBrandStart >= 0 && nextBrandStart < end)
+                    return null;
+            }
 
             // A few creators have regular local-business specials. An exclusive signing reserves
             // their commercial slots for the player's brand, leaving ordinary personal broadcasts.
-            bool rival = KolPersonContract(talent.Id, start) == null && day % 7 == 4 &&
+            bool rival = applicableContract == null && day % GameDate.DaysPerWeek == (int)GameWeekday.Friday &&
                 (talent.Id == "qiao" || talent.Id == "life_designer" || talent.Id == "life_creator");
             return new KolSlot(talent.Id, null, rival ? talent.Kind : null, start, end);
         }
@@ -323,17 +325,19 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        private long NextKolRoomStart(KolTalentDef talent, long now)
+        private KolSlot? NextKolRoomSlot(KolTalentDef talent, long from)
         {
-            var contract = KolPersonContract(talent.Id, now);
-            if (contract != null)
+            var contract = KolPersonContract(talent.Id, Clock.Now.TotalMinutes);
+            long brandStart = KolNextSpecialStart(contract, from);
+            long first = KolWindowStart(from, talent.PublicStartMinute);
+            if (first < from) first += 1440;
+            for (int day = 0; day < GameDate.DaysPerWeek; day++)
             {
-                long next = KolWindowStart(now, contract.StartMinute) + 1440;
-                if (next < contract.EndAt) return next;
-                now = contract.EndAt - 1;
+                long start = first + day * 1440L;
+                if (brandStart >= 0 && brandStart <= start) break;
+                if (KolPlannedSlotAt(talent, start) is KolSlot slot && slot.Start == start) return slot;
             }
-            if (!City.IsLakeCity) return -1;
-            return KolWindowStart(now, talent.PublicStartMinute) + 1440;
+            return brandStart < 0 ? null : KolPlannedSlotAt(talent, brandStart);
         }
 
         public bool IsFollowingKol(string id) => _kol.Followed.Contains(id);
@@ -370,12 +374,13 @@ namespace PCShopSell.Core.Session
             var scheduled = KolSlotAt(talent, now);
             if (includeNext)
             {
-                room.NextStart = NextKolRoomStart(talent, now);
-                if (room.NextStart >= 0)
+                long from = Math.Max(now + 1, scheduled?.Running?.EndsAt ?? 0);
+                if (NextKolRoomSlot(talent, from) is KolSlot next)
                 {
-                    var next = KolPlannedSlotAt(talent, room.NextStart);
-                    room.NextBrandId = next?.Contract?.BrandId;
-                    string rivalKind = next?.Rival;
+                    room.NextStart = next.Start;
+                    room.NextEnd = next.End;
+                    room.NextBrandId = next.Contract?.BrandId;
+                    string rivalKind = next.Rival;
                     room.NextSponsor = rivalKind == null ? Brand(room.NextBrandId)?.Name : BrandRivalName(rivalKind);
                 }
                 var contract = KolPersonContract(person, now);
@@ -465,7 +470,8 @@ namespace PCShopSell.Core.Session
                 Id = id, ContractId = slot.Contract?.Id, PersonId = slot.Person, BrandId = brand?.Id,
                 RivalKind = slot.Rival, SponsorName = brand?.Name ?? (slot.Rival == null ? null : BrandRivalName(slot.Rival)),
                 ShowcaseKind = brand?.Kind ?? slot.Rival ?? KolMarket.Get(slot.Person).Kind,
-                FeeCents = fee, StartedAt = at, EndsAt = Math.Max(slot.End, at + KolMinimumLiveMinutes),
+                FeeCents = fee, StartedAt = at,
+                EndsAt = slot.Contract == null ? slot.End : Math.Max(slot.End, at + KolMinimumLiveMinutes),
                 ScheduledDay = (int)(slot.Start / 1440)
             };
             _kol.Sessions = AppendBrand(_kol.Sessions, session);

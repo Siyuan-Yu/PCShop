@@ -153,7 +153,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void CloseShop_InsideAndEmpty_ForfeitsDepositWithoutChargingAgain()
+        public void CloseShop_WithStock_ForfeitsDepositWithoutChargingAgain()
         {
             GameSession s = TwoShops();
             var part = s.MainShop.Sim.Stock.Lines().First().Part;
@@ -161,8 +161,7 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s,"flat");
             StringAssert.Contains("在这家店里", s.CloseShopBlocker(s.ShopAt("tea")), "退租要在店里办");
             GameSessionTests.Teleport(s, "tea");
-            StringAssert.Contains("货车", s.CloseShopBlocker(s.ShopAt("tea")), "有货先叫货车搬走");
-            s.ShopAt("tea").Sim.Stock.Clear();
+            Assert.IsNull(s.CloseShopBlocker(s.ShopAt("tea")), "允许确认清空店内库存并退租");
             Money deposit = s.ShopAt("tea").Lease.Deposit;
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.CloseShop("tea"));
@@ -174,7 +173,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.IsVacant(s.City.GetPlace("tea")));
             Assert.IsTrue(s.Listings.Any(l => l.PlaceId == "tea"), "铺子重新挂牌");
             GameSessionTests.Teleport(s, "pc");
-            StringAssert.Contains("货车", s.CloseShopBlocker(s.MainShop), "最后一家店也可退，只需先搬走存货");
+            Assert.IsNull(s.CloseShopBlocker(s.MainShop), "最后一家店也可退");
         }
 
         [TestCase(false)]
@@ -190,7 +189,8 @@ namespace PCShopSell.Tests
                 var agency=s.AgencyFor(shop.Place);
                 if(fromAgency)GameSessionTests.Teleport(s,agency.Id);
                 Assert.AreEqual(1,s.MyShopCount);Assert.Greater(shop.Lease.Deposit.Cents,0);
-                var furniture=shop.Layout.GroupBy(f=>f.Id).ToDictionary(g=>g.Key,g=>s.FurnitureInStock(g.Key)+g.Count());
+                var furniture=shop.Layout.Select(f=>f.Id).Distinct().ToDictionary(id=>id,id=>s.FurnitureInStock(id));
+                shop.Sim.Stock.ForceAdd(PCShopSell.Core.Catalog.PartCatalog.Get("cpu0"),true,1);
                 var before=s.Ledger.Balance;
                 var root=new UnityEngine.GameObject("LastShopTerminationRegression");root.SetActive(false);
                 var controller=root.AddComponent<PCShopSell.Game.GameController>();
@@ -207,17 +207,14 @@ namespace PCShopSell.Tests
                         detail.SetParent(ui.Canvases.First().transform,false);
                         typeof(PCShopSell.Game.UI.GameUi).GetMethod("BuildAgencyDetail",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance)
                             .Invoke(ui,new object[]{detail,shop.Place,1,null});
-                        shop.Sim.Stock.ForceAdd(PCShopSell.Core.Catalog.PartCatalog.Get("cpu0"),true,1);
-                        Button("AgencyCloseShop_"+shop.Place.Id).onClick.Invoke();
-                        Assert.IsFalse(Button("ConfirmCloseShop").interactable,"中介退租仍须先搬走存货");
-                        Assert.IsFalse(s.CloseShop(shop.Place.Id));Assert.AreEqual(agency,s.CurrentPlace);
-                        Assert.AreEqual(before,s.Ledger.Balance);Assert.AreEqual(1,s.MyShopCount);
-                        ui.CloseTopWindow();shop.Sim.Stock.Clear();
                         Button("AgencyCloseShop_"+shop.Place.Id).onClick.Invoke();
                     }
                     else{ui.OpenDock();Button("CloseShopCounter").onClick.Invoke();}
+                    Assert.IsTrue(Button("ReviewCloseShop").interactable);
+                    Button("ReviewCloseShop").onClick.Invoke();
+                    Assert.AreEqual(1,s.MyShopCount,"第一步只确认说明，不退租");
                     Assert.IsTrue(Button("ConfirmCloseShop").interactable);
-                    StringAssert.Contains("押金不退",Button("ConfirmCloseShop").GetComponentInChildren<UnityEngine.UI.Text>().text);
+                    StringAssert.Contains("清空并退租",Button("ConfirmCloseShop").GetComponentInChildren<UnityEngine.UI.Text>().text);
                     Button("ConfirmCloseShop").onClick.Invoke();
                     Assert.IsFalse(s.HasShop);Assert.AreEqual(0,s.MyShopCount);
                     if(fromAgency)Assert.AreEqual(agency,s.CurrentPlace,"在中介办理后应留在中介");else Assert.IsNull(s.CurrentPlace);

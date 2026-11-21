@@ -11,7 +11,7 @@ namespace PCShopSell.Game.Runtime
     {
         private const int CabinetLayer = 28;
         private const float DeckY = .945f, RailY = 2.70f;
-        private readonly Transform _root, _gantry, _carriage, _head, _wire, _aim;
+        private readonly Transform _root, _gantry, _carriage, _head, _wire;
         private readonly Transform[] _fingerRoots = new Transform[3];
         private readonly Transform[] _joints = new Transform[3], _tips = new Transform[3];
         private readonly Transform[] _pawns = new Transform[6];
@@ -47,6 +47,7 @@ namespace PCShopSell.Game.Runtime
             Prims.Shape(PrimitiveType.Sphere, _root, "JoystickKnob", new Vector3(-.984f,1.155f,-1.15f), Vector3.one*.13f, Lit("AC6153"));
             Prims.Shape(PrimitiveType.Cylinder, _root, "DropButton", new Vector3(.75f,.987f,-1.16f), new Vector3(.28f,.034f,.28f), Lit("B99058"));
             Box(_root, "Outlet", new Vector3(.92f,.39f,-.888f), new Vector3(.74f,.41f,.041f), Lit("243632"));
+            Box(_root, "PrizeChute", new Vector3(.92f, .942f, -.675f), new Vector3(.54f, .030f, .22f), ink);
             Prims.SignText(_root, "取物口", new Vector3(.92f,.395f,-.917f), .65f,.15f, ArtDirection.Cream);
             Prims.SignText(_root, "礼品机", new Vector3(0,2.972f,-.897f), 1.32f,.20f, ArtDirection.Cream);
 
@@ -66,17 +67,6 @@ namespace PCShopSell.Game.Runtime
                 _fingerRoots[i] = pivot;
                 _joints[i] = Box(pivot,"FingerBase",Vector3.zero,new Vector3(.055f,.055f,1),trim);
                 _tips[i] = Box(pivot,"FingerTip",Vector3.zero,new Vector3(.053f,.053f,1),trim);
-            }
-
-            _aim = Child(_root,"AimRing");
-            var gold = Mats.Unlit(ArtDirection.Hex("EBC983"));
-            for(int i=0;i<16;i++)
-            {
-                float angle = i*Mathf.PI/8;
-                var a = new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle))*.32f;
-                var b = new Vector3(Mathf.Cos(angle+.145f),0,Mathf.Sin(angle+.145f))*.32f;
-                var dash = Box(_aim,"AimDash",Vector3.zero,new Vector3(.014f,.014f,1),gold);
-                Rod(dash,a,b);
             }
 
             _camera = Child(_root,"CabinetCamera").gameObject.AddComponent<Camera>();
@@ -118,9 +108,10 @@ namespace PCShopSell.Game.Runtime
             _gantry.localPosition = new Vector3(0,RailY,z);
             _carriage.localPosition = Vector3.right*x;
             _head.localPosition = Vector3.up*(height-RailY);
+            _head.localRotation = Quaternion.Euler(0, 0, -(float)state.Sway * 128f);
             _wire.localPosition = Vector3.up*((height-RailY-.1f)*.5f);
             _wire.localScale = new Vector3(.032f,RailY-.10f-height,.032f);
-            float spread = state.HeldPrize && state.Phase != 4 ? .235f : .36f;
+            float spread = Mathf.Lerp(.36f, .19f, (float)state.FingerClosure);
             for(int i=0;i<_fingerRoots.Length;i++)
             {
                 Vector3 elbow = new Vector3(spread,-.17f,0);
@@ -132,23 +123,29 @@ namespace PCShopSell.Game.Runtime
             {
                 var gift = _pawns[i];
                 if (gift == null) continue;
-                var (slotX, slotZ) = GiftClawPlay.GiftPosition(i);
+                var (slotX, slotZ) = state.GiftPosition(i);
                 if (state.HeldPrize && i == state.Target)
                 {
-                    float drop = state.Phase == 4 ? (float)(state.Time / .29) : 0;
-                    gift.localPosition = new Vector3(x, height-.62f-1.32f*drop*drop, z);
-                    gift.localRotation = Quaternion.Euler(0,18,9);
+                    float drop = (float)state.ReleaseProgress;
+                    float lift = DeckY + (float)state.Height * .90f;
+                    gift.localPosition = new Vector3((float)state.HoldX, Mathf.Lerp(lift, DeckY - .33f, drop * drop),
+                        (float)state.HoldZ);
+                    gift.localRotation = Quaternion.Euler(0, 14, (float)state.Sway * 168f);
+                }
+                else if (i == state.Target && state.SlipProgress < 1)
+                {
+                    float fall = (float)state.SlipProgress;
+                    gift.localPosition = new Vector3(Mathf.Lerp((float)state.FallX, (float)slotX, fall),
+                        DeckY + .90f * (float)state.FallHeight * (1 - fall * fall),
+                        Mathf.Lerp((float)state.FallZ, (float)slotZ, fall));
+                    gift.localRotation = Quaternion.Euler(0, 14 + 64 * fall, Mathf.Sin(fall * Mathf.PI) * 42);
                 }
                 else
                 {
-                    float fall = i == state.Target && state.SlipProgress < 1
-                        ? .37f * (1 - (float)(state.SlipProgress * state.SlipProgress)) : 0;
-                    gift.localPosition = new Vector3((float)slotX,DeckY+fall,(float)slotZ);
+                    gift.localPosition = new Vector3((float)slotX,DeckY,(float)slotZ);
                     gift.localRotation = Quaternion.Euler(0, i%2 == 0 ? 14 : -14, 0);
                 }
             }
-            _aim.gameObject.SetActive(!state.Animating);
-            _aim.localPosition = new Vector3(x, DeckY+.016f, z);
             _camera.Render();
         }
 

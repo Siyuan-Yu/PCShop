@@ -229,13 +229,17 @@ namespace PCShopSell.Tests
             Shot(s, 0);
             Assert.AreEqual(OnsiteSportResult.Success, s.CurrentOnsite.LastSportResult);
             Assert.AreEqual(1, s.CurrentOnsite.Success);
+            Assert.AreEqual(3, s.CurrentOnsite.BasketballPoints);
             Shot(s, 0, .2, 30);
             Assert.AreEqual(OnsiteSportResult.Miss, s.CurrentOnsite.LastSportResult);
             Assert.AreEqual(1, s.CurrentOnsite.Success);
+            Assert.AreEqual(3, s.CurrentOnsite.BasketballPoints);
             Shot(s, 1, .65);
             Assert.AreEqual(3, s.CurrentOnsite.Round);
+            Assert.AreEqual(5, s.CurrentOnsite.BasketballPoints);
             Finish(s, a);
             Assert.AreEqual(CityActivityPhase.Completed, a.State);
+            StringAssert.Contains("投篮得分 5 分", a.EventSettlementNote);
         }
         [Test] public void NewFloorNeedsAllThreeExercisesAndActualFeedback()
         {
@@ -263,6 +267,48 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.OnsiteCourtFeedback(1));
             Finish(s, a);
             Assert.AreEqual(CityActivityPhase.Completed, a.State);
+        }
+        [Test] public void BasketballUsesTheNewShotPositionAfterReload()
+        {
+            using var s = Make();
+            var activity = Book(s, 54);
+            Attend(s, activity);
+            long minute = s.Clock.Now.TotalMinutes;
+            Assert.IsTrue(s.MoveOnsiteBasketball(2, 2));
+            Assert.AreEqual(minute, s.Clock.Now.TotalMinutes);
+
+            using var loaded = Reload(s);
+            var shot = loaded.CurrentOnsite;
+            Assert.That(shot.TargetX, Is.EqualTo(-2).Within(.001));
+            Assert.That(shot.TargetZ, Is.EqualTo(6).Within(.001));
+            Assert.IsTrue(loaded.BeginOnsiteCharge());
+            Assert.IsTrue(loaded.AimOnsiteSport(Math.Atan2(shot.TargetX, shot.TargetZ) * 180 / Math.PI));
+            Assert.IsFalse(loaded.MoveOnsiteBasketball(-1, 0));
+            double power = shot.BasketballRimDistance / shot.BasketballShotRange;
+            for (int i = 0; i < Math.Round(power * 1000); i++) loaded.StepOnsiteSport(.001);
+            Assert.IsTrue(loaded.ReleaseOnsiteShot());
+            for (int i = 0; i < 16 && loaded.CurrentOnsite.Phase == "flight"; i++) loaded.StepOnsiteSport(.1);
+            Assert.AreEqual(OnsiteSportResult.Success, loaded.CurrentOnsite.LastSportResult);
+            Assert.AreEqual(2, loaded.CurrentOnsite.BasketballPoints);
+            using var afterShot = Reload(loaded);
+            Assert.AreEqual(2, afterShot.CurrentOnsite.BasketballPoints);
+        }
+        [Test] public void BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses()
+        {
+            using var s = Make();
+            var activity = Book(s, 54);
+            Attend(s, activity);
+            Assert.IsTrue(s.BeginOnsiteCharge());
+            s.AimOnsiteBasketball(0, 1.25);
+            for (int i = 0; i < 7; i++) s.StepOnsiteSport(.1);
+            Assert.That(s.CurrentOnsite.Power, Is.EqualTo(.7).Within(.001));
+            Assert.IsTrue(s.ReleaseOnsiteShot());
+
+            using var loaded = Reload(s);
+            Assert.That(loaded.CurrentOnsite.BasketballLandingHeightOffset, Is.EqualTo(1.25));
+            for (int i = 0; i < 16 && loaded.CurrentOnsite.Phase == "flight"; i++) loaded.StepOnsiteSport(.1);
+            Assert.AreEqual(OnsiteSportResult.Miss, loaded.CurrentOnsite.LastSportResult);
+            Assert.AreEqual("瞄高了。", loaded.CurrentOnsite.Message);
         }
         [Test] public void TeacherGameNeedsFivePhysicalPossessions()
         {using var s=Make();var a=Book(s,56);Attend(s,a);for(int i=0;i<5;i++)Shot(s,i%2);Assert.AreEqual(5,s.CurrentOnsite.Round);Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);}

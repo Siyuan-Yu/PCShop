@@ -33,6 +33,7 @@ namespace PCShopSell.Game.Runtime
         public readonly List<GameObject> ClosedOnly = new List<GameObject>();
         public Light Neon;
         public int OpenState = -1;
+        internal LayoutBlockData ResidentialBlock;
 
         /// <summary>Actual exterior geometry in world space, or in the requested transform's local space.</summary>
         public Bounds BuildingBounds(Transform relativeTo = null)
@@ -48,6 +49,16 @@ namespace PCShopSell.Game.Runtime
                     var point=matrix.MultiplyPoint3x4(local.center+Vector3.Scale(local.extents,new Vector3(x,y,z)));
                     if(!found){result=new Bounds(point,Vector3.zero);found=true;}else result.Encapsulate(point);
                 }
+            }
+            if (ResidentialBlock != null)
+            {
+                // ResidentialCompounds batches several houses into one mesh. Its mesh bounds cannot identify a single house.
+                float width = (float)ResidentialBlock.width;
+                float depth = (float)ResidentialBlock.depth;
+                float height = Mathf.Max(4f, (float)ResidentialBlock.height);
+                var footprint = new Bounds(new Vector3(0, height / 2, depth / 2), new Vector3(width, height, depth));
+                Include(footprint, toTarget * root.localToWorldMatrix);
+                return result;
             }
             foreach(var renderer in exterior.GetComponentsInChildren<MeshRenderer>(true))
             {

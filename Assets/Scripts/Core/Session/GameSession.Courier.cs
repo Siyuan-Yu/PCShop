@@ -43,6 +43,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>送到哪家店（铺面 id）；null = 主店。</summary>
         public string ShopId;
+        public string ResidenceId;
         public long DueMinute;
         public readonly List<CourierItem> Items = new List<CourierItem>();
 
@@ -174,13 +175,24 @@ namespace PCShopSell.Core.Session
             dest == null ? "家里" : ShopTitle(dest);
 
         /// <summary>这辆车送去哪（给界面列在路上的车用）。</summary>
-        public string CourierRunDestName(CourierRun r) => r.ToShop ? CourierDestName(DeliveryShop(r.ShopId)) : "家里";
+        public string CourierRunDestName(CourierRun r) => r.ToShop ? CourierDestName(DeliveryShop(r.ShopId))
+            : r.ResidenceId != null ? PlaceTitle(CourierResidence(r)) : "家里";
 
         /// <summary>这辆车是不是送进当前这家店（算在途库存、仓位用）。</summary>
         private bool HeadsToThisShop(CourierRun r) => r.ToShop && DeliveryShop(r.ShopId) == _focus;
 
-        private static string RunKey(OwnedShop dest) => dest == null ? CourierHome : dest.Place.Id;
-        private void RememberPurchaseDelivery(OwnedShop dest) => _lastPurchaseDeliveryDest = RunKey(dest);
+        private string RunKey(OwnedShop dest, Place residence = null) => dest?.Place.Id ?? "residence:" + (residence ?? Home).Id;
+        private void RememberPurchaseDelivery(OwnedShop dest) => _lastPurchaseDeliveryDest = dest?.Place.Id ?? CourierHome;
+
+        private Place CourierResidence(CourierRun run)
+        {
+            if (City.HasPlace(run.ResidenceId))
+            {
+                var residence = City.GetPlace(run.ResidenceId);
+                if (CanSleepAt(residence)) return residence;
+            }
+            return Home;
+        }
 
         private OwnedShop PurchaseDeliveryShop(bool toShop, string shopId) =>
             toShop ? ShopAt(string.IsNullOrEmpty(shopId) ? MainShop.Place.Id : shopId) : null;
@@ -189,16 +201,15 @@ namespace PCShopSell.Core.Session
 
         public IReadOnlyList<CourierRun> Couriers => _couriers;
 
-        private double CourierDistance(OwnedShop dest)
+        private (Money fee, int minutes) CourierQuoteTo(Place place)
         {
             string from = CurrentPlace?.NodeId ?? PlayerNodeId;
-            string to = dest != null ? dest.Place.NodeId : Home.NodeId;
-            PathResult path = Pathfinder.FindPath(City.Map, from, to);
-            return path.Found ? path.Distance : 0;
+            PathResult path = Pathfinder.FindPath(City.Map, from, place.NodeId);
+            return CourierQuoteForDistance(path.Found ? path.Distance : 0);
         }
 
         /// <summary>从这里叫一车送到某家店（null = 家里）：每辆运费和大概多久到。</summary>
-        public (Money fee, int minutes) CourierQuote(OwnedShop dest) => CourierQuoteForDistance(CourierDistance(dest));
+        public (Money fee, int minutes) CourierQuote(OwnedShop dest) => CourierQuoteTo(dest?.Place ?? Home);
 
         private static (Money fee, int minutes) CourierQuoteForDistance(double distance) =>
             (Vehicles.TaxiFare(distance) + CourierHandling, CourierBaseMinutes + (int)Math.Ceiling(distance / CourierMetersPerMinute));
@@ -217,7 +228,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>在这里一共叫了几辆车（到这个目的地的）。</summary>
         public int CourierRunsHere(OwnedShop dest) =>
-            _couriers.Count(r => (dest == null ? !r.ToShop : r.ToShop && DeliveryShop(r.ShopId) == dest)
+            _couriers.Count(r => (dest == null ? !r.ToShop && CourierResidence(r) == Home : r.ToShop && DeliveryShop(r.ShopId) == dest)
                 && r.FromId == CurrentPlace?.Id && r.DueMinute > Clock.Now.TotalMinutes);
 
         public int CourierRunsHere(bool toShop) => CourierRunsHere(AsDest(toShop));
@@ -245,7 +256,7 @@ namespace PCShopSell.Core.Session
         /// 把这批东西装车：先装当前这辆，装不下的按每辆 <see cref="CourierCapacityKg"/> 千克再叫车（单件不拆）。
         /// 返回每辆车装多少（null 表示是新车），单件就超载时返回 null。
         /// </summary>
-        private List<(CourierRun run, double amount)> PlanLoad(CourierItem item, OwnedShop dest)
+        private List<(CourierRun run, double amount)> PlanLoad(CourierItem item, OwnedShop dest, Place residence = null)
         {
             bool rice = item.Kind == CourierItemKind.Rice;
             double total = rice ? item.Kg : item.Count;
@@ -253,7 +264,7 @@ namespace PCShopSell.Core.Session
             if (!rice && unitKg > CourierCapacityKg + 1e-9) return null;
             var plan = new List<(CourierRun, double)>();
             double left = total;
-            CourierRun open = OpenCourierRun(dest);
+            _openRuns.TryGetValue(RunKey(dest, residence), out CourierRun open);
             if (open != null)
             {
                 double n = FitAmount(rice, unitKg, open.FreeKg, left);
@@ -270,8 +281,8 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>这一批（按顺序装）一共要再叫几辆新车；有单件超过一辆车的返回 -1。</summary>
-        private int CarsFor(IEnumerable<(bool rice, double unitKg, double amount)> lines, OwnedShop dest) =>
-            CarsFor(lines, OpenCourierRun(dest)?.FreeKg ?? 0);
+        private int CarsFor(IEnumerable<(bool rice, double unitKg, double amount)> lines, OwnedShop dest, Place residence) =>
+            CarsFor(lines, _openRuns.TryGetValue(RunKey(dest, residence), out var run) ? run.FreeKg : 0);
 
         private static int CarsFor(IEnumerable<(bool rice, double unitKg, double amount)> lines, double free)
         {
@@ -307,13 +318,13 @@ namespace PCShopSell.Core.Session
         /// <summary>
         /// 把一批东西装上去 dest（null = 家里）的车：付货款（可以是 0）和新车的运费；结账时已经付过的车先用掉。
         /// </summary>
-        private bool Ship(OwnedShop dest, string category, Money goods, string what, CourierItem item, string verb)
+        private bool Ship(OwnedShop dest, string category, Money goods, string what, CourierItem item, string verb, Place residence = null)
         {
-            var plan = PlanLoad(item, dest);
+            var plan = PlanLoad(item, dest, residence);
             if (plan == null) return Fail($"单件就超过一辆面包车能装的 {CourierCapacityKg:0} 千克。");
             int newCars = plan.Count(p => p.run == null);
             int prepaid = Math.Min(newCars, _prepaidCars);
-            (Money fee, int minutes) = CourierQuote(dest);
+            (Money fee, int minutes) = CourierQuoteTo(residence ?? dest?.Place ?? Home);
             Money freight = fee * (newCars - prepaid);
             Money due = goods + freight;
             if (Ledger.Balance < due) return Fail(newCars > prepaid ? $"要 {goods} + 运费 {freight}（{newCars - prepaid} 辆车），钱不够。" : $"要 {goods}，钱不够。");
@@ -329,7 +340,7 @@ namespace PCShopSell.Core.Session
                     allocation = allocation.Product(item.Id, item.Count, goods.Cents / Math.Max(1, item.Count));
                 Ledger.TryDebit(Clock.Today, category, goods, what, allocation);
             }
-            string destName = CourierDestName(dest);
+            string destName = residence != null ? PlaceTitle(residence) : CourierDestName(dest);
             if (freight.IsPositive)
                 Ledger.TryDebit(Clock.Today, "运费", freight, $"叫 {newCars - prepaid} 辆车从{CurrentPlace?.Name ?? "街上"}送到{destName}",
                     dest != null ? LedgerAttribution.ForShop(dest.Place.Id, transactionKind: "物流") : new LedgerAttribution(LedgerBusinessKind.Personal, transactionKind: "物流"));
@@ -345,13 +356,15 @@ namespace PCShopSell.Core.Session
                         FromName = CurrentPlace?.Name ?? "街上",
                         ToShop = dest != null,
                         ShopId = dest?.Place.Id,
+                        ResidenceId = residence?.Id,
                         DueMinute = Clock.Now.TotalMinutes + minutes,
                     };
                     _couriers.Add(last);
                 }
+                else if (residence != null) last.ResidenceId = residence.Id;
                 last.Items.Add(Portion(item, amount));
             }
-            _openRuns[RunKey(dest)] = last;
+            _openRuns[RunKey(dest, residence)] = last;
             if (goods.IsPositive) RememberPurchaseDelivery(dest);
             if (newCars == 0)
                 Say($"{verb}{what}，装上刚叫的车（{last.LoadKg:0.##}/{CourierCapacityKg:0} 千克），一起送到{destName}。");
@@ -368,35 +381,41 @@ namespace PCShopSell.Core.Session
         private void DeliverCouriers(GameTimestamp now)
         {
             DeliverFurnitureBuybacks(now);
-            var arrived = new List<(OwnedShop Dest, bool ToShop, string Where, string From, List<CourierItem> Items)>();
+            var arrived = new List<(OwnedShop Shop, Place Residence, string From, string RequestedResidenceId, List<CourierItem> Items)>();
             for (int i = 0; i < _couriers.Count; i++)
             {
                 CourierRun run = _couriers[i];
                 if (run.DueMinute > now.TotalMinutes) continue;
-                string noisePlace = run.ToShop ? DeliveryShop(run.ShopId)?.Place.Id : Home.Id;
+                var dest = run.ToShop ? DeliveryShop(run.ShopId) : null;
+                if (dest?.Rented != true) dest = null;
+                var residence = dest == null ? CourierResidence(run) : null;
+                string noisePlace = dest?.Place.Id ?? residence.Id;
                 if (noisePlace != null && LifeQuietBlock(noisePlace)) { run.DueMinute = now.TotalMinutes + (420 - Clock.MinuteOfDay + 1440) % 1440; continue; }
                 if (noisePlace != null) RecordLifeNoise(noisePlace);
                 foreach (var kv in _openRuns.Where(kv => kv.Value == run).ToList()) _openRuns.Remove(kv.Key);
                 _couriers.RemoveAt(i--);
-                OwnedShop dest = run.ToShop ? DeliveryShop(run.ShopId) : null;
-                bool toShop = dest != null && dest.Rented;
-                string where = !toShop ? "家里" : MyShopCount > 1 ? ShopTitle(dest) : "店里";
-                arrived.Add((dest, toShop, where, run.FromName, run.Items));
+                arrived.Add((dest, residence, run.FromName, run.ResidenceId, run.Items));
             }
             // 同一趟到的几辆车（比如一次买的东西装了两三辆）合并成一个弹窗，按送到哪分组，同种货先合成一条
-            foreach (var group in arrived.GroupBy(a => (a.Dest, a.Where)))
+            foreach (var group in arrived.GroupBy(a => (a.Shop, a.Residence)))
             {
-                var first = group.First();
+                var (shop, residence) = group.Key;
+                bool toShop = shop != null;
+                string where = toShop ? (MyShopCount > 1 ? ShopTitle(shop) : "店里")
+                    : group.Any(delivery => delivery.RequestedResidenceId != null) ? PlaceTitle(residence) : "家里";
+                var local = residence != null && residence != Home ? FreightStorageAt(residence.Id) : null;
                 var what = new List<string>();
                 var items = group.SelectMany(a => a.Items).ToList();
-                WithShop(first.Dest, () => { foreach (CourierItem it in MergeItems(items)) what.Add(Unpack(it, first.ToShop)); });
-                if (first.ToShop && items.Any(item => item.Kind is CourierItemKind.Part or CourierItemKind.Goods
+                WithShop(shop, () => { foreach (CourierItem it in MergeItems(items)) what.Add(Unpack(it, toShop, local)); });
+                if (toShop && items.Any(item => item.Kind is CourierItemKind.Part or CourierItemKind.Goods
                         or CourierItemKind.Ingredient or CourierItemKind.Rice))
-                    RecordShopPurchaseReceipt(first.Dest, now.TotalMinutes, "货车送达");
+                    RecordShopPurchaseReceipt(shop, now.TotalMinutes, "货车送达");
                 var sources = group.Select(a => a.From).Distinct().ToList();
                 string head = sources.Count == 1
-                    ? $"从{sources[0]}叫的车把东西送到{first.Where}了："
-                    : $"叫的车把东西送到{first.Where}了：";
+                    ? $"从{sources[0]}叫的车把东西送到{where}了："
+                    : $"叫的车把东西送到{where}了：";
+                if (residence != null && group.Any(delivery => delivery.RequestedResidenceId != null && delivery.RequestedResidenceId != residence.Id))
+                    head = "部分货物的原收货地址已不可用，司机已改送到" + where + "。\n" + head;
                 string tail = what.Any(x => x.Contains("临时存放")) ? $"\n\n临时存放的东西能放 {TempKeepDays} 天，到期前打开纸箱清掉（放进纸箱、摆出来、叫货车搬走或扔掉）。" : "";
                 Show("货送到了", head + "\n" + string.Join("\n", what) + "。" + tail);
             }
@@ -424,11 +443,11 @@ namespace PCShopSell.Core.Session
         /// 送到家中的米菜、礼品和配件进入家中后仓。送店里时配件上货架，米菜和礼品进店里纸箱。
         /// 家具也进纸箱。纸箱放不下的进临时存放（下次打开纸箱要清空）。
         /// </summary>
-        private string Unpack(CourierItem it, bool toShop)
+        private string Unpack(CourierItem it, bool toShop, ResidenceFreightStorage local = null)
         {
             if (toShop && RestaurantIngredientsOnly(_focus) && IsRawIngredientDelivery(it))
                 return UnpackRestaurantIngredient(_focus, it);
-            Backpack box = toShop ? ShopLocker : HomeBox;
+            Backpack box = local?.Box ?? (toShop ? ShopLocker : HomeBox);
             Backpack temp = toShop ? ShopTemp : HomeTemp;
             string boxPlace = toShop ? "放进店里纸箱" : "放进家中后仓";
             string Where(int overflow, int total) =>
@@ -436,6 +455,7 @@ namespace PCShopSell.Core.Session
             switch (it.Kind)
             {
                 case CourierItemKind.Rice:
+                    if (local != null) { box.Food.RiceKg += it.Kg; return $"大米 {it.Kg:0.##} 千克（{boxPlace}）"; }
                     double riceOver = StoreRiceOrTemp(toShop, it.Kg);
                     return $"大米 {it.Kg:0.##} 千克（{(riceOver <= 1e-9 ? boxPlace : $"纸箱放不下的 {riceOver:0.##} 千克放在临时存放")}）";
                 case CourierItemKind.Ingredient:
@@ -462,14 +482,16 @@ namespace PCShopSell.Core.Session
                         return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（进了店里后仓）";
                     }
                     int goodsOver = StoreOrTemp(false, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count,
-                        n => AddRetailToBag(HomeBox, Gifts.Get(it.Id), n, it.ExpireDay, it.Chilled),
+                        n => AddRetailToBag(box, Gifts.Get(it.Id), n, it.ExpireDay, it.Chilled),
                         n => AddRetailToBag(HomeTemp, Gifts.Get(it.Id), n, it.ExpireDay, it.Chilled));
                     return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(goodsOver, it.Count)}）";
                 case CourierItemKind.Furniture:
+                    if (local != null) { box.AddFurniture(it.Id, it.Count); return $"{FurnitureCatalog.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{boxPlace}）"; }
                     int furnOver = StoreFurnitureHere(toShop, it.Id, it.Count);
                     return $"{FurnitureCatalog.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(furnOver, it.Count)}）";
                 default:
                     PartDef p = PartCatalog.Get(it.Id);
+                    if (local != null) { local.Parts.ForceAdd(p, it.Boxed, it.Count); return $"{p.Name}×{it.Count}（{boxPlace}）"; }
                     if (!toShop)
                     {
                         int partOver = StorePartAtHome(p, it.Boxed, it.Count);
@@ -490,6 +512,7 @@ namespace PCShopSell.Core.Session
             fromName = r.FromName,
             toShop = r.ToShop,
             shopId = r.ShopId,
+            residenceId = r.ResidenceId,
             dueMinute = r.DueMinute,
             kinds = r.Items.Select(i => (int)i.Kind).ToArray(),
             ids = r.Items.Select(i => i.Id).ToArray(),
@@ -506,7 +529,8 @@ namespace PCShopSell.Core.Session
             _openRuns.Clear();
             foreach (SaveCourier s in saved ?? Array.Empty<SaveCourier>())
             {
-                var run = new CourierRun { FromId = s.fromId, FromName = s.fromName, ToShop = s.toShop, ShopId = string.IsNullOrEmpty(s.shopId) ? null : s.shopId, DueMinute = s.dueMinute };
+                var run = new CourierRun { FromId = s.fromId, FromName = s.fromName, ToShop = s.toShop, ShopId = string.IsNullOrEmpty(s.shopId) ? null : s.shopId,
+                    ResidenceId = string.IsNullOrEmpty(s.residenceId) ? null : City.CanonicalPlaceId(s.residenceId), DueMinute = s.dueMinute };
                 int n = s.kinds?.Length ?? 0;
                 for (int i = 0; i < n; i++)
                 {

@@ -23,7 +23,7 @@ namespace PCShopSell.Game.UI
                 {int steps=Mathf.Max(Mathf.Abs(xx-x),Mathf.Abs(yy-y));for(int i=0;i<=steps;i++){int px=Mathf.RoundToInt(Mathf.Lerp(x,xx,i/(float)Mathf.Max(1,steps))),py=Mathf.RoundToInt(Mathf.Lerp(y,yy,i/(float)Mathf.Max(1,steps)));Pixel(px,py);Pixel(px+1,py);Pixel(px,py+1);}}
                 void Box(int x,int y,int w,int h){Line(x,y,x+w,y);Line(x+w,y,x+w,y+h);Line(x+w,y+h,x,y+h);Line(x,y+h,x,y);}
                 void Head(int x,int y,int r){for(int j=-r;j<=r;j++)for(int i=-r;i<=r;i++)if(i*i+j*j<=r*r)Pixel(x+i,y+j);}
-                if(title=="我的"||title=="人物"||title=="人脉"||title=="员工")
+                if(title=="我的"||title=="人物"||title=="人脉"||title=="员工"||title=="联系人")
                 {Head(15,23,5);Line(7,5,7,12);Line(7,12,12,16);Line(12,16,19,16);Line(19,16,24,12);Line(24,12,24,5);Line(7,5,24,5);if(title!="我的"){Head(26,22,3);Line(27,15,30,11);}}
                 else if(title=="经营"||title=="资产"||title=="采购")
                 {Box(4,5,24,13);Line(4,18,12,23);Line(12,23,12,18);Line(13,18,21,23);Line(21,23,21,18);Box(23,18,4,10);Box(8,8,4,5);Box(18,8,4,5);}

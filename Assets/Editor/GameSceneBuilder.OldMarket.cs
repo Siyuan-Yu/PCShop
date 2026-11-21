@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Game;
@@ -21,20 +22,27 @@ namespace PCShopSell.EditorTools
             var s = _game.Session; s.EventsEnabled = false; s.Clock.Restore(new GameDate(42), 600);
             _game.Ui.CloseAllWindows(); Teleport(s, GameSession.OldMarketVenueId); Frame(0); _game.SnapCamera(); Frame(0); Shot("01-market-four-stalls");
             if (GameObject.FindObjectsOfType<Transform>().Count(t => t.name.StartsWith("OldMarketStall_", StringComparison.Ordinal)) != 4) throw new InvalidOperationException("Four physical market stalls missing");
-            _game.Ui.OpenCityVenue(s.CurrentPlace); Shot("02-real-market-catalog"); _game.Ui.CloseAllWindows();
-            typeof(PCShopSell.Game.UI.GameUi).GetField("_oldMarketStall", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(_game.Ui, 1);
+            UnityEngine.UI.Button Button(string name) => _game.Ui.Canvases
+                .SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b => b.name == name);
             _game.Ui.OpenCityVenue(s.CurrentPlace);
-            var buy = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b => b.name == "OldMarketBuy_oldmarket:radio");
-            buy.onClick.Invoke(); Frame(0); Shot("04-simple-owned-actions");
-            var repair = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b => b.name == "OldMarketRepair_oldmarket:radio");
-            repair.onClick.Invoke(); Frame(0);
+            Shot("02-market-reception");
+            var cash = s.Ledger.Balance;
+            Button("BuyMarketHuntPass").onClick.Invoke(); Frame(0); Shot("03-market-hunt");
+            if (s.MarketHuntRemaining != 1 || s.Ledger.Balance != cash - Money.FromYuan(OldMarketHuntCatalog.Prices[0])
+                || !Button("SearchProp_radio").IsInteractable())
+                throw new InvalidOperationException("Counter purchase did not open the existing hunt with one paid attempt");
+            if (!s.BeginMarketHunt("radio") || !s.ClaimMarketFind() || s.MarketHuntRemaining != 0)
+                throw new InvalidOperationException("Paid hunt did not return an item");
+            _game.Ui.CloseAllWindows();
+            s.Backpack.AddGift("oldmarket:radio:faulty", 1);
+            _game.Ui.OpenCityVenue(s.CurrentPlace);
+            Button("OldMarketServices").onClick.Invoke(); Frame(0); Shot("04-legacy-repair");
+            Button("OldMarketRepair_oldmarket:radio").onClick.Invoke(); Frame(0);
             if (_game.Ui.AnyModalOpen || s.OldMarketProgress.Remaining != 15) throw new InvalidOperationException("One-click repair did not close menu and start work");
             s.AdvanceClock(15); Frame(0);
             if (s.Backpack.GiftCount("oldmarket:radio") != 1 || s.Backpack.GiftCount("oldmarket:radio:faulty") != 0) throw new InvalidOperationException("Repair did not return exactly one working item");
-            typeof(PCShopSell.Game.UI.GameUi).GetField("_oldMarketStall", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(_game.Ui, 4);
-            _game.Ui.OpenCityVenue(s.CurrentPlace); Shot("03-real-repaired-item");
-            File.WriteAllText(Path.Combine(_outDir, "runtime-results.txt"), "Production world: four physical stalls, simplified five-tab menu; clicked actual buy and master-repair buttons; menu closed automatically; exactly one repaired backpack item after 15 minutes.\n");
-            Log("Independent old market, four physical stalls, actual purchase/inspection/repair passed.");
+            File.WriteAllText(Path.Combine(_outDir, "runtime-results.txt"), "Production world: four physical stalls; counter purchase opened the existing hunt; used one paid search; repaired one legacy item.\n");
+            Log("旧物市场接待、买次数、淘货和旧存档物品维修通过。");
         });
     }
 }

@@ -171,6 +171,7 @@ namespace PCShopSell.Tests
             var shortcuts = (RectTransform)rig.Components<Transform>().Single(t => t.name == "HudFunctionBar");
             shortcuts.gameObject.SetActive(true);
             var functions = (RectTransform)rig.Button("HudManagement").transform.parent;
+            var contacts = rig.Button("HudContacts");
             var price = (RectTransform)rig.Button("HudPrices").transform;
             var menu = (RectTransform)rig.Button("HudMenu").transform;
             var timeControls = (RectTransform)row.Find("HudTimeControls");
@@ -179,6 +180,8 @@ namespace PCShopSell.Tests
             Assert.AreSame(functions, price.parent);
             Assert.AreSame(row, menu.parent);
             Assert.AreEqual("物价", price.GetComponentInChildren<Text>().text);
+            Assert.AreSame(functions, contacts.transform.parent);
+            Assert.AreEqual("K", contacts.transform.Find("NavigationShortcut").GetComponent<Text>().text);
             Assert.AreEqual(Ui.ButtonHot, rig.Button("ShortcutGo_0").image.color);
 
             speeds[0].onClick.Invoke();
@@ -214,7 +217,10 @@ namespace PCShopSell.Tests
                 Assert.That(menuRect.yMax, Is.LessThanOrEqualTo(top.rect.yMax));
                 Assert.That(Bounds(price).yMax, Is.LessThan(top.rect.yMin));
                 foreach (Button button in functions.GetComponentsInChildren<Button>())
+                {
                     Assert.AreEqual(Bounds(price).center.y, Bounds((RectTransform)button.transform).center.y, .1);
+                    Assert.That(Bounds((RectTransform)button.transform).xMax, Is.LessThanOrEqualTo(Bounds(shortcuts).xMax));
+                }
 
                 var firstSpeedRect = (RectTransform)speeds[0].transform;
                 foreach (var button in speeds)
@@ -235,6 +241,12 @@ namespace PCShopSell.Tests
             rig.Ui.CloseAllWindows();
             Assert.True(rig.Ui.TryHotkey(KeyCode.I));
             Assert.NotNull(rig.Workspace("market"));
+            rig.Ui.CloseAllWindows();
+            contacts.onClick.Invoke();
+            Assert.IsTrue(rig.Button("CallTruck").transform.IsChildOf(rig.Workspace("people")));
+            rig.Ui.CloseAllWindows();
+            Assert.True(rig.Ui.TryHotkey(KeyCode.K));
+            Assert.IsTrue(rig.Button("CallTruck").transform.IsChildOf(rig.Workspace("people")));
         }
 
         [TestCase(0)]
@@ -267,6 +279,128 @@ namespace PCShopSell.Tests
             Assert.AreEqual(CityActivityPhase.Completed, walk.State, walk.EndReason);
             rig.Ui.OpenCityActivitySettlement(walk.Id);
             Assert.That(rig.Text, Does.Not.Contain("本次支出").And.Not.Contain("参考费用"));
+        }
+
+        [Test]
+        public void ParkWalkTopicsOpenDialogueAndReturnToTheUnsettledWalk()
+        {
+            using var rig = new Rig(DistrictProgressionTests.Make());
+            const string park = "life_hike";
+            const string personId = "landlady";
+            rig.S.Clock.Restore(rig.S.Clock.Today, 14 * 60);
+            GameSessionTests.Teleport(rig.S, park);
+            var companion = rig.S.CityPersonState(personId);
+            companion.LocationPlaceId = park;
+            companion.Route = null;
+            companion.ActivityId = null;
+            companion.VisitId = null;
+            companion.Task = CityPersonTask.Leisure;
+            rig.S.Meet(personId, 35);
+            Assert.True(rig.S.SelectVenueService("hike", 0, walkInCompanions: new[] { personId }));
+            var walk = rig.S.RunningCityActivity;
+            var before = rig.S.Clock.Now.TotalMinutes;
+            Assert.True((bool)rig.Call("TryOpenVenueActivityCg", walk));
+            Assert.True(rig.Components<Transform>().Any(t => t.name == "ParkTrail"));
+            Assert.False(rig.Components<Transform>().Any(t => t.name == "WalkingCompanion"));
+
+            Text Reply() => rig.Components<Text>().Single(t => t.name == "DialogueReplyText");
+            rig.ClickCaption("聊生活");
+            string firstLine = Reply().text;
+            Assert.IsNotEmpty(firstLine);
+            rig.ClickCaption("平时喜欢做些什么？");
+            Assert.AreNotEqual(firstLine, Reply().text);
+            rig.ClickCaption("回到步道");
+            Assert.False(rig.Components<Text>().Any(t => t.name == "DialogueReplyText"));
+            rig.ClickCaption("分享经历");
+            StringAssert.Contains(rig.S.CityPerson(personId).Stories[0], Reply().text);
+            rig.ClickCaption("回到步道");
+            Assert.AreEqual(walk.Id, rig.S.RunningCityActivity.Id);
+            Assert.AreEqual(before, rig.S.Clock.Now.TotalMinutes);
+        }
+
+        [Test]
+        public void SoloMealCgOpensOneSettlementBeforeReturningToTheRestaurant()
+        {
+            using var rig = new Rig(DistrictProgressionTests.Make());
+            const string restaurant = "life_restaurant";
+            var employee = rig.S.CityPersonState("life_chef");
+            employee.WorkPlaceId = restaurant;
+            employee.LocationPlaceId = restaurant;
+            employee.Route = null;
+            employee.Task = CityPersonTask.Working;
+            GameSessionTests.Teleport(rig.S, restaurant);
+            rig.S.CityActivitySettled += rig.Ui.OpenCityActivitySettlement;
+
+            Assert.IsTrue(rig.S.SelectVenueService("snack", 0, walkInCompanions: Array.Empty<string>()));
+            var meal = rig.S.RunningCityActivity;
+            Assert.NotNull(meal);
+            Assert.IsTrue((bool)rig.Call("TryOpenVenueActivityCg", meal));
+            var cg = (Window)typeof(GameUi).GetField("_venueActivityCgWindow", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(rig.Ui);
+            Assert.NotNull(cg);
+            rig.Call("CompleteVenueActivityCg", cg, meal);
+
+            Assert.IsTrue(cg.Closed);
+            Assert.AreEqual(CityActivityPhase.Completed, meal.State);
+            Assert.AreEqual(1, rig.Components<Transform>().Count(item => item.name == "Window_活动结算"));
+            StringAssert.Contains("本次支出", rig.Text);
+            StringAssert.Contains("个人状态", rig.Text);
+            Assert.IsFalse(rig.Components<Button>().Any(button => button.GetComponentInChildren<Text>()?.text == "点这份餐"));
+            rig.ClickCaption("返回餐厅");
+            Assert.IsFalse(rig.Components<Transform>().Any(item => item.name == "Window_活动结算"));
+            Assert.IsTrue(rig.Components<Button>().Any(button => button.GetComponentInChildren<Text>()?.text == "点这份餐"));
+        }
+
+        [Test]
+        public void PachinkoSettlementOpensOnceAndCanBeViewedAgain()
+        {
+            using var rig = new Rig(DistrictProgressionTests.Make());
+            GameSessionTests.Teleport(rig.S, CityLifeCatalog.PachinkoVenue);
+            Assert.IsTrue(rig.S.StartPachinkoMachine(0));
+            string activityId = rig.S.RunningCityActivity.Id;
+            rig.S.CityActivitySettled += rig.Ui.OpenCityActivitySettlement;
+            Assert.IsTrue(rig.S.FinishLeisure());
+
+            int SettlementWindows() => rig.Components<Transform>().Count(t => t.name == "Window_活动结算");
+            Assert.AreEqual(1, SettlementWindows());
+            rig.Ui.OpenCityActivitySettlement(activityId);
+            Assert.AreEqual(1, SettlementWindows());
+            rig.ClickCaption("完成");
+            Assert.AreEqual(0, SettlementWindows());
+            Assert.IsFalse(rig.Ui.AnyModalOpen);
+
+            rig.Ui.OpenCityActivitySettlement(activityId);
+            Assert.AreEqual(1, SettlementWindows());
+        }
+
+        [TestCase(CityLifeCatalog.PokerVenue, "life_leisure_staff_poker", "Leisure_leisure_poker")]
+        [TestCase(CityLifeCatalog.ClawVenue, "life_leisure_staff_claw", "Leisure_leisure_claw")]
+        [TestCase(GameSession.OldMarketVenueId, GameSession.OldMarketAttendantId, "BuyMarketHuntPass")]
+        public void LeisureReceptionShowsTheEmployeeAndAVisitorWhoIsActuallyThere(string venueId, string personId, string serviceButton)
+        {
+            using var rig = new Rig(DistrictProgressionTests.Make());
+            var venue = rig.S.City.GetPlace(venueId);
+            GameSessionTests.Teleport(rig.S, venueId);
+            var employee = rig.S.CityPersonState(personId);
+            employee.LocationPlaceId = venueId;
+            employee.Route = null;
+            employee.Task = CityPersonTask.Working;
+            var visitor = rig.S.CityPersonState("zhou");
+            visitor.LocationPlaceId = venueId;
+            visitor.Route = null;
+            visitor.Task = CityPersonTask.Waiting;
+
+            rig.Ui.OpenCityVenue(venue);
+            var roster = rig.Components<Transform>().Single(t => t.name == "People");
+            var portraits = roster.GetComponentsInChildren<Button>().Where(b => b.targetGraphic is RawImage).ToArray();
+            var portrait = GameUi.PortraitOf(personId);
+            Assert.NotNull(portrait);
+            var portraitButton = portraits.Single(b => ((RawImage)b.targetGraphic).texture == portrait);
+            var visitorPortrait = GameUi.PortraitOf(visitor.PersonId);
+            Assert.NotNull(visitorPortrait);
+            Assert.IsTrue(portraits.Any(b => ((RawImage)b.targetGraphic).texture == visitorPortrait));
+            Assert.IsTrue(rig.Button(serviceButton).transform.IsChildOf(roster.parent.Find("Goods")));
+            portraitButton.onClick.Invoke();
+            Assert.IsTrue(rig.Components<Transform>().Any(t => t.name.StartsWith("Window_" + rig.S.CityPerson(personId).Name)));
         }
 
         [TestCase("life_court")]

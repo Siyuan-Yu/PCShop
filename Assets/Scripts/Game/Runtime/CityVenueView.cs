@@ -10,11 +10,33 @@ namespace PCShopSell.Game.Runtime
         public static void Build(Transform root, Place p, float width, float depth)
         {
             string kind = (p.Business ?? "").Replace("venue_", "");
-            Color floor = kind == "court" || kind == "golf" || kind == "park" || kind == "hike" ? ArtDirection.Sage : ArtDirection.Cream;
-            bool lawn=kind=="golf"||kind=="park"||kind=="hike";
-            var ground=IndustrialMaterials.Surface(lawn?"meadow":"paving",lawn?ArtDirection.Hex("7D9859"):floor,new Vector2(width/14,depth/14));
-            var body = Prims.Box(root, "Body", new Vector3(0, .045f, depth / 2 - 1), new Vector3(width, .09f, depth + 6), ground, true);
+            if (kind is "ferris" or "amusement")
+            {
+                AmusementParkView.Build(root, p, width, depth);
+                return;
+            }
+            if (kind == "pachinko")
+            {
+                LeisureVenueEntrance.BuildPachinkoRoom(root, p, width, depth);
+                return;
+            }
+            bool walkingPark = kind == "hike" && p.Id != GameSession.FishingVenueId;
+            bool lawn = kind is "golf" or "park" or "hike";
+            Color floor = kind == "court" ? ArtDirection.Sage : ArtDirection.Cream;
+            Vector3 plotCenter = new Vector3(0, .045f, depth / 2 - 1);
+            Vector3 plotSize = new Vector3(width, .09f, depth + 6);
+            var ground = walkingPark
+                ? IndustrialMaterials.Surface("paving", ArtDirection.Hex("D3B993"), new Vector2(width / 4, (depth + 6) / 4))
+                : IndustrialMaterials.Surface(lawn ? "meadow" : "paving", lawn ? ArtDirection.Hex("7D9859") : floor,
+                    new Vector2(width / 14, depth / 14));
+            var body = Prims.Box(root, "Body", plotCenter, plotSize, ground, true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
+            if (walkingPark)
+            {
+                var trimmedLawn = IndustrialMaterials.Surface("meadow", ArtDirection.Hex("A9C986"), new Vector2(width / 14, depth / 14));
+                Prims.Box(root, "WalkingParkLawn", new Vector3(0, .09f, plotCenter.z),
+                    new Vector3(plotSize.x - 1.15f, .06f, plotSize.z - 1.15f), trimmedLawn);
+            }
             bool outside=kind=="court"||kind=="golf"||kind=="park"||kind=="hike";
             if(outside)
             {
@@ -23,10 +45,14 @@ namespace PCShopSell.Game.Runtime
                 foreach(float y in new[]{.55f,1.35f})Prims.Box(root,"OutdoorFenceRail",new Vector3(0,y,depth),new Vector3(width,.07f,.07f),Mats.Lit(ArtDirection.Sage));
             }
             else Prims.Box(root, "BackBoundary", new Vector3(0, 1.5f, depth), new Vector3(width, 3, .2f), Mats.Lit(ArtDirection.Ink));
-            Prims.Box(root, "EntranceFascia", new Vector3(0, 3.5f, -.1f), new Vector3(width - .4f, .9f, .24f), Mats.Lit(ArtDirection.Sage));
-            Prims.SignText(root, p.Name, new Vector3(0, 3.5f, -.25f), width - .8f, .65f, ArtDirection.Cream);
-            Prims.Box(root, "SignSupportLeft", new Vector3(-width / 2 + .3f, 1.8f, 0), new Vector3(.18f, 3.6f, .18f), Mats.Lit(ArtDirection.Brass));
-            Prims.Box(root, "SignSupportRight", new Vector3(width / 2 - .3f, 1.8f, 0), new Vector3(.18f, 3.6f, .18f), Mats.Lit(ArtDirection.Brass));
+            float gateWidth = walkingPark ? Mathf.Min(width - .4f, 10.8f) : width - .4f;
+            Color fascia = walkingPark ? ArtDirection.Hex("945B3C") : ArtDirection.Sage;
+            var support = Mats.Lit(walkingPark ? ArtDirection.Hex("79533A") : ArtDirection.Brass);
+            float postSize = walkingPark ? .32f : .18f;
+            Prims.Box(root, "EntranceFascia", new Vector3(0, 3.5f, -.1f), new Vector3(gateWidth, .9f, .24f), Mats.Lit(fascia));
+            Prims.SignText(root, p.Name, new Vector3(0, 3.5f, -.25f), gateWidth - .4f, .65f, ArtDirection.Cream);
+            Prims.Box(root, "SignSupportLeft", new Vector3(-gateWidth / 2 + .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
+            Prims.Box(root, "SignSupportRight", new Vector3(gateWidth / 2 - .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
             switch (kind)
             {
                 case "服装": Clothing(root, width, depth); break;
@@ -37,11 +63,14 @@ namespace PCShopSell.Game.Runtime
                 case "golf": Golf(root, width, depth); break;
                 case "expo": Expo(root, width, depth); break;
                 case "oldmarket": OldMarket(root, width, depth); break;
-                case "pachinko": case "poker": case "claw": case "billiards": case "cinema":
+                case "poker": case "claw": case "billiards": case "cinema":
                     LeisureVenueEntrance.Build(root, p, width, depth);
                     break;
-                case "hike": if (p.Id == GameSession.FishingVenueId) FishingPark(root, width, depth); else Park(root, width, depth, true); break;
-                default: Park(root, width, depth, false, p.Id == GameSession.CommunityParkId); break;
+                case "hike":
+                    if (walkingPark) WalkingPark(root, width, depth);
+                    else FishingPark(root, width, depth);
+                    break;
+                default: Park(root, width, depth, p.Id == GameSession.CommunityParkId); break;
             }
             if(kind=="restaurant"||kind=="ktv"||kind=="bar"||kind=="expo")
             {
@@ -262,9 +291,22 @@ namespace PCShopSell.Game.Runtime
         {
             root.gameObject.AddComponent<QuarterlyExpoView>().Initialize(width,depth);
         }
-        private static void Park(Transform root, float width, float depth, bool hike, bool rowing = false)
+        private static void WalkingPark(Transform root, float width, float depth)
         {
-            if(!hike && width>=30)
+            float trailLength = depth + 4;
+            var paving = IndustrialMaterials.Surface("paving", ArtDirection.Hex("DDC9A8"), new Vector2(.85f, trailLength / 4));
+            Prims.Box(root, "WalkingTrail", new Vector3(0, .126f, depth / 2 - 2),
+                new Vector3(3.4f, .10f, trailLength), paving);
+            var timber = IndustrialMaterials.Surface("wood", ArtDirection.Hex("B88B64"), new Vector2((width - 3) / 4, 1));
+            Prims.Box(root, "ViewDeck", new Vector3(0, .4f, depth - 1.8f), new Vector3(width - 3, .8f, 2.7f), timber);
+            for (int side = -1; side <= 1; side += 2)
+                CityVegetation.Build(root, new Vector3(side * (width / 2 - 1.5f), 0, depth - 2), side + 3);
+            Prims.SignText(root, "步道 · 观景平台", new Vector3(0, 2, depth - .13f), width - 1, .65f, ArtDirection.Cream);
+        }
+
+        private static void Park(Transform root, float width, float depth, bool rowing)
+        {
+            if(width>=30)
             {
                 var stone=Mats.Lit(ArtDirection.Cream);
                 Prims.Shape(PrimitiveType.Cylinder,root,"LakeShore",new Vector3(0,.12f,depth*.53f),new Vector3(width*.65f,.12f,depth*.63f),stone);
@@ -303,14 +345,13 @@ namespace PCShopSell.Game.Runtime
                     Prims.Box(pergola,"Post",new Vector3(x*1.7f,1.4f,z),new Vector3(.16f,2.8f,.16f),stone);
                 for(int i=-4;i<=4;i++)Prims.Box(pergola,"RoofSlat",new Vector3(i*.45f,2.85f,0),new Vector3(.15f,.18f,2.7f),Mats.Lit(ArtDirection.Wood));
             }
-            else Prims.Box(root, hike ? "WalkingTrail" : "River", new Vector3(0, .12f, depth / 2), new Vector3(hike ? 2.2f : 3.5f, .12f, depth), Mats.Lit(hike ? ArtDirection.Cream : new Color(.28f, .48f, .54f)));
+            else Prims.Box(root, "River", new Vector3(0, .12f, depth / 2), new Vector3(3.5f, .12f, depth), Mats.Lit(new Color(.28f, .48f, .54f)));
             for (int side = -1; side <= 1; side += 2)
             {
                 CityVegetation.Build(root,new Vector3(side*(width/2-1.5f),0,depth-2),side+3);
-                if (!hike && !rowing) Prims.Box(root, "FishingRod", new Vector3(side * 2.1f, .65f, 2), new Vector3(.06f, 1.2f, .06f), Mats.Lit(ArtDirection.Brass));
+                if (!rowing) Prims.Box(root, "FishingRod", new Vector3(side * 2.1f, .65f, 2), new Vector3(.06f, 1.2f, .06f), Mats.Lit(ArtDirection.Brass));
             }
-            if (hike) Prims.Box(root, "ViewDeck", new Vector3(0, .4f, depth - 1.8f), new Vector3(width - 3, .8f, 2.7f), Mats.Lit(ArtDirection.Clay));
-            Prims.SignText(root, hike ? "步道 · 观景平台" : rowing ? "湖边散步 · 小船码头" : "河岸 · 垂钓 · 散步", new Vector3(0, 2, depth - .13f), width - 1, .65f, ArtDirection.Cream);
+            Prims.SignText(root, rowing ? "湖边散步 · 小船码头" : "河岸 · 垂钓 · 散步", new Vector3(0, 2, depth - .13f), width - 1, .65f, ArtDirection.Cream);
         }
     }
 }

@@ -168,7 +168,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void LeaseCannotRemoveLockerOrTemporaryGoods()
+        public void ClosingLeaseDiscardsLockerAndTemporaryGoods()
         {
             using (var s = Make())
             {
@@ -178,14 +178,13 @@ namespace PCShopSell.Tests
                 Assert.True(s.SignLease("tea", true));
                 GameSessionTests.Teleport(s, "tea");
                 var shop = s.ShopAt("tea");
+                int homeCount = s.HomeBox.GiftCount(Gifts.Cig) + s.HomeTemp.GiftCount(Gifts.Cig);
                 shop.Locker.AddGift(Gifts.Cig, 1);
-                StringAssert.Contains("纸箱", s.CloseShopBlocker(shop));
-                Assert.False(s.CloseShop("tea"));
-                shop.Locker.TakeGift(Gifts.Cig);
                 shop.Temp.AddGift(Gifts.Cig, 1);
-                StringAssert.Contains("临时存放", s.CloseShopBlocker(shop));
-                Assert.False(s.CloseShop("tea"));
-                Assert.AreEqual(1, shop.Temp.GiftCount(Gifts.Cig));
+                Assert.IsNull(s.CloseShopBlocker(shop));
+                Assert.True(s.CloseShop("tea"));
+                Assert.IsNull(s.ShopAt("tea"));
+                Assert.AreEqual(homeCount, s.HomeBox.GiftCount(Gifts.Cig) + s.HomeTemp.GiftCount(Gifts.Cig));
             }
         }
     }

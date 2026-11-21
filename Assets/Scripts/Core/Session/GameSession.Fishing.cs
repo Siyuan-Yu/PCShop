@@ -55,7 +55,9 @@ namespace PCShopSell.Core.Session
             + (_fishing?.Spot == _fishing?.Bait ? .025 : 0)
             + (RunningCityActivity?.Choices.Contains("fishing-advice") == true ? .02 : 0);
         public string[] FishingCompanions => FishingActive ? RunningCityActivity.Participants.Select(p => p.PersonId)
-            .Where(person => CitySamePlace(person) && HasGreeted(person)).ToArray() : Array.Empty<string>();
+            .Where(person => CitySamePlace(person) && (HasGreeted(person)
+                || RunningCityActivity.SourceId?.StartsWith("walk-in:", StringComparison.Ordinal) == true)).ToArray()
+            : Array.Empty<string>();
 
         private void StartFishingActivity(CityActivity activity)
         {

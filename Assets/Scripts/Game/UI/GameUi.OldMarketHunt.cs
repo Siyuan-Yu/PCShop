@@ -33,12 +33,11 @@ namespace PCShopSell.Game.UI
 
         private void OpenMarketHunt()
         {
-            if ((_marketHuntWindow != null && !_marketHuntWindow.Closed) || S.CurrentPlace?.Id != GameSession.OldMarketVenueId)
+            if ((_marketHuntWindow != null && !_marketHuntWindow.Closed) || S.CurrentPlace?.Id != GameSession.OldMarketVenueId
+                || S.MarketHuntRemaining == 0 && S.PendingMarketFind == null)
                 return;
 
             int stall = OldMarketHuntCatalog.Spot(S.PendingMarketFind?.MarketSpotId)?.Stall ?? 0;
-            int tier = S.MarketHuntTier;
-            int attempts = 3;
             int selected = -1;
             float animationLeft = 0;
             _marketHuntWindow = OpenWindow("青湾旧物市场 · 淘旧物", 1920, 1080, w =>
@@ -55,13 +54,13 @@ namespace PCShopSell.Game.UI
                     image.texture = texture;
                     image.raycastTarget = false;
                 }
-                var header = BuildLeisureHeader(w, "青湾旧物市场 · 淘旧物", "返回市场", w.Close);
-                Ui.Button(header, "固定商品 / 修理", () =>
+                void ReturnToReception()
                 {
                     var place = S.CurrentPlace;
                     w.Close();
-                    if (place?.Id == GameSession.OldMarketVenueId) OpenOldMarket(place, null);
-                }, 17, Ui.ButtonBg).GetComponent<RectTransform>().Anchor(.70f, .15f, .845f, .85f);
+                    if (place?.Id == GameSession.OldMarketVenueId) OpenOldMarket(place, null, showReception: true);
+                }
+                BuildLeisureHeader(w, "青湾旧物市场 · 淘旧物", "返回柜台", ReturnToReception);
 
                 var result = S.PendingMarketFind;
                 bool browsing = result == null;
@@ -118,39 +117,7 @@ namespace PCShopSell.Game.UI
                             bounds.center.x + .055f, bounds.yMax + .054f);
                     }
 
-                    if (S.MarketHuntRemaining == 0)
-                    {
-                        var panel = Ui.FlatPanel(scene, "BuyHuntPass", Ui.PanelBg).rectTransform
-                            .Anchor(.675f, .10f, .975f, .654f);
-                        var box = Ui.Rect(panel, "PassOptions").Fill(17);
-                        Ui.VList(box, 8, 0);
-                        Line(box, "买淘货次数", 26, Ui.Accent);
-                        Line(box, "三个摊区共用次数。", 17, Ui.Dim);
-                        var tiers = Ui.Row(box, 51, 6);
-                        for (int i = 0; i < OldMarketHuntCatalog.Tiers.Length; i++)
-                        {
-                            int index = i;
-                            Ui.Size(Ui.Button(tiers, $"{OldMarketHuntCatalog.Tiers[i]}\n¥{OldMarketHuntCatalog.Prices[i]:N0}／次",
-                                () => { tier = index; w.RequestRebuild(); }, 17, Ui.SelectedButton(tier == i)), 0, 49, 1);
-                        }
-                        var sizes = Ui.Row(box, 46, 6);
-                        foreach (int count in OldMarketHuntCatalog.PassSizes)
-                        {
-                            int minutes = count * OldMarketHuntCatalog.MinutesPerSearch;
-                            string length = minutes < 60 ? $"{minutes} 分钟" : $"{minutes / 60} 小时";
-                            Ui.Size(Ui.Button(sizes, $"{length} · {count} 次", () => { attempts = count; w.RequestRebuild(); },
-                                16, Ui.SelectedButton(count == attempts)), 0, 44, 1);
-                        }
-                        string blocker = S.MarketHuntPassBlocker(tier, attempts);
-                        if (blocker != null) Para(box, blocker, 17, Ui.Warn);
-                        Money price = Money.FromYuan(OldMarketHuntCatalog.Prices[tier] * attempts);
-                        Ui.Size(Ui.Button(box, $"买 {attempts} 次 · {price}", () =>
-                        {
-                            S.BuyMarketHuntPass(tier, attempts);
-                            w.RequestRebuild();
-                        }, 20, Ui.ButtonHot, blocker == null), -1, 49);
-                    }
-                    else if (selected >= 0)
+                    if (selected >= 0)
                     {
                         var spot = OldMarketHuntCatalog.Spots[selected];
                         var panel = Ui.FlatPanel(scene, "ConfirmHunt", Ui.PanelBg).rectTransform
@@ -158,12 +125,12 @@ namespace PCShopSell.Game.UI
                         var box = Ui.Rect(panel, "Confirmation").Fill(16);
                         Ui.VList(box, 7, 0);
                         Line(box, $"淘{spot.Label}？", 25, Ui.Accent);
-                        Line(box, $"使用 1 次淘货机会 · 完成后剩 {S.MarketHuntRemaining - 1} 次", 17);
+                        Line(box, $"还剩 {S.MarketHuntRemaining} 次", 17);
                         string blocker = S.MarketHuntSearchBlocker(spot);
                         if (blocker != null) Para(box, blocker, 17, Ui.Warn);
-                        var actions = Ui.Row(box, 47, 8);
-                        Ui.Size(Ui.Button(actions, "先逛逛", () => { selected = -1; w.RequestRebuild(); }, 17), 0, 44, 1);
-                        Ui.Size(Ui.Button(actions, "开始淘", () =>
+                        var confirmationButtons = Ui.Row(box, 47, 8);
+                        Ui.Size(Ui.Button(confirmationButtons, "先逛逛", () => { selected = -1; w.RequestRebuild(); }, 17), 0, 44, 1);
+                        Ui.Size(Ui.Button(confirmationButtons, "开始淘", () =>
                         {
                             if (S.BeginMarketHunt(spot.Id)) animationLeft = HuntSearchSeconds;
                             w.RequestRebuild();
@@ -174,8 +141,8 @@ namespace PCShopSell.Game.UI
                     {
                         if (S.CurrentPlace?.Id != GameSession.OldMarketVenueId || S.IsGameOver) { w.Close(); return; }
                         if (_windows.LastOrDefault() != w || w.RebuildPending) return;
-                        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow)) MoveTo(stall - 1);
-                        else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow)) MoveTo(stall + 1);
+                        if (DirectionalInput.LeftPressed) MoveTo(stall - 1);
+                        else if (DirectionalInput.RightPressed) MoveTo(stall + 1);
                     };
                     return;
                 }
@@ -213,8 +180,13 @@ namespace PCShopSell.Game.UI
                     return;
                 }
 
+                var recipients = S.MarketHuntGiftRecipients.ToArray();
+                const int recipientsPerRow = 3;
+                int recipientRows = (recipients.Length + recipientsPerRow - 1) / recipientsPerRow;
+                float cardTop = recipients.Length > 1 ? Mathf.Min(.84f, .56f + .054f * recipientRows)
+                    : recipients.Length == 1 ? .56f : .51f;
                 var reward = Ui.FlatPanel(scene, "HuntReward", Ui.PanelBg).rectTransform
-                    .Anchor(.655f, .10f, .975f, .51f);
+                    .Anchor(.655f, .10f, .975f, cardTop);
                 var content = Ui.Rect(reward, "FoundItem").Fill(19);
                 Ui.VList(content, 8, 0);
                 Line(content, "淘到了", 18, Ui.Accent);
@@ -224,12 +196,34 @@ namespace PCShopSell.Game.UI
                 Line(content, $"二手店参考价 {Money.FromYuan(GameSession.UsedValue(result))}", 25, Ui.Good);
                 bool canCarry = GameSession.UsedWeight(result) <= S.FreeKg + 1e-9 && !S.IsGameOver;
                 if (!canCarry) Line(content, "背包空间不足，腾出负重后再领取。", 17, Ui.Warn);
-                Ui.Size(Ui.Button(content, "收进背包", () =>
+
+                void ResolveFind(Func<bool> resolve)
                 {
-                    if (!S.ClaimMarketFind()) return;
+                    var outing = S.RunningCityActivity;
+                    if (!resolve()) return;
                     selected = -1;
-                    w.RequestRebuild();
-                }, 20, Ui.ButtonHot, canCarry), -1, 48);
+                    if (outing != null && !outing.Active) w.Close();
+                    else if (S.MarketHuntRemaining > 0) w.RequestRebuild();
+                    else ReturnToReception();
+                }
+
+                void GiftButton(RectTransform row, string personId)
+                {
+                    string name = S.CityPerson(personId)?.Name ?? "同行者";
+                    Ui.Size(Ui.Button(row, "送给" + name, () => ResolveFind(() => S.GiftMarketFindToCompanion(personId)),
+                        18, Ui.ButtonHot), 0, 46, 1).name = "MarketHuntGift_" + personId;
+                }
+
+                if (recipients.Length > 1)
+                    for (int i = 0; i < recipients.Length; i += recipientsPerRow)
+                    {
+                        var giftRow = Ui.Row(content, 48, 8);
+                        foreach (string id in recipients.Skip(i).Take(recipientsPerRow)) GiftButton(giftRow, id);
+                    }
+                var actions = Ui.Row(content, 48, 8);
+                if (recipients.Length == 1) GiftButton(actions, recipients[0]);
+                Ui.Size(Ui.Button(actions, "收进背包", () => ResolveFind(S.ClaimMarketFind),
+                    18, recipients.Length > 0 ? Ui.ButtonBg : Ui.ButtonHot, canCarry), 0, 46, 1);
             }, onClosed: () => _marketHuntWindow = null, scrollContent: false, showTitleBar: false, fullScreen: true);
         }
 

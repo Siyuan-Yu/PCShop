@@ -162,12 +162,14 @@ namespace PCShopSell.Tests
                     DistrictProgressionTests.AwaitInvitation(s);ui.CloseAllWindows();ui.OpenQuests();Find("DistrictStoryMessage").onClick.Invoke();
                     ui.DebugRefreshQuests();StringAssert.Contains(s.CurrentDistrictNode.Title,ui.QuestTrackerText);
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name=="DistrictGoToMeeting"));
-                    StringAssert.Contains("回复李秀兰",Find("DistrictChoice_accept").GetComponentInChildren<Text>().text);
                     var beforeReply=s.PlayerPosition;
+                    Find("DialogueContinue").onClick.Invoke();
+                    StringAssert.Contains("回复李秀兰",Find("DistrictChoice_accept").GetComponentInChildren<Text>().text);
                     Find("DistrictChoice_later").onClick.Invoke();
                     Assert.AreEqual("community.intro",s.CurrentDistrictNode.Id);
                     Assert.IsNull(s.DistrictStoryState.MeetingNodeId);
                     ui.OpenDistrictStory();
+                    Find("DialogueContinue").onClick.Invoke();
                     Find("DistrictChoice_accept").onClick.Invoke();
                     Assert.AreEqual("community.meeting",s.CurrentDistrictNode.Id);
                     Assert.AreEqual(beforeReply,s.PlayerPosition,"Replying arranges the meeting; it does not move the player");
@@ -206,6 +208,10 @@ namespace PCShopSell.Tests
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>(b.GetComponentInChildren<Text>()?.text??"").Contains("接受寻物委托")));
                     ui.CloseAllWindows();ui.OpenPersonDialogue(CityLifeCatalog.TangWei);
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>(b.GetComponentInChildren<Text>()?.text??"").StartsWith("主线 · ")));
+                    ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>b.GetComponentInChildren<Text>()?.text=="听听唐蔚找这张图做什么").onClick.Invoke();
+                    Find("DialogueContinue").onClick.Invoke();
+                    Find("DialogueContinue").onClick.Invoke();
+                    Assert.AreEqual("community.meeting",s.CurrentDistrictNode.Id,"Reading the explanation must not accept the commission");
                     var accept=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>(b.GetComponentInChildren<Text>()?.text??"")=="接受寻找三页商铺图的委托");
                     Assert.True(accept.interactable);accept.onClick.Invoke();
                     Assert.AreEqual("community.clue",s.CurrentDistrictNode.Id);

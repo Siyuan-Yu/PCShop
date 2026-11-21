@@ -30,11 +30,17 @@ namespace PCShopSell.Game
                 return World.Places.TryGetValue(place.Id,out var visual)?visual:null;
             }
         }
-        private Vector3 CityCloseFocus(PlaceVisual visual)
+        private Vector3 CityCloseFocus(PlaceVisual visual, float overview)
         {
             if(visual.Place.Id==GameSession.LifeServicePlace||visual.Place.Id==GameSession.LifeFairPlace)
                 return visual.Root.transform.TransformPoint(new Vector3(0,.8f,-2));
             float depth=visual.Place.ExplicitEntrance?Mathf.Max(6,(float)visual.Place.Depth):8;
+            if (visual.Place.Id == CityLifeCatalog.PachinkoVenue)
+            {
+                var center = visual.Root.transform.TransformPoint(new Vector3(0, .8f, depth * .5f));
+                return _pachinkoRoom == null ? center
+                    : Vector3.Lerp(_pachinkoRoom.OwnerWorld + Vector3.up * .8f, center, overview);
+            }
             // The forecourt holds participants, while tables, rails and counters remain in frame.
             if(!visual.Place.ExplicitEntrance&&Session.IsCityActivityVenue(visual.Place))return StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up*.8f;
             if(!visual.Place.ExplicitEntrance)return new Vector3(visual.Entrance.x,.8f,StreetWorldBuilder.FrontZAt(visual.Entrance.x)+depth*.24f);

@@ -8,7 +8,7 @@ namespace PCShopSell.Game.Runtime
     // Only fixed presentation is baked. Session, guests and player furniture are never stored here.
     public sealed class BakedCityMap : MonoBehaviour
     {
-        public const int CurrentVersion=1;
+        public const int CurrentVersion=3;
         public const string ResourcePath="BakedCity/Map";
         public int Version=CurrentVersion;
         public string LayoutHash,SourceHash;

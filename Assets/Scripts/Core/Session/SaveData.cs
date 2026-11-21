@@ -377,6 +377,7 @@ namespace PCShopSell.Core.Session
         public SaveBatch[] packed;
         public SaveBatch[] packLunch;
         public SaveCourier[] couriers;
+        public SaveResidentialFreight[] residentialFreight;
         public FurnitureBuybackOrder[] furnitureBuybacks;
         public long nextFurnitureBuybackId;
         public bool sendByCourier;
@@ -465,12 +466,20 @@ namespace PCShopSell.Core.Session
     }
 
     [Serializable]
+    public sealed class SaveResidentialFreight
+    {
+        public string residenceId;
+        public SaveStorage storage;
+    }
+
+    [Serializable]
     public sealed class SaveCourier
     {
         public string fromId;
         public string fromName;
         public bool toShop;
         public string shopId;
+        public string residenceId;
         public long dueMinute;
         public int[] kinds;
         public string[] ids;

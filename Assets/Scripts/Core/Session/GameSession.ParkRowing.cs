@@ -25,7 +25,10 @@ namespace PCShopSell.Core.Session
         private ParkRowingState _parkRowing;
 
         public static bool IsParkRowing(CityActivity activity) => activity?.DefinitionId == ParkRowingActivityId;
-        public static bool IsParkWalk(CityActivityDefinition service) => service?.Id is "hike" or "park_walk";
+        private static bool IsParkWalkService(string id) => id is "hike" or "park_walk";
+        public static bool IsParkWalk(CityActivityDefinition service) => IsParkWalkService(service?.Id);
+        public static bool IsParkWalkActivity(CityActivity activity) => activity != null
+            && IsParkWalkService(string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId);
         public bool ParkRowingActive => _parkRowing != null && RunningCityActivity?.Id == _parkRowing.ActivityId
             && CurrentPlace?.Id == CommunityParkId && !IsGameOver && !_sleeping && !IsWorking;
         public ParkRowingState ParkRowing => ParkRowingActive ? _parkRowing.Copy() : null;

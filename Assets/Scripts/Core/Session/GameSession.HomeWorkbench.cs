@@ -7,6 +7,7 @@ using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
@@ -46,6 +47,7 @@ namespace PCShopSell.Core.Session
         public bool OwnsHomeWorkbench => HomeLayout.Any(item => item.Id == HomeWorkbenchId) || FurnitureInStock(HomeWorkbenchId) > 0
             || HomeBox.FurnitureCount(HomeWorkbenchId) > 0 || HomeTemp.FurnitureCount(HomeWorkbenchId) > 0
             || Backpack.FurnitureCount(HomeWorkbenchId) > 0 || _mallStash.Any(item => item.Id == HomeWorkbenchId)
+            || _residenceFreight.Values.Any(storage => storage.Box.FurnitureCount(HomeWorkbenchId) > 0)
             || _shops.Any(shop => shop.Locker.FurnitureCount(HomeWorkbenchId) > 0 || shop.Temp.FurnitureCount(HomeWorkbenchId) > 0
                 || shop.Layout.Any(item => item.Id == HomeWorkbenchId));
         public bool HomeWorkbenchInTransit => _parcels.Any(item => item.Kind == ParcelKind.Furniture && item.Id == HomeWorkbenchId)
@@ -55,12 +57,13 @@ namespace PCShopSell.Core.Session
         public bool CanUseHomeWorkbench => !IsGameOver && CurrentPlace == Home && (HomeWorkbenchInstalled || DebugHomeWorkbenchEnabled)
             && !IsWorking && !CityActivityExclusive && Trip == null;
 
-        private bool BuyHomeWorkbench()
+        private bool BuyHomeWorkbench(Place residence)
         {
             if (HomeWorkbenchPurchaseBlocker is string reason) return Fail(reason);
+            if (CartResidenceBlocker(residence) is string deliveryBlocker) return Fail(deliveryBlocker + "。");
             var furniture = FurnitureCatalog.Get(HomeWorkbenchId);
             return Ship(null, "家具", furniture.Price, furniture.Name,
-                new CourierItem { Kind = CourierItemKind.Furniture, Id = HomeWorkbenchId, Count = 1 }, "买了");
+                new CourierItem { Kind = CourierItemKind.Furniture, Id = HomeWorkbenchId, Count = 1 }, "买了", residence);
         }
         public IReadOnlyList<WorkbenchAlert> WorkbenchAlerts=>_workbenchAlerts.Select(p=>new WorkbenchAlert{Key=p.Key,Text=p.Value}).ToArray();
         public int WorkbenchMealSpent=>_workbenchMealDay==Clock.Today.TotalDays?_workbenchMealSpent:0;

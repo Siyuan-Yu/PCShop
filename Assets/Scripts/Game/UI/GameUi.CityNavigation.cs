@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 using PCShopSell.Core.World;
 using UnityEngine.UI;
@@ -23,6 +24,7 @@ namespace PCShopSell.Game.UI
         private bool _shortcutSelectionExplained;
         private const int OwnedShopShortcut = 0;
         private const int SleepShortcut = 4;
+        private const float ShortcutCaptionPadding = 8;
         // 0: owned shop, 1: wholesale sources, 2: agencies, 3: custom destination, 4: residence.
         private Place[] ShortcutPlaces(int kind)
         {
@@ -78,7 +80,7 @@ namespace PCShopSell.Game.UI
             if(!_shortcutSelectionExplained)
             {
                 _shortcutSelectionExplained=true;
-                Toast("已选目的地："+ShortcutPlaceName(kind,place)+"。点击“前往”出发。");
+                Toast("已选目的地："+ShortcutPlaceName(kind,place)+"。点击底栏主按钮出发。");
             }
         }
         private void TravelShortcut(int kind)
@@ -92,18 +94,22 @@ namespace PCShopSell.Game.UI
         private void BuildShortcutButton(Transform parent,string label,int kind,float width)
         {
             var group=Ui.Row(parent,42,1);group.name="Shortcut_"+kind;Ui.Size(group,width+27,42);
-            var main=Ui.Button(group,label,()=>TravelShortcut(kind),17);
+            var main=Ui.Button(group,label,()=>TravelShortcut(kind),16);
             main.name="ShortcutGo_"+kind;Ui.Size(main,width,42);
             var caption=main.GetComponentInChildren<Text>();
-            caption.horizontalOverflow=HorizontalWrapMode.Wrap;
-            caption.resizeTextForBestFit=true;caption.resizeTextMinSize=13;caption.resizeTextMaxSize=17;
+            caption.horizontalOverflow = HorizontalWrapMode.Overflow;
+            caption.verticalOverflow = VerticalWrapMode.Truncate;
+            caption.supportRichText = false;
+            caption.rectTransform.Anchor(0, 0, 1, 1, ShortcutCaptionPadding, 3, ShortcutCaptionPadding, 3);
+            main.gameObject.AddComponent<RectMask2D>().padding = new Vector4(ShortcutCaptionPadding, 0, ShortcutCaptionPadding, 0);
             main.Tip(() =>
             {
                 if (kind == OwnedShopShortcut && S.MyShopCount == 0 && S.ManagedVentures.Count == 0) return "尚无经营中的商铺。";
                 var place = SelectedShortcut(kind);
-                if (place != null && ShortcutBlocker(kind, place) is string blocker) return blocker;
                 string address = place == null ? "暂无" : ShortcutPlaceAddress(kind, place);
-                return "当前目的地：" + address + (kind == SleepShortcut
+                string tip = "当前目的地：" + address;
+                if (place != null && ShortcutBlocker(kind, place) is string blocker) return tip + "\n" + blocker;
+                return tip + (kind == SleepShortcut
                     ? "\n点主按钮前往并走到床边，右侧小三角可切换住宅。"
                     : "\n点主按钮直接前往；右侧小三角可切换目的地。");
             });
@@ -160,6 +166,12 @@ namespace PCShopSell.Game.UI
             return name.Contains(street) ? name : name + "\n" + street;
         }
 
+        private static string NameWithoutStreetPrefix(string name, string street)
+        {
+            string prefix = street + " · ";
+            return name.StartsWith(prefix, System.StringComparison.Ordinal) ? name.Substring(prefix.Length) : name;
+        }
+
         private string[] ShortcutOptionLabels(int kind, Place[] places)
         {
             if (kind is SleepShortcut or OwnedShopShortcut)
@@ -173,13 +185,12 @@ namespace PCShopSell.Game.UI
                         return string.IsNullOrEmpty(district) ? address : district + " · " + address;
                     }
                     string name = ShortcutPlaceName(kind, place), street = S.City.StreetName(place.StreetId);
-                    string Shorten(string value) => value.StartsWith(street + " · ", System.StringComparison.Ordinal)
-                        ? value.Substring(street.Length + 3) : value;
                     if (kind == OwnedShopShortcut)
-                        return name == place.Name ? Shorten(name) : name + " · " + Shorten(place.Name);
+                        return name == place.Name ? NameWithoutStreetPrefix(name, street)
+                            : name + " · " + NameWithoutStreetPrefix(place.Name, street);
                     string status = place == S.Home ? "主住所" : S.DistrictAccessBlocker(place) != null ? "片区未开放"
                         : !S.CanSleepAt(place) ? "有租户" : S.HasResidentialLease(place) ? "已租" : "已购";
-                    return Shorten(name) + " · " + status;
+                    return NameWithoutStreetPrefix(name, street) + " · " + status;
                 }).ToArray();
             var names = places.Select(place => ShortcutPlaceName(kind, place)).ToArray();
             var duplicates = new HashSet<string>(names.GroupBy(name => name)
@@ -195,6 +206,40 @@ namespace PCShopSell.Game.UI
 
         private static int ShortcutOptionIndex(Place[] places, Place destination) =>
             Mathf.Max(0, System.Array.IndexOf(places, destination));
+
+        private static void FitShortcutCaption(ShortcutMenu menu, string name, bool hasDestination)
+        {
+            var label = menu.Caption;
+            var settings = label.GetGenerationSettings(Vector2.zero);
+            float Measure(string value) => label.cachedTextGeneratorForLayout.GetPreferredWidth(value, settings) / label.pixelsPerUnit;
+            float maxWidth = menu.Kind == SleepShortcut ? 160 : 172;
+            const float gutter = ShortcutCaptionPadding * 2 + 4;
+            float maxTextWidth = maxWidth - gutter;
+            name = name.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ');
+            string caption = hasDestination ? "前往 " + name : name;
+            float preferred = Measure(caption);
+            if (preferred > maxTextWidth && hasDestination)
+            {
+                caption = name;
+                preferred = Measure(caption);
+            }
+            if (preferred > maxTextWidth)
+            {
+                caption = "…";
+                var characterStarts = StringInfo.ParseCombiningCharacters(name);
+                for (int i = characterStarts.Length - 1; i > 0; i--)
+                {
+                    string candidate = name.Substring(0, characterStarts[i]).TrimEnd() + "…";
+                    if (Measure(candidate) > maxTextWidth) continue;
+                    caption = candidate;
+                    break;
+                }
+            }
+            label.text = caption;
+            float width = Mathf.Clamp(Mathf.Ceil(preferred) + gutter, Mathf.Max(100, menu.MinimumWidth), maxWidth);
+            Ui.Size(menu.Main, width, 42);
+            Ui.Size(menu.Group, width + 27, 42);
+        }
 
         private void RefreshShortcutMenus()
         {
@@ -213,20 +258,18 @@ namespace PCShopSell.Game.UI
                         Ui.SetButtonFill(menu.Main, canTravel ? Ui.ButtonHot : Ui.ButtonBg);
                 }
                 string selected=destination?.Id;
-                string caption=destination==null?(menu.Kind==3?"选择目的地":ShortcutPlaceName(menu.Kind,null)):"前往 "+ShortcutPlaceName(menu.Kind,destination);
+                string name = destination == null && menu.Kind == 3 ? "选择目的地" : ShortcutPlaceName(menu.Kind, destination);
+                if (destination?.Kind == PlaceKind.Home)
+                    name = NameWithoutStreetPrefix(name, S.City.StreetName(destination.StreetId));
                 var labels = menu.Dropdown == null ? System.Array.Empty<string>() : ShortcutOptionLabels(menu.Kind, places);
-                string stamp=string.Join("|",places.Select(p=>p?.Id))+"/"+string.Join("|",labels)+"/"+selected+"/"+caption;
+                string stamp=string.Join("|",places.Select(p=>p?.Id))+"/"+string.Join("|",labels)+"/"+selected+"/"+name+"/"+menu.Caption.fontStyle;
                 if (menu.Stamp == stamp)
                 {
                     menu.Dropdown?.RefreshOptionAvailability();
                     continue;
                 }
                 menu.Stamp=stamp;menu.Places=places;
-                menu.Caption.text=caption;
-                // Keep room for the other shortcuts when all destinations have long names.
-                float maxWidth = menu.Kind == SleepShortcut ? 124 : 172;
-                float width=Mathf.Clamp(menu.Caption.preferredWidth+20,Mathf.Max(100,menu.MinimumWidth),maxWidth);
-                Ui.Size(menu.Main,width,42);Ui.Size(menu.Group,width+27,42);
+                FitShortcutCaption(menu, name, destination != null);
                 if(menu.Dropdown==null)continue;
                 menu.Dropdown.ClearOptions();
                 menu.Dropdown.AddOptions(places.Length==0?new List<string>{"暂无目的地"}:labels.ToList());
@@ -242,7 +285,8 @@ namespace PCShopSell.Game.UI
                 var people=S.PeopleInPlace(place.Id).ToArray();
                 if(people.Length==0)Para(w.Content,"此刻没有可交谈的人在这里。人员按实际日程和活动到场。",20);
                 foreach(var p in people){string id=p.PersonId;var def=S.CityPerson(id);if(def==null)continue;
-                    OrgNode(w.Content, id, def.Name, S.CityPersonRole(id), p.WorkPlaceId == place.Id, false, () => OpenCityPerson(id));}
+                    OrgNode(w.Content, id, def.Name, S.CityPersonRole(id), p.WorkPlaceId == place.Id, false, () => OpenCityPerson(id),
+                        tooltip: CanTalkToScenePerson(id) ? "当面交谈" : "查看人物资料");}
             });
         }
     }

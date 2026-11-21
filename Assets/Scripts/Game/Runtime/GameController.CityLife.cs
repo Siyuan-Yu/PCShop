@@ -12,6 +12,87 @@ namespace PCShopSell.Game
     public sealed partial class GameController
     {
         private string _cityExitIntent;
+        private PachinkoRoomView _pachinkoRoom;
+        public bool InPachinkoRoom => Session?.CurrentPlace?.Id == CityLifeCatalog.PachinkoVenue;
+
+        private PachinkoRoomView SyncPachinkoRoom()
+        {
+            if (!InPachinkoRoom)
+            {
+                ClearPachinkoRoom();
+                return null;
+            }
+            if (_pachinkoRoom == null && World != null && World.Places.TryGetValue(CityLifeCatalog.PachinkoVenue, out var venue))
+                _pachinkoRoom = new PachinkoRoomView(venue, Session.LiveLeisure?.Pachinko?.Machine);
+            return _pachinkoRoom;
+        }
+
+        private void ClearPachinkoRoom()
+        {
+            _pachinkoRoom?.Dispose();
+            _pachinkoRoom = null;
+        }
+
+        private bool TryPachinkoCounterWorker(PachinkoRoomView room, out CityPersonState worker, out Vector3 world)
+        {
+            worker = null;
+            world = default;
+            if (_crowd == null) return false;
+            const float talkReach = 2.1f;
+            float best = room.NearCounter ? float.PositiveInfinity : talkReach * talkReach;
+            foreach (var person in Session.PeopleInPlace(CityLifeCatalog.PachinkoVenue))
+            {
+                if (!_crowd.TryLeisureReception(Session, person, out var position)) continue;
+                var offset = room.OwnerWorld - position;
+                float distance = offset.x * offset.x + offset.z * offset.z;
+                if (distance >= best) continue;
+                best = distance;
+                worker = person;
+                world = position + Vector3.up * 1.8f;
+            }
+            return worker != null;
+        }
+
+        private void InteractPachinkoRoom()
+        {
+            var room = SyncPachinkoRoom();
+            if (room == null) return;
+            if (room.TryNearbyMachine(out int machine, out _)) Ui.OpenPachinkoMachine(machine);
+            else if (room.NearDoor) LeaveCurrentPlace();
+            else if (room.NearCounter && Session.IsOwnedVenue(Session.CurrentPlace)) Ui.OpenVenueManagement(Session.CurrentPlace);
+            else if (TryPachinkoCounterWorker(room, out var worker, out _)) Ui.OpenCityPerson(worker.PersonId);
+            else if (room.NearCounter) Ui.Toast("柜台暂时没有店员。");
+            else Ui.Toast("走近店员、机台或门口，再按 F。");
+        }
+
+        private bool TryGetPachinkoInteract(out Vector3 world, out string label)
+        {
+            var room = SyncPachinkoRoom();
+            world = default;
+            label = null;
+            if (room == null) return false;
+            if (room.TryNearbyMachine(out int machine, out world))
+            {
+                label = Ui.PachinkoCabinetHint(machine);
+                return true;
+            }
+            if (room.NearDoor)
+            {
+                world = room.DoorWorld;
+                label = "返回街上";
+                return true;
+            }
+            if (room.NearCounter && Session.IsOwnedVenue(Session.CurrentPlace))
+            {
+                world = room.CounterWorld;
+                label = "场馆管理";
+                return true;
+            }
+            if (!TryPachinkoCounterWorker(room, out var worker, out world)) return false;
+            label = "和" + Session.CityPerson(worker.PersonId).Name + "交谈";
+            return true;
+        }
+
         private SaveData _cityRealProgress;
         private int _cityRealSaveSlot;
         private string _cityRealCampaignId;
@@ -153,11 +234,12 @@ namespace PCShopSell.Game
             Session.CancelPlayerRestaurantWork();
             _pendingEnter=null;CancelHomeBedTrip();Ui.CloseDock();
             if(Session.CurrentPlace?.Id==intent.TargetPlaceId){Session.ActivateCityTravel(intent.Id);return;}
-            if(InRoom)
+            if(InRoom || InPachinkoRoom)
             {
                 Session.Time.SetPaused(false);
                 _cityExitIntent=intent.Id;
                 Interior?.CancelCityDoorWalk();ActiveResidence?.CancelBedWalk();
+                _pachinkoRoom?.CancelDoorWalk();
                 Ui.Toast("先走到门口，再沿城市路网前往；WASD可接管。 ");
             }
             else Session.ActivateCityTravel(intent.Id);
@@ -166,10 +248,12 @@ namespace PCShopSell.Game
         {
             if(_cityExitIntent==null)return;
             if(Session.CityIntent==null||Session.CityIntent.Id!=_cityExitIntent||Session.IsGameOver||Session.IsWorking)
-            {_cityExitIntent=null;Interior?.CancelCityDoorWalk();ActiveResidence?.CancelBedWalk();return;}
+            {_cityExitIntent=null;Interior?.CancelCityDoorWalk();ActiveResidence?.CancelBedWalk();_pachinkoRoom?.CancelDoorWalk();return;}
             if(!Session.Time.IsRunning||Ui.AnyModalOpen)return;
             float walkDt=IndoorWalkDelta(dt);
-            int result=InInterior?Interior.WalkToDoor(walkDt):InHome||InVisit?ActiveResidence.WalkToDoor(walkDt):1;
+            int result = InInterior ? Interior.WalkToDoor(walkDt)
+                : InHome || InVisit ? ActiveResidence.WalkToDoor(walkDt)
+                : (SyncPachinkoRoom()?.WalkToDoor(walkDt) ?? 1);
             if(result==0)return;
             string intent=_cityExitIntent;_cityExitIntent=null;
             if(result<0){Session.CancelCityTravel();Ui.Toast("出门路线被家具挡住了，请清出通道后重新前往。");return;}

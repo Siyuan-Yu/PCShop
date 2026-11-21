@@ -14,9 +14,9 @@ namespace PCShopSell.Game.UI
         private bool _agencyMyProperties;
         private bool _agencyMyResidences;
         private string _agencyMyPropertyId;
-        private static readonly Color PropertyOwnedColor = new Color32(232, 190, 98, 255);
-        private static readonly Color PropertyRentedColor = new Color32(103, 181, 216, 255);
-        private static readonly Color AgencyLocationColor = new Color32(67, 88, 70, 255);
+        private static readonly Color PropertyOwnedColor = new Color32(116, 65, 158, 255);
+        private static readonly Color PropertyRentedColor = new Color32(44, 91, 167, 255);
+        private static readonly Color AgencyLocationColor = new Color32(52, 56, 70, 255);
 
         private bool OwnsPropertyAt(Place place) =>
             place.Kind == PlaceKind.Home ? S.OwnsResidence(place) : S.PropertyAt(place.Id) != null || S.ShopAt(place)?.OwnsProperty == true;
@@ -133,7 +133,7 @@ namespace PCShopSell.Game.UI
                 string label = interest >= .42 ? "较高" : interest >= .22 ? "一般" : interest >= .08 ? "较低" : "很低";
                 preview.text = $"周租 {draft} · 租客意愿 {label}";
                 preview.color = interest >= .42 ? Ui.Good : interest < .22 ? Ui.Warn : Ui.TextColor;
-                fee.text = $"成交中介费 {S.AgentFeeFor(draft)}";
+                fee.text = $"成交中介费 {S.AgentFeeFor(draft, place)}";
                 confirm.interactable = !listed || draft != initial;
             }
             void BuildWithdraw(Transform container) => Ui.Size(Ui.Button(container, "撤牌", () =>
@@ -142,12 +142,13 @@ namespace PCShopSell.Game.UI
             }, 16), 72, 36);
         }
 
-        private void BuildResidencePropertyActions(Transform parent, Place place, Window owner, bool includeRental)
+        private void BuildResidencePropertyActions(Transform parent, Place place, Window owner, bool showTravel)
         {
             bool canReach = S.CanSleepAt(place) && ShortcutTravelBlocker(place) == null;
             var row = Ui.Row(parent, 37, 6);
-            Ui.Size(Ui.Button(row, "前往这套住宅", () => { CloseAllWindows(); _ctrl.GoHomeToSleep(place); },
-                16, Ui.ButtonHot, canReach), 0, 37, 1);
+            if (showTravel)
+                Ui.Size(Ui.Button(row, "前往这套住宅", () => { CloseAllWindows(); _ctrl.GoHomeToSleep(place); },
+                    16, Ui.ButtonHot, canReach), 0, 37, 1);
             bool preferred = SelectedShortcut(SleepShortcut) == place;
             Ui.Size(Ui.Button(row, preferred ? "默认回家" : "设为默认回家", () =>
             {
@@ -155,7 +156,6 @@ namespace PCShopSell.Game.UI
                 RefreshShortcutMenus();
                 owner.Rebuild();
             }, 16, interactable: canReach && !preferred), 0, 37, 1);
-            if (includeRental && S.PropertyAt(place.Id) != null) BuildPropertyRentalControls(parent, place, owner);
         }
 
         private void OpenOwnedPropertyRental(Place place, Window parent)

@@ -105,7 +105,7 @@ namespace PCShopSell.Game.Runtime
             if (_city.IsLakeCity && IsLakeAccessNode(p.NodeId)) door.y = LakeAccessHeight(_city);
             var root=new GameObject("Place_"+p.Id).transform;root.SetParent(parent,false);root.position=door;
             root.rotation=Quaternion.Euler(0,(float)p.Heading,0);
-            var vis=new PlaceVisual{Place=p,Entrance=door,Root=root.gameObject};Places[p.Id]=vis;_cur=vis;
+            var vis=new PlaceVisual{Place=p,Entrance=door,Root=root.gameObject,ResidentialBlock=block};Places[p.Id]=vis;_cur=vis;
             float w=(float)p.Width,d=(float)p.Depth;
             if(p.Kind==PlaceKind.Garage)
             {

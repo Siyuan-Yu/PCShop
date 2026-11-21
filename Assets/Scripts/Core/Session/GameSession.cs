@@ -23,7 +23,7 @@ namespace PCShopSell.Core.Session
         public const int WakeUpMinute = 8 * 60;
         public const int BedtimeReminderMinute = 23 * 60;
         public const int FaintMinute = 4 * 60;
-        public const int WholesalerOpenMinute = 9 * 60;
+        public const int WholesalerOpenMinute = 6 * 60;
         public const int WholesalerCloseMinute = 20 * 60;
         public const int DealerOpenMinute = 9 * 60;
         public const int DealerCloseMinute = 19 * 60;
@@ -260,6 +260,7 @@ namespace PCShopSell.Core.Session
             SetFocus(ShopAt(place));
             CurrentPlace = place;
             CourierDest = null;
+            _truckDestinationId = null;
             CloseCourierRuns();
             ClearCarts();
             if (InPlayerShop)
@@ -290,6 +291,7 @@ namespace PCShopSell.Core.Session
             if (InPlayerShop) PlayerShop.PlayerPresent = false;
             CancelPlayerRestaurantWork();
             Place left = CurrentPlace;
+            _gardenPartyActivityId = null;
             CurrentPlace = null;
             MapPoint stand = StandOf(left);
             if (left.NodeId == PlayerNodeId && Dist(stand, City.ViewPosition(left.NodeId)) > 1e-3) _free = stand;
@@ -336,6 +338,7 @@ namespace PCShopSell.Core.Session
             if (WorkStaffEntry(p)) return null;
             if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || IsPlayerPropertyOccupied(p.Id)) return null;
             if (p.Kind == PlaceKind.Shop && IsVacant(p)) return null;
+            if (NpcVenueStaffingBlocker(p) is string staffing) return staffing;
             string hours = OpeningHoursText(p);
             if (hours == null || IsPlaceOpen(p)) return null;
             if (SupplierClosesOnWeekend(p) && Clock.Today.IsWeekend)
@@ -373,6 +376,7 @@ namespace PCShopSell.Core.Session
             if (RacingGarageEntryBlocker(p.Id) != null) return false;
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
+            if (UsesNpcVenueRoster(p)) return CityVenueFits(p, Clock.Now.TotalMinutes, 1) && VenueHasNpcOnDuty(p);
             if (SupplierClosesOnWeekend(p)) return IsWholesalerOpen;
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return CityWithinHours(Clock.MinuteOfDay,p.OpenMinute,p.CloseMinute);
             var venture = VentureAt(p.Id);
@@ -421,6 +425,8 @@ namespace PCShopSell.Core.Session
             }
             foreach (StockLine l in Cargo.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
             foreach (var l in HomeBoxParts.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
+            foreach (var storage in _residenceFreight.Values)
+                foreach (var l in storage.Parts.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
             foreach (var o in Online.Pending) foreach (var l in o.Lines) sum += Market.PriceOf(PartCatalog.Get(l.PartId)).Yuan * l.Count;
             foreach (var r in Couriers) foreach (var l in r.Items)
                 if (l.Kind == CourierItemKind.Part) sum += Market.PriceOf(PartCatalog.Get(l.Id)).Yuan * l.Count;

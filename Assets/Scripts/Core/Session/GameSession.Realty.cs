@@ -54,6 +54,17 @@ namespace PCShopSell.Core.Session
                 : AgencyStreetOf(agency)==AgencyStreetOf(unit));
         public Place AgencyFor(Place unit) => City.OfKind(PlaceKind.Agency).FirstOrDefault(a => AgencyServes(a, unit));
 
+        public CityPersonDefinition AgencyAgent(Place agency) => agency?.Id switch
+        {
+            "agency" => CityPerson(Rosters.AgentChen.Id),
+            "agency_s_services" => CityPerson(CityLifeCatalog.TangWei),
+            "agency_s_night" => CityPerson(CityLifeCatalog.LiangJing),
+            _ => null
+        };
+
+        public int AgencyRapport(Place agency) => AgencyAgent(agency) is CityPersonDefinition agent ? StaffRapport(agent.Id) : 0;
+        public Money AgentFeeFor(Money rent, Place property) => RealEstate.AgentFeeAfter(rent, AgencyRapport(AgencyFor(property)));
+
         public bool InAgency => CurrentPlace != null && CurrentPlace.Kind == PlaceKind.Agency;
 
         public bool IsMyShop(Place p) => ShopAt(p) != null;
@@ -72,7 +83,7 @@ namespace PCShopSell.Core.Session
         /// </summary>
         public Money LeaseCost(ShopListing l, bool newShop = false)
         {
-            Money cost = l.Rent + RealEstate.Deposit(l.Rent) + AgentFeeFor(l.Rent);
+            Money cost = l.Rent + RealEstate.Deposit(l.Rent) + AgentFeeFor(l.Rent, ListingPlace(l));
             if (Lease != null && !newShop && !IsAdvance(l)) cost = cost + RealEstate.MoveFee - Lease.Deposit;
             return cost;
         }
@@ -236,9 +247,12 @@ namespace PCShopSell.Core.Session
             Ledger.ForceDebit(today, "房租", rent, $"{street} · 商铺首周租金",
                 LedgerAttribution.ForShop(place.Id, transactionKind: "租金"));
             Ledger.ForceDebit(today, "押金", RealEstate.Deposit(rent), $"{street} · 商铺押金");
-            Money fee = AgentFeeFor(rent);
-            double off = AgentDiscount;
-            Ledger.ForceDebit(today, "中介费", fee, off > 0 ? $"安居房产中介（熟人价 {off * 100:0.#}% 折扣）" : "安居房产中介",
+            var agency = AgencyFor(place);
+            string agencyName = agency?.Name ?? "房产中介";
+            int rapport = AgencyRapport(agency);
+            double off = RealEstate.AgentDiscount(rapport);
+            Money fee = RealEstate.AgentFeeAfter(rent, rapport);
+            Ledger.ForceDebit(today, "中介费", fee, off > 0 ? $"{agencyName}（减免 {off * 100:0.#}%）" : agencyName,
                 LedgerAttribution.ForShop(place.Id, transactionKind: "中介费"));
         }
 
@@ -433,7 +447,7 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        private static string CommercialPremisesBlocker(Place place) => IsCommercialPremises(place) ? null
+        public static string CommercialPremisesBlocker(Place place) => IsCommercialPremises(place) ? null
             : place?.Id == "life_expo" ? "会展中心请从品牌展会页预订摊位"
             : "该地点保留原有用途，不开放商铺租购";
 

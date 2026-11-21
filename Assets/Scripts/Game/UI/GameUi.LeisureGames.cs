@@ -17,6 +17,121 @@ namespace PCShopSell.Game.UI
         private int _managedPachinkoMachine;
         public bool LeisureGameInputActive => _leisureGameWindow != null && !_leisureGameWindow.Closed;
 
+        public string PachinkoCabinetHint(int machine) => $"{machine + 1} 号机 · {PachinkoBoard.Machines[machine].Name}";
+
+        public void OpenPachinkoMachine(int machine) => OpenPachinkoExchange(machine);
+
+        private void OpenPachinkoExchange(int? machine = null)
+        {
+            var session = S;
+            if (session.CurrentPlace?.Id != CityLifeCatalog.PachinkoVenue) return;
+            var board = machine is int index ? PachinkoBoard.Machines[index] : null;
+            string title = board == null ? session.CurrentPlace.Name + " · 换珠" : $"{machine + 1} 号机 · {board.Name}";
+            bool selling = false;
+            OpenWindow(title, 770, 490, w =>
+            {
+                var tradeBlocker = session.PachinkoTradeBlocker;
+                if (board != null) Line(w.Content, board.Description, 17, Ui.Dim);
+                var toolbar = Ui.Row(w.Content, 43, 8);
+                Ui.Tab(toolbar, "买入", () => SelectMode(false), !selling, 110);
+                Ui.Tab(toolbar, "卖出", () => SelectMode(true), selling, 110);
+                var cash = Ui.Size(Ui.Label(toolbar, "", 17, TextAnchor.MiddleRight, Ui.Accent), 0, -1, 1);
+                var sellAll = selling ? Ui.Size(Ui.Button(toolbar, "全部卖出…", null, 16, Ui.Warn), 132, 38) : null;
+                var booking = board == null ? null : session.PendingVenueActivity(session.CurrentPlace);
+                string playBlocker = board == null ? null
+                    : booking != null && CityLifeCatalog.LeisureService(booking) != LeisureGame.Pachinko ? "请先完成当前的预约。"
+                    : booking?.ServiceConfirmed == true ? session.VenueAppointmentStartBlocker(booking)
+                    : session.VenueServiceBlocker(CityLifeCatalog.PachinkoService, 0, booking?.Id);
+                Button play = null;
+
+                var heading = Ui.Row(w.Content, 32, 8);
+                Ui.Size(Ui.Label(heading, "弹珠", 16, color: Ui.Dim), 0, -1, 1);
+                Ui.Size(Ui.Label(heading, "持有", 16, TextAnchor.MiddleCenter, Ui.Dim), 104);
+                Ui.Size(Ui.Label(heading, selling ? "回收单价 / 回收比例" : "买入单价", 16, TextAnchor.MiddleCenter, Ui.Dim), 190);
+                Ui.Size(Ui.Label(heading, "交易", 16, TextAnchor.MiddleCenter, Ui.Dim), 136);
+                var tiers = GameSession.PachinkoTiers;
+                var rows = new (Text Count, Button Trade)[tiers.Length];
+                for (int i = 0; i < tiers.Length; i++)
+                {
+                    int tier = i;
+                    var kind = tiers[i];
+                    var row = Ui.Row(w.Content, 45, 8);
+                    string tint = ColorUtility.ToHtmlStringRGB(LeisureBoardGraphic.PachinkoBeadColor(i));
+                    Ui.Size(Ui.Label(row, $"<color=#{tint}>●</color> {kind.Name}", 19), 0, -1, 1);
+                    var count = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleCenter), 104);
+                    string price = selling ? $"{Money.FromYuan(kind.Sell)} / {(double)kind.Sell / kind.Buy:P0}" : Money.FromYuan(kind.Buy).ToString();
+                    Ui.Size(Ui.Label(row, price, 17, TextAnchor.MiddleCenter, Ui.Accent), 190);
+                    var trade = Ui.Size(Ui.Button(row, selling ? "卖 1 珠" : "买 1 珠", null, 17, Ui.ButtonHot), 136, 42);
+                    var hold = trade.gameObject.AddComponent<HoldRepeat>();
+                    hold.Owner = w;
+                    hold.Key = $"Pachinko:{selling}:{tier}";
+                    hold.Commit = _ =>
+                    {
+                        if (S != session || w.Closed) return;
+                        if (selling) session.SellPachinkoBeads(tier);
+                        else session.BuyPachinkoBead(tier);
+                        RefreshTrade();
+                    };
+                    trade.onClick.AddListener(hold.ClickOnce);
+                    rows[i] = (count, trade);
+                }
+
+                var actions = Ui.Row(w.Content, 47, 8);
+                Ui.Size(Ui.Label(actions, "点按交易 1 珠，长按连续交易", 16, color: Ui.Dim), 0, -1, 1);
+                if (machine is int selectedMachine) play = Ui.Size(Ui.Button(actions, "开始游玩", () =>
+                {
+                    if (S != session || !session.StartPachinkoMachine(selectedMachine)) return;
+                    w.Close();
+                    OpenLeisurePlay();
+                }, 18, Ui.ButtonHot), 136, 44);
+                if (sellAll != null) sellAll.onClick.AddListener(ConfirmSellAll);
+                if (tradeBlocker != null) Para(w.Content, tradeBlocker, 16, Ui.Warn);
+                if (playBlocker != null && playBlocker != tradeBlocker) Para(w.Content, playBlocker, 16, Ui.Warn);
+                RefreshTrade();
+
+                void SelectMode(bool sell)
+                {
+                    if (selling == sell) return;
+                    HoldRepeat.CancelActiveHold();
+                    selling = sell;
+                    w.Rebuild();
+                }
+
+                void RefreshTrade()
+                {
+                    cash.text = $"现金 {session.Ledger.Balance}";
+                    bool canTrade = session.PachinkoTradeBlocker == null;
+                    for (int tier = 0; tier < rows.Length; tier++)
+                    {
+                        int count = session.PachinkoBeadCount(tier);
+                        rows[tier].Count.text = $"{count:N0} 珠";
+                        rows[tier].Trade.interactable = canTrade && (selling ? count > 0
+                            : session.PachinkoBeadSpace(tier) > 0 && session.Ledger.CanAfford(Money.FromYuan(tiers[tier].Buy)));
+                    }
+                    if (sellAll != null) sellAll.interactable = canTrade && session.HasPachinkoBeads;
+                    if (play != null) play.interactable = playBlocker == null && session.HasPachinkoBeads;
+                }
+
+                void ConfirmSellAll()
+                {
+                    if (S != session || !selling || !session.HasPachinkoBeads || session.PachinkoTradeBlocker != null) return;
+                    HoldRepeat.CancelActiveHold();
+                    OpenWindow("全部卖出弹珠", 520, 232, confirm =>
+                    {
+                        int count = Enumerable.Range(0, tiers.Length).Sum(session.PachinkoBeadCount);
+                        Para(confirm.Content, $"卖出持有的全部 {count:N0} 珠，可收回 {session.PachinkoBeadValue}。", 18);
+                        var buttons = Ui.Row(confirm.Content, 44, 8);
+                        Ui.Size(Ui.Button(buttons, "取消", confirm.Close, 17), 0, -1, 1);
+                        Ui.Size(Ui.Button(buttons, "确认全部卖出", () =>
+                        {
+                            if (S == session && !w.Closed && session.SellPachinkoBeads(null)) RefreshTrade();
+                            confirm.Close();
+                        }, 17, Ui.Warn), 0, -1, 1);
+                    }, fitContent: true);
+                }
+            }, fitContent: true);
+        }
+
         private void MaybeResumeLeisure()
         {
             if (!LeisureGameInputActive && !AnyModalOpen && !OpeningMealRestricted && S.LiveLeisure != null)
@@ -30,68 +145,85 @@ namespace PCShopSell.Game.UI
             bool here = S.CurrentPlace?.Id == place.Id;
             if (here && S.LiveLeisure != null) { OpenLeisurePlay(); return true; }
             if (here) S.PrepareVenueCompanions(place, activityId);
+            if (here && kind == LeisureGame.Pachinko)
+            {
+                CloseAllWindows();
+                return true;
+            }
 
             OpenWindow(place.Name, 980, kind == LeisureGame.Cinema ? 560 : 510, w =>
             {
+                float bodyHeight = _venueWalkInOrder?.Window == w ? 440 : kind == LeisureGame.Cinema ? 320 : 270;
+                var goods = here ? BuildRosterFrame(w, place, bodyHeight) : w.Content;
+                if (BuildVenueWalkIn(w, goods)) return;
                 var booking = here ? S.PendingVenueActivity(place, activityId) : null;
                 var services = booking != null ? new[] { S.CityActivityService(booking) }
                     : CityLifeCatalog.Activities.Where(a => !a.EventOnly && a.VenueId == place.Id).ToArray();
                 var friend = booking?.Participants.FirstOrDefault();
                 if (friend != null)
-                    PersonSummary(w.Content, friend.PersonId, S.CityPerson(friend.PersonId)?.Name ?? "同行者", "今天与你相约");
+                    PersonSummary(goods, friend.PersonId, S.CityPerson(friend.PersonId)?.Name ?? "同行者", "今天与你相约");
                 else
-                    Line(w.Content, CityPlaceHours(place), 19, Ui.Dim);
+                    Line(goods, CityPlaceHours(place), 19, Ui.Dim);
 
                 foreach (var service in services.Where(s => s != null))
                 {
+                    if (kind == LeisureGame.Pachinko)
+                    {
+                        Para(goods, "走到任意机台旁按 F 换珠或游玩。三台都支持各档弹珠。", 18, Ui.Dim);
+                        continue;
+                    }
                     bool confirmed = booking?.ServiceConfirmed == true;
+                    bool canInvite = here && booking == null && service.WalkInCapacity(0) > 1;
                     string blocker = !here ? "到场后开始" : confirmed
-                        ? S.VenueAppointmentStartBlocker(booking) : S.VenueServiceBlocker(service.Id, 0, booking?.Id);
+                        ? S.VenueAppointmentStartBlocker(booking) : S.VenueServiceBlocker(service.Id, 0, booking?.Id,
+                            walkInCompanions: canInvite ? Array.Empty<string>() : null, checkPrice: !canInvite);
                     var cost = S.CityActivityEntryPrice(service, confirmed ? booking.ServiceChoice : 0, booking);
                     string price = kind switch
                     {
                         LeisureGame.Poker => $"换筹码 ¥{GameSession.PokerBuyInYuan}",
                         LeisureGame.Claw => $"投币 ¥{GameSession.ClawPriceYuan}/次",
-                        _ => cost.IsPositive ? cost.ToString() : "免费"
+                        _ => cost.IsPositive ? cost + (canInvite ? "／人" : "") : "免费"
                     };
                     string title = kind == LeisureGame.Cinema ? service.Choices[0] : service.Name;
-                    var row = Ui.Row(w.Content, 51, 9);
-                    Ui.Size(Ui.Label(row, $"<b>{title}</b>　<size=16>{service.Minutes} 分钟</size>", 21), 0, 46, 1);
+                    bool showBlocker = here && blocker != null;
+                    string effects = VenuePlayerEffects(service.Service(confirmed ? booking.ServiceChoice : 0),
+                        canInvite || booking?.Participants.Length > 0, compact: true);
+                    var row = Ui.Row(goods, showBlocker ? 72 : 58, 9);
+                    string label = $"<b>{title}</b>　<size=15>{ActivityDescriptionText($"{service.Minutes} 分钟")}"
+                        + (effects.Length == 0 ? "" : "\n" + effects)
+                        + (showBlocker ? "\n" + ActivityDescriptionText(blocker) : "") + "</size>";
+                    Ui.Size(Ui.Label(row, label, 21), 0, -1, 1);
                     Ui.Size(Ui.Label(row, price, 18, TextAnchor.MiddleRight, Ui.Accent), 141, 44);
-                    string caption = kind == LeisureGame.Cinema ? "购票入场" : service.Choices[0];
+                    string caption = kind == LeisureGame.Cinema ? canInvite ? "选择这场" : "购票入场" : service.Choices[0];
                     Ui.Size(Ui.Button(row, caption, () =>
                     {
+                        if (canInvite)
+                        {
+                            SelectVenueWalkIn(w, service, 0, EnterPlay);
+                            return;
+                        }
                         bool started = confirmed ? S.StartVenueAppointment(booking.Id)
                             : S.SelectVenueService(service.Id, 0, booking?.Id);
-                        if (started && S.LiveLeisure != null) { w.Close(); OpenLeisurePlay(); }
+                        if (started) EnterPlay();
                         else w.Rebuild();
                     }, 17, Ui.ButtonHot, blocker == null).Tip(blocker), 160, 38).name = "Leisure_" + service.Id;
+
+                    void EnterPlay()
+                    {
+                        if (S.LiveLeisure != null) { w.Close(); OpenLeisurePlay(); }
+                        else w.Rebuild();
+                    }
                 }
 
-                if (here && kind == LeisureGame.Pachinko && !S.IsOwnedVenue(place))
-                {
-                    string blocker = S.PachinkoPurchaseBlocker;
-                    string cost = S.PropertyAt(place.Id) == null ? " · " + GameSession.PachinkoTransferPrice : "";
-                    Ui.Size(Ui.Button(w.Content, "接手柏青哥店" + cost, () =>
-                    {
-                        ConfirmAction("接手柏青哥店",
-                            "接手后可经营原有机台，并在「经营 → 店」调整每台机的返奖。",
-                            "确认接手", () =>
-                            {
-                                if (S.PurchasePachinko()) { w.Close(); OpenVenueManagement(place); }
-                                else w.Rebuild();
-                            });
-                    }, 17, Ui.ButtonBg, blocker == null).Tip(blocker), -1, 39);
-                }
                 if (here)
-                    Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17), -1, 39);
+                    Ui.Size(Ui.Button(goods, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17), -1, 39);
                 else
                     Ui.Size(Ui.Button(w.Content, "前往" + place.Name, () =>
                     {
                         CloseAllWindows();
                         _ctrl.GoToPlace(place);
                     }, 18, Ui.ButtonHot, S.ClosedReason(place) == null).Tip(S.ClosedReason(place)), -1, 40);
-            });
+            }, fitContent: true);
             return true;
         }
 
@@ -124,14 +256,14 @@ namespace PCShopSell.Game.UI
             if (LeisureGameInputActive || S.LiveLeisure == null) return;
             if (S.LiveLeisure.Game == LeisureGame.Cinema)
             {
-                string cinemaId = S.LiveLeisure.ActivityId;
-                if (S.FinishLeisure()) OpenCityActivitySettlement(cinemaId);
+                S.FinishLeisure();
                 return;
             }
 
             var state = S.LiveLeisure;
             var venue = S.CurrentPlace;
             bool exitAfterHand = false;
+            bool exitAfterBeads = false;
             GiftClawCabinet cabinet = null;
             bool pointerHeld = false;
             CloseAllWindows();
@@ -140,9 +272,11 @@ namespace PCShopSell.Game.UI
                 var content = w.Content;
                 var background = Ui.Panel(content, "LeisureBackground", Ui.ChromeWell).rectTransform;
                 background.Fill();
-                var header = BuildLeisureHeader(w, venue.Name, "结束游玩", () =>
+                string title = state.Pachinko is PachinkoPlay machine ? $"{machine.Machine + 1} 号机 · {machine.Board.Name}" : venue.Name;
+                var header = BuildLeisureHeader(w, title, "结束游玩", () =>
                 {
                     if (state.Poker?.HandActive == true) { exitAfterHand = true; return; }
+                    if (state.Pachinko?.Balls.Count > 0) { exitAfterBeads = true; return; }
                     Finish();
                 });
                 var exit = header.GetComponentInChildren<Button>();
@@ -160,7 +294,6 @@ namespace PCShopSell.Game.UI
                 {
                     if (!S.FinishLeisure()) return;
                     if (!w.Closed) w.Close();
-                    OpenCityActivitySettlement(state.ActivityId);
                 }
 
                 Text Readout(string caption, int height = 41, Color? ink = null)
@@ -189,10 +322,20 @@ namespace PCShopSell.Game.UI
                     {
                         if (S.LiveLeisure != state) { w.Close(); return; }
                         bool focused = _windows.LastOrDefault() == w && Application.isFocused;
-                        if (focused) S.StepLeisure(Time.unscaledDeltaTime, pointerHeld || Input.GetKey(KeyCode.Space));
+                        if (focused)
+                        {
+                            if (state.Pachinko != null)
+                            {
+                                if (Input.GetKeyDown(KeyCode.Escape)) exitAfterBeads = true;
+                                S.AimPachinko(DirectionalInput.Horizontal * Math.Min(.06, Time.unscaledDeltaTime) * 1.6);
+                            }
+                            S.StepLeisure(Time.unscaledDeltaTime, !exitAfterBeads && (pointerHeld || Input.GetKey(KeyCode.Space)));
+                        }
                         if (exitAfterHand && state.Poker?.HandActive == false) { Finish(); return; }
-                        exit.interactable = state.Poker?.HandActive == true || S.CanFinishLeisure;
-                        exitText.text = state.Poker?.HandActive == true ? exitAfterHand ? "本手结束后离桌" : "打完这手离桌" : "结束游玩";
+                        if (exitAfterBeads && S.CanFinishLeisure) { Finish(); return; }
+                        exit.interactable = !exitAfterBeads && (state.Poker?.HandActive == true || state.Pachinko != null || S.CanFinishLeisure);
+                        exitText.text = exitAfterBeads ? "弹珠落定后离开"
+                            : state.Poker?.HandActive == true ? exitAfterHand ? "本手结束后离桌" : "打完这手离桌" : "结束游玩";
                         draw();
                     };
                     draw();
@@ -203,27 +346,43 @@ namespace PCShopSell.Game.UI
                     var p = state.Pachinko;
                     var board = MakeLeisureBoard(stage, 1.13f);
                     board.Pachinko = p;
-                    var counts = Readout("", 70);
-                    Readout("发射力度", 32, Ui.Accent);
-                    Ui.Size(Ui.Slider(controls, 0, 1, (float)p.Power, value => S.AimPachinko(value)), -1, 35);
-                    var power = Readout("");
-                    var machines = Ui.Choice(controls, new[] { "1 号机", "2 号机", "3 号机" }, p.Machine,
-                        machine => { S.SwitchPachinkoMachine(machine); });
-                    Ui.Size(machines, -1, 43);
-                    var status = Readout("", 55, Ui.Good);
+                    foreach (var slot in p.Board.Slots)
+                    {
+                        var label = Ui.Label(board.rectTransform, $"+{slot.Reward}", 24, TextAnchor.MiddleCenter, Ui.ChromeGold);
+                        float center = .12f + .76f * (float)slot.X;
+                        label.rectTransform.Anchor(center - .049f, .079f, center + .049f, .124f);
+                        label.raycastTarget = false;
+                    }
+                    var counts = Readout("", 48, Ui.ChromeInk);
+                    Readout("选择发射的弹珠", 28, Ui.ChromeGold);
+                    var tierLabels = new Text[GameSession.PachinkoTiers.Length];
+                    var tierNames = new string[tierLabels.Length];
+                    for (int i = 0; i < tierLabels.Length; i++)
+                    {
+                        int tier = i;
+                        string tint = ColorUtility.ToHtmlStringRGB(LeisureBoardGraphic.PachinkoBeadColor(i));
+                        tierNames[i] = $"<color=#{tint}>●</color> {GameSession.PachinkoTiers[i].Name}";
+                        var button = Ui.Size(Ui.Button(controls, "", () => S.SelectPachinkoTier(tier), 18, Ui.ChromeButton), -1, 42);
+                        tierLabels[i] = button.GetComponentInChildren<Text>();
+                    }
+                    Readout("A/D 或 ←/→ 转动发射口", 38, Ui.ChromeInk);
+                    var aim = Ui.Row(controls, 45, 8);
+                    Ui.Size(Ui.Button(aim, "向左", () => S.AimPachinko(-.11), 18, Ui.ChromeButton), 0, 43, 1);
+                    Ui.Size(Ui.Button(aim, "向右", () => S.AimPachinko(.11), 18, Ui.ChromeButton), 0, 43, 1);
+                    var status = Readout("", 54, Ui.ChromeGold);
                     var spacer = Ui.Size(Ui.Rect(controls, "ActionSpace"), -1, 0);
                     spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
-                    var fire = Hold("按住发射 · 鼠标或空格");
+                    var fire = Hold("发射 · 空格 / 鼠标");
                     return () =>
                     {
                         board.SetVerticesDirty();
-                        counts.text = $"剩余 {p.Beads} 珠\n本局返珠 {p.Returned} 珠";
-                        power.text = $"{p.Power:P0}　·　奖励口返 {S.PachinkoPayoutForMachine(p.Machine)} 珠";
-                        status.text = p.RewardFlash > 0 ? $"进奖励口 · +{p.LastReward} 珠"
-                            : p.Beads == 0 && p.Balls.Count == 0 ? "弹珠已经用完。" : "松手后，盘里的珠子会继续落下。";
-                        fire.interactable = p.Beads > 0;
-                        machines.interactable = p.Balls.Count == 0;
-                        if (machines.value != p.Machine) machines.SetValueWithoutNotify(p.Machine);
+                        counts.text = $"已发射 {p.Launched} · 返珠 {p.Returned}";
+                        for (int i = 0; i < tierLabels.Length; i++)
+                            tierLabels[i].text = $"{tierNames[i]} · {S.PachinkoBeadCount(i)} 珠"
+                                + (p.Tier == i ? "　✓" : "");
+                        status.text = p.RewardFlash > 0 ? p.LastReward > 0 ? $"入槽 · 返 {p.LastReward} 珠" : "落空"
+                            : !S.HasPachinkoBeads && p.Balls.Count == 0 ? "弹珠已用完，可结束游玩后补珠。" : "";
+                        fire.interactable = !exitAfterBeads && S.PachinkoBeadCount(p.Tier) > 0;
                     };
                 }
 
@@ -273,40 +432,44 @@ namespace PCShopSell.Game.UI
                     var fitter = image.gameObject.AddComponent<AspectRatioFitter>();
                     fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
                     fitter.aspectRatio = (float)cabinet.Texture.width / cabinet.Texture.height;
-                    var message = Readout("", 80, Ui.Accent);
-                    var counts = Readout("", 55);
+                    var message = Readout("", 74, Ui.ChromeGold);
+                    var counts = Readout("", 48, Ui.ChromeInk);
+                    Readout("A/D 或 ←/→ 左右对准\n空格投币，再按空格落爪", 67, Ui.ChromeInk);
                     var lateral = Ui.Row(controls, 47, 8);
-                    var depth = Ui.Row(controls, 47, 8);
-                    MoveButton(lateral, "← 左移", -.13, 0);
-                    MoveButton(lateral, "右移 →", .13, 0);
-                    MoveButton(depth, "↑ 推远", 0, .13);
-                    MoveButton(depth, "靠近 ↓", 0, -.13);
+                    var left = Ui.Size(Ui.Button(lateral, "← 左移", () => S.MoveClaw(-.13), 17, Ui.ChromeButton), 0, 44, 1);
+                    var right = Ui.Size(Ui.Button(lateral, "右移 →", () => S.MoveClaw(.13), 17, Ui.ChromeButton), 0, 44, 1);
                     var freight = S.CourierQuote(toShop: false).fee;
                     Readout($"装不下会送到家，新叫车 {freight}\n付不起运费则放弃这次的奖品", 70, Ui.Dim);
                     var spacer = Ui.Size(Ui.Rect(controls, "ActionSpace"), -1, 0);
                     spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
-                    var grab = Ui.Size(Ui.Button(controls, $"投币并落爪 · ¥{GameSession.ClawPriceYuan}", () => S.DropClaw(),
-                        22, Ui.ButtonHot), -1, 60);
+                    int lastPressFrame = -1;
+                    string insertCaption = $"投币 · ¥{GameSession.ClawPriceYuan}";
+                    var grab = Ui.Size(Ui.Button(controls, insertCaption, PressClaw, 22, Ui.ButtonHot), -1, 60);
+                    var grabCaption = grab.GetComponentInChildren<Text>();
                     return () =>
                     {
-                        if (_windows.LastOrDefault() == w && Application.isFocused && !claw.Animating)
+                        if (_windows.LastOrDefault() == w && Application.isFocused)
                         {
-                            double step = Math.Min(Time.unscaledDeltaTime, .08f) * 1.12;
-                            if (Input.GetKey(KeyCode.LeftArrow)) S.MoveClaw(-step, 0);
-                            if (Input.GetKey(KeyCode.RightArrow)) S.MoveClaw(step, 0);
-                            if (Input.GetKey(KeyCode.UpArrow)) S.MoveClaw(0, step);
-                            if (Input.GetKey(KeyCode.DownArrow)) S.MoveClaw(0, -step);
-                            if (Input.GetKeyDown(KeyCode.Space)) S.DropClaw();
+                            float lateralInput = DirectionalInput.Horizontal;
+                            if (!claw.Animating && lateralInput != 0)
+                                S.MoveClaw(lateralInput * Math.Min(Time.unscaledDeltaTime, .08f) * 1.12);
+                            if (Input.GetKeyDown(KeyCode.Space)) PressClaw();
                         }
                         cabinet.Render(claw);
                         message.text = claw.Message;
                         counts.text = $"已抓 {claw.Attempts} 次 · 获得 {claw.PrizesWon} 件";
-                        grab.interactable = !claw.Animating && claw.HasGifts
-                            && S.Ledger.CanAfford(Money.FromYuan(GameSession.ClawPriceYuan));
+                        left.interactable = right.interactable = !claw.Animating;
+                        grabCaption.text = claw.Sweeping ? "现在落爪" : claw.Animating ? "抓取中" : insertCaption;
+                        grab.interactable = claw.Sweeping || (!claw.Animating && claw.HasGifts
+                            && S.Ledger.CanAfford(Money.FromYuan(GameSession.ClawPriceYuan)));
                     };
 
-                    void MoveButton(Transform row, string caption, double x, double z)
-                        => Ui.Size(Ui.Button(row, caption, () => S.MoveClaw(x, z), 17), 0, 44, 1);
+                    void PressClaw()
+                    {
+                        if (lastPressFrame == Time.frameCount) return;
+                        lastPressFrame = Time.frameCount;
+                        S.PressClawButton();
+                    }
                 }
             }, holds: false, closable: false, onClosed: () =>
             {

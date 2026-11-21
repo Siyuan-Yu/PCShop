@@ -30,7 +30,11 @@ namespace PCShopSell.Game.UI
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        public static void InvalidatePortraitCache() => PortraitCache.Clear();
+        public static void InvalidatePortraitCache()
+        {
+            PortraitCache.Clear();
+            ScenePortraits.Clear();
+        }
 
         private static RawImage FitPortrait(RectTransform frame, string portraitId, float padding = 0)
         {
@@ -159,16 +163,15 @@ namespace PCShopSell.Game.UI
         // ---------- 店里的人 ----------
 
         /// <summary>
-        /// 有人接待的店（档口、手机店、家具城、烟酒茶行、农贸市场、车行）：左边是“店内人员图”，
-        /// 像宗门图一样自上而下——老板在最上面（金框），下面一级是店员（灰框），上下之间有连线；人物多时可滚动。
-        /// 老板交情够了才见得到，没到时是灰色“？？？”，原因写在图下面。右边是原来的商品内容。
-        /// 返回放商品内容的容器；没有人返回 null。
+        /// 左栏显示实际到场的人，值班人员和本次同行者排在前面。返回右侧商品或服务容器。
         /// </summary>
         private RectTransform BuildRosterFrame(Window w, Place p, float bodyHeight, bool scrollGoods = false, float rosterWidth = 210)
         {
             var locations = p.Kind == PlaceKind.Wholesaler ? S.WholesaleStallsAt(p) : new[] { p };
             var present = locations.SelectMany(place => S.PeopleInPlace(place.Id))
                 .Where(person => S.CityPerson(person.PersonId) != null).ToArray();
+            var activity = S.RunningCityActivity is CityActivity running && running.VenueId == p.Id
+                ? running : S.PendingVenueActivity(p);
 
             var body=Ui.Row(w.Content,bodyHeight,12);
             var people = Ui.FlatPanel(body, "People", Ui.PanelBg2).rectTransform;
@@ -181,16 +184,33 @@ namespace PCShopSell.Game.UI
             bool hospital = p.Business == GameSession.HospitalBusiness;
             bool sport = p.Business is "venue_court" or "venue_golf";
             Ui.Size(Ui.Label(people, fishing ? "钓场在场人物" : sport ? "球场在场人物" : hospital ? "医院在场人物" : "店内在场人物", 17), -1, 30);
-            var portraits = Ui.Scroll(people, Mathf.Max(140, bodyHeight - 40));
-            if (fishing && S.CityPerson(GameSession.FishingAttendantId) is CityPersonDefinition attendant
-                && !present.Any(person => person.PersonId == attendant.Id))
-                Para(portraits, $"{attendant.Name} · 钓场管理员\n值班 {attendant.WorkStart / 60:00}:{attendant.WorkStart % 60:00}–{attendant.WorkEnd / 60:00}:{attendant.WorkEnd % 60:00}\n当前不在场，可自助办理。", 16, Ui.Dim);
-            else if (present.Length == 0) Para(portraits, hospital ? "此刻没有可交谈的医生在场。" : "此刻没有可交谈的店员在场。", 16, Ui.Dim);
-            foreach(var state in present)
+            float portraitArea = Mathf.Max(140, bodyHeight - 40);
+            float portraitWidth = rosterWidth >= 190 ? 100 : 82;
+            float portraitRowHeight = portraitWidth * 4f / 3f + 64;
+            bool compact = present.Length > 1 && present.Length * (portraitRowHeight + 4) + 8 > portraitArea;
+            var portraits = Ui.Scroll(people, portraitArea);
+            if (S.NpcVenueStaffingBlocker(p) is string staffing)
+                Para(portraits, staffing, 16, Ui.Warn);
+            else if (present.Length == 0) Para(portraits, "此刻没有其他人在场。", 16, Ui.Dim);
+            bool OnDuty(CityPersonState person) => S.IsOnDutyVenueNpc(S.City.GetPlace(person.LocationPlaceId), person);
+            bool Companion(CityPersonState person) => activity?.Participants.Any(participant =>
+                participant.PersonId == person.PersonId && participant.Phase != CityParticipantPhase.Left) == true;
+            foreach(var state in present.OrderByDescending(OnDuty).ThenByDescending(Companion))
             {
                 string id=state.PersonId;var def=S.CityPerson(id);
-                OrgNode(portraits, id, def.Name, S.CityPersonRole(id), state.WorkPlaceId == state.LocationPlaceId, false,
-                    () => OpenCityPerson(id), portraitWidth: rosterWidth >= 190 ? 100 : 82, columnWidth: rosterWidth - 26);
+                bool onDuty = OnDuty(state);
+                bool companion = Companion(state);
+                string role = onDuty ? S.CityPersonRole(id) + " · 值班" : companion ? "同行" : S.CityPersonRole(id);
+                string tooltip = CanTalkToScenePerson(id) ? "当面交谈" : "查看人物资料";
+                if (compact)
+                {
+                    var row = PersonSummary(portraits, id, def.Name, role, onClick: () => OpenCityPerson(id),
+                        muted: onDuty ? Ui.Accent : companion ? Ui.Good : Ui.Dim);
+                    row.GetComponentInChildren<Button>()?.Tip(tooltip);
+                }
+                else
+                    OrgNode(portraits, id, def.Name, role, onDuty, false,
+                        () => OpenCityPerson(id), portraitWidth, rosterWidth - 26, tooltip);
             }
             var center=Ui.Rect(body,"Goods");Ui.VList(center,6,0);
             var goodsSize=Ui.Size(center,0,-1,1).GetComponent<LayoutElement>();
@@ -207,7 +227,7 @@ namespace PCShopSell.Game.UI
         }
 
         private void OrgNode(Transform parent, string portraitId, string name, string title, bool top, bool locked,
-            System.Action onClick, float portraitWidth = 44, float columnWidth = 72)
+            System.Action onClick, float portraitWidth = 44, float columnWidth = 72, string tooltip = null)
         {
             float portraitHeight = portraitWidth * 4f / 3f;
             RectTransform row = Ui.Row(parent, portraitHeight + 64, 0);
@@ -247,6 +267,7 @@ namespace PCShopSell.Game.UI
                 b.targetGraphic = raw;
                 Ui.SteadyButtonFeedback(b);
                 b.onClick.AddListener(() => onClick());
+                if (tooltip != null) b.Tip(tooltip);
             }
 
             Ui.Size(Ui.Label(col, $"<b>{name}</b>", 14, TextAnchor.MiddleCenter), -1, 20);
@@ -266,7 +287,7 @@ namespace PCShopSell.Game.UI
 
         private sealed class TalkOpt
         {
-            public string Label, Blocker;
+            public string Label, Blocker, Id;
             public bool Hot, SeparateBlocker, Invitation, Mainline;
             public System.Action Act;
         }
@@ -276,6 +297,8 @@ namespace PCShopSell.Game.UI
             private string _reply;
             public Window W;
             public ScrollRect ReplyScroll;
+            public string SpeakerId;
+            public TalkOpt[] Replies;
             public string Reply
             {
                 get => _reply;
@@ -285,44 +308,60 @@ namespace PCShopSell.Game.UI
                     if (ReplyScroll != null) ReplyScroll.content.anchoredPosition = Vector2.zero;
                 }
             }
+
+            public void Show(string text, params TalkOpt[] replies)
+            {
+                Reply = text;
+                Replies = replies.Length > 0 ? replies : null;
+                if (W == null) return;
+                W.ResetScrollOnRebuild = true;
+                W.Rebuild();
+            }
+
+            public void Continue(string text, System.Action next) => Show(text,
+                new TalkOpt { Id = "DialogueContinue", Label = "继续", Hot = true, Act = next });
         }
 
-        private void OpenDialogue(string portraitId, string name, string role, string greeting,
+        private Window OpenDialogue(string portraitId, string name, string role, string greeting,
             System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, System.Action onClosed = null,
-            bool remote = false, bool replyOnly = false, string replyConfirm = "知道了")
+            bool remote = false, System.Action<TalkCtx> start = null)
         {
             var ctx = new TalkCtx { Reply = firstReply };
+            start?.Invoke(ctx);
             var paper = new Color32(242, 230, 205, 255);
             var ink = new Color32(41, 46, 40, 255);
-            OpenWindow(name + "　" + role, replyOnly ? 700 : 930, replyOnly ? 660 : 520, w =>
+            return OpenWindow(name + "　" + role, 930, 520, w =>
             {
                 ctx.W = w;
-                w.LiveConversation = true;
-                w.LiveKey = () => ConversationViewKey(portraitId);
-                w.LiveStamp = w.LiveKey();
+                if (makeOptions != null)
+                {
+                    w.LiveConversation = true;
+                    w.LiveKey = () => ConversationViewKey(portraitId);
+                    w.LiveStamp = w.LiveKey();
+                }
+                string speakerId = ctx.SpeakerId ?? portraitId;
+                string speakerName = speakerId == portraitId ? name : S.CityPerson(speakerId)?.Name ?? speakerId;
+                string speakerRole = speakerId == portraitId ? role : S.CityPersonRole(speakerId);
 
                 var frame = Ui.Panel(w.Content, "DialogueReadingPanel", new Color32(166, 134, 80, 255));
                 frame.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
                 var reading = Ui.Row(frame.transform, -1, 1).Fill(1);
                 var identity = Ui.Panel(reading, "DialogueIdentity", Ui.PanelBg2);
-                Ui.Size(identity, replyOnly ? 158 : 184, -1, 0);
+                Ui.Size(identity, 184, -1, 0);
                 var identityLayout = Ui.VList(identity.rectTransform, 5, 12);
                 identityLayout.childAlignment = TextAnchor.MiddleCenter;
-                var portrait = PortraitCard(identity.transform, portraitId, name, "", replyOnly ? 120 : 148,
-                    () => OpenCityPersonProfile(portraitId, fromConversation: true), tagText: null);
+                var portrait = PortraitCard(identity.transform, speakerId, speakerName, "", 148,
+                    () => OpenCityPersonProfile(speakerId, fromConversation: true), tagText: null);
                 portrait.Find("Caption").gameObject.SetActive(false);
                 portrait.GetComponentInChildren<Button>().Tip("查看人物资料");
-                Ui.Label(identity.transform, PersonNameWithKolBadge(portraitId, name), 22, TextAnchor.MiddleCenter, Ui.Accent).fontStyle = FontStyle.Bold;
-                Ui.Label(identity.transform, role, 15, TextAnchor.MiddleCenter, Ui.Dim);
-                if (!replyOnly)
-                {
-                    Ui.Label(identity.transform, "熟悉度 " + S.Relation(portraitId), 16, TextAnchor.MiddleCenter, Ui.Good);
-                    if (S.IsPlayerPartner(portraitId)) Ui.Label(identity.transform, "你的伴侣", 16, TextAnchor.MiddleCenter, Ui.Accent);
-                }
+                Ui.Label(identity.transform, PersonNameWithKolBadge(speakerId, speakerName), 22, TextAnchor.MiddleCenter, Ui.Accent).fontStyle = FontStyle.Bold;
+                Ui.Label(identity.transform, speakerRole, 15, TextAnchor.MiddleCenter, Ui.Dim);
+                Ui.Label(identity.transform, "熟悉度 " + S.Relation(speakerId), 16, TextAnchor.MiddleCenter, Ui.Good);
+                if (S.IsPlayerPartner(speakerId)) Ui.Label(identity.transform, "你的伴侣", 16, TextAnchor.MiddleCenter, Ui.Accent);
 
                 var speech = Ui.Panel(reading, "DialogueSpeech", paper);
                 Ui.Size(speech, -1, -1, 1);
-                var options = replyOnly ? null : makeOptions(ctx);
+                var options = ctx.Replies == null ? makeOptions?.Invoke(ctx) : null;
                 var mainline = options?.Where(opt => opt.Mainline).ToArray();
                 int mainlineHeight = mainline == null || mainline.Length == 0 ? 0 : mainline.Length <= 2 ? 48 : 102;
                 var replyBody = Ui.Scroll(speech.transform);
@@ -331,21 +370,16 @@ namespace PCShopSell.Game.UI
                 ((RectTransform)ctx.ReplyScroll.transform).Anchor(0, 0, 1, 1, 18, 18 + mainlineHeight, 18, 18);
                 ctx.ReplyScroll.GetComponent<Image>().color = Color.clear;
                 bool nearby = remote || S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
-                string district = replyOnly ? null : DistrictDialogueContext(portraitId, remote);
+                string district = options != null && ctx.Reply == null ? DistrictDialogueContext(portraitId, remote) : null;
                 string currentGreeting = S.IsPlayerPartner(portraitId) ? "你来了，正好想跟你说会儿话。" : greeting;
                 string text = ctx.Reply ?? (nearby ? district ?? currentGreeting : "对方已经离开了，等下次见面再聊吧。");
                 var line = Para(replyBody, Ui.EmphasizeReading(text), 22, ink);
                 line.name = "DialogueReplyText";
                 line.lineSpacing = 1.2f;
-                if (replyOnly)
-                    Ui.Size(Ui.Button(w.Content, replyConfirm, w.Close, 18, Ui.ButtonHot), -1, 42);
-                else
-                {
-                    if (mainlineHeight > 0)
-                        BuildDialogueMainline(speech.transform, mainline, mainlineHeight);
-                    BuildDialogueOptions(w, options.Where(opt => !opt.Mainline).ToList());
-                }
-            }, true, true, onClosed, scrollContent: false, showTitleBar: replyOnly);
+                if (mainlineHeight > 0) BuildDialogueMainline(speech.transform, mainline, mainlineHeight);
+                var actions = options == null ? ctx.Replies : options.Where(opt => !opt.Mainline).ToArray();
+                BuildDialogueFooter(w, actions, spreadReplies: ctx.Replies != null);
+            }, true, true, onClosed, scrollContent: false, showTitleBar: false);
         }
 
         private static void BuildDialogueMainline(Transform speech, TalkOpt[] options, int height)
@@ -376,46 +410,53 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private static void BuildDialogueOptions(Window w, List<TalkOpt> options)
+        private static void BuildDialogueFooter(Window w, IReadOnlyList<TalkOpt> options, bool spreadReplies)
         {
-            const int columns = 6;
+            const int maxColumns = 5;
             const int rowHeight = 40;
             const int gap = 6;
-            while (options.Count < columns - 1) options.Add(null);
-            options.Insert(columns - 1, new TalkOpt { Label = "结束对话", Act = w.Close });
-            int rows = (options.Count + columns - 1) / columns;
-            int visibleRows = Mathf.Min(rows, 2);
-            int height = visibleRows * rowHeight + (visibleRows - 1) * gap;
+            const int endWidth = 146;
+            const int visibleRows = 2;
+            const int footerHeight = visibleRows * rowHeight + (visibleRows - 1) * gap;
+            int count = options?.Count ?? 0;
+            int columns = spreadReplies ? Mathf.Clamp(count, 1, maxColumns) : maxColumns;
+            int rows = (count + columns - 1) / columns;
+            var footer = Ui.Size(Ui.Rect(w.Content, "DialogueFooter"), -1, footerHeight);
+            var end = Ui.Button(footer, "结束对话", w.Close, 16, Ui.Warn);
+            end.name = "DialogueEnd";
+            ((RectTransform)end.transform).Anchor(1, 0, 1, 0, -endWidth, 0, 0, -rowHeight);
+            if (count == 0) return;
+
             RectTransform actions;
+            RectTransform optionsArea;
             if (rows > visibleRows)
             {
-                actions = Ui.Scroll(w.Content, height);
-                var actionsScroll = actions.GetComponentInParent<ScrollRect>();
-                actionsScroll.name = "DialogueOptions";
-                actionsScroll.GetComponent<Image>().color = Color.clear;
+                actions = Ui.Scroll(footer);
+                optionsArea = (RectTransform)actions.GetComponentInParent<ScrollRect>().transform;
             }
             else
             {
-                actions = Ui.Size(Ui.Rect(w.Content, "DialogueOptions"), -1, height);
+                optionsArea = actions = Ui.Rect(footer, "DialogueOptions");
                 Ui.VList(actions);
             }
+            optionsArea.name = "DialogueOptions";
+            optionsArea.Anchor(0, 0, 1, 1, 0, 0, endWidth + gap, rows == 1 ? rowHeight + gap : 0);
             var list = actions.GetComponent<VerticalLayoutGroup>();
             list.padding = new RectOffset();
             list.spacing = gap;
 
-            for (int i = 0; i < options.Count; i += columns)
+            for (int i = 0; i < count; i += columns)
             {
                 var row = Ui.Row(actions, rowHeight, gap);
                 row.name = "DialogueOptionRow";
                 for (int j = 0; j < columns; j++)
                 {
-                    var opt = i + j < options.Count ? options[i + j] : null;
-                    if (opt == null)
+                    if (i + j >= count)
                     {
                         Ui.Size(Ui.Rect(row, "Empty"), 0, -1, 1);
                         continue;
                     }
-                    BuildTalkOption(row, opt);
+                    BuildTalkOption(row, options[i + j]);
                 }
             }
         }
@@ -424,17 +465,18 @@ namespace PCShopSell.Game.UI
         {
             string label = opt.Blocker == null || opt.SeparateBlocker || opt.Blocker.Length > 20
                 ? opt.Label : opt.Label.Split('（')[0] + "\n<size=13>" + opt.Blocker + "</size>";
-            bool close = opt.Label == "结束对话";
             if (opt.Invitation) label = "＋ " + label;
-            var button = Ui.Size(Ui.Button(row, label, opt.Act, 16,
-                opt.Invitation ? (Color)new Color32(184, 224, 216, 255) : Ui.SelectedButton(!close && opt.Hot), opt.Blocker == null), 0, -1, 1);
+            Color fill = opt.Invitation && !opt.Mainline
+                ? new Color32(184, 224, 216, 255)
+                : Ui.SelectedButton(opt.Mainline || opt.Hot);
+            var button = Ui.Size(Ui.Button(row, label, opt.Act, 16, fill, opt.Blocker == null), 0, -1, 1);
             var caption = button.GetComponentInChildren<Text>();
             caption.rectTransform.Fill(4);
             caption.resizeTextForBestFit = true;
             caption.resizeTextMinSize = opt.Mainline ? 14 : 11;
             caption.resizeTextMaxSize = 16;
             if (opt.Invitation) caption.fontStyle = FontStyle.Bold;
-            if (close) button.name = "DialogueEnd";
+            if (opt.Id != null) button.name = opt.Id;
             if (opt.Blocker != null) button.Tip(opt.Blocker);
         }
 
@@ -464,7 +506,7 @@ namespace PCShopSell.Game.UI
                 var options = new List<TalkOpt>();
                 bool near = !remote && (definition == null || S.CitySamePlace(personId));
                 bool canTalk = remote || near;
-                void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
+                void Reply(string text) { ctx.Show(text); parent?.RequestRebuild(); }
                 if (confirmingBreakup)
                 {
                     options.Add(new TalkOpt { Label = "继续相处", Act = () =>
@@ -490,7 +532,7 @@ namespace PCShopSell.Game.UI
                         options.Add(new TalkOpt { Label = "谈MCN合作", Blocker = canTalk ? null : "对方已离开",
                             Act = () => OpenCreatorRelations(personId, ctx.W) });
                 }
-                AddDistrictDialogue(options,personId,remote,near,Reply);
+                AddDistrictDialogue(options,personId,remote,near,ctx,Reply);
                 if(personId=="life_enterprise"||personId=="life_tenant")
                     foreach(var tender in S.BrandBusiness.Tenders.Where(t=>t.Stage<2))
                     {
@@ -544,7 +586,10 @@ namespace PCShopSell.Game.UI
                     options.Add(new TalkOpt { Label = "返回聊天", Act = () => { discussingPeople = false; ctx.W.ResetScrollOnRebuild = true; ctx.W.Rebuild(); } });
                     return options;
                 }
-                options.Add(new TalkOpt { Label = "聊一聊", Hot = true, Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId,remote)) });
+                if (near && _ctrl.InPachinkoRoom && S.IsLeisureVenueWorker(S.CityPersonState(personId)))
+                    options.Add(new TalkOpt { Label = "买卖弹珠", Blocker = S.PachinkoTradeBlocker, Act = () => OpenPachinkoExchange() });
+                options.Add(new TalkOpt { Label = "聊一聊", Hot = true, Blocker = canTalk ? null : "对方已离开",
+                    Act = () => StartCasualDialogue(ctx, personId, remote, Reply) });
                 options.Add(new TalkOpt { Label = "交流物价", Blocker = canTalk ? null : "对方已离开",
                     Act = () => Reply(S.ExchangeMarketTalk(personId, remote, place, text => Ui.Emphasize(text))) });
                 options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId,remote:remote), Act = () =>
@@ -598,6 +643,34 @@ namespace PCShopSell.Game.UI
         private string ConversationViewKey(string id) => S.Clock.Today.TotalDays + "|" + S.CitySamePlace(id) + "|" + S.Relation(id)
             + "|" + S.HasGreeted(id) + "|" + S.IsMet(id) + "|" + S.RomanceId + "|" + S.CarriedKg.ToString("R")
             + "|" + S.DistrictAccessTier;
+
+        private void StartCasualDialogue(TalkCtx ctx, string personId, bool remote, System.Action<string> reply)
+        {
+            var session = S;
+            bool acquainted = session.HasGreeted(personId);
+            string greeting = session.CasualConversation(personId, remote, out var followUp);
+            const string photoShopStory = "conversation:landlady-photo-shop";
+            if (personId == "landlady" && acquainted && !session.Flags.Contains(photoShopStory))
+            {
+                void Finish(string line)
+                {
+                    session.Flags.Add(photoShopStory);
+                    reply(line);
+                }
+                ctx.Show("今天路过旧居街，才发现那家老照相馆换招牌了。以前的老板还在门口认出我了。",
+                    new TalkOpt { Label = "你以前常去吗？", Act = () =>
+                        ctx.Continue("你搬来之前，我每年都在那里拍全家福。老板知道我爸坐不久，总把椅子先留给他。", () =>
+                            Finish("后来人凑不齐，照片也就没再拍了。今天看到他拿着老相机，倒想把家里那几张翻出来看看。")) },
+                    new TalkOpt { Label = "现在开了家什么店？", Act = () =>
+                        Finish("还是照相馆。现在是他女儿看店，顺便帮人把老照片扫进手机里。我的那几张，改日也拿过去试试。") },
+                    new TalkOpt { Label = "下次再聊", Act = () => reply("行，你先去忙。") });
+                return;
+            }
+            if (followUp != null)
+                ctx.Continue(greeting, () => reply(followUp() ?? "这事等下次有空再聊。"));
+            else
+                reply(greeting);
+        }
 
         private void OpenPersonGiftGrid(string personId, string name, TalkCtx ctx)
         {

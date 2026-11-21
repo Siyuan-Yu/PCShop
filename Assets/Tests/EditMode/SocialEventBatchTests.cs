@@ -105,13 +105,16 @@ namespace PCShopSell.Tests
             // It was added after the paid venue expansion and has no bundled premium consumption.
             foreach (var basic in CityLifeCatalog.Activities.Where(d => !d.EventOnly && d.LogicalId == null && d.Id != "oldmarket_visit"))
             {
-                var menu = CityLifeCatalog.Activities.Where(d => !d.EventOnly && (d.Id == basic.Id || d.LogicalId == basic.Id)).ToArray();
+                var menu = CityLifeCatalog.Activities.Where(d => !d.EventOnly &&
+                    (d.Id == basic.Id || d.LogicalId == basic.Id && !GameSession.IsBarDrinkService(d))).ToArray();
                 Assert.AreEqual(basic.ServiceCount * 2, menu.Sum(d => d.ServiceCount), basic.Id);
                 Assert.IsTrue(menu.Any(d => d.Minutes > basic.Minutes), basic.Id);
                 Assert.IsTrue(menu.Any(d => d.PriceYuan > basic.PriceYuan), basic.Id);
             }
             Assert.AreEqual(4, CityLifeCatalog.Activities.Where(d => !d.EventOnly && d.VenueId == "life_ktv").Sum(d => d.ServiceCount));
-            Assert.AreEqual(4, CityLifeCatalog.Activities.Where(d => !d.EventOnly && d.VenueId == "life_bar").Sum(d => d.ServiceCount));
+            var barMenu = CityLifeCatalog.Activities.Where(d => !d.EventOnly && d.VenueId == "life_bar").ToArray();
+            Assert.AreEqual(8, barMenu.Sum(d => d.ServiceCount));
+            Assert.AreEqual(6, barMenu.Where(GameSession.IsBarDrinkService).Sum(d => d.ServiceCount));
             Assert.AreEqual(8, CityLifeCatalog.Activities.Where(d => !d.EventOnly && d.VenueId == "life_restaurant").Sum(d => d.ServiceCount));
             Assert.AreEqual(0, CityLifeCatalog.Activity("oldmarket_visit").PriceYuan);
             Assert.AreEqual(100, CityLifeCatalog.Activity("dinner").ServicePriceYuan(0));
@@ -126,9 +129,21 @@ namespace PCShopSell.Tests
             var a = s.CityActivities.Single(x => x.Active);
             Assert.AreEqual("ktv", a.DefinitionId); Assert.AreEqual("ktv_premium1", a.ServiceDefinitionId);
             Assert.AreEqual(120, a.Duration); Assert.AreEqual(balance - Money.FromYuan(1800), s.Ledger.Balance);
+            Assert.IsTrue(s.SelectKaraokeSong(a.Id, 1, 2));
             using var loaded = Reload(s); var saved = loaded.CityActivities.Single(x => x.Active);
             Assert.AreEqual("ktv_premium1", loaded.CityActivityService(saved).Id);
-            loaded.AdvanceClock(121);
+            Assert.AreEqual(1, saved.KaraokeSongIndex);
+            Assert.AreEqual(2, saved.KaraokeDifficulty);
+            double charmBefore = loaded.Player.Charm;
+            loaded.AdvanceClock(10);
+            Assert.AreEqual(saved.ActualStart, loaded.Clock.Now.TotalMinutes);
+            Assert.IsFalse(loaded.AdvanceKaraokePlayback(saved.Id, .5));
+            Assert.AreEqual(saved.ActualStart + 60, loaded.Clock.Now.TotalMinutes);
+            Assert.IsFalse(loaded.AdvanceKaraokePlayback(saved.Id, .5));
+            Assert.AreEqual(saved.ActualStart + 60, loaded.Clock.Now.TotalMinutes);
+            Assert.IsTrue(loaded.AdvanceKaraokePlayback(saved.Id, 1, sang: true));
+            Assert.AreEqual(saved.ActualStart + 120, loaded.Clock.Now.TotalMinutes);
+            Assert.AreEqual(Math.Min(100, charmBefore + 7), loaded.Player.Charm);
             Assert.AreEqual(CityActivityPhase.Completed, saved.State);
             Assert.AreEqual(balance - Money.FromYuan(1800), loaded.Ledger.Balance);
         }
@@ -144,7 +159,8 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Money.FromYuan(cost), s.CityActivityEntryPrice(s.CityActivityService(a), 0, a));
             var balance = s.Ledger.Balance; Attend(s, a);
             Assert.AreEqual(balance - Money.FromYuan(cost), s.Ledger.Balance);
-            s.AdvanceClock(121); Assert.AreEqual(balance - Money.FromYuan(cost), s.Ledger.Balance);
+            Assert.IsTrue(s.AdvanceKaraokePlayback(a.Id, 1));
+            Assert.AreEqual(balance - Money.FromYuan(cost), s.Ledger.Balance);
         }
 
         [Test]
@@ -206,7 +222,7 @@ namespace PCShopSell.Tests
             Assert.That(s.PrepareVenueCompanions(s.CurrentPlace), Is.True);
             Assert.That(s.SelectVenueService("ktv", 0), Is.True);
             Assert.That(s.RunningCityActivity, Is.SameAs(invitation));
-            s.AdvanceClock(invitation.Duration);
+            Assert.That(s.AdvanceKaraokePlayback(invitation.Id, 1), Is.True);
             Assert.That(invitation.State, Is.EqualTo(CityActivityPhase.Completed));
         }
 
@@ -221,7 +237,7 @@ namespace PCShopSell.Tests
             Assert.That(s.IsMet(singer), Is.True);
             Assert.That(s.Relation(singer), Is.EqualTo(before));
 
-            s.AdvanceClock(a.Duration);
+            Assert.That(s.AdvanceKaraokePlayback(a.Id, 1), Is.True);
             Assert.That(a.State, Is.EqualTo(CityActivityPhase.Completed));
             Assert.That(s.Relation(singer) - before, Is.EqualTo(7));
             Assert.That(a.Participants.Single().RelationAfter - before, Is.EqualTo(7));
@@ -244,7 +260,7 @@ namespace PCShopSell.Tests
 
             using var loaded = Reload(s);
             var saved = loaded.RunningCityActivity;
-            loaded.AdvanceClock(saved.Duration);
+            Assert.That(loaded.AdvanceKaraokePlayback(saved.Id, 1), Is.True);
             Assert.That(saved.State, Is.EqualTo(CityActivityPhase.Completed));
             Assert.That(loaded.Relation(guest) - before, Is.EqualTo(expected));
             Assert.That(saved.Participants.Single().RelationAfter - before, Is.EqualTo(expected));
@@ -263,7 +279,7 @@ namespace PCShopSell.Tests
 
             using var loaded = Reload(s);
             var saved = loaded.RunningCityActivity;
-            loaded.AdvanceClock(saved.Duration);
+            Assert.That(loaded.AdvanceKaraokePlayback(saved.Id, 1), Is.True);
             Assert.That(saved.State, Is.EqualTo(CityActivityPhase.Completed));
             Assert.That(loaded.Relation(singer), Is.EqualTo(beforeReload));
         }
@@ -310,6 +326,8 @@ namespace PCShopSell.Tests
                 }
                 Assert.IsTrue(loaded.FinishManualCityActivity(a.Id));
             }
+            else if (GameSession.IsKaraokeActivity(a))
+                Assert.IsTrue(loaded.AdvanceKaraokePlayback(a.Id, 1));
             else loaded.AdvanceClock(a.Duration + 1);
             Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason);
             Assert.Greater(loaded.Relation(personId), relation);
@@ -377,8 +395,9 @@ namespace PCShopSell.Tests
             Assert.AreEqual(findsProblem, a.Choices.Contains("audio-finding"));
             Assert.AreEqual(balance, s.Ledger.Balance);
             using var loaded = Reload(s); var saved = loaded.CityActivities.Single(x => x.Id == a.Id);
-            loaded.AdvanceClock(91);
+            Assert.IsTrue(loaded.AdvanceKaraokePlayback(saved.Id, 1));
             Assert.AreEqual(balance + Money.FromYuan(1500), loaded.Ledger.Balance);
+            Assert.IsFalse(loaded.AdvanceKaraokePlayback(saved.Id, 1));
             loaded.AdvanceClock(20); Assert.AreEqual(balance + Money.FromYuan(1500), loaded.Ledger.Balance);
             Assert.That(saved.SettlementSummary, Does.Contain("1,500"));
         }
@@ -420,7 +439,13 @@ namespace PCShopSell.Tests
         public void LeavingAudioWorkEarlyDoesNotPayAndChefStoryWaitsForCompletion()
         {
             using var s = Make(); var a = Accept(s, "act_ktv_fuzhi"); var balance = s.Ledger.Balance;
-            Attend(s, a); s.AdvanceClock(20); Assert.IsTrue(s.CancelCityActivity(a.Id));
+            Attend(s, a);
+            Assert.IsFalse(s.AdvanceKaraokePlayback(a.Id, .25));
+            long exitMinute = s.Clock.Now.TotalMinutes;
+            Assert.AreEqual(a.ActualStart + a.Duration / 4, exitMinute);
+            Assert.IsTrue(s.CancelCityActivity(a.Id));
+            Assert.AreEqual(exitMinute, s.Clock.Now.TotalMinutes);
+            Assert.AreEqual(CityActivityPhase.Interrupted, a.State);
             Assert.AreEqual(balance, s.Ledger.Balance);
             using var other = Make(); var meal = Accept(other, "act_dinner_chef"); Attend(other, meal);
             Assert.IsTrue(other.ChooseCityActivity(meal.Id, 1)); Assert.IsFalse(other.Flags.Contains("social:chef-story"));

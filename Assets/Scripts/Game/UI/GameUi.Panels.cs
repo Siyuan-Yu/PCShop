@@ -38,6 +38,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
+            if (p.Id == CityLifeCatalog.PachinkoVenue) { OpenCityVenue(p, activityId); return; }
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
             if (UsesCityVenuePanel(p)) { OpenCityVenue(p, activityId); return; }
             if (IsCarryStore(p))
@@ -64,7 +65,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildAgency, 1660, 1000);
                     break;
                 case PlaceKind.Home when p != S.Home:
-                    Toast(S.CanSleepAt(p) ? "已到住处。走近床按 F 休息，走回门口按 F 出门。" : "走近在家的住户按 F 交谈，走回门口按 F 告辞。");
+                    Toast(S.CanSleepAt(p) ? "已到住处。按 B 查看本住宅后仓，走近床按 F 休息。" : "走近在家的住户按 F 交谈，走回门口按 F 告辞。");
                     break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
@@ -143,24 +144,26 @@ namespace PCShopSell.Game.UI
                 {
                     string id = resident.PersonId;
                     bool atHome = present.Contains(id);
+                    bool canTalk = atHome && S.CanTalkAtHomeDoor(residence, id);
                     var person = S.CityPerson(id);
+                    if (person == null) continue;
                     var entry = Ui.Row(portraits, 58, 8);
                     var layout = entry.GetComponent<HorizontalLayoutGroup>();
                     layout.childForceExpandHeight = false;
                     layout.childAlignment = TextAnchor.MiddleLeft;
-                    PortraitThumb(entry, id, 46, () => OpenCityPersonProfile(id, fromConversation: true), dimmed: !atHome);
+                    PortraitThumb(entry, id, 46, () => OpenResidentPortrait(residence, id, window), dimmed: !atHome);
                     var description = Ui.Rect(entry, "ResidentDetails");
                     Ui.Size(description, -1, -1, 1);
                     Ui.VList(description, 2, 0);
                     Line(description, person.Name + (atHome ? " · 在家" : " · 不在家"), 16, atHome ? Ui.Good : Ui.Dim);
-                    Line(description, "好感 " + S.Relation(id), 15, Ui.Dim);
+                    Line(description, (canTalk ? "门口交谈" : "查看资料") + " · 好感 " + S.Relation(id), 15, Ui.Dim);
                 }
 
                 var details = Ui.Rect(row, "Visit");
                 Ui.Size(details, -1, -1, 1);
                 Ui.VList(details, 10, 0);
                 Line(details, residence.Name, 22, Ui.Accent);
-                Para(details, "点击左侧头像查看住户资料。", 16, Ui.Dim);
+                Para(details, "点击在家住户的头像，可以在门口交谈。", 16, Ui.Dim);
                 string blocker = S.ClosedReason(residence);
                 Para(details, "与至少一位住户的好感达到 " + GameSession.HomeVisitMinRelation + "，且这位住户在家时，可以进屋拜访。", 18);
                 if (blocker != null) Para(details, blocker, 17, Ui.Warn);
@@ -175,6 +178,24 @@ namespace PCShopSell.Game.UI
                     OnEnteredPlace(residence);
                 }, 18, Ui.ButtonHot, blocker == null), -1, 46).name = "ResidenceEnter";
             }, scrollContent: false);
+        }
+
+        private void OpenResidentPortrait(Place residence, string id, Window residenceWindow)
+        {
+            var session = S;
+            if (OpeningMealRestricted || !session.TryStartHomeDoorConversation(residence, id))
+            {
+                OpenCityPersonProfile(id);
+                return;
+            }
+
+            void EndConversation() => session.EndHomeDoorConversation(residence, id);
+            residenceWindow.OnClosed += EndConversation;
+            OpenPersonDialogue(id, parent: residenceWindow, onClosed: () =>
+            {
+                residenceWindow.OnClosed -= EndConversation;
+                EndConversation();
+            });
         }
 
         private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true)

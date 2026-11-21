@@ -3,6 +3,7 @@ using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
+using PCShopSell.Game.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,7 +34,12 @@ namespace PCShopSell.Game.Runtime
             return texture;
         }
 
-        public static Texture2D Host(string person) => KolMarket.Get(person) == null ? null : Load("KolStudio/Hosts/" + person);
+        public static Texture2D Host(string person)
+        {
+            if (KolMarket.Get(person) == null) return null;
+            var portrait = GameUi.PortraitOf(person);
+            return ScenePortraits.FromPortrait(portrait) ?? portrait;
+        }
         public static Texture2D Studio(string kind) => Load("KolStudio/" + kind + "_studio");
 
         private static Rect Cell(int index, int columns, int rows) =>

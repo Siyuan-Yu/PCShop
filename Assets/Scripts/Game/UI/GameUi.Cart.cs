@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -196,9 +197,8 @@ namespace PCShopSell.Game.UI
                 Ui.Size(ProductText(asset,item.Name+" ×"+item.Amount+" · "+item.Price+"\n<size=14>结账后登记为已购资产，不占背包或货车空间</size>",16),-1,-1,1);
                 Ui.Size(Ui.Button(asset,"移除",()=>{S.RemoveFromCart(item.Key,item.Amount);w.Rebuild();},15),64,38);
             }
-            OwnedShop dest = S.CourierShop(defaultToShop);
-            (Money fee, int minutes) = S.CourierQuote(dest);
-            int cars = S.CartCars(defaultToShop);
+            var quote = S.QuoteCart(defaultToShop);
+            var (fee, minutes, cars) = (quote.fee, quote.minutes, quote.cars);
             double truckKg = S.CartTruckKg;
             bool physical=S.Cart.Any(l=>!l.Registered);
             if(physical)
@@ -233,15 +233,15 @@ namespace PCShopSell.Game.UI
             if (truckKg > 1e-9)
             {
                 Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
-                Ui.Size(CourierDestinationButton(destRow, w, dest, 15), 300);
+                Ui.Size(CourierDestinationButton(destRow, w, quote.destination, 15, quote.residence), 300);
                 Ui.Size(Ui.Label(destRow, $"约 {minutes} 分钟到，每辆面包车最多装 {GameSession.CourierCapacityKg:0} 千克", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
             }
             else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
 
             }
             // 钱都写在这一行：货款 + 运费 = 合计
-            Money goods = S.CartGoods;
-            Money freight = truckKg > 1e-9 ? S.CartFreight(defaultToShop) : Money.Zero;
+            Money goods = quote.goods;
+            Money freight = cars > 0 ? fee * cars : Money.Zero;
             Money total = goods + freight;
             string freightText = truckKg <= 1e-9 ? "运费 ¥0（不叫车）"
                 : cars > 0 ? $"运费 {freight}（{cars} 辆 × {fee}）"
@@ -254,7 +254,7 @@ namespace PCShopSell.Game.UI
             RectTransform pay = Ui.Row(parent, 46, 8);
             if(physical)Ui.Size(Ui.Button(pay, "背得动的都放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonBg), 170);
             if(physical)Ui.Size(Ui.Button(pay, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonBg), 110);
-            string why = S.CheckoutBlocker(defaultToShop);
+            string why = quote.blocker;
             var checkout = Ui.Button(pay, why ?? "结账（付合计）", () => CheckoutCart(w, defaultToShop),
                 why == null ? 18 : 14, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
             checkout.name = "CartCheckout";
@@ -315,16 +315,20 @@ namespace PCShopSell.Game.UI
             };
         }
 
-        private Button CourierDestinationButton(Transform parent, Window owner, OwnedShop destination, int fontSize, bool forTruck = false)
+        private Button CourierDestinationButton(Transform parent, Window owner, OwnedShop destination, int fontSize, Place residence)
         {
-            var button = Ui.Button(parent, S.CourierDestName(destination) + "  ▼",
-                () => OpenCourierDestMenu(owner, destination, forTruck), fontSize, Ui.FlatRow);
+            string name = residence == null ? S.CourierDestName(destination) : S.PlaceTitle(residence);
+            var button = Ui.Button(parent, name + "  ▼", () =>
+            {
+                if (residence == null) OpenCourierDestMenu(owner, destination);
+                else OpenTruckDestMenu(owner, residence, forCart: true);
+            }, fontSize, Ui.FlatRow);
             button.name = "CourierDestination";
             return button;
         }
 
-        /// <summary>“送到”下拉框：家里 + 每一家自己的店，各自的运费和大概多久到。forTruck 时不能选现在站的地方。</summary>
-        private void OpenCourierDestMenu(Window owner, OwnedShop current, bool forTruck)
+        /// <summary>购物配送地址：家里和各家门店。</summary>
+        private void OpenCourierDestMenu(Window owner, OwnedShop current)
         {
             int n = 1 + S.MyShopCount;
             OpenWindow("送到哪", 600, 150 + n * 72, w =>
@@ -332,15 +336,14 @@ namespace PCShopSell.Game.UI
                 void Option(OwnedShop shop)
                 {
                     (Money fee, int minutes) = S.CourierQuote(shop);
-                    bool here = forTruck && (shop == null ? S.CurrentPlace == S.Home : S.CurrentPlace == shop.Place);
                     bool chosen = shop == current;
-                    string sub = here ? "你就在这里" : $"每辆运费 {fee}，约 {minutes} 分钟到";
+                    string sub = $"每辆运费 {fee}，约 {minutes} 分钟到";
                     Ui.Size(Ui.Button(w.Content, $"{S.CourierDestName(shop)}{(chosen ? "  ✓" : "")}\n<size=13>{sub}</size>", () =>
                     {
                         S.SetCourierDest(shop);
                         w.Close();
                         owner?.Rebuild();
-                    }, 18, Ui.SelectedButton(chosen), !here), -1, 64);
+                    }, 18, Ui.SelectedButton(chosen)), -1, 64);
                 }
                 Option(null);
                 foreach (OwnedShop s in S.MyShops) Option(s);
@@ -350,6 +353,48 @@ namespace PCShopSell.Game.UI
         }
 
         // ---------- 打电话叫货车 ----------
+
+        private void OpenTruckDestMenu(Window owner, Place selected, bool forCart = false)
+        {
+            var destinations = S.TruckDestinations.ToArray();
+            var residences = destinations.Where(place => place.Kind == PlaceKind.Home).ToArray();
+            var shops = destinations.Where(place => place.Kind != PlaceKind.Home).ToArray();
+            int rows = forCart ? residences.Length : Math.Max(residences.Length, shops.Length);
+            OpenWindow("送到哪", forCart ? 650 : 980, Math.Min(850, 138 + rows * 64), w =>
+            {
+                var columns = Ui.Row(w.Content, -1, 14);
+                columns.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                BuildGroup("住宅", residences);
+                if (!forCart && shops.Length > 0) BuildGroup("店铺", shops);
+
+                void BuildGroup(string title, Place[] addresses)
+                {
+                    var column = Ui.Size(Ui.Rect(columns, title), 0, -1, 1);
+                    Ui.VList(column, 6, 0);
+                    Line(column, title, 18, Ui.Accent);
+                    foreach (var address in addresses)
+                    {
+                        string blocker = forCart ? S.CartResidenceBlocker(address) : S.TruckDestinationBlocker(address);
+                        var (fee, minutes) = S.TruckQuote(address);
+                        string note = address == S.CurrentPlace ? "你就在这里" : blocker ?? $"每辆 {fee} · 约 {minutes} 分钟";
+                        if (forCart && blocker == null)
+                        {
+                            int tier = address == S.Home ? S.HomeTier : S.ResidentialTier(address);
+                            if (tier < GameSession.HomeWorkbenchMinimumResidenceTier) note += " · 需中型及以上住宅安装";
+                            else if (address != S.Home) note += " · 搬入后可安装";
+                        }
+                        bool chosen = address == selected;
+                        Ui.Size(Ui.Button(column, S.PlaceTitle(address) + (chosen ? "  ✓" : "") + "\n<size=14>" + note + "</size>", () =>
+                        {
+                            bool chosenAddress = forCart ? S.SelectCartResidence(address) : S.SelectTruckDestination(address);
+                            if (!chosenAddress) { w.Rebuild(); return; }
+                            w.Close();
+                            owner.Rebuild();
+                        }, 17, Ui.SelectedButton(chosen), blocker == null), -1, 58);
+                    }
+                }
+            });
+        }
 
         /// <summary>
         /// 打电话叫货车：左边是这里能交给司机的东西，点“装车”（按住装多件）或拖到右边装货单，选好送到哪，点出发一起付运费。
@@ -361,12 +406,13 @@ namespace PCShopSell.Game.UI
             {
                 Para(w.Content, $"每辆货车最多装 {Ui.Emphasize($"{GameSession.CourierCapacityKg:0} 千克")}，运费按路程算。先选送到哪，再把左边的东西装车。" +
                     "在家或店内可搬后仓和临时存放的货物。摆着的家具先收进后仓。", 15, Ui.Dim);
-                OwnedShop dest = S.TruckDest;
+                Place dest = S.TruckDestination;
                 RectTransform destRow = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(destRow, "送到", 17, TextAnchor.MiddleLeft, Ui.Dim), 44);
-                Ui.Size(CourierDestinationButton(destRow, w, dest, 16, forTruck: true), 320);
+                Ui.Size(Ui.Button(destRow, S.PlaceTitle(dest) + "  ▼", () => OpenTruckDestMenu(w, dest), 16, Ui.FlatRow), 320)
+                    .name = "CourierDestination";
                 string destWhy = S.TruckDestBlocker;
-                (Money fee, int minutes) = S.CourierQuote(dest);
+                (Money fee, int minutes) = S.TruckQuote(dest);
                 Ui.Size(Ui.Label(destRow, destWhy ?? $"每辆 {fee}，约 {minutes} 分钟到", 15, TextAnchor.MiddleLeft, destWhy != null ? Ui.Warn : Ui.Dim), -1, -1, 1);
 
                 RectTransform cols = Ui.Row(w.Content, 520, 10);
@@ -464,30 +510,48 @@ namespace PCShopSell.Game.UI
         private void ConfirmCloseShop(OwnedShop shop)
         {
             string title = S.ShopTitle(shop);
-            OpenWindow((shop.OwnsProperty?"结束自营 · ":"退租 · ") + title, 660, 460, confirm =>
+            string action = shop.OwnsProperty ? "结束自营" : "退租";
+            bool finalReview = false;
+            OpenWindow(action + " · " + title, 660, 460, confirm =>
             {
-                Line(confirm.Content, $"{title} · {S.City.StreetName(shop.Place.StreetId)} · 周租 {shop.Lease.Rent}", 20, Ui.Accent);
-                Para(confirm.Content, (shop.OwnsProperty?"结束自营后产权保留。":$"主动退租，已交押金 {Ui.Emphasize($"{shop.Lease.Deposit} 全部不退", Ui.Warn)}，不会再次扣款。")+
-                    $"店里摆的家具收回“我的”，{Ui.Emphasize("本店员工辞退", Ui.Warn)}。"+(S.CurrentPlace==shop.Place?"办理后移到店铺门口。":"办理后仍留在中介。")+
-                    (S.MyShopCount==1?"这是最后一家店，结束后可到中介重新租铺。":shop==S.MainShop?"下一家店将成为主店。":""),17);
-                string blocker=S.CloseShopBlocker(shop);
-                if(blocker!=null)Para(confirm.Content,"暂不能办理："+blocker+"。",17,Ui.Warn);
-                var row = Ui.Row(confirm.Content, 46, 10);
-                Ui.Size(Ui.Button(row, "再想想", confirm.Close, 18), -1, 46, 1);
-                var submit=Ui.Size(Ui.Button(row, shop.OwnsProperty?"确认结束自营":"确认退租（押金不退）", () =>
+                Line(confirm.Content, finalReview ? $"再次确认{action} · {title}" : $"{title} · {S.City.StreetName(shop.Place.StreetId)}", 20, Ui.Accent);
+                Para(confirm.Content, shop.OwnsProperty ? "保留商铺产权，铺面转为空置。" : $"已交押金 {shop.Lease.Deposit} 不退，铺面重新挂牌。", 17);
+                Para(confirm.Content, Ui.Emphasize("店内货物、家具和装修会永久清空。", Ui.Warn), 17);
+                if (!finalReview)
                 {
-                    if (S.CloseShopBlocker(shop) != null)
+                    Para(confirm.Content, "员工转为待安排。已付款的在途货物改送家中，还没采购的部分取消。", 17);
+                    if (shop.Sim.Orders.Count > 0)
+                        Para(confirm.Content, "未完成的装机单会取消，企业订单按原规则结算履约保证金。", 17, Ui.Warn);
+                }
+                string blocker = S.CloseShopBlocker(shop);
+                if (blocker != null) Para(confirm.Content, "暂不能办理：" + blocker + "。", 17, Ui.Warn);
+                var row = Ui.Row(confirm.Content, 46, 10);
+                Ui.Size(Ui.Button(row, finalReview ? "返回上一步" : "再想想", () =>
+                {
+                    if (!finalReview) { confirm.Close(); return; }
+                    finalReview = false;
+                    confirm.Rebuild();
+                }, 18), -1, 46, 1);
+                var submit = Ui.Size(Ui.Button(row, finalReview ? "清空并" + action : "继续", () =>
+                {
+                    if (S.CloseShopBlocker(shop) is string reason)
                     {
-                        confirm.Close();
-                        Toast(S.CloseShopBlocker(shop));
+                        Toast(reason);
+                        confirm.Rebuild();
+                        return;
+                    }
+                    if (!finalReview)
+                    {
+                        finalReview = true;
+                        confirm.Rebuild();
                         return;
                     }
                     CloseAllWindows();
                     CloseDock();
                     if (!S.CloseShop(shop.Place.Id) && S.InPlayerShop) OpenDock();
-                }, 18, Ui.Warn,blocker==null), -1, 46, 1);
-                submit.name="ConfirmCloseShop";
-            });
+                }, 18, Ui.Warn, blocker == null), -1, 46, 1);
+                submit.name = finalReview ? "ConfirmCloseShop" : "ReviewCloseShop";
+            }, fitContent: true);
         }
     }
 }

@@ -62,10 +62,12 @@ namespace PCShopSell.Game.Runtime
             foreach(var g in data.Glows)Mats.RestoreBakedGlow(g.Material,g.Emission,g.Daylight);
             NightLights.AddRange(data.NightLights);
             foreach(var label in _root.GetComponentsInChildren<UnityEngine.UI.Text>(true))label.font=PCShopSell.Game.UI.Ui.Font;
+            var residentialBlocks = _city.Blocks.Where(block => _city.HasPlace(block.homeId)).ToDictionary(block => block.homeId);
             foreach(var p in data.Places)
             {
+                residentialBlocks.TryGetValue(p.Id, out var block);
                 var v=new PlaceVisual {Place=_city.GetPlace(p.Id),Entrance=p.Entrance,LabelPos=p.LabelPos,Root=p.Root,
-                    Exterior=p.Exterior,VenueInterior=p.Interior,Sign=p.Sign,Neon=p.Neon};
+                    Exterior=p.Exterior,VenueInterior=p.Interior,Sign=p.Sign,Neon=p.Neon,ResidentialBlock=block};
                 v.OpenOnly.AddRange(p.OpenOnly);v.ClosedOnly.AddRange(p.ClosedOnly);Places.Add(p.Id,v);
                 if(v.Exterior!=null&&v.VenueInterior!=null)_venueVisuals.Add(v);
             }

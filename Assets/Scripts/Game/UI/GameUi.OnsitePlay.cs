@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Home;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
@@ -13,6 +15,8 @@ namespace PCShopSell.Game.UI
         private Window _onsiteWindow;
         private Text _onsiteStatus,_onsiteReadout;
         private Image _onsitePower;
+        private Text _onsiteBasketballControls, _onsiteBasketballAimDot;
+        private bool _onsiteBasketballMouseLook, _onsiteBasketballCursorLocked, _onsiteBasketballMouseHeld;
         private RectTransform _onsiteRoundResult;
         private bool _onsiteIllustratedBar;
         private bool _onsiteHeld,_onsiteWasHeld;
@@ -21,20 +25,30 @@ namespace PCShopSell.Game.UI
         public bool OnsiteInputActive=>_onsiteWindow!=null&&!_onsiteWindow.Closed;
         public void OpenOnsitePlay()
         {
-            if (OnsiteInputActive || S.CurrentOnsite == null) return;
+            if (OnsiteInputActive || S.CurrentOnsite is not OnsitePlayState state) return;
             var activity = S.RunningCityActivity;
             bool sport = GameSession.IsOnsiteSport(activity);
             _onsiteSportActivityId = sport ? activity.Id : null;
             CloseAllWindows();
-            _onsiteHeld=_onsiteWasHeld=false;
-            _onsiteWindow=OpenWindow("现场活动",1920,1080,BuildOnsitePlay,holds:false,closable:false,onClosed:()=>{_onsiteHeld=_onsiteWasHeld=false;_onsiteWindow=null;_onsiteSportActivityId=null;_ctrl.HideOnsiteScene();},scrollContent:false,showTitleBar:false);
+            _onsiteHeld = _onsiteWasHeld = _onsiteBasketballMouseHeld = false;
+            _onsiteBasketballMouseLook = state.IsBasketball && !OnsiteReadyToFinish(activity);
+            if (_onsiteBasketballMouseLook) S.CancelOnsiteBasketballCharge();
+            _onsiteWindow=OpenWindow("现场活动",1920,1080,BuildOnsitePlay,holds:false,closable:false,onClosed:()=>
+            {
+                _onsiteHeld = _onsiteWasHeld = _onsiteBasketballMouseLook = _onsiteBasketballMouseHeld = false;
+                CaptureBasketballMouse(false);
+                _onsiteWindow = null;
+                _onsiteSportActivityId = null;
+                _ctrl.HideOnsiteScene();
+            },scrollContent:false,showTitleBar:false);
         }
-        private string OnsiteLayoutKey(OnsitePlayState s)=>s==null?"ended":s.Number+":"+s.Phase+":"+s.Pending+":"+s.Round+":"+s.Feedback+":"+s.Attempts+":"+s.Subject+":"+s.Base+":"+s.Flavor+":"+s.Sweet+":"+string.Join(",",s.TalkMasks)+":"+s.ProcurementDecided+":"+s.Mode+":"+s.Angle+":"+s.Selected;
+        private string OnsiteLayoutKey(OnsitePlayState s)=>s==null?"ended":s.Number+":"+s.Phase+":"+s.Pending+":"+s.Round+":"+s.Feedback+":"+s.Attempts+":"+s.Subject+":"+s.Base+":"+s.Flavor+":"+s.Sweet+":"+string.Join(",",s.TalkMasks)+":"+s.ProcurementDecided+":"+s.Mode+":"+s.Selected;
         private void BuildOnsitePlay(Window w)
         {
             var s=S.CurrentOnsite;if(s==null){Line(w.Content,"本场已结束，关闭后可查看日程结算。",22);return;}
             _onsiteLayoutKey=OnsiteLayoutKey(s);_onsiteStatus=_onsiteReadout=null;_onsitePower=null;
             _onsiteRoundResult = null;
+            _onsiteBasketballControls = _onsiteBasketballAimDot = null;
             var panel=w.Root.Find("Panel") as RectTransform;if(w.Fitter!=null)w.Fitter.enabled=false;if(panel!=null){panel.localScale=Vector3.one;panel.Fill();}
             w.Content.GetComponent<VerticalLayoutGroup>().enabled=false;w.Content.Fill();
             if (s.IsFootballPenalty)
@@ -59,14 +73,31 @@ namespace PCShopSell.Game.UI
             bool drinkTasting = GameSession.IsDrinkTasting(activity);
             bool practice = GameSession.IsVenueSport(activity);
             bool venueBasketball = GameSession.IsVenueBasketball(activity);
-            if (venueBasketball)
+            bool readyToFinish = OnsiteReadyToFinish(activity);
+            if (s.IsBasketball)
             {
-                var score = Ui.Panel(w.Content, "BasketballPracticeScore", Ui.Chrome).rectTransform.Anchor(.025f, .80f, .185f, .882f);
-                Ui.Label(score, $"已投 {s.Round} 球　命中 {s.Success} 球", 20, TextAnchor.MiddleCenter, Ui.Accent)
+                var score = Ui.Panel(w.Content, "BasketballPracticeScore", Ui.Chrome).rectTransform.Anchor(.025f, .80f, .22f, .882f);
+                string scoreText = s.Number == 56 ? $"比分 {s.BasketballPoints} : {s.OpponentScore}"
+                    : venueBasketball ? $"已投 {s.Round} 球　得分 {s.BasketballPoints} 分"
+                    : $"完成 {s.Round} 回合　得分 {s.BasketballPoints} 分";
+                Ui.Label(score, scoreText, 20, TextAnchor.MiddleCenter, Ui.Accent)
                     .rectTransform.Fill(6);
+                var hint = Ui.Panel(w.Content, "BasketballControls", Ui.Chrome).rectTransform;
+                hint.Anchor(.025f, .71f, .315f, .785f);
+                _onsiteBasketballControls = Ui.Label(hint, BasketballControlHint(readyToFinish), 17, TextAnchor.MiddleCenter);
+                _onsiteBasketballControls.rectTransform.Fill(6);
+                if (!s.BasketballDrill && !readyToFinish)
+                {
+                    _onsiteBasketballAimDot = Ui.Label(w.Content, "•", 27, TextAnchor.MiddleCenter, Color.white);
+                    _onsiteBasketballAimDot.gameObject.name = "BasketballAimDot";
+                    _onsiteBasketballAimDot.raycastTarget = false;
+                    _onsiteBasketballAimDot.enabled = _onsiteBasketballMouseLook && s.Phase != "flight";
+                    _onsiteBasketballAimDot.rectTransform.Anchor(.5f, .5f, .5f, .5f, -15, -15, -15, -15);
+                    var outline = _onsiteBasketballAimDot.gameObject.AddComponent<Outline>();
+                    outline.effectColor = new Color(0, 0, 0, .55f);
+                    outline.effectDistance = new Vector2(1, -1);
+                }
             }
-            bool readyToFinish = practice ? S.CanFinishOnsiteSport && S.ManualAttemptsLeft == 0
-                : S.CanFinishManualCityActivity(activity.Id);
             if (drinkTasting)
                 Ui.Label(header.transform, $"时间暂停 · 尝完三杯计入 {activity.Duration} 分钟", 19).rectTransform.Anchor(.52f,0,.83f,1);
             else if (practice)
@@ -79,8 +110,8 @@ namespace PCShopSell.Game.UI
                 _onsiteRoundResult.Anchor(.32f, .77f, .68f, .875f);
                 bool golf = s.Number >= 57;
                 string unit = golf ? "杆" : "回合";
-                string tally = s.Number == 56 ? $"{(s.Round == 5 ? "终场" : "当前")}比分 {s.Success * 2} : {s.OpponentScore}"
-                    : $"累计{(golf || venueBasketball ? "命中" : "成功")} {s.Success} 次";
+                string tally = s.Number == 56 ? $"{(s.Round == 5 ? "终场" : "当前")}比分 {s.BasketballPoints} : {s.OpponentScore}"
+                    : s.IsBasketball ? $"累计得分 {s.BasketballPoints} 分" : $"累计命中 {s.Success} 次";
                 Ui.Label(_onsiteRoundResult, $"第 {s.Round} {unit} · {tally}", 20, TextAnchor.MiddleCenter, Ui.Dim)
                     .rectTransform.Anchor(0, .60f, 1, .96f, 12, 0, 12, 0);
                 Color resultColor = golf ? Ui.Accent : s.LastSportResult switch
@@ -171,19 +202,22 @@ namespace PCShopSell.Game.UI
                             s.Phase is not ("charging" or "flight"), selected: s.Mode == i);
                     }
                 }
-                if (!s.BasketballDrill)
+                if (!s.IsBasketball)
                 {
                     bool canAim = s.Phase is not ("charging" or "flight");
                     var aim = Ui.Row(list, 40, 6);
-                    Ui.Size(Ui.Button(aim, "← 方向", () => { S.AimOnsiteSport(s.Angle - 3); w.RequestRebuild(); }, 17, interactable: canAim), -1, 38, 1);
-                    Ui.Size(Ui.Button(aim, "方向 →", () => { S.AimOnsiteSport(s.Angle + 3); w.RequestRebuild(); }, 17, interactable: canAim), -1, 38, 1);
+                    void MoveAim(double degrees)
+                    {
+                        if (S.CurrentOnsite is OnsitePlayState current) S.AimOnsiteSport(current.Angle + degrees);
+                    }
+                    Ui.Size(Ui.Button(aim, "← 方向", () => MoveAim(-3), 17, interactable: canAim), -1, 38, 1);
+                    Ui.Size(Ui.Button(aim, "方向 →", () => MoveAim(3), 17, interactable: canAim), -1, 38, 1);
                     Label("方向 " + s.Angle.ToString("0") + "° · 回合 " + s.Round);
                 }
                 if(s.Number==55&&s.Round>=3&&s.Mask==7)for(int i=0;i<3;i++){int n=i;Button(new[]{"反馈抓地力","反馈急停脚感","反馈回弹"}[i],()=>S.OnsiteCourtFeedback(n),s.Feedback<0);}
                 if(s.Number==58&&s.Round>=3)
                 {Button("谈用途、型号和保修",()=>S.DecideOnsiteProcurement(0),!s.ProcurementDecided);Button("谈预算、数量和交期",()=>S.DecideOnsiteProcurement(1),!s.ProcurementDecided);Button("这次不承诺供货",()=>S.DecideOnsiteProcurement(2),!s.ProcurementDecided);}
-                Label(s.Number == 55 && s.BasketballDrill ? s.Mode == 0 ? "运球约 55% 力度" : "急停约 70% 力度"
-                    : "按住屏幕下方按钮或空格蓄力");
+                if (!s.IsBasketball) Label("按住屏幕下方按钮或空格蓄力");
             }
             else if(s.Number==76)
             {
@@ -198,19 +232,22 @@ namespace PCShopSell.Game.UI
                 Button("拍照并保存",()=>{if(!_ctrl.CaptureOnsitePhoto())Toast("照片未保存，请检查现场、相机和写入空间。");});Button("查看相册",OpenOnsiteAlbum);
             }
             var rail=Ui.Panel(w.Content,"OnsiteBottom",Ui.Chrome);
-            if (venueBasketball) rail.rectTransform.Anchor(.23f, .03f, .77f, .175f);
+            if (s.IsBasketball) rail.rectTransform.Anchor(.25f, .03f, .75f, .135f);
             else rail.rectTransform.Anchor(0, 0, 1, .19f);
             _onsiteStatus=Ui.Label(rail.transform,_onsiteRoundResult == null ? s.Message : "",21,color:Ui.Accent);_onsiteStatus.rectTransform.Anchor(.025f,s.Number==53?.18f:.48f,.70f,.98f);
             _onsiteReadout=Ui.Label(rail.transform,"",18);_onsiteReadout.rectTransform.Anchor(.025f,.10f,.70f,.48f);
-            if (venueBasketball && !readyToFinish)
+            if (s.IsBasketball)
             {
-                _onsiteStatus.rectTransform.Anchor(.035f, .63f, .47f, .98f);
-                _onsiteReadout.rectTransform.Anchor(.035f, .06f, .70f, .28f);
-                bool canAim = s.Phase is not ("charging" or "flight");
-                Ui.Button(rail.transform, "←", () => S.AimOnsiteSport(s.Angle - 3), 19, Ui.ButtonBg, canAim)
-                    .GetComponent<RectTransform>().Anchor(.49f, .64f, .565f, .91f);
-                Ui.Button(rail.transform, "→", () => S.AimOnsiteSport(s.Angle + 3), 19, Ui.ButtonBg, canAim)
-                    .GetComponent<RectTransform>().Anchor(.578f, .64f, .653f, .91f);
+                _onsiteStatus.fontSize = 17;
+                _onsiteStatus.rectTransform.Anchor(.035f, .06f, .70f, .39f);
+                _onsiteReadout.text = $"蓄力 {s.Power:P0}";
+                _onsiteReadout.rectTransform.Anchor(.035f, .62f, .70f, .95f);
+                var meter = Ui.Panel(rail.transform, "PowerBackground", Ui.PanelBg2);
+                meter.rectTransform.Anchor(.035f, .41f, .70f, .59f);
+                meter.raycastTarget = false;
+                _onsitePower = Ui.Panel(meter.transform, "Power", Ui.ButtonHot);
+                _onsitePower.rectTransform.Anchor(0, 0, (float)s.Power, 1);
+                _onsitePower.raycastTarget = false;
             }
             if (readyToFinish)
             {
@@ -228,27 +265,73 @@ namespace PCShopSell.Game.UI
                 string action = s.BasketballDrill ? s.Number == 54 ? "练习脚步" : s.Mode == 0 ? "运球" : "急停转向"
                     : s.Number == 55 ? "跳投" : s.Number <= 56 ? "投篮" : "击球";
                 bool canCharge = s.Phase != "flight";
-                string chargeLabel = canCharge ? "按住蓄力\n松手" + action : s.BasketballDrill ? "正在练习…" : "球在飞行中…";
+                string chargeLabel = canCharge ? (s.IsBasketball ? "左键 / 空格蓄力" : "按住蓄力") + "\n松手" + action
+                    : s.BasketballDrill ? "正在练习…" : "球在飞行中…";
                 var charge = Ui.Button(rail.transform, chargeLabel, null, 23, Ui.ButtonHot, canCharge);
                 charge.GetComponent<RectTransform>().Anchor(.73f,.2f,.98f,.85f);
                 if (canCharge) charge.gameObject.AddComponent<FishingHoldInput>().Held = v => _onsiteHeld = v;
-                var meter = Ui.Panel(rail.transform, "PowerBackground", Ui.ButtonBg);
-                meter.rectTransform.Anchor(.035f, venueBasketball ? .35f : .02f, .653f, venueBasketball ? .51f : .09f);
-                _onsitePower = Ui.Panel(meter.transform, "Power", Ui.ButtonHot);
-                _onsitePower.raycastTarget = false;
-                if (venueBasketball)
+                if (!s.IsBasketball)
                 {
-                    // Strength interval that reaches the rim when aimed straight ahead.
-                    float start = (float)((s.TargetZ - OnsitePlayState.BasketballRimTolerance) / s.BasketballShotRange);
-                    float end = (float)((s.TargetZ + OnsitePlayState.BasketballRimTolerance) / s.BasketballShotRange);
-                    var interval = Ui.Panel(meter.transform, "RimRange", new Color(.39f, .64f, .39f, .7f));
-                    interval.rectTransform.Anchor(start, 0, end, 1);
-                    interval.raycastTarget = false;
+                    var meter = Ui.Panel(rail.transform, "PowerBackground", Ui.ButtonBg);
+                    meter.rectTransform.Anchor(.035f, .02f, .653f, .09f);
+                    _onsitePower = Ui.Panel(meter.transform, "Power", Ui.ButtonHot);
+                    _onsitePower.raycastTarget = false;
                 }
             }
             else if (!drinkTasting)
                 Ui.Button(rail.transform,"完成现场步骤后结算",null,19,Ui.ButtonBg,false).GetComponent<RectTransform>().Anchor(.74f,.3f,.98f,.75f);
         }
+
+        private bool OnsiteReadyToFinish(CityActivity activity) => GameSession.IsVenueSport(activity)
+            ? S.CanFinishOnsiteSport && S.ManualAttemptsLeft == 0
+            : S.CanFinishManualCityActivity(activity.Id);
+
+        private string BasketballControlHint(bool readyToFinish) => readyToFinish ? "本场已完成 · 点击「结束并结算」"
+            : _onsiteBasketballMouseLook
+            ? "WASD / 方向键移动 · 鼠标转视角\nTab 显示鼠标 · V 重置镜头"
+            : "Tab 继续瞄准";
+
+        private void CaptureBasketballMouse(bool capture)
+        {
+            if (!Application.isPlaying || Application.isBatchMode || _onsiteBasketballCursorLocked == capture) return;
+            _onsiteBasketballCursorLocked = capture;
+            Cursor.lockState = capture ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = !capture;
+            if (capture) EventSystem.current?.SetSelectedGameObject(null);
+        }
+
+        private void UpdateBasketballControls(OnsitePlayState shot, float dt)
+        {
+            if (_onsiteBasketballCursorLocked && Cursor.lockState != CursorLockMode.Locked)
+                _onsiteBasketballMouseLook = false;
+            if (Input.GetKeyDown(KeyCode.Tab)) _onsiteBasketballMouseLook = !_onsiteBasketballMouseLook;
+            if (Input.GetKeyDown(KeyCode.Escape)) _onsiteBasketballMouseLook = false;
+            bool wasLocked = _onsiteBasketballCursorLocked;
+            CaptureBasketballMouse(_onsiteBasketballMouseLook);
+            if (_onsiteBasketballMouseLook)
+            {
+                if (wasLocked)
+                {
+                    _ctrl.TurnOnsiteBasketballView(Input.GetAxisRaw("Mouse X") * 3.2f, -Input.GetAxisRaw("Mouse Y") * 2.8f);
+                    _onsiteBasketballMouseHeld = Input.GetMouseButton(0)
+                        && (_onsiteBasketballMouseHeld || Input.GetMouseButtonDown(0));
+                }
+                Vector2 movement = Vector2.ClampMagnitude(DirectionalInput.Held, 1);
+                if (movement != Vector2.zero && dt > 0 && _ctrl.MoveOnsiteBasketball(movement * (4f * Mathf.Min(dt, .1f))))
+                    shot = S.CurrentOnsite;
+            }
+            else if (_onsiteBasketballMouseHeld)
+            {
+                _onsiteBasketballMouseHeld = _onsiteWasHeld = false;
+                S.CancelOnsiteBasketballCharge();
+            }
+            if (Input.GetKeyDown(KeyCode.V)) _ctrl.ResetOnsiteBasketballView();
+            if (!shot.BasketballDrill && shot.Phase != "flight") _ctrl.AimOnsiteBasketballFromView(shot);
+            if (_onsiteBasketballControls != null) _onsiteBasketballControls.text = BasketballControlHint(false);
+            if (_onsiteBasketballAimDot != null)
+                _onsiteBasketballAimDot.enabled = _onsiteBasketballMouseLook && shot.Phase != "flight";
+        }
+
         private void FramePhoto(int subject,double yaw,double pitch,double distance,double offset,int exposure)=>S.SetOnsitePhotoFrame(subject,yaw,pitch,distance,offset,exposure);
         private void ReturnFromOnsitePlay()
         {
@@ -271,15 +354,27 @@ namespace PCShopSell.Game.UI
             }
             var s = S.CurrentOnsite;
             if (s == null) { ReturnFromOnsitePlay(); return; }
-            if (_windows.LastOrDefault() != _onsiteWindow) return;
-            bool held=_onsiteHeld||Input.GetKey(KeyCode.Space);
-            if (GameSession.IsOnsiteSport(S.RunningCityActivity))
+            if (_windows.LastOrDefault() != _onsiteWindow
+                || s.IsBasketball && Application.isPlaying && !Application.isBatchMode && !Application.isFocused)
+            {
+                if (s.IsBasketball)
+                {
+                    CaptureBasketballMouse(false);
+                    S.CancelOnsiteBasketballCharge();
+                    _onsiteHeld = _onsiteWasHeld = _onsiteBasketballMouseHeld = false;
+                }
+                return;
+            }
+            var runningActivity = S.RunningCityActivity;
+            bool basketballFinished = s.IsBasketball && OnsiteReadyToFinish(runningActivity);
+            bool held = !basketballFinished && (_onsiteHeld || Input.GetKey(KeyCode.Space));
+            if (GameSession.IsOnsiteSport(runningActivity))
             {
                 if (s.IsFootballPenalty) UpdateFootballAim(s);
-                else if (s.Number is >= 54 and <= 56 && !s.BasketballDrill)
+                else if (s.IsBasketball && !basketballFinished)
                 {
-                    if (Input.GetKeyDown(KeyCode.LeftArrow)) S.AimOnsiteSport(s.Angle - 3);
-                    if (Input.GetKeyDown(KeyCode.RightArrow)) S.AimOnsiteSport(s.Angle + 3);
+                    UpdateBasketballControls(s, dt);
+                    held |= _onsiteBasketballMouseHeld;
                 }
                 if (held && !_onsiteWasHeld) S.BeginOnsiteCharge();
                 if (!held && _onsiteWasHeld) S.ReleaseOnsiteShot();
@@ -287,6 +382,13 @@ namespace PCShopSell.Game.UI
             }
             _onsiteWasHeld=held;s=S.CurrentOnsite;
             if (s == null) { ReturnFromOnsitePlay(); return; }
+            if (s.IsBasketball && (basketballFinished || OnsiteReadyToFinish(runningActivity)))
+            {
+                _onsiteBasketballMouseLook = _onsiteBasketballMouseHeld = _onsiteHeld = _onsiteWasHeld = false;
+                CaptureBasketballMouse(false);
+                if (_onsiteBasketballControls != null) _onsiteBasketballControls.text = BasketballControlHint(true);
+                if (_onsiteBasketballAimDot != null) _onsiteBasketballAimDot.enabled = false;
+            }
             if(OnsiteLayoutKey(s)!=_onsiteLayoutKey&&s.Phase!="charging")_onsiteWindow.RequestRebuild();
             bool showRoundResult = _onsiteRoundResult != null && s.Phase == "result";
             if (_onsiteRoundResult != null) _onsiteRoundResult.gameObject.SetActive(showRoundResult);
@@ -296,25 +398,15 @@ namespace PCShopSell.Game.UI
                 RefreshFootballPenalty(s);
                 return;
             }
-            if (_onsiteStatus != null) _onsiteStatus.text = showRoundResult ? "" : s.Message;
+            if (_onsiteStatus != null)
+                _onsiteStatus.text = showRoundResult ? "" : s.Message;
             if (_onsiteReadout != null)
             {
-                if (s.Number is >= 54 and <= 56)
-                {
-                    string direction = s.BasketballDrill ? "" : $" · 方向 {s.Angle:0}°";
-                    string count = s.Number == 56 ? $"比分 {s.Success * 2} : {s.OpponentScore}"
-                        : $"{(GameSession.IsVenueBasketball(S.RunningCityActivity) ? "命中" : "成功")} {s.Success} 次";
-                    _onsiteReadout.text = $"力度 {s.Power:P0}{direction} · 完成 {s.Round} 回合 · {count}";
-                }
+                if (s.IsBasketball)
+                    _onsiteReadout.text = $"蓄力 {s.Power:P0}";
                 else _onsiteReadout.text=s.Number is 51 or 53?"":s.Pending!=null?"现场操作中":s.Number>=57&&s.Number<=58?$"力度{s.Power:P0} · 方向{s.Angle:0}° · 已打{s.Round}杆 · 目标({s.TargetX:0}, {s.TargetZ:0})米 · 风偏{s.Wind:+0.0;-0.0;0}米":s.Number==76?$"已保存{s.PhotoCount}张 · 合格{s.GoodPhotos}张 · 当前构图{S.OnsitePhotoScore}分":"聊完后选择「结束并结算」。";
             }
-            if (_onsitePower != null)
-            {
-                _onsitePower.rectTransform.Anchor(0, 0, (float)s.Power, 1);
-                if (GameSession.IsVenueBasketball(S.RunningCityActivity))
-                    _onsitePower.color = Math.Abs(s.Power * s.BasketballShotRange - s.TargetZ)
-                        < OnsitePlayState.BasketballRimTolerance ? Ui.Good : Ui.ButtonHot;
-            }
+            if (_onsitePower != null) _onsitePower.rectTransform.Anchor(0, 0, (float)s.Power, 1);
         }
         public void OpenOnsiteAlbum()
         {

@@ -21,6 +21,14 @@ namespace PCShopSell.Game.UI
             return image;
         }
 
+        private static Texture2D ScenePersonTexture(string id, bool seated, out bool hasSeatedArt)
+        {
+            var seatedArt = seated ? Resources.Load<Texture2D>("EventCg/person_" + id + "_seated") : null;
+            hasSeatedArt = seatedArt != null;
+            return seatedArt ?? Resources.Load<Texture2D>("EventCg/person_" + id)
+                ?? ScenePortraits.FromPortrait(PortraitOf(id));
+        }
+
         private RectTransform BuildEventCg(Transform parent, EventCgFrame frame, float height, bool featureDish = false)
         {
             var background = Resources.Load<Texture2D>("EventCg/" + frame.Background);
@@ -60,25 +68,15 @@ namespace PCShopSell.Game.UI
 
             if (person != null)
             {
-                var seatedCharacter = frame.Seated ? Resources.Load<Texture2D>("EventCg/person_" + person.Id + "_seated") : null;
-                var character = seatedCharacter != null ? seatedCharacter : Resources.Load<Texture2D>("EventCg/person_" + person.Id);
+                var character = ScenePersonTexture(person.Id, frame.Seated, out bool hasSeatedArt);
                 if (character != null)
                 {
                     var holder = Ui.Rect(canvas, "SceneParticipant");
-                    if (seatedCharacter != null)
+                    if (hasSeatedArt)
                         holder.Anchor(.63f, .28f, .98f, .86f, 0, 0, 0, 0); // The dining tabletop begins at this lower edge.
                     else
                         holder.Anchor(.71f, 0f, 1f, .98f, 0, 0, 0, 0);
                     EventCgImage(holder, person.Id, character);
-                }
-                else
-                {
-                    var holder = Ui.Rect(canvas, "ParticipantPortrait").Anchor(.73f, .08f, .975f, .90f, 0, 0, 0, 0);
-                    var portrait = FitPortrait(holder, person.Id);
-                    portrait.raycastTarget = false;
-                    var border = portrait.gameObject.AddComponent<Outline>();
-                    border.effectColor = Ui.Chrome;
-                    border.effectDistance = new Vector2(2, -2);
                 }
                 EventCgCaption(canvas, person.Name, .73f, .98f, TextAnchor.MiddleCenter);
             }

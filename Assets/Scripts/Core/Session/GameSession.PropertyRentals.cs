@@ -51,6 +51,7 @@ namespace PCShopSell.Core.Session
             if (ShopAt(place.Id) != null || VentureAt(place.Id) != null || place.Id == ParkPlaceId) return "请先结束自营";
             if (property.UseMode != "vacant" || place.Kind == PlaceKind.Home && HasResidentialOccupants(place.Id))
                 return "现有租约结束后才能挂牌";
+            if (ResidenceFreightBlocker(place) is string freight) return freight;
             return PropertyReferenceRent(place).IsPositive ? null : "当前没有参考周租";
         }
 
@@ -124,7 +125,7 @@ namespace PCShopSell.Core.Session
             property.TenantName = RentalApplicantNames[random.Next(0, RentalApplicantNames.Length)];
             if (place.Kind == PlaceKind.Home) MoveNewRentalResidentIn(property, place);
             CreditPropertyRent(property, today);
-            Money fee = AgentFeeFor(rent);
+            Money fee = AgentFeeFor(rent, place);
             if (fee.IsPositive)
                 Ledger.ForceDebit(today, "中介费", fee, place.Name + "出租成交",
                     LedgerAttribution.ForAsset(place.Id, $"property:{place.Id}:lease:{day}:fee"));

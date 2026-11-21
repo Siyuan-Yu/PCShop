@@ -63,7 +63,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>中介费标价：半周房租。</summary>
         public static Money AgentFee(Money rent) => rent.Scale(.5);
 
-        /// <summary>和中介陈启明熟络度每点能打的折扣（0.5%），封顶 <see cref="MaxAgentDiscount"/>。</summary>
+        /// <summary>与房源所属中介负责人每有 1 点熟悉度可减免 0.5%，封顶 <see cref="MaxAgentDiscount"/>。</summary>
         public const double AgentDiscountPerRapport = 0.005;
 
         public const double MaxAgentDiscount = 0.5;

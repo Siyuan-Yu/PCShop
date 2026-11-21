@@ -181,8 +181,8 @@ namespace PCShopSell.Core.Session
         {
             if (shop == null) return 0;
             int count = kind == PurchaseGoodsKind.Part ? Online.Pending.Where(o => OnlineOrderDestination(o) == shop).Sum(o => o.Lines.Where(l => l.PartId == productId).Sum(l => l.Count))
-                + DirectShipments.Where(o => o.PartId == productId && DeliveryShop(o.ShopId) == shop).Sum(o => o.Count) : 0;
-            count += _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == shop).Sum(t => t.Items.Where(i => i.Kind == kind && i.PartId == productId).Sum(i => i.Count));
+                + DirectShipments.Where(o => o.PartId == productId && DirectShipmentDestination(o) == shop).Sum(o => o.Count) : 0;
+            count += _employeeTrips.Where(t => !t.Delivered && EmployeePurchaseDestination(t) == shop).Sum(t => t.Items.Where(i => i.Kind == kind && i.PartId == productId).Sum(i => i.Count));
             foreach (var route in Couriers.Where(r => r.ToShop && DeliveryShop(r.ShopId) == shop))
                 count += route.Items.Where(i => i.Id == productId && ((kind == PurchaseGoodsKind.Part && i.Kind == CourierItemKind.Part) || (kind == PurchaseGoodsKind.Gift && i.Kind == CourierItemKind.Goods))).Sum(i => i.Count);
             return count;
@@ -243,7 +243,7 @@ namespace PCShopSell.Core.Session
             if (pending == null || Clock.Now.TotalMinutes >= pending.DeliverAtMinute || IsGameOver) return Fail("订单已交付或不可取消。");
             var order = Online.CancelPending(id); if (order == null) return false;
             Ledger.Credit(Clock.Today, "进货退款", Money.FromCents(order.TotalCents), "网购取消订单 #" + id,
-                order.ToHome ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: "online-order:" + id + ":refund", transactionKind: "个人采购退款") : LedgerAttribution.ForShop(order.ShopId, "online-order:" + id + ":refund", "采购退款"));
+                order.ToHome && order.ShopId == null ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: "online-order:" + id + ":refund", transactionKind: "个人采购退款") : LedgerAttribution.ForShop(order.ShopId, "online-order:" + id + ":refund", "采购退款"));
             var record = _cityProcurementOrders.FirstOrDefault(o => o.Id == "online-order:" + id);
             if (record != null) record.State = "已取消并退款";
             foreach (var claim in _cityProcurementClaims.Where(c => c.OrderId == "online-order:" + id))

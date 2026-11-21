@@ -79,11 +79,20 @@ namespace PCShopSell.Tests
                 void At(string id){var p=f.Session.City.GetPlace(id);typeof(GameSession).GetProperty("CurrentPlace").SetValue(f.Session,p);ui.OnEnteredPlace(p);}
                 Button Button(string id)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>b.name==id);
                 AgencyStreetMap Map()=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<AgencyStreetMap>()).Single();
+                bool ShowsAgent(string name) => ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>())
+                    .Any(label => label.text.Contains($"负责人 {name} ·"));
                 try
                 {
                     At("agency");
+                    Assert.True(ShowsAgent("陈启明"));
                     var activeMap = Map();
                     var camera = Preview(activeMap);
+                    Assert.True(activeMap.CanSelect("shop02"), "固定商户也能查看租购状态");
+                    Assert.False(activeMap.CanSelect("stall_gpu"), "市场内的档口不单独标记");
+                    activeMap.Selected("shop02");
+                    var detail = ui.Canvases.SelectMany(c => c.GetComponentsInChildren<RectTransform>()).Single(r => r.name == "AgencyDetail");
+                    Assert.True(detail.GetComponentsInChildren<Text>().Any(t => t.text.Contains("保留原有用途")));
+                    Assert.False(detail.GetComponentsInChildren<Button>().Any(b => b.name == "AgencyReviewLease" || b.name == "AgencyReviewPurchase"));
                     var target = AgencyStreetMap.DistrictPlaces(f.Session, f.Session.CurrentPlace)
                         .Last(p => p.Kind == PlaceKind.Shop && p.Id != "player_shop" && activeMap.CanSelect(p.Id));
                     activeMap.Selected(target.Id);
@@ -95,7 +104,18 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(zoom,Map().Zoom);Assert.AreEqual(size,Preview(Map()).orthographicSize,.001f);Assert.AreEqual(position,Preview(Map()).transform.position);
                     Assert.False(Map().CanSelect("player_shop"));Assert.NotNull(Button("ResidentialFocusCurrent"));
                     Button("AgencyCommercialTab").onClick.Invoke();Assert.AreEqual(position,Preview(Map()).transform.position);Assert.AreEqual(zoom,Map().Zoom);
-                    ui.CloseAllWindows();At("agency_s_services");Button("AgencyResidentialTab").onClick.Invoke();
+                    ui.CloseAllWindows();At("agency_s_services");
+                    Assert.True(ShowsAgent("唐蔚"));
+                    Assert.False(ShowsAgent("陈启明"));
+                    var localShop = f.Session.City.GetPlace("life_unit_s_market_0");
+                    var rent = Money.FromYuan(2000);
+                    var localFee = f.Session.AgentFeeFor(rent, localShop);
+                    f.Session.AddRelation(Rosters.AgentChen.Id, 30);
+                    Assert.AreEqual(localFee, f.Session.AgentFeeFor(rent, localShop));
+                    f.Session.AddRelation(CityLifeCatalog.TangWei, 30);
+                    Assert.Less(f.Session.AgentFeeFor(rent, localShop).Cents, localFee.Cents);
+                    Button("AgencyResidentialTab").onClick.Invoke();
+                    Assert.True(ShowsAgent("唐蔚"));
                     Assert.AreEqual(1,Map().Zoom);Assert.False(Map().CanSelect("home"));Assert.True(Map().CanSelect("home_tier1"));
                     foreach(var button in ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Where(b=>b.name.StartsWith("ResidenceMap_")))
                         Assert.True(f.Session.AgencyServes(f.Session.CurrentPlace,f.Session.City.GetPlace(button.name.Substring("ResidenceMap_".Length))));

@@ -28,66 +28,86 @@ namespace PCShopSell.Game.UI
         private void OpenSaveSlots(bool saving, bool confirmProgress)
         {
             string title = saving ? "save" : "load";
-            OpenWindow(L(title), 1140, 850, w =>
+            const float windowWidth = 1480;
+            const float cardHeight = 132;
+            const float gap = 10;
+            OpenWindow(L(title), windowWidth, 780, w =>
             {
                 MenuTitle(w, title);
-                Ui.Size(Ui.Label(w.Content, L(saving ? "pick_save_slot" : "pick_load_slot"), 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 34);
-                RectTransform row = null;
-                for (int index = 0; index < 12; index++)
+                float availableWidth = Mathf.Min(windowWidth, w.Root.rect.width - 32) - 46;
+                int columns = Mathf.Clamp(Mathf.FloorToInt((availableWidth + gap) / (234 + gap)), 2, 5);
+                var header = Ui.Row(w.Content, cardHeight, gap);
+                Ui.Size(BuildSaveSlot(header, w, SaveStore.AutomaticSlot, saving, confirmProgress), 0, -1, 1);
+                var hint = Ui.Label(header, L(saving ? "pick_save_slot" : "pick_load_slot"), 17, TextAnchor.MiddleLeft, Ui.Dim);
+                Ui.Size(hint, (columns - 2) * gap, -1, columns - 1);
+
+                for (int firstSlot = 1; firstSlot <= SaveStore.SlotCount; firstSlot += columns)
                 {
-                    if (index % 3 == 0) row = Ui.Row(w.Content, 172, 12);
-                    if (index <= SaveStore.SlotCount)
-                        BuildSaveSlot(row, w, index, saving, confirmProgress, automatic: index == SaveStore.AutomaticSlot);
-                    else Ui.Size(Ui.Rect(row, "SaveSlotSpacer"), 0, -1, 1);
+                    var row = Ui.Row(w.Content, cardHeight, gap);
+                    for (int slot = firstSlot; slot < firstSlot + columns; slot++)
+                    {
+                        if (slot <= SaveStore.SlotCount)
+                            Ui.Size(BuildSaveSlot(row, w, slot, saving, confirmProgress), 0, -1, 1);
+                        else
+                            Ui.Size(Ui.Rect(row, "SaveSlotSpacer"), 0, -1, 1);
+                    }
                 }
-            }, scrollContent: false, allowDuringOpeningMeal: true);
+            }, allowDuringOpeningMeal: true, fitContent: true);
         }
 
-        private void BuildSaveSlot(Transform row, Window window, int slot, bool saving, bool confirmProgress, bool automatic = false)
+        private Button BuildSaveSlot(Transform row, Window window, int slot, bool saving, bool confirmProgress)
         {
+            bool automatic = slot == SaveStore.AutomaticSlot;
             var latest = SaveStore.InspectSlot(slot, automatic);
             bool occupied = latest.Exists;
             bool active = !automatic && _ctrl.ActiveSaveSlot == slot;
             string number = slot.ToString("00");
             string title = automatic ? L("auto_save") : MenuLocalization.Format("save_slot_number", number);
 
-            var card = Ui.Size(Ui.Button(row, "", () =>
+            var card = Ui.Button(row, "", () =>
             {
                 if (saving && !automatic)
                     SaveIntoSlot(window, slot, number);
                 else
                     LoadSaveVersion(slot, latest, confirmProgress);
             }, bg: active ? Ui.SelectedButton(true) : occupied ? Ui.ButtonBg : Ui.FlatWell,
-                interactable: automatic ? !saving && occupied : saving || occupied), 0, -1, 1);
+                interactable: automatic ? !saving && occupied : saving || occupied);
 
-            var name = SlotLabel(card.transform, title, 22, 1, -44, 11, Ui.TextColor);
+            var name = SlotLabel(card.transform, title, 21, 1, -35, 7, Ui.TextColor);
             name.fontStyle = FontStyle.Bold;
             if (active)
-                SlotLabel(card.transform, L("current_save_slot"), 14, 1, -42, 12, Ui.Accent, TextAnchor.MiddleRight);
+                SlotLabel(card.transform, L("current_save_slot"), 14, 1, -35, 7, Ui.Accent, TextAnchor.MiddleRight);
             Ui.Panel(card.transform, "SlotDivider", active ? Ui.FlatHotEdge : Ui.FlatButtonEdge)
-                .rectTransform.Anchor(0, 1, 1, 1, 16, -48, 16, 47);
+                .rectTransform.Anchor(0, 1, 1, 1, 12, -39, 12, 38);
 
             if (!latest.Readable)
             {
-                SlotLabel(card.transform, L(occupied ? "unreadable_save_slot" : "empty_save_slot"), 18, 1, -113, 72, occupied ? Ui.Warn : Ui.Dim);
+                SlotLabel(card.transform, L(occupied ? "unreadable_save_slot" : "empty_save_slot"), 18, 1, -90, 53, occupied ? Ui.Warn : Ui.Dim);
                 if (saving && !automatic && !occupied)
-                    SlotLabel(card.transform, L("save_in_empty_slot"), 15, 0, 9, -36, Ui.Accent);
-                return;
+                    SlotLabel(card.transform, L("save_in_empty_slot"), 15, 0, 7, -29, Ui.Accent);
+                return card;
             }
 
             string place = !string.IsNullOrEmpty(latest.ShopName) ? latest.ShopName
                 : _ctrl.City.HasPlace(latest.Place) ? _ctrl.City.GetPlace(latest.Place).Name : L("slot_in_town");
-            var placeText = SlotLabel(card.transform, place, 21, 1, -84, 53, Ui.TextColor);
+            var placeText = SlotLabel(card.transform, place, 20, 1, -73, 44, Ui.TextColor);
             placeText.fontStyle = FontStyle.Bold;
-            var gameTime = SlotLabel(card.transform, SaveGameTime(latest), 16, 1, -112, 85, Ui.Dim);
-            gameTime.rectTransform.Anchor(0, 1, .56f, 1, 16, -112, 4, 85);
-            var cash = SlotLabel(card.transform, Money.FromCents(latest.BalanceCents).ToString(), 18, 1, -112, 85, Ui.Good, TextAnchor.MiddleRight);
-            cash.rectTransform.Anchor(.56f, 1, 1, 1, 4, -112, 16, 85);
+            placeText.resizeTextForBestFit = true;
+            placeText.resizeTextMinSize = 14;
+            placeText.resizeTextMaxSize = 20;
+            var gameTime = SlotLabel(card.transform, SaveGameTime(latest), 15, 1, -99, 75, Ui.Dim);
+            gameTime.rectTransform.Anchor(0, 1, .57f, 1, 12, -99, 2, 75);
+            gameTime.resizeTextForBestFit = true;
+            gameTime.resizeTextMinSize = 12;
+            gameTime.resizeTextMaxSize = 15;
+            var cash = SlotLabel(card.transform, Money.FromCents(latest.BalanceCents).ToString(), 18, 1, -99, 75, Ui.Good, TextAnchor.MiddleRight);
+            cash.rectTransform.Anchor(.57f, 1, 1, 1, 2, -99, 12, 75);
             cash.resizeTextForBestFit = true;
             cash.resizeTextMinSize = 11;
             cash.resizeTextMaxSize = 18;
-            SlotLabel(card.transform, latest.SavedAt ?? "", 14, 0, 11, -40, Ui.Dim);
-            SlotLabel(card.transform, L(VersionKey(latest)), 14, 0, 11, -40, Ui.Accent, TextAnchor.MiddleRight);
+            SlotLabel(card.transform, latest.SavedAt ?? "", 14, 0, 7, -29, Ui.Dim);
+            SlotLabel(card.transform, L(VersionKey(latest)), 14, 0, 7, -29, Ui.Accent, TextAnchor.MiddleRight);
+            return card;
         }
 
         private static Text SlotLabel(Transform parent, string text, int size, float anchorY, int bottom, int top,
@@ -96,7 +116,7 @@ namespace PCShopSell.Game.UI
             var label = Ui.Label(parent, text, size, alignment, color);
             label.supportRichText = false;
             label.verticalOverflow = VerticalWrapMode.Truncate;
-            label.rectTransform.Anchor(0, anchorY, 1, anchorY, 16, bottom, 16, top);
+            label.rectTransform.Anchor(0, anchorY, 1, anchorY, 12, bottom, 12, top);
             return label;
         }
 

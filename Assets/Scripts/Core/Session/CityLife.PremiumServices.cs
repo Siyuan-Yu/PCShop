@@ -17,16 +17,20 @@ namespace PCShopSell.Core.Session
                 switch (kind)
                 {
                     case "dinner":
-                        Add("主厨时令套餐", 90, 650, "前菜、时令主菜与甜品，适合认真交流的一餐。", new CityVenueService(650, hunger: 80, energy: 8, mood: 16, nutrition: 5, relation: 12));
-                        Add("私宴品鉴席", 120, 1800, "独立雅间、分道上菜与主厨介绍，适合庆祝或商务宴请。", new CityVenueService(1800, hunger: 90, energy: 10, mood: 22, nutrition: 6, charm: 1, relation: 15));
+                        Add("主厨时令套餐", 90, 650, "前菜、时令主菜与甜品，适合认真交流的一餐。", new CityVenueService(650, hunger: 80, energy: 8, mood: 16, nutrition: 5, relation: 12, walkInPeople: 4));
+                        Add("私宴品鉴席", 120, 1800, "独立雅间、分道上菜与主厨介绍，适合庆祝或商务宴请。", new CityVenueService(1800, hunger: 90, energy: 10, mood: 22, nutrition: 6, charm: 1, relation: 15, walkInPeople: 6));
                         break;
                     case "ktv":
                         Add("录音指导包间", 120, 1800, "整间报价；包含录音回听与气息指导，偏重个人练习。", new CityVenueService(1800, energy: -6, mood: 18, charm: 3, relation: 7), true);
-                        Add("尊享主题包间", 180, 3800, "整间报价；独立主题包间、灯光编排与合唱时段，适合多人聚会。", new CityVenueService(3800, hunger: 15, energy: -8, mood: 26, charm: 2, relation: 16), true);
+                        Add("尊享主题包间", 180, 3800, "整间报价；独立主题包间、灯光编排与合唱时段，适合多人聚会。", new CityVenueService(3800, hunger: 15, energy: -8, mood: 26, charm: 2, relation: 16, walkInPeople: 6), true);
                         break;
                     case "bar":
-                        Add("主理人风味品鉴", 90, 680, "三款风味饮品与小食，可选全程无酒精版本，侧重品鉴交流。", new CityVenueService(680, hunger: 24, energy: 3, mood: 18, intelligence: 1, relation: 10));
-                        Add("湖景臻享套餐", 120, 1600, "湖景预约座、定制无酒精特调与精致小食，适合长时间相聚。", new CityVenueService(1600, hunger: 35, energy: 5, mood: 25, charm: 1, relation: 15));
+                        Add("主理人风味品鉴", 90, 680, "三款风味饮品与小食，可选全程无酒精版本，侧重品鉴交流。", new CityVenueService(680, hunger: 24, energy: 3, mood: 18, intelligence: 1, relation: 10, walkInPeople: 4));
+                        Add("湖景臻享套餐", 120, 1600, "湖景预约座、定制无酒精特调与精致小食，适合长时间相聚。", new CityVenueService(1600, hunger: 35, energy: 5, mood: 25, charm: 1, relation: 15, walkInPeople: 4));
+                        AddDrink("berry_soda", "莓果苏打", BarDrinkStyle.BerrySoda, 95, "带一点莓果酸香，气泡轻快。", 11, 4, 12);
+                        AddDrink("mint_apple", "青苹果薄荷", BarDrinkStyle.MintAppleSoda, 90, "青苹果汁加薄荷，清爽微酸。", 10, 6, 9);
+                        AddDrink("jasmine_cold_brew", "茉莉冷泡", BarDrinkStyle.JasmineColdBrew, 75, "冷泡茉莉茶，茶味清淡。", 5, 10, 6);
+                        AddDrink("peach_black_tea", "蜜桃冰红茶", BarDrinkStyle.PeachBlackTea, 100, "红茶带蜜桃香，口感柔和。", 15, 5, 10);
                         break;
                     case "court":
                         Add("私人技战术指导", 90, 1200, "专业指导脚步与投篮，运动量更大，侧重身体训练。", new CityVenueService(1200, energy: -20, mood: 16, health: 5, relation: 8));
@@ -45,12 +49,12 @@ namespace PCShopSell.Core.Session
                         all.AddRange(FishingCatalog.Passes.Skip(1).Select(FishingPass));
                         break;
                     case "hike":
-                        Add("生态向导路线", 120, 900, "由向导讲解植物与城市生态，路线较长。", new CityVenueService(900, energy: -17, mood: 19, health: 4, intelligence: 2, relation: 10));
-                        Add("山湖私享野餐", 180, 2200, "向导与预设野餐点，包含餐食和休息时段。", new CityVenueService(2200, hunger: 55, energy: -20, mood: 28, health: 5, nutrition: 4, relation: 15));
+                        Add("生态向导路线", 120, 900, "由向导讲解植物与城市生态，路线较长。", new CityVenueService(900, energy: -17, mood: 19, health: 4, intelligence: 2, relation: 10, walkInPeople: 6));
+                        Add("山湖私享野餐", 180, 2200, "向导与预设野餐点，包含餐食和休息时段。", new CityVenueService(2200, hunger: 55, energy: -20, mood: 28, health: 5, nutrition: 4, relation: 15, walkInPeople: 6));
                         break;
                     case "snack":
-                        Add("海味砂锅夜宵", 90, 480, "砂锅、热菜与清爽小食，更顶饱。", new CityVenueService(480, hunger: 70, energy: 6, mood: 14, nutrition: 3, relation: 11));
-                        Add("深夜私厨套餐", 120, 1200, "预留私厨座席与分道夜宵，适合赛后或久别重聚。", new CityVenueService(1200, hunger: 85, energy: 8, mood: 21, nutrition: 4, relation: 15));
+                        Add("海味砂锅夜宵", 90, 480, "砂锅、热菜与清爽小食，更顶饱。", new CityVenueService(480, hunger: 70, energy: 6, mood: 14, nutrition: 3, relation: 11, walkInPeople: 4));
+                        Add("深夜私厨套餐", 120, 1200, "预留私厨座席与分道夜宵，适合赛后或久别重聚。", new CityVenueService(1200, hunger: 85, energy: 8, mood: 21, nutrition: 4, relation: 15, walkInPeople: 6));
                         break;
                     case "market":
                         Add("供应链导览", 90, 600, "付费讲解渠道与报价，不含商品采购。", new CityVenueService(600, energy: -6, mood: 8, intelligence: 2, relation: 9));
@@ -77,7 +81,18 @@ namespace PCShopSell.Core.Session
                         FixedGroupPrice = group, ServiceOptionCount = 1, Choices = new[] { name, "交流体验", "聊近况" },
                         StartText = name + "开始。", MidText = description, EndText = name + "结束。",
                         DefaultService = new CityVenueService(price, description, effects.Hunger, effects.Energy, effects.Mood,
-                            effects.Nutrition, effects.Health, effects.Charm, effects.Intelligence, effects.Relation) });
+                            effects.Nutrition, effects.Health, effects.Charm, effects.Intelligence, effects.Relation, effects.WalkInPeople) });
+                }
+
+                void AddDrink(string id, string name, BarDrinkStyle style, int price, string description, int hunger, int energy, int mood)
+                {
+                    // Separate entries keep the original drinks and conversation choices at their saved indices.
+                    all.Add(new CityActivityDefinition { Id = source.Id + "_drink_" + id, LogicalId = source.Id,
+                        Name = name, VenueId = source.VenueId, Minutes = source.Minutes, PriceMultiplier = source.PriceMultiplier,
+                        ServiceOptionCount = 1, Choices = new[] { name, "聊近况", "认识同桌" },
+                        StartText = source.StartText, MidText = description, EndText = source.EndText,
+                        DefaultService = new CityVenueService(price, description, hunger, energy, mood, relation: 6,
+                            walkInPeople: 4, barDrink: style) });
                 }
             }
             return all.ToArray();

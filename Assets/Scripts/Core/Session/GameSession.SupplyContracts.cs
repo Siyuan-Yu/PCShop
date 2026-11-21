@@ -56,8 +56,8 @@ namespace PCShopSell.Core.Session
         }
         public Money DirectPrice(PartDef p) => Market.PriceOf(p).Scale(.84);
         public double IncomingShopSpace => Online.Pending.Where(o => OnlineOrderDestination(o) == _focus).Sum(o => o.Lines.Sum(l => Stock.SpaceOf(PartCatalog.Get(l.PartId), true, l.Count)))
-            + _directShipments.Where(x => DeliveryShop(x.ShopId) == _focus).Sum(x => Stock.SpaceOf(PartCatalog.Get(x.PartId), true, x.Count))
-            + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Sum(PurchaseStockSpace))
+            + _directShipments.Where(x => DirectShipmentDestination(x) == _focus).Sum(x => Stock.SpaceOf(PartCatalog.Get(x.PartId), true, x.Count))
+            + _employeeTrips.Where(t => !t.Delivered && EmployeePurchaseDestination(t) == _focus).Sum(t => t.Items.Sum(PurchaseStockSpace))
             + Couriers.Where(HeadsToThisShop).Sum(x => x.Items.Sum(i => i.Kind == CourierItemKind.Part && PartCatalog.Exists(i.Id)
                 ? Stock.SpaceOf(PartCatalog.Get(i.Id), i.Boxed, i.Count) : i.Kind == CourierItemKind.Goods ? Stock.GoodsSpace(i.Id, i.Count) : 0))
             + ClaimedProcurementSpace(_focus.Place.Id);
@@ -103,17 +103,27 @@ namespace PCShopSell.Core.Session
             Say("直供账单已结清。");
             return true;
         }
+        private OwnedShop DirectShipmentDestination(DirectShipment shipment) => shipment.DeliverHome ? null
+            : DeliveryShop(string.IsNullOrEmpty(shipment.ShopId) ? null : shipment.ShopId);
+
         private void DeliverDirect(GameTimestamp now)
         {
             foreach (var x in _directShipments.Where(x => x.Arrival <= now.TotalMinutes).ToArray())
             {
-                OwnedShop dest = DeliveryShop(string.IsNullOrEmpty(x.ShopId) ? null : x.ShopId);
-                dest.Sim.Stock.ForceAdd(PartCatalog.Get(x.PartId), true, x.Count);
+                OwnedShop dest = DirectShipmentDestination(x);
+                string delivery;
+                if (!x.DeliverHome)
+                {
+                    var part = PartCatalog.Get(x.PartId);
+                    dest.Sim.Stock.ForceAdd(part, true, x.Count);
+                    delivery = $"{part.Name} ×{x.Count}，已入{(MyShopCount > 1 ? ShopTitle(dest) : "店里")}后仓";
+                }
+                else delivery = Unpack(new CourierItem { Kind = CourierItemKind.Part, Id = x.PartId, Count = x.Count, Boxed = true }, toShop: false);
                 var record = _cityProcurementOrders.FirstOrDefault(order => order.Id == x.OrderId);
                 RecordShopPurchaseReceipt(dest, now.TotalMinutes, record?.Channel ?? "直供");
                 if (record != null) record.State = "已交付";
                 _directShipments.Remove(x);
-                Say($"直供到货：{PartCatalog.Get(x.PartId).Name} ×{x.Count}，已入{(MyShopCount > 1 ? ShopTitle(dest) : "店里")}后仓。");
+                Say($"直供到货：{delivery}。");
             }
         }
         private static LedgerAttribution SupplierDebtAttribution(SupplierDebt debt) =>

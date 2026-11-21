@@ -55,6 +55,7 @@ namespace PCShopSell.Core.Session
                 SaveNeighborhood(d);
                 SaveOnsitePlay(d);
                 SaveParkRowing(d);
+                d.gardenPartyActivityId = _gardenPartyActivityId;
                 SaveLeisurePlay(d);
                 return d;
             }
@@ -359,6 +360,7 @@ namespace PCShopSell.Core.Session
             RestoreNeighborhood(d);
             RestoreOnsitePlay(d);
             RestoreParkRowing(d);
+            _gardenPartyActivityId = d.gardenPartyActivityId;
             RestoreLeisurePlay(d);
             InitializeExpansionResidents();
             LoadVenueBusinesses(d);
@@ -378,6 +380,7 @@ namespace PCShopSell.Core.Session
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
+            ConsolidateHomeFreight();
             RestoreConversationContacts();
             if (RacingGarageEntryBlocker(CurrentPlace?.Id) != null)
             {

@@ -173,6 +173,14 @@ namespace PCShopSell.Core.Session
         }
         public string CasualConversation(string id, bool remote = false)
         {
+            string text = CasualConversation(id, remote, out var followUp);
+            string story = followUp?.Invoke();
+            return string.IsNullOrEmpty(story) ? text : string.IsNullOrEmpty(text) ? story : text + "\n\n" + story;
+        }
+
+        public string CasualConversation(string id, bool remote, out Func<string> followUp)
+        {
+            followUp = null;
             if(remote){var why=RemoteConversationBlocker(id);if(why!=null)return why;}
             else if (CityPersonState(id) != null && !CitySamePlace(id)) return "对方已经离开了，等下次见面再聊吧。";
             bool firstConversation = !HasGreeted(id);
@@ -204,28 +212,31 @@ namespace PCShopSell.Core.Session
                 text = CityTalk(id, topic, remote);
             }
             var person = CityPersonState(id);
-            if (followup || !remote && id == LuZhi)
-            {
-                string story = ContinueCasualStory(id, def, person, remote);
-                if (!string.IsNullOrEmpty(story)) text = string.IsNullOrEmpty(text) ? story : text + "\n\n" + story;
-            }
+            if ((followup || !remote && id == LuZhi) && CasualStoryReply(id, remote) != null)
+                followUp = () => CasualStoryReply(id, remote)?.Invoke();
             if (person != null)
                 person.KnownTopics = person.KnownTopics.Union(ConversationTraits(id).Select((t, i) => t.Known ? "trait:" + i : null).Where(t => t != null)).ToArray();
             return text;
         }
 
-        private string ContinueCasualStory(string id, CityPersonDefinition definition, CityPersonState person, bool remote)
+        public string SharePersonalExperience(string id) => CasualStoryReply(id, false)?.Invoke() ?? CityTalk(id, "work");
+
+        private Func<string> CasualStoryReply(string id, bool remote)
         {
+            if (remote ? RemoteConversationBlocker(id) != null : CityPersonState(id) != null && !CitySamePlace(id))
+                return null;
+            var person = CityPersonState(id);
+            var definition = CityPerson(id);
             int today = Clock.Today.TotalDays;
             if (person?.LastStoryDay == today || _lifeDays.TryGetValue(id, out int heardDay) && heardDay == today
                 || _staffStoryDay.TryGetValue(id, out int staffDay) && staffDay == today) return null;
             if (person != null && definition?.Stories != null && person.StoryChapter < definition.Stories.Length
                 && Relation(id) >= 5 + person.StoryChapter * 5)
-                return remote ? CityHearStory(id, true) : HearCityPersonalStory(id);
+                return () => remote ? CityHearStory(id, true) : HearCityPersonalStory(id);
 
-            if (Npcs.Get(id) != null && LifeBlocker(id) == null) return LifeTalk(id);
+            if (Npcs.Get(id) != null && LifeBlocker(id) == null) return () => LifeTalk(id);
             var staff = Rosters.Get(id) ?? Residents.Get(id)?.Person;
-            return staff != null && StaffStoryBlocker(id) == null ? StaffStory(staff) : null;
+            return staff != null && StaffStoryBlocker(id) == null ? () => StaffStory(staff) : null;
         }
 
         private IEnumerable<FoodBatch> GiftableFoodBatches(bool meal) =>

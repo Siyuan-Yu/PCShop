@@ -13,10 +13,11 @@ namespace PCShopSell.Core.Session
         public static string CommunityLeadActivity(int index) => new[]{"hike","dinner","oldmarket_visit"}[index];
         public static string CommunityLeadVenue(int index) => new[]{"life_hike","life_restaurant",OldMarketVenueId}[index];
         private const string CommunityMarketGift = "community-market-gift";
+        private const string LakesideSuburbanParkNode = "lake_gap1_14";
         public bool IsCommunityLeadInvitation(string definitionId, string personId) => CommunitySearchActive
             && Enumerable.Range(0, 3).Any(i => !CommunityHasOuting(i)
                 && CommunityLeadPerson(i) == personId && CommunityLeadActivity(i) == definitionId);
-        public static bool IsCommunityMarketOuting(CityActivity activity) => activity?.DefinitionId == "oldmarket_visit"
+        public static bool IsCommunityMarketOuting(CityActivity activity) => IsOldMarketVisit(activity)
             && activity.SourceId?.StartsWith("community-lead:", StringComparison.Ordinal) == true;
         public static bool IsCommunityLeadDinner(CityActivity activity) => activity?.DefinitionId == "dinner"
             && activity.SourceId?.StartsWith("community-lead:", StringComparison.Ordinal) == true;
@@ -24,18 +25,13 @@ namespace PCShopSell.Core.Session
             && a.VenueId == CommunityLeadVenue(index) && CityActivityService(a)?.Id == CommunityLeadActivity(index)
             && a.Participants.Any(p => p.PersonId == CommunityLeadPerson(index)));
 
-        public bool BuyCommunityMarketGift(string goodsId)
+        public static bool CommunityMarketGiftDelivered(CityActivity activity) =>
+            activity?.Choices.Contains(CommunityMarketGift) == true;
+
+        private static void RecordCommunityMarketGift(CityActivity activity, string personId)
         {
-            var activity = RunningCityActivity;
-            if (!IsCommunityMarketOuting(activity) || !AtOldMarket || !CitySamePlace(CommunityLeadPerson(2))
-                || activity.Choices.Contains(CommunityMarketGift)) return Fail("请先与周维成在旧物市场会合。");
-            var goods = OldMarketCatalog.Get(goodsId);
-            if (goods == null || !BuyOldMarketGoods(goodsId)) return false;
-            Backpack.TakeGift(OldMarketCatalog.ItemId(goods));
-            ApplyCargoLimit();
-            activity.Choices = activity.Choices.Append(CommunityMarketGift).ToArray();
-            activity.EventSettlementNote = "在青湾旧物市场买下" + goods.Name + "送给了周维成。";
-            return FinishManualCityActivity(activity.Id);
+            if (IsCommunityMarketOuting(activity) && personId == CommunityLeadPerson(2) && !CommunityMarketGiftDelivered(activity))
+                activity.Choices = activity.Choices.Append(CommunityMarketGift).ToArray();
         }
         public static string CommunityBoxPlace(int index) => new[]{"life_hike","life_court","metro_b"}[index];
         public static string CommunityBoxName(int index) => new[]{"绿绳旧居资料箱","蓝绳街铺资料箱","红绳市场资料箱"}[index];
@@ -80,7 +76,7 @@ namespace PCShopSell.Core.Session
             for(int i=0;i<3;i++)
                 if(CityActivityService(activity)?.Id==CommunityLeadActivity(i)&&activity.VenueId==CommunityLeadVenue(i)
                     &&activity.Participants.Any(p=>p.PersonId==CommunityLeadPerson(i))
-                    && (i != 2 || activity.Choices.Contains(CommunityMarketGift)))
+                    && (i != 2 || CommunityMarketGiftDelivered(activity)))
                 {
                     _district.CommunityOutings|=1<<i;
                     if(CommunitySearchActive && !CommunityHasClue(i))
@@ -91,7 +87,11 @@ namespace PCShopSell.Core.Session
                     }
                 }
         }
-        public int TakeCommunityActivityClue(string activityId)
+        public int PendingCommunityActivityClue(string activityId) => CommunityActivityClue(activityId, markShown: false);
+
+        public int TakeCommunityActivityClue(string activityId) => CommunityActivityClue(activityId, markShown: true);
+
+        private int CommunityActivityClue(string activityId, bool markShown)
         {
             var activity=_cityActivities.FirstOrDefault(a=>a.Id==activityId);
             if(activity==null)return -1;
@@ -100,7 +100,7 @@ namespace PCShopSell.Core.Session
             for(int i=0;i<3;i++)
                 if((activity.CommunityClueMask&(1<<i))!=0&&(activity.CommunityClueShownMask&(1<<i))==0)
                 {
-                    activity.CommunityClueShownMask|=1<<i;
+                    if (markShown) activity.CommunityClueShownMask|=1<<i;
                     return i;
                 }
             return -1;
@@ -109,13 +109,13 @@ namespace PCShopSell.Core.Session
             a.State==CityActivityPhase.Completed&&a.RewardApplied&&a.EntryPaid&&a.ActualStart>=_district.CommunityAcceptedAt
             &&a.VenueId==CommunityLeadVenue(index)&&CityActivityService(a)?.Id==CommunityLeadActivity(index)
             &&a.Participants.Any(p=>p.PersonId==CommunityLeadPerson(index))
-            && (index != 2 || a.Choices.Contains(CommunityMarketGift)));
+            && (index != 2 || CommunityMarketGiftDelivered(a)));
         public string CommunityLeadStatus(int index)
         {
             if(CommunityHasPiece(index))return "已找到："+CommunityPieceName(index);
             if(CommunityHasClue(index))return "线索："+CommunityLeadHint(index);
             if (CommunityHasOuting(index)) return "联系对方打听图页线索。";
-            return index == 2 ? "约周维成去青湾旧物市场，挑一件旧物买下来送给他。"
+            return index == 2 ? "约周维成去青湾旧物市场，淘到一件旧物后送给他。"
                 : "一起完成一次" + CityLifeCatalog.Activity(CommunityLeadActivity(index)).Name + "，结束后对方会告诉你藏箱线索。";
         }
         public string AskCommunityLead(int index,bool remote=false)
@@ -145,7 +145,29 @@ namespace PCShopSell.Core.Session
         }
 
         public string CommunityBoxNode(int index) => CommunityStreetNode(City.GetPlace(CommunityBoxPlace(index)));
-        public MapPoint CommunityBoxPosition(int index) => City.ViewPosition(CommunityBoxNode(index));
+        public MapPoint CommunityBoxPosition(int index)
+        {
+            var road = City.ViewPosition(CommunityBoxNode(index));
+            if (index != 0) return road;
+            var park = City.GetPlace(CommunityBoxPlace(index));
+            if (park.NodeId != LakesideSuburbanParkNode) return road;
+
+            var entrance = DoorOf(park);
+            double dx = entrance.X - road.X, dy = entrance.Y - road.Y;
+            double length = DistanceCity(road, entrance);
+            if (length < .1) return road;
+            const double fractionAlongPath = .52, sideOffset = 1.15;
+            return new MapPoint(road.X + dx * fractionAlongPath - dy / length * sideOffset,
+                road.Y + dy * fractionAlongPath + dx / length * sideOffset);
+        }
+
+        public bool GoToCommunityBox(int index)
+        {
+            if (!CommunityBoxAvailable(index) || !GoTo(CommunityBoxNode(index), CommunityBoxPosition(index), requireUnlockedRoute: true))
+                return false;
+            CancelCityTravel();
+            return true;
+        }
         public int NearbyCommunityBox
         {
             get

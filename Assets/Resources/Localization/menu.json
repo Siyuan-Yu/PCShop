@@ -260,15 +260,15 @@
     },
     {
       "key": "pick_save_slot",
-      "zh": "选择存档位。之后的自动存档会保存在这个档位。",
-      "ja": "セーブ枠を選んでください。以後のオートセーブもこの枠に入ります。",
-      "en": "Choose a slot. Future autosaves will use this slot."
+      "zh": "选择下方的手动存档位。自动存档单独保存。",
+      "ja": "下の手動セーブ枠を選んでください。オートセーブは別の枠に保存されます。",
+      "en": "Choose a manual save slot below. Autosaves use a separate slot."
     },
     {
       "key": "pick_load_slot",
-      "zh": "选择存档位。同一档位有手动档和自动档时，可选择读取哪个版本。",
-      "ja": "セーブ枠を選んでください。手動セーブとオートセーブがある場合は、読み込む方を選べます。",
-      "en": "Choose a slot. If both a manual save and an autosave exist, you can choose which to load."
+      "zh": "选择要读取的自动存档或手动存档。",
+      "ja": "読み込むオートセーブまたは手動セーブを選んでください。",
+      "en": "Choose an autosave or a manual save to load."
     },
     {
       "key": "save_slot_number",

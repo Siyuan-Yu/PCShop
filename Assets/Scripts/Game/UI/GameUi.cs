@@ -221,6 +221,7 @@ namespace PCShopSell.Game.UI
             if (MainMenuOpen) return;
             if (!tutorialPaused)
             {
+                ShowPendingCommunityIntroCall();
                 UpdateEventBatch();
                 ShowPendingPropertyContractPopup();
                 ShowPendingScheduledPropertyPopup();
@@ -426,6 +427,7 @@ namespace PCShopSell.Game.UI
                 ? "左键放置 · R 旋转 · X 收纳 · Esc 取消 · Q/E 转视角 · V 复位"
                 : "左键选位置 · 侧栏确认 · R 旋转 · X 收回 · Esc 取消 · Q/E 转视角 · V 复位";
             else if (_ctrl.InInterior) _hintText.text = early ? "WASD 移动 · 靠近人物或设施按 F 交互 · 门口按 F 离店" : "";
+            else if (_ctrl.InPachinkoRoom) _hintText.text = "WASD / 方向键走动 · F 与店员交谈、使用机台或离店";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyCommunityBox>=0)
                 _hintText.text = "<color=#DDC18B>按 F 调查"+GameSession.CommunityBoxName(S.NearbyCommunityBox)+"，取回这一份图页</color>";
@@ -490,7 +492,7 @@ namespace PCShopSell.Game.UI
         private void UpdateLabels()
         {
             Camera cam = _ctrl.Cam;
-            bool show = !_ctrl.InRoom;
+            bool show = !_ctrl.InRoom && !_ctrl.InPachinkoRoom;
             if (!show)
             {
                 if (_streetLabelsVisible)
@@ -1218,11 +1220,11 @@ namespace PCShopSell.Game.UI
 
             void BuildOnlinePurchase(Window w, int index)
             {
-                var (part, destination) = def.Choices[index].OnlinePurchase.Value;
+                var (part, destination, maxQuantity) = def.Choices[index].OnlinePurchase.Value;
                 var product = Ui.Row(w.Content, 54, 10);
                 ItemPortrait(product, part.Id, 50);
                 Ui.Size(Ui.Label(product, part.Name, 22), 0, 54, 1);
-                Line(w.Content, $"送到 {S.ShopTitle(destination)} · 次日 10:00", 17, Ui.Dim);
+                Line(w.Content, $"送到 {S.ShopTitle(destination)} · 次日 10:00 · 本次限购 {maxQuantity} 件", 17, Ui.Dim);
                 var quantity = Ui.Row(w.Content, 42, 10);
                 Ui.Size(Ui.Label(quantity, "采购数量", 18), 94);
                 var prices = Line(w.Content, "", 18);
@@ -1242,14 +1244,14 @@ namespace PCShopSell.Game.UI
                     if (S.ResolveEvent(index, purchaseQuantity)) w.Close();
                     else Refresh();
                 });
-                PurchaseQuantity(w, quantity, "eventOnlinePurchase", purchaseQuantity, 1, GameSession.OnlinePartOrderLimit,
+                PurchaseQuantity(w, quantity, "eventOnlinePurchase", purchaseQuantity, 1, maxQuantity,
                     value => purchaseQuantity = (int)value, changed: _ => Refresh(), trackWidth: 0);
                 Refresh();
                 w.RefreshQuantityContent = Refresh;
 
                 void Refresh()
                 {
-                    var quote = S.QuoteOnlinePartOrder(part, purchaseQuantity, destination);
+                    var quote = S.QuoteOnlinePartOrder(part, purchaseQuantity, destination, maxQuantity);
                     prices.text = $"单价 {quote.UnitPrice} · 运费 {Online1788.ShippingFee}"
                         + (quote.Discount.IsPositive ? $" · 采购券减 {quote.Discount}" : "");
                     status.text = quote.Blocker ?? $"可用现金 {S.Ledger.Balance}";

@@ -103,7 +103,7 @@ namespace PCShopSell.Game.Runtime
                 "resident_quyuan", "resident_shaoan", "resident_songan", "resident_wenbo", "resident_yucheng",
                 "staff_gpu", "staff_gpu2", "staff_psu", "sun", "zhou");
             Add("swept", "keeper_dealer", "life_enterprise", "life_golfer", "res_pharm", "resident_baiming",
-                "resident_guwen", "resident_jiangning", "resident_leiming", "resident_sujun");
+                "resident_guwen", "resident_jiangning", "resident_leiming", "resident_sujun", "life_leisure_staff_amusement_evening");
             Add("tousled", "ake", "jie", "keeper_tobacco", "life_clothsupplier", "life_ming", "lin", "racer_2",
                 "res_rider", "resident_fuzhi", "resident_lishan", "resident_luchen", "resident_luhai",
                 "resident_maoning", "resident_pancheng", "resident_shiyang", "resident_xuweilin", "resident_zhaoyu",
@@ -118,9 +118,10 @@ namespace PCShopSell.Game.Runtime
                 "resident_wanqing", "resident_yinhe", "resident_yuanan");
             Add("waves", "keeper_farm", "landlady", "life_creator", "life_designer", "life_singer", "life_teacher",
                 "qiao", "racer_0", "racer_1", "racer_3", "res_fang", "resident_luoya", "resident_penglan",
-                "resident_taoran", "resident_xuwei", "resident_yeli", "resident_zengyu");
+                "resident_taoran", "resident_xuwei", "resident_yeli", "resident_zengyu", "life_leisure_staff_ferris_evening");
             Add("tied", "momo", "qian", "res_tea", "resident_chenxia", "resident_dengyue", "resident_duma",
-                "resident_hexin", "resident_moxin", "resident_renxin", "resident_rongke", "staff_mall", "story_tangwei");
+                "resident_hexin", "resident_moxin", "resident_renxin", "resident_rongke", "staff_mall", "story_tangwei",
+                "life_leisure_staff_ferris_day", "life_leisure_staff_amusement_day");
             Add("officer", "service_officer");
             Add("worker", "service_repair", "CommunityRoofWorker");
             return heads;

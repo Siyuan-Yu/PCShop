@@ -76,8 +76,8 @@ namespace PCShopSell.Game.UI
                     if (state == null) { w.Close(); return; }
                     if (_windows.LastOrDefault() == w && Application.isFocused)
                     {
-                        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) S.StrokeParkRowing(false);
-                        else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) S.StrokeParkRowing(true);
+                        if (DirectionalInput.LeftPressed) S.StrokeParkRowing(false);
+                        else if (DirectionalInput.RightPressed) S.StrokeParkRowing(true);
                         S.StepParkRowing(Time.unscaledDeltaTime);
                         state = S.ParkRowing;
                         if (state == null) { w.Close(); return; }

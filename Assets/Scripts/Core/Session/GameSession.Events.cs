@@ -55,7 +55,7 @@ namespace PCShopSell.Core.Session
         public string Text;
         public (string Key, string Label)? Selection;
         public (string Payment, long Start, int Minutes, Money Price, bool AskHost, string Note)? Appointment;
-        public (PartDef Part, OwnedShop Destination)? OnlinePurchase;
+        public (PartDef Part, OwnedShop Destination, int MaxQuantity)? OnlinePurchase;
 
         /// <summary>这个选项现在能不能选（比如钱够不够）。为 null 表示总能选。</summary>
         public Func<GameSession, bool> Enabled;
@@ -772,7 +772,6 @@ namespace PCShopSell.Core.Session
         }
 
         private readonly List<EventReferral> _eventReferrals = new List<EventReferral>();
-        private bool HasEventReservedStock(string shopId) => _eventReferrals.Any(visit => visit.ShopId == shopId && visit.Reserved > 0);
 
         [Serializable]
         public sealed class FlyerCampaign
@@ -1686,7 +1685,7 @@ namespace PCShopSell.Core.Session
             if (choice.Details != null || !IsChoiceEnabled(choice)) return false;
             if (choice.OnlinePurchase is { } purchase)
             {
-                if (!PlaceOnlinePartOrder(purchase.Part, quantity, purchase.Destination))
+                if (!PlaceOnlinePartOrder(purchase.Part, quantity, purchase.Destination, purchase.MaxQuantity))
                     return false;
                 PendingEvent = null;
                 return true;

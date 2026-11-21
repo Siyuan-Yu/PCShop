@@ -187,8 +187,6 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var place=s.CurrentPlace;var cash=s.Ledger.Balance;
-                // Starter boxes are assets and must be moved out explicitly before surrender.
-                s.CurrentShop.Locker.ClearFurniture();
                 Assert.IsNull(s.CloseShopBlocker(s.CurrentShop));Assert.True(s.CloseShop(place.Id));
                 Assert.AreEqual(cash,s.Ledger.Balance);Assert.IsNull(s.VenueOperation(place.Id));
                 GameSessionTests.Teleport(s,s.AgencyFor(place).Id);

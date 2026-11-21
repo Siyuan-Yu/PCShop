@@ -101,7 +101,7 @@ namespace PCShopSell.EditorTools
                 throw new System.Exception("WALKTHROUGH 找人导航未到本人身边 "+id);
             }
             void Talk(string id){_game.Ui.CloseAllWindows();_game.Ui.OpenPersonDialogue(id);Frame(0);Must(_game.Ui.AnyModalOpen,"打开当面对话 "+id);}
-            void AttendMeeting(string action)
+            void AttendMeeting(params string[] actions)
             {
                 Guide("meeting-route");
                 if(!s.AtCurrentDistrictMeeting){Click("DistrictGoToMeeting",true);Walk();}
@@ -109,7 +109,9 @@ namespace PCShopSell.EditorTools
                 WaitUntil(s.DistrictStoryState.MeetingAt+1);
                 Must(s.AtCurrentDistrictMeeting&&s.DistrictMeetingBlocker==null,"双方实际到达会面点");
                 Guide("meeting-arrived");Must(!Buttons().Any(b=>b.name=="DistrictGoToMeeting"),"到场不再提示前往");
-                var id=s.DistrictStoryState.MeetingPeople.First();Talk(id);Capture("meeting-talk");Click(action);Capture("meeting-reply");
+                var id=s.DistrictMeetingContact;Talk(id);Capture("meeting-talk");
+                foreach (string action in actions) Click(action);
+                Capture("meeting-reply");
             }
             // Test setup only. No quest evidence, actor positions or activity results are injected.
             Must(s.DebugPrepareDistrictPrerequisites(1),"准备第一段资产门槛");
@@ -119,13 +121,14 @@ namespace PCShopSell.EditorTools
             }
             WaitUntil(s.DistrictStoryState.InvitationDueAt);
             Guide("invitation");Must(!Buttons().Any(b=>b.name=="DistrictGoToMeeting"),"邀请未回复前无会面路线");
+            Click("DialogueContinue",true);
             Click("DistrictChoice_accept",true);
             Must(s.DistrictStoryState.MeetingNodeId==null,"回复只获得陈启明的线索，不自动预约");
-            NearPerson("keeper_agent");Talk("keeper_agent");Click("请帮我约唐蔚出来见面");
-            AttendMeeting("答应帮忙找回三页图");
+            NearPerson("keeper_agent");Talk("keeper_agent");Click("＋ 请陈启明约唐蔚");
+            AttendMeeting("听听唐蔚找这张图做什么","继续","继续","接受寻找三页商铺图的委托");
             Must(s.CurrentDistrictNode.Id=="community.clue","接受委托后进入找李秀兰阶段");
-            NearPerson("landlady");Talk("landlady");Click("商量主线会面：");
-            AttendMeeting("询问三页图分别由谁保管");
+            NearPerson("landlady");Talk("landlady");Click("＋ 约见面");
+            AttendMeeting("询问三页图分别由谁保管","为什么分开保管？","继续","记下联系方式");
             Must(s.CommunitySearchActive,"开始三人寻物");
             for(int i=0;i<3;i++)
             {
@@ -154,8 +157,9 @@ namespace PCShopSell.EditorTools
                 Must(activity.State==CityActivityPhase.Completed&&s.CommunityHasOuting(i),"实际参加并结算活动 "+i);
                 Must(s.CommunityHasClue(i),"活动结算直接取得线索，无需再次找人 "+i);
                 _game.Ui.CloseAllWindows();_game.Ui.OpenCityActivitySettlement(activity.Id);Frame(0);Capture("outing-settlement-"+i);
-                Click("收好这段回忆");Capture("outing-clue-"+i);
-                // An automatically displayed settlement may already have delivered this one-time dialogue.
+                Click(Buttons().Any(b=>Label(b)=="继续交谈")?"继续交谈":"收好这段回忆");
+                if(Buttons().Any(b=>b.name=="DialogueContinue"))Click("DialogueContinue",true);
+                Capture("outing-clue-"+i);
                 if(Buttons().Any(b=>Label(b)=="记下线索"))Click("记下线索");
                 Guide("box-route-"+i);Must(!Buttons().Any(b=>b.name=="DistrictFindPerson_"+id),"有线索后只提示箱子 "+i);
                 Click("前往藏箱地点");Walk();Capture("box-arrived-"+i);

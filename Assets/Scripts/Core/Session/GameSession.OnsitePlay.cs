@@ -16,7 +16,10 @@ namespace PCShopSell.Core.Session
         public const double BasketballDropSeconds = .5;
         public const double BasketballReleaseHeight = 1.52;
         public const double BasketballRimHeight = 3.05;
+        public const double BasketballRimDepth = 8;
         public const double BasketballRimTolerance = .65;
+        public const double BasketballThreePointRadius = 6.65;
+        public const double BasketballCourtLineWidth = .072;
         public string ActivityId,Phase="ready",Pending,Message;
         public int Number,Mode,Selected,Round,Success,OpponentScore,Mask,Feedback=-1,Attempts,Base,Flavor,Sweet,Subject,PhotoCount,GoodPhotos,PhotoSubjects;
         public int[] TalkMasks=Array.Empty<int>();
@@ -25,18 +28,27 @@ namespace PCShopSell.Core.Session
         public long ReadyAt;
         public double Time,Power,Angle,Flight,Distance,LandingX,LandingZ,BallX,BallY=1.7,BallZ,Wind,TargetX,TargetZ,DefenderX,ShotOriginX;
         public double PhotoYaw=25,PhotoPitch=25,PhotoDistance=4,PhotoOffset,Exposure=1;
+        public double BasketballPlayerX, BasketballDepthOffset, BasketballAimHeightOffset, BasketballLandingHeightOffset;
+        public int BasketballPoints;
+        public bool IsBasketball => Number is >= 54 and <= 56;
         public bool BasketballDrill => Number == 55 && Mode < 2 || Number == 54 && Mode == 2;
-        public double BasketballOriginZ => Mode == 1 ? 2.8 : 0;
+        public double BasketballOriginZ => (Mode == 1 ? 2.8 : 0) + BasketballDepthOffset;
         public double BasketballShotRange => Mode == 1 ? 8 : 13;
-        public double SportTargetError => Math.Sqrt(Math.Pow(LandingX - TargetX, 2) + Math.Pow(LandingZ - TargetZ, 2));
+        public double BasketballRimDistance => Math.Sqrt(TargetX * TargetX + TargetZ * TargetZ);
+        public int BasketballShotValue => BasketballRimDistance > BasketballThreePointRadius + BasketballCourtLineWidth / 2 ? 3 : 2;
+        public double SportTargetError => Math.Sqrt(Math.Pow(LandingX - TargetX, 2) + Math.Pow(LandingZ - TargetZ, 2)
+            + Math.Pow(BasketballLandingHeightOffset, 2));
         public bool BasketballShotBlocked
         {
             get
             {
                 if (Number != 56) return false;
                 if (Phase == "result") return LastSportResult == OnsiteSportResult.Blocked;
+                double defenderDepth = 4.5 - BasketballOriginZ;
+                if (defenderDepth <= 0 || LandingZ <= defenderDepth) return false;
                 double defender = Math.Sin((Time - Flight + BasketballFlightSeconds) * 1.7 + Round) * 2;
-                return Mode == 0 && Math.Abs(defender) < .55 || Mode == 1 && defender > 1.3;
+                double offset = defender - (BasketballPlayerX + LandingX * defenderDepth / LandingZ);
+                return Mode == 0 && Math.Abs(offset) < .55 || Mode == 1 && offset > 1.3 && offset < 2;
             }
         }
 
@@ -52,7 +64,8 @@ namespace PCShopSell.Core.Session
             double z = nearRim ? TargetZ : LandingZ;
             bool blocked = BasketballShotBlocked;
             if (blocked) z = Math.Min(z, 4.5 - BasketballOriginZ);
-            double endHeight = blocked ? 1.7 : BasketballRimHeight;
+            double endHeight = blocked ? 1.7 : nearRim ? BasketballRimHeight
+                : Math.Max(.22, BasketballRimHeight + BasketballLandingHeightOffset);
             double height = BasketballReleaseHeight + (endHeight - BasketballReleaseHeight) * progress;
             return (x * progress, height + (blocked ? .8 : 2.5) * Math.Sin(Math.PI * progress), z * progress);
         }
@@ -96,10 +109,75 @@ namespace PCShopSell.Core.Session
         public static bool IsManualPlayActivity(CityActivity activity) =>
             activity != null && (IsInteractiveFishingActivity(activity) || IsOnsiteSport(activity)
                 || IsOnsiteActivity(activity) || IsOutdoorBatchActivity(activity)
-                || IsCookTasting(activity) || IsAutomaticMeal(activity) || IsCommunityMarketOuting(activity) || IsParkRowing(activity)
+                || IsCookTasting(activity) || IsAutomaticMeal(activity) || IsRestaurantMeal(activity) || IsParkWalkActivity(activity)
+                || IsOldMarketVisit(activity) || IsParkRowing(activity) || RideAt(activity) != AmusementRide.None
+                || IsKaraokeActivity(activity) || IsBarVisit(activity)
                 || CityLifeCatalog.LeisureService(activity) != LeisureGame.None
                 || activity.DefinitionId is StreetMusicActivityId or NightSchoolActivityId);
         public bool ManualActivityClockPaused => IsManualPlayActivity(RunningCityActivity);
+
+        public static bool IsKaraokeActivity(CityActivity activity) => activity?.DefinitionId is "ktv" or "social_48" or "social_49" or "social_50"
+            || activity?.DefinitionId?.StartsWith("ktv_", StringComparison.Ordinal) == true;
+
+        public static readonly (string Title, string Genre, int Mood, int Charm, int Intelligence)[] KaraokeSongs =
+        {
+            ("晚风慢一点", "舒缓抒情", 6, 0, 0),
+            ("绿灯亮起来", "轻快流行", 0, 2, 0),
+            ("沿河老街", "复古民谣", 0, 0, 2)
+        };
+
+        public static (int Mood, int Charm, int Intelligence) KaraokeSongRewards(int songIndex, int difficulty)
+        {
+            var song = KaraokeSongs[Math.Clamp(songIndex, 0, KaraokeSongs.Length - 1)];
+            int halfUnits = 2 + Math.Clamp(difficulty, 0, 2);
+            return (song.Mood * halfUnits / 2, song.Charm * halfUnits / 2, song.Intelligence * halfUnits / 2);
+        }
+
+        public bool SelectKaraokeSong(string id, int song, int difficulty)
+        {
+            var activity = RunningCityActivity;
+            if (!IsKaraokeActivity(activity) || activity.Id != id || CurrentPlace?.Id != activity.VenueId
+                || song < 0 || song >= KaraokeSongs.Length || difficulty is < 0 or > 2) return false;
+            activity.KaraokeSongIndex = song;
+            activity.KaraokeDifficulty = difficulty;
+            return true;
+        }
+
+        private void ApplyKaraokeSongRewards(CityActivity activity)
+        {
+            if (!IsKaraokeActivity(activity) || !activity.KaraokeSang) return;
+            var reward = KaraokeSongRewards(activity.KaraokeSongIndex, activity.KaraokeDifficulty);
+            int Earned(int maximum) => (int)Math.Round(maximum * activity.KaraokeAccuracy, MidpointRounding.AwayFromZero);
+            Player.Mood = Math.Min(100, Player.Mood + Earned(reward.Mood));
+            Player.Charm = Math.Min(100, Player.Charm + Earned(reward.Charm));
+            Player.Intelligence = Math.Min(100, Player.Intelligence + Earned(reward.Intelligence));
+        }
+
+        /// <summary>Advance to the playback position and return true when the outing has settled.</summary>
+        public bool AdvanceKaraokePlayback(string id, double progress, string result = null, bool sang = false, double accuracy = 1)
+        {
+            var activity = RunningCityActivity;
+            if (activity?.Id != id || !IsKaraokeActivity(activity) || _settlingManualActivity
+                || CurrentPlace?.Id != activity.VenueId || IsGameOver || IsWorking || _sleeping
+                || !double.IsFinite(progress) || progress < 0 || progress > 1) return false;
+
+            if (progress == 1)
+            {
+                if (result != null) activity.EventSettlementNote = result;
+                activity.KaraokeSang = sang;
+                activity.KaraokeAccuracy = sang && double.IsFinite(accuracy) ? Math.Clamp(accuracy, 0, 1) : 0;
+                return SettleManualActivity(activity, activity.Duration, CityActivityPhase.Completed,
+                    CityActivityService(activity)?.EndText ?? "本次包间活动已结束。");
+            }
+
+            // Elapsed world minutes already include any playback before a save or restart.
+            long remaining = activity.ActualStart + (int)(activity.Duration * progress) - Clock.Now.TotalMinutes;
+            if (remaining <= 0) return false;
+            _settlingManualActivity = true;
+            try { AdvanceClock((int)remaining); }
+            finally { _settlingManualActivity = false; }
+            return false;
+        }
 
         private double ManualOperationTime(CityActivity activity) => activity.ManualOperationMinute > 0
             ? activity.ManualOperationMinute : Clock.Now.TotalMinutes;
@@ -217,12 +295,14 @@ namespace PCShopSell.Core.Session
         public bool CanFinishManualCityActivity(string id)
         {
             var activity = RunningCityActivity;
-            return activity?.Id == id && IsManualPlayActivity(activity) && !UsesManualVenuePass(activity)
+            return activity?.Id == id && IsManualPlayActivity(activity) && !UsesManualVenuePass(activity) && !IsKaraokeActivity(activity)
                 && CurrentPlace?.Id == activity.VenueId && !IsGameOver && !_sleeping && !IsWorking
                 && (activity.VenueId != OldMarketVenueId || _oldMarket.Pending == null)
+                && (!IsOldMarketVisit(activity) || _marketHunt.Pending == null && _marketHunt.Remaining == 0)
                 && (!IsParkRowing(activity) || ParkRowingActive && _parkRowing.AtDock)
+                && (RideAt(activity) != AmusementRide.RingToss || RingThrows(activity) >= RingsPerRound)
                 && OnsiteCompletionReady(activity) && OutdoorCompletionReady(activity) && LifeActivityReady(activity)
-                && CookTastingReady(activity) && (!IsCommunityMarketOuting(activity) || activity.Choices.Contains(CommunityMarketGift));
+                && CookTastingReady(activity) && (!IsCommunityMarketOuting(activity) || CommunityMarketGiftDelivered(activity));
         }
 
         public bool FinishManualCityActivity(string id)
@@ -250,7 +330,7 @@ namespace PCShopSell.Core.Session
             _settlingManualActivity = true;
             try
             {
-                long remaining = activity.ActualStart + minutes - Clock.Now.TotalMinutes;
+                long remaining = activity.ActualStart + Math.Max(minutes, MarketHuntMinutes(activity)) - Clock.Now.TotalMinutes;
                 if (remaining > 0) AdvanceClock((int)remaining);
                 EndCityActivity(activity, phase, reason, Clock.Now.TotalMinutes);
             }
@@ -340,6 +420,7 @@ namespace PCShopSell.Core.Session
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束当前活动";
             long now = Clock.Now.TotalMinutes;
             if (now > activity.ScheduledStart + CityArrivalWindowMinutes) return "已超过约定的到场时间";
+            if (NpcVenueStaffingBlocker(CurrentPlace) is string staffing) return staffing;
             if (OnsiteNumber(activity.DefinitionId) == 56 && activity.Participants.Length == 0) return "这场球缺少同行者";
             if (!OnsiteCompanionsPresent(activity))
                 return "等同行者到齐后开始";
@@ -403,7 +484,18 @@ namespace PCShopSell.Core.Session
             _onsitePlays.Add(state);
         }
         private void SetNextOnsiteTarget(OnsitePlayState s)
-        {s.TargetZ=s.Number<=56?(s.Mode==1?5.2:8):new[]{60.0,85,110}[s.Round%3];s.TargetX=s.Number<=56?0:new[]{0.0,-12,12}[s.Round%3];s.Wind=s.Number>=57?new[]{-2.0,1.5,3}[s.Round%3]:0;}
+        {
+            if (s.Number <= 56)
+            {
+                s.TargetX = -s.BasketballPlayerX;
+                s.TargetZ = OnsitePlayState.BasketballRimDepth - s.BasketballOriginZ;
+                s.Wind = 0;
+                return;
+            }
+            s.TargetZ = new[] { 60.0, 85, 110 }[s.Round % 3];
+            s.TargetX = new[] { 0.0, -12, 12 }[s.Round % 3];
+            s.Wind = new[] { -2.0, 1.5, 3 }[s.Round % 3];
+        }
         public bool SipOnsiteDrink(int drink)
         {
             var activity = RunningCityActivity;
@@ -452,6 +544,7 @@ namespace PCShopSell.Core.Session
             var s = Play;
             if (!OnsiteHere || s == null || s.Number < 54 || s.Number > 58 || s.Phase is "flight" or "charging" || mode < 0 || mode > 2) return false;
             s.Mode = mode;
+            s.BasketballDepthOffset = 0;
             s.Phase = "ready";
             s.Power = 0;
             s.BallX = s.BallZ = 0;
@@ -461,7 +554,44 @@ namespace PCShopSell.Core.Session
             return true;
         }
         public bool AimOnsiteSport(double degrees)
-        {var s=Play;if(!OnsiteHere||s==null||s.Number<54||s.Number>58||s.Phase is "flight" or "charging")return false;s.Angle=Math.Max(-50,Math.Min(50,degrees));return true;}
+        {
+            var s = Play;
+            if (!OnsiteHere || s == null || s.Number is < 54 or > 58 || !double.IsFinite(degrees)
+                || s.Phase == "flight" || s.Phase == "charging" && (s.Number > 56 || s.BasketballDrill)) return false;
+            double limit = s.IsBasketball ? 180 : 50;
+            s.Angle = Math.Clamp(degrees, -limit, limit);
+            s.BasketballAimHeightOffset = 0;
+            return true;
+        }
+
+        public void AimOnsiteBasketball(double degrees, double heightOffset)
+        {
+            var s = Play;
+            if (s?.IsBasketball != true || s.BasketballDrill || !double.IsFinite(heightOffset)
+                || !AimOnsiteSport(degrees)) return;
+            s.BasketballAimHeightOffset = Math.Clamp(heightOffset, -3, 3);
+        }
+
+        public bool MoveOnsiteBasketball(double sideways, double forward)
+        {
+            var s = Play;
+            if (!OnsiteHere || s == null || s.IsFootballPenalty || s.Number is < 54 or > 56
+                || s.Phase is "charging" or "flight" || !double.IsFinite(sideways) || !double.IsFinite(forward)) return false;
+            double x = Math.Clamp(s.BasketballPlayerX + sideways, -4.6, 4.6);
+            double z = Math.Clamp(s.BasketballOriginZ + forward, s.Mode == 1 ? 2 : -3.5, 5.3);
+            if (x == s.BasketballPlayerX && z == s.BasketballOriginZ) return false;
+            s.BasketballPlayerX = x;
+            s.BasketballDepthOffset = z - (s.Mode == 1 ? 2.8 : 0);
+            if (s.Phase == "result")
+            {
+                s.Phase = "ready";
+                s.Power = s.BallX = s.BallZ = 0;
+                s.BallY = OnsitePlayState.BasketballReleaseHeight;
+                s.Message = BasketballReadyMessage(s);
+            }
+            SetNextOnsiteTarget(s);
+            return true;
+        }
         public bool BeginOnsiteCharge()
         {
             var s = Play;
@@ -474,6 +604,16 @@ namespace PCShopSell.Core.Session
             if (s.Number <= 56) s.Message = s.BasketballDrill ? "蓄力中，松手开始练习。" : "蓄力中，松手投篮。";
             return true;
         }
+
+        public void CancelOnsiteBasketballCharge()
+        {
+            var s = Play;
+            if (s?.IsBasketball != true || s.Phase != "charging") return;
+            s.Phase = "ready";
+            s.Flight = s.Power = 0;
+            s.Message = BasketballReadyMessage(s);
+        }
+
         public bool ReleaseOnsiteShot()
         {
             var s=Play;if(!OnsiteHere||s?.Phase!="charging")return false;
@@ -481,6 +621,7 @@ namespace PCShopSell.Core.Session
             s.Phase="flight";s.Flight=0;double rad=s.Angle*Math.PI/180;
             double range=s.Number<=56?s.BasketballShotRange*s.Power:new[]{100.0,180,55}[s.Mode]*s.Power*s.Power;
             s.Distance=range;s.LandingX=Math.Sin(rad)*range+s.Wind;s.LandingZ=Math.Cos(rad)*range;s.ShotOriginX=0;
+            s.BasketballLandingHeightOffset = s.IsBasketball && !s.BasketballDrill ? s.BasketballAimHeightOffset : 0;
             s.Message = s.BasketballDrill ? "练习进行中…" : "球已出手，观察飞行和落点。";
             return true;
         }
@@ -504,7 +645,11 @@ namespace PCShopSell.Core.Session
                 s.BallX = end.X + (end.X >= s.TargetX ? rebound : -rebound);
                 s.BallZ = end.Z + .12 * drop;
             }
-            else if(s.Phase=="charging"){s.Flight+=dt;s.Power=1-Math.Abs((s.Flight%2)-1);}
+            else if (s.Phase == "charging")
+            {
+                s.Flight += dt;
+                s.Power = 1 - Math.Abs(s.Flight % 2 - 1);
+            }
             else if(s.Phase=="flight")
             {
                 s.Flight+=dt;double duration=s.Number<=56?OnsitePlayState.BasketballFlightSeconds:2.6;double t=Math.Min(1,s.Flight/duration);
@@ -521,13 +666,16 @@ namespace PCShopSell.Core.Session
                 bool good=s.Number<=56?miss<OnsitePlayState.BasketballRimTolerance&&!blocked:miss<10;
                 if(s.Number==55&&s.Mode<2)good=Math.Abs(s.Power-(s.Mode==0?.55:.7))<.15;
                 if(s.Number==54&&s.Mode==2)good=Math.Abs(s.DefenderX)>1&&s.Power>.35&&s.Power<.8;
+                // The player and target positions stay fixed from release until the ball lands.
+                int points = s.IsBasketball && !s.BasketballDrill && good ? s.BasketballShotValue : 0;
+                s.BasketballPoints += points;
                 s.Round++;if(good)s.Success++;s.Mask|=1<<s.Mode;s.Phase="result";
                 s.LastSportResult = blocked ? OnsiteSportResult.Blocked : good ? OnsiteSportResult.Success : OnsiteSportResult.Miss;
                 Player.SpendEnergy(s.Number<=56?3:2);
                 if(s.Number==56&&(!good||Math.Sin(s.Time*1.3)>.6))s.OpponentScore+=2;
                 s.Message = s.Number >= 57 ? $"落点距目标 {miss:0.0} 米 · 实际飞行 {s.Distance:0.0} 米"
                     : s.BasketballDrill ? good ? "练习成功！" : "练习未成功，调整力度再试。"
-                    : blocked ? "投篮被封盖！" : good ? "进球！" : BasketballMissMessage(s);
+                    : blocked ? "投篮被封盖！" : good ? $"进球！ +{points} 分" : BasketballMissMessage(s);
             }
         }
 
@@ -535,6 +683,8 @@ namespace PCShopSell.Core.Session
         {
             double sideways = shot.LandingX - shot.TargetX;
             double depth = shot.LandingZ - shot.TargetZ;
+            if (Math.Abs(shot.BasketballLandingHeightOffset) > Math.Max(Math.Abs(sideways), Math.Abs(depth)))
+                return shot.BasketballLandingHeightOffset < 0 ? "瞄低了。" : "瞄高了。";
             if (Math.Abs(sideways) > Math.Abs(depth)) return sideways < 0 ? "投偏左了。" : "投偏右了。";
             return depth < 0 ? "投短了。" : "投过了。";
         }
@@ -600,7 +750,7 @@ namespace PCShopSell.Core.Session
             if (IsVenueSport(a))
             {
                 string summary = s.IsFootballPenalty ? $"射门 {s.Round} 球 · 进球 {s.Success} 球"
-                    : s.Number == 54 ? $"投篮 {s.Round} 次 · 命中 {s.Success} 次"
+                    : s.IsBasketball ? $"投篮 {s.Round} 次 · 得分 {s.BasketballPoints} 分"
                     : $"击球 {s.Round} 杆 · 命中目标 {s.Success} 次";
                 a.EventSettlementNote = (a.EventSettlementNote ?? "") + "\n" + summary;
                 return;
@@ -617,7 +767,12 @@ namespace PCShopSell.Core.Session
             }
             if (s.Number == 56)
             {
-                a.EventSettlementNote = (a.EventSettlementNote ?? "") + $"\n打完五回合 · 你 {s.Success * 2} : {s.OpponentScore} 张绍文";
+                a.EventSettlementNote = (a.EventSettlementNote ?? "") + $"\n打完五回合 · 你 {s.BasketballPoints} : {s.OpponentScore} 张绍文";
+                return;
+            }
+            if (s.IsBasketball)
+            {
+                a.EventSettlementNote = (a.EventSettlementNote ?? "") + $"\n完成 {s.Round} 回合 · 投篮得分 {s.BasketballPoints} 分";
                 return;
             }
             a.EventSettlementNote=(a.EventSettlementNote??"")+(s.Number==53?"\n你和曾玉在吧台尝了新饮品，也聊了各自的感受。":"\n实际回合"+s.Round+"，成功"+s.Success+"，照片"+s.PhotoCount+"。");
@@ -625,7 +780,16 @@ namespace PCShopSell.Core.Session
         private void SaveOnsitePlay(SaveData d){d.onsitePlays=_onsitePlays.Select(x=>x.Copy()).ToArray();d.onsitePhotos=_onsitePhotos.Select(x=>x.Copy()).ToArray();d.onsitePhotoSequence=_onsitePhotoSequence;}
         private void RestoreOnsitePlay(SaveData d)
         {
-            _onsitePlays.Clear();foreach(var x in d.onsitePlays??Array.Empty<OnsitePlayState>()){var s=x.Copy();if(string.IsNullOrEmpty(s.Pending))s.Pending=null;_onsitePlays.Add(s);}
+            _onsitePlays.Clear();
+            foreach (var saved in d.onsitePlays ?? Array.Empty<OnsitePlayState>())
+            {
+                var s = saved.Copy();
+                if (string.IsNullOrEmpty(s.Pending)) s.Pending = null;
+                // Earlier saves only record successes. Convert them when they all came from shots.
+                bool onlyShots = s.Number switch { 54 => (s.Mask & 4) == 0, 55 => (s.Mask & 3) == 0, 56 => true, _ => false };
+                if (d.cityLifeVersion < 5 && onlyShots) s.BasketballPoints = 2 * s.Success;
+                _onsitePlays.Add(s);
+            }
             foreach (var activity in _cityActivities.Where(a => a.Active && IsDrinkTasting(a)))
                 activity.Duration = CityLifeCatalog.DrinkTastingMinutes;
             var running = RunningCityActivity;

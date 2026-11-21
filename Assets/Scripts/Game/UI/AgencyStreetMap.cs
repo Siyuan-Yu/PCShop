@@ -26,8 +26,8 @@ namespace PCShopSell.Game.UI
             { From=from; To=to; Height=height; Width=width; Level=level; }
         }
 
-        public static readonly Color RentalAvailable = new Color(.15f, 1f, .38f);
-        public static readonly Color RentalUpcoming = new Color(1f, .5f, .06f);
+        public static readonly Color RentalAvailable = new Color32(22, 110, 94, 255);
+        public static readonly Color RentalUpcoming = new Color32(156, 77, 30, 255);
         private static readonly Color[] PedestrianBandColors =
         {
             new Color32(174,234,244,255), new Color32(80,179,201,255), new Color32(16,106,132,255)
@@ -93,6 +93,8 @@ namespace PCShopSell.Game.UI
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = new Color32(159, 179, 156, 255);
             _camera.allowHDR = false;
+            // Property markers are drawn by the map UI. Keep the street's translucent effects out of the render texture.
+            _camera.cullingMask &= ~(1 << ShopBeacon.StreetPropertyEffectLayer);
             var extra = _camera.GetUniversalAdditionalCameraData();
             extra.renderPostProcessing = false;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
@@ -111,7 +113,9 @@ namespace PCShopSell.Game.UI
             RequestMapRender(notify: false);
         }
 
-        private bool CanSelectCommercial(Place place) => IsDistrictOverviewPlace(place)
+        private static bool CanSelectCommercial(Place place) => place.Kind != PlaceKind.Home && !place.IsElectronicsCounter;
+
+        private bool IsCommercialFramePlace(Place place) => IsDistrictOverviewPlace(place)
             || (place.Kind == PlaceKind.Shop && (_game.Session.IsMyShop(place)
                 || _game.Session.VentureAt(place.Id) != null || _game.Session.PropertyAt(place.Id) != null));
 
@@ -150,7 +154,7 @@ namespace PCShopSell.Game.UI
                 bool isDistrictFrontage = unit.Kind == PlaceKind.Home || unit.Kind == PlaceKind.Agency
                     || unit.Kind == PlaceKind.Wholesaler || unit.Kind == PlaceKind.Station
                     || (unit.Kind == PlaceKind.Shop && unit.Business != "venue_expo");
-                if (!isDistrictFrontage && !CanSelectCommercial(unit)) continue;
+                if (!isDistrictFrontage && !IsCommercialFramePlace(unit)) continue;
                 if (!_game.World.Places.TryGetValue(unit.Id, out var visual)) continue;
                 buildings.Add(BoundsOf(visual));
                 buildings.Add(new Bounds(visual.Entrance, Vector3.zero));
@@ -412,21 +416,7 @@ namespace PCShopSell.Game.UI
         {
             if (!_buildingBounds.TryGetValue(building, out var bounds))
             {
-                var block = _game.Session.City.Blocks.FirstOrDefault(candidate => candidate.homeId == building.Place.Id);
-                if (block == null) bounds = BuildingBounds(building);
-                else
-                {
-                    // Static batching shares a large mesh across homes. Use this lot's own footprint.
-                    var transform = building.Root.transform;
-                    float w = (float)block.width, d = (float)block.depth, h = Mathf.Max(4, (float)block.height);
-                    bounds = new Bounds(transform.position, Vector3.zero);
-                    foreach (int side in new[] { -1, 1 })
-                    foreach (float depth in new[] { 0, d })
-                    {
-                        bounds.Encapsulate(transform.TransformPoint(side * w / 2, 0, depth));
-                        bounds.Encapsulate(transform.TransformPoint(side * w / 2, h, depth));
-                    }
-                }
+                bounds = BuildingBounds(building);
                 _buildingBounds.Add(building, bounds);
             }
             return bounds;

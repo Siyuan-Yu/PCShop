@@ -17,6 +17,9 @@ namespace PCShopSell.Game
         private FigureMotion _onsiteShooterMotion;
         private LineRenderer _onsiteAim,_onsiteTrail;
         private string _onsiteSceneKey;
+        private const float BasketballCameraShoulder = .72f, BasketballCameraHeight = 2f, BasketballCameraDistance = 6.5f;
+        private float _basketballViewYaw, _basketballViewPitch;
+        private Vector2 _basketballStartingView;
         public RenderTexture OnsiteTexture=>_onsiteTexture;
         public string OnsitePhotoPath(string file)=>Path.Combine(Application.persistentDataPath,"Photos",Path.GetFileName(file));
         public void HideOnsiteScene()
@@ -24,6 +27,61 @@ namespace PCShopSell.Game
             if (_onsiteScene != null) _onsiteScene.SetActive(false);
             _footballPenaltyView?.Close();
             _footballPenaltyView = null;
+        }
+
+        public void TurnOnsiteBasketballView(float yaw, float pitch)
+        {
+            _basketballViewYaw = Mathf.Repeat(_basketballViewYaw + yaw, 360f);
+            _basketballViewPitch = Mathf.Clamp(_basketballViewPitch + pitch, -55f, 55f);
+        }
+
+        private void InitializeOnsiteBasketballView(OnsitePlayState shot)
+        {
+            var rim = new Vector2((float)shot.TargetX, (float)shot.TargetZ);
+            float rimDistance = rim.magnitude;
+            float shoulder = Mathf.Asin(Mathf.Clamp01(BasketballCameraShoulder / rimDistance));
+            float yaw = (Mathf.Atan2(rim.x, rim.y) - shoulder) * Mathf.Rad2Deg;
+            float distance = rimDistance * Mathf.Cos(shoulder) + BasketballCameraDistance;
+            float pitch = -Mathf.Atan2((float)OnsitePlayState.BasketballRimHeight - BasketballCameraHeight, distance) * Mathf.Rad2Deg;
+            _basketballStartingView = new Vector2(yaw, pitch);
+            ResetOnsiteBasketballView();
+        }
+
+        public void ResetOnsiteBasketballView()
+        {
+            _basketballViewYaw = _basketballStartingView.x;
+            _basketballViewPitch = _basketballStartingView.y;
+        }
+
+        public bool MoveOnsiteBasketball(Vector2 movement)
+        {
+            var step = Quaternion.Euler(0, _basketballViewYaw, 0) * new Vector3(movement.x, 0, movement.y);
+            return Session.MoveOnsiteBasketball(step.x, step.z);
+        }
+
+        private (Vector3 Position, Quaternion Rotation) BasketballCameraPose(OnsitePlayState shot)
+        {
+            var player = new Vector3((float)shot.BasketballPlayerX, BasketballCameraHeight, (float)shot.BasketballOriginZ);
+            var shoulder = new Vector3(BasketballCameraShoulder, 0, -BasketballCameraDistance);
+            var position = player + Quaternion.Euler(0, _basketballViewYaw, 0) * shoulder;
+            return (position, Quaternion.Euler(_basketballViewPitch, _basketballViewYaw, 0));
+        }
+
+        public void AimOnsiteBasketballFromView(OnsitePlayState shot)
+        {
+            var (position, rotation) = BasketballCameraPose(shot);
+            var forward = rotation * Vector3.forward;
+            float angle = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+            float heightOffset = 0;
+            if (forward.z > .05f)
+            {
+                // Translate the center ray from the shoulder camera to the ball's release point.
+                float depth = (float)OnsitePlayState.BasketballRimDepth - position.z;
+                var target = position + forward * (depth / forward.z);
+                angle = Mathf.Atan2(target.x - (float)shot.BasketballPlayerX, (float)shot.TargetZ) * Mathf.Rad2Deg;
+                heightOffset = target.y - (float)OnsitePlayState.BasketballRimHeight;
+            }
+            Session.AimOnsiteBasketball(angle, heightOffset);
         }
 
         private void OnDestroy()
@@ -98,7 +156,7 @@ namespace PCShopSell.Game
                     BuildOnsiteHalfCourt(root, cream);
                     Prims.Box(root,"Backboard",new Vector3(0,3.5f,8.5f),new Vector3(1.8f,1.1f,.12f),cream);
                     Prims.Box(root,"HoopPost",new Vector3(0,1.6f,9),new Vector3(.2f,3.2f,.2f),sage);
-                    var hoop = new Vector3(0, (float)OnsitePlayState.BasketballRimHeight, 8);
+                    var hoop = new Vector3(0, (float)OnsitePlayState.BasketballRimHeight, (float)OnsitePlayState.BasketballRimDepth);
                     var rim = Mats.Lit(ArtDirection.Clay);
                     for (int i = 0; i < 12; i++)
                     {
@@ -124,13 +182,13 @@ namespace PCShopSell.Game
                     Prims.SignText(_onsiteDefender, opponentName, new Vector3(0, 2.2f, 0), 2.6f, .26f, ArtDirection.Cream);
                     _onsitePlayer=Prims.Figure(root,"PlayerShooting",ArtDirection.Clay,ArtDirection.Cream,1,FigureAppearance.Player).transform;
                     _onsiteShooterMotion = _onsitePlayer.GetComponent<FigureMotion>();
-                    _onsiteShooterMotion.LocomotionEnabled = false;
+                    _onsiteShooterMotion.LocomotionEnabled = true;
+                    _onsiteShooterMotion.PresentationAnimation = true;
                     _onsiteCamera.orthographic = false;
-                    _onsiteCamera.fieldOfView = 48;
+                    _onsiteCamera.fieldOfView = 58;
                     _onsiteCamera.backgroundColor = ArtDirection.Hex("ADC9D1");
-                    _onsiteCamera.transform.localPosition = new Vector3(6.1f, 5.0f, -8.6f);
-                    _onsiteCamera.transform.LookAt(root.TransformPoint(new Vector3(.6f, 2.7f, 4.0f)));
                     light.transform.localRotation = Quaternion.Euler(43, -32, 0);
+                    InitializeOnsiteBasketballView(s);
                 }
                 else if(s.Number<=58)
                 {
@@ -150,18 +208,25 @@ namespace PCShopSell.Game
                     Prims.Box(root,"ExhibitBackdrop",new Vector3(0,1.5f,2),new Vector3(10,5,.1f),sage);
                     _onsiteCamera.orthographic=false;_onsiteCamera.fieldOfView=42;
                 }
-                if(s.Number>=54&&s.Number<=58)
+                if(s.Number is >= 57 and <= 58)
                 {
                     LineRenderer Line(string name,Color color,float width){var go=new GameObject(name);go.transform.SetParent(root,false);var line=go.AddComponent<LineRenderer>();line.useWorldSpace=false;line.startWidth=line.endWidth=width;line.material=Mats.Unlit(color);return line;}
-                    _onsiteAim=Line("AimDirection",ArtDirection.Cream,s.Number<=56?.06f:.3f);
-                    _onsiteTrail=Line("BallFlightTrail",s.Number<=56?ArtDirection.Hex("FFE193"):ArtDirection.Brass,s.Number<=56?.09f:.35f);
+                    _onsiteAim=Line("AimDirection",ArtDirection.Cream,.3f);
+                    _onsiteTrail=Line("BallFlightTrail",ArtDirection.Brass,.35f);
                 }
                 OnsiteLayer(root);
             }
             _onsiteScene.SetActive(true);var t=_onsiteScene.transform;
-            bool basketball = s.Number is >= 54 and <= 56;
+            bool basketball = s.IsBasketball;
             float origin = basketball ? (float)s.BasketballOriginZ : 0;
-            if(_onsiteBall!=null)_onsiteBall.localPosition=new Vector3((float)s.BallX,(float)s.BallY,(float)s.BallZ+origin);
+            float playerX = basketball ? (float)s.BasketballPlayerX : 0;
+            if (basketball)
+            {
+                var (position, rotation) = BasketballCameraPose(s);
+                _onsiteCamera.transform.localPosition = position;
+                _onsiteCamera.transform.localRotation = rotation;
+            }
+            if(_onsiteBall!=null)_onsiteBall.localPosition=new Vector3(playerX+(float)s.BallX,(float)s.BallY,(float)s.BallZ+origin);
             if (_onsiteDefender != null)
             {
                 bool showDefense = s.Number == 56 || s.Number == 54 && s.BasketballDrill;
@@ -178,36 +243,34 @@ namespace PCShopSell.Game
                 {
                     float release = s.Phase == "flight" && !s.BasketballDrill ? Mathf.Clamp01(1 - (float)s.Flight / .32f) : 0;
                     float step = s.BasketballDrill ? (float)s.BallZ : 0;
-                    _onsitePlayer.localPosition = new Vector3(-.41f, .22f * release, origin + step - .2f);
-                    var reach = s.BasketballDrill ? _onsiteBall.localPosition : new Vector3(0, 1.5f + .45f * release, origin + .16f);
+                    var rotation = Quaternion.Euler(0, s.BasketballDrill ? 0 : (float)s.Angle, 0);
+                    _onsitePlayer.localPosition = new Vector3(playerX, .22f * release, origin + step)
+                        + rotation * new Vector3(-.38f, 0, -.2f);
+                    _onsitePlayer.localRotation = rotation;
+                    var reach = s.BasketballDrill ? _onsiteBall.localPosition : new Vector3(playerX, 1.5f + .45f * release, origin + .16f);
                     float reachWeight = s.Phase == "flight" && !s.BasketballDrill ? release : s.Phase == "result" ? 0 : 1;
                     _onsiteShooterMotion.SetReachPose(t.TransformPoint(reach), reachWeight, s.BasketballDrill ? .22f : 0, false);
                 }
-                float power=s.Phase=="charging"?(float)s.Power:.65f;float range=s.Number<=56?(float)s.BasketballShotRange*power:new[]{100f,180,55}[s.Mode]*power*power;
-                bool showAim = !s.BasketballDrill && s.Phase != "flight";
+            }
+            if (_onsiteAim != null && _onsiteTrail != null)
+            {
+                float power = s.Phase == "charging" ? (float)s.Power : .65f;
+                float range = new[] { 100f, 180, 55 }[s.Mode] * power * power;
+                bool showAim = s.Phase != "flight";
                 _onsiteAim.positionCount = showAim ? 2 : 0;
                 if (showAim)
                 {
                     float yaw = (float)s.Angle * Mathf.Deg2Rad;
-                    _onsiteAim.SetPosition(0, new Vector3(0, .08f, origin));
-                    _onsiteAim.SetPosition(1, new Vector3(Mathf.Sin(yaw) * range + (float)s.Wind, .08f, origin + Mathf.Cos(yaw) * range));
+                    _onsiteAim.SetPosition(0, new Vector3(playerX, .08f, origin));
+                    _onsiteAim.SetPosition(1, new Vector3(playerX + Mathf.Sin(yaw) * range + (float)s.Wind, .08f, origin + Mathf.Cos(yaw) * range));
                 }
-                _onsiteTrail.positionCount = !s.BasketballDrill && s.Phase is ("flight" or "result") ? 32 : 0;
-                double flightDuration = basketball ? OnsitePlayState.BasketballFlightSeconds : 2.6;
-                double progress = s.Phase == "flight" ? Math.Min(1, s.Flight / flightDuration) : 1;
+                _onsiteTrail.positionCount = s.Phase is ("flight" or "result") ? 32 : 0;
+                double progress = s.Phase == "flight" ? Math.Min(1, s.Flight / 2.6) : 1;
                 for (int i = 0; i < _onsiteTrail.positionCount; i++)
                 {
                     double f = progress * i / 31;
-                    if (basketball)
-                    {
-                        var point = s.BasketballFlightPoint(f);
-                        _onsiteTrail.SetPosition(i, new Vector3((float)point.X, (float)point.Y, origin + (float)point.Z));
-                    }
-                    else
-                    {
-                        float y = .2f + Mathf.Sin(Mathf.PI * (float)f) * Mathf.Max(3, (float)s.Distance * .2f);
-                        _onsiteTrail.SetPosition(i, new Vector3((float)(s.LandingX * f), y, (float)(s.LandingZ * f)));
-                    }
+                    float y = .2f + Mathf.Sin(Mathf.PI * (float)f) * Mathf.Max(3, (float)s.Distance * .2f);
+                    _onsiteTrail.SetPosition(i, new Vector3((float)(s.LandingX * f), y, (float)(s.LandingZ * f)));
                 }
             }
             if(s.Number==76)
@@ -236,7 +299,7 @@ namespace PCShopSell.Game
             {
                 Vector2 delta = to - from, center = (from + to) * .5f;
                 var segment = Prims.Box(root, "CourtMarking", new Vector3(center.x, .018f, center.y),
-                    new Vector3(.072f, .014f, delta.magnitude + .022f), stripe);
+                    new Vector3((float)OnsitePlayState.BasketballCourtLineWidth, .014f, delta.magnitude + .022f), stripe);
                 segment.transform.localRotation = Quaternion.Euler(0, Mathf.Atan2(delta.x, delta.y) * Mathf.Rad2Deg, 0);
             }
 
@@ -260,7 +323,7 @@ namespace PCShopSell.Game
                 }
             }
             Arc(2.4f, 4.4f);
-            Arc(6.65f, 8.1f);
+            Arc((float)OnsitePlayState.BasketballThreePointRadius, (float)OnsitePlayState.BasketballRimDepth);
             Prims.Box(root, "CourtFenceRail", new Vector3(0, .87f, 13), new Vector3(31, .16f, .15f), fence);
             for (int i = -4; i <= 4; i++)
                 Prims.Box(root, "CourtFencePost", new Vector3(i * 3.8f, .53f, 13), new Vector3(.15f, 1.22f, .15f), fence);

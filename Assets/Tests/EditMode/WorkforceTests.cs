@@ -360,20 +360,30 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void InboundProcurement_ReservesOnlyDestinationStockSpace_AndBlocksClosingShop()
+        public void InboundProcurement_ReservesOnlyDestinationSpace_AndRedirectsWhenShopCloses()
         {
             using (var s = Make(true))
             {
-                var e = Worker(); s.ShopAt("tea").Buyer = e; CityTestPeople.AtAssignedWork(s,e);
+                var e = Worker(); var closing = s.ShopAt("tea"); closing.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, Plan()));
                 Assert.True(s.DispatchEmployeePurchase(e.Id));
                 GameSessionTests.Teleport(s, "tea");
                 Assert.GreaterOrEqual(s.IncomingShopSpace, 2);
                 Assert.AreEqual(2, s.PendingOnlineCount("cpu0"));
-                StringAssert.Contains("进货", s.CloseShopBlocker(s.ShopAt("tea")));
+                Assert.IsNull(s.CloseShopBlocker(closing));
+                var trip = s.EmployeePurchaseTrips.Single();
+                Assert.True(s.CloseShop("tea"));
+                Assert.AreEqual(EmployeeRole.Unassigned, s.FindEmployee(e.Id).Role);
+                Assert.True(trip.DeliverHome);
                 GameSessionTests.Teleport(s, "pc");
                 Assert.Zero(s.IncomingShopSpace);
                 Assert.Zero(s.PendingOnlineCount("cpu0"));
+                var part = PartCatalog.Get("cpu0");
+                int initial = s.HomeBoxParts.CountAll(part) + s.HomeTempParts.CountAll(part);
+                using var loaded = RoundTrip(s);
+                var pending = loaded.EmployeePurchaseTrips.Single();
+                loaded.AdvanceClock((int)(Math.Max(pending.ReturnAt, pending.DeliveryAt) - loaded.Clock.Now.TotalMinutes + 1));
+                Assert.That(loaded.HomeBoxParts.CountAll(part) + loaded.HomeTempParts.CountAll(part), Is.EqualTo(initial + 2));
             }
         }
 

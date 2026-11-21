@@ -18,6 +18,7 @@ namespace PCShopSell.Game.Runtime
         Dining,
         CatMeow,
         DogBark,
+        PhoneRing,
     }
 
     /// <summary>
@@ -70,6 +71,7 @@ namespace PCShopSell.Game.Runtime
                 Sfx.Error => (0.68f, 0.25f),
                 Sfx.Arrival => (0.62f, 0.35f),
                 Sfx.Notification => (0.60f, 0.30f),
+                Sfx.PhoneRing => (0.62f, 0.85f),
                 Sfx.ShopGuestLeaves => (0.55f, 0.85f),
                 Sfx.Cooking => (0.45f, 1.7f),
                 Sfx.Dining => (0.38f, 3.2f),
@@ -111,6 +113,10 @@ namespace PCShopSell.Game.Runtime
                     return Build("arrival", 0.28f, t => 0.65f * Chime(784, t, 0, 17) + 0.55f * Chime(659, t, 0.085f, 16));
                 case Sfx.Notification:
                     return Build("notification", 0.19f, t => 0.7f * Chime(880, t, 0, 20) + 0.6f * Chime(1047, t, 0.065f, 22));
+                case Sfx.PhoneRing:
+                    return Build("phone-ring", .72f, t => .58f * Chime(740, t, 0, 11)
+                        + .48f * Chime(988, t, .115f, 12) + .48f * Chime(740, t, .34f, 14)
+                        + .40f * Chime(988, t, .455f, 15));
                 case Sfx.ShopGuestLeaves:
                     return Build("shop-door-out", 0.33f, t => 0.62f * Chime(587, t, 0, 15)
                         + 0.30f * Chime(440, t, 0.09f, 17) + 0.52f * Chime(110, t, 0.12f, 35));

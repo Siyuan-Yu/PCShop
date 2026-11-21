@@ -1,4 +1,5 @@
 using PCShopSell.Core.Session;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -49,7 +50,7 @@ namespace PCShopSell.Game.UI
             _footballAimRight = Ui.Button(footer, "→", () => AimFootballStep(1), 21, Ui.ButtonBg);
             ((RectTransform)_footballAimLeft.transform).Anchor(.30f, .57f, .35f, .84f);
             ((RectTransform)_footballAimRight.transform).Anchor(.359f, .57f, .409f, .84f);
-            Ui.Label(footer, "鼠标或方向键", 18, TextAnchor.MiddleRight, Ui.Dim)
+            Ui.Label(footer, "鼠标 / A、D / 左右键", 18, TextAnchor.MiddleRight, Ui.Dim)
                 .rectTransform.Anchor(.43f, .53f, .685f, .88f);
 
             Ui.Label(footer, "力度", 19, color: Ui.Dim).rectTransform.Anchor(.024f, .14f, .097f, .47f);
@@ -79,8 +80,8 @@ namespace PCShopSell.Game.UI
             bool moved = mouse != _footballMouse;
             _footballMouse = mouse;
             if (!shot.FootballPreparing || shot.Phase == "charging" || S.ManualAttemptsLeft == 0) return;
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) AimFootballStep(-1);
-            else if (Input.GetKeyDown(KeyCode.RightArrow)) AimFootballStep(1);
+            if (DirectionalInput.LeftPressed) AimFootballStep(-1);
+            else if (DirectionalInput.RightPressed) AimFootballStep(1);
             else if (moved && _footballCourt != null
                 && RectTransformUtility.ScreenPointToLocalPointInRectangle(_footballCourt, mouse, null, out Vector2 point)
                 && _footballCourt.rect.Contains(point))

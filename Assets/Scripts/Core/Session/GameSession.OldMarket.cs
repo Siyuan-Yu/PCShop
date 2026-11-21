@@ -18,6 +18,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public const string OldMarketVenueId = "life_oldmarket";
+        public const string OldMarketAttendantId = "life_leisure_staff_oldmarket";
         private OldMarketState _oldMarket = new OldMarketState();
         public OldMarketState OldMarketProgress => _oldMarket.Copy();
         public bool AtOldMarket => CurrentPlace?.Id == OldMarketVenueId && ClosedReason(CurrentPlace) == null;
@@ -108,8 +109,8 @@ namespace PCShopSell.Core.Session
             string person = n == 71 ? "resident_guwen" : "resident_leiming", definition = "social_" + n;
             long start = SuggestCityActivityStartAt(definition, person, 0, OldMarketVenueId);
             string reason = CityActivityBlockerAt(definition, new[] { person }, start, false, OldMarketVenueId);
-            return EventScene(template, n == 71 ? "顾文约你去青湾旧物市场看钟表，聊聊老物件。遇到喜欢的，可以自己买下。"
-                : "雷鸣约你去青湾旧物市场淘旧电子。坏了的可以买下请师傅修，修好后留着或卖掉。",
+            return EventScene(template, n == 71 ? "顾文约你去青湾旧物市场看钟表，聊聊老物件。还可以到柜台买次数，去钟表摊淘一淘。"
+                : "雷鸣约你去青湾旧物市场看旧电子。一起学怎么看品相，也可以到柜台买次数淘旧电子。",
                 Choose("约好时间 · " + new PCShopSell.Core.Time.GameTimestamp(start), s =>
                 {
                     var a = s.ScheduleCityActivity(definition, new[] { person }, start);
@@ -126,7 +127,7 @@ namespace PCShopSell.Core.Session
             if (choice == 1) { if (state.Visited >= 3) return Fail("三个摊位已走完。"); QueueOutdoorWalk(a, state, state.Visited); reply = "正在走向下一个旧物摊位。"; return true; }
             if (state.Tested) return Fail("本场主要学习已经完成，可以继续看货或结束活动。");
             state.Pending = "oldmarket_talk"; state.Mode = choice; state.ReadyAt = (long)ManualOperationTime(a) + 5;
-            reply = a.DefinitionId == "social_71" ? "顾文与你现场观察机芯、核对走时或查问来历。" : "雷鸣在旧电子摊旁演示检测方法。购买和维修另选实物处理。"; return true;
+            reply = a.DefinitionId == "social_71" ? "顾文与你现场观察机芯、核对走时或查问来历。" : "雷鸣在旧电子摊旁演示检测方法。想亲手翻找，可以到柜台买淘货次数。"; return true;
         }
         private void SaveOldMarket(SaveData d) => d.oldMarket = _oldMarket.Copy();
         private void RestoreOldMarket(SaveData d) => _oldMarket = d.oldMarket?.Copy() ?? new OldMarketState();

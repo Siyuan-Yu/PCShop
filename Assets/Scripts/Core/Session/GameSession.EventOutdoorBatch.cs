@@ -210,7 +210,7 @@ namespace PCShopSell.Core.Session
                         "样株三：叶片像小扇子，叶脉放射展开。请选择树种。" }[Math.Min(2, state.Visited - 1)];
                     else if (state.Number == 63 && state.Mode > 1)
                     { state.Pending = "work"; state.ReadyAt = now + 8; state.Message = "已到达任务现场，正在做维护。"; }
-                    else if (state.Number is 71 or 72) state.Message = "已到青湾旧物市场第 " + state.Visited + " 个摊位。可现场学习，也可打开市场看货、购买或维修。";
+                    else if (state.Number is 71 or 72) state.Message = "已到青湾旧物市场第 " + state.Visited + " 个摊位。可现场学习，也可到柜台买次数淘旧物。";
                     else if (state.Number >= 73) ExhibitionNodeArrived(a, state);
                     else if (state.Number >= 68) CaptureOutdoorQuote(a, state);
                     else state.Message = "已走到第 " + state.Visited + " 处现场，可继续、休息或选择本次任务。";
