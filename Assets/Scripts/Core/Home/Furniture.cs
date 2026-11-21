@@ -231,7 +231,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef(ModelPaintBench, "喷漆台", "模型店的客带模型加工台，可用于改胶、喷漆和收边。", 900, FurnitureSlot.Floor, 1.3, .75, true) { WeightKg = 35 });
             Add(new FurnitureDef("used_repairbench","二手修复台","修复师处理已鉴定的瑕疵或损坏旧物；每台同时修复一件，需支付耗材。",600,FurnitureSlot.Floor,1.3,.75,true){WeightKg=35});
             // ---- 出租屋：开局自带 ----
-            Add(new FurnitureDef(HomeWorkbench, "居家办公台", "大型经营终端，需中型及以上住宅安装。摆好后可集中管理门店、投资、联系人和生活托管。", 1_080_000, FurnitureSlot.Floor, 6.4, 1.2) { WeightKg=160 });
+            Add(new FurnitureDef(HomeWorkbench, "居家办公台", "可在初始出租屋及其他可入住的自家住宅安装。摆好一台后，各处住处都能打开工作台管理门店、投资、联系人和生活托管。", 1_080_000, FurnitureSlot.Floor, 2, .75) { WeightKg=160 });
             Add(new FurnitureDef(BedBoard, "硬板床", "一块木板加一层薄褥子。", 0, FurnitureSlot.Floor, 2.0, 1.0, false, true) { Role = FurnitureRole.Bed, BedQuality = 1.0 });
             Add(new FurnitureDef(WardrobeCloth, "布衣柜", "拉链布衣柜，塑料骨架。", 0, FurnitureSlot.Floor, 1.1, 0.6, false, true) { Role = FurnitureRole.Wardrobe });
             Add(new FurnitureDef(FittingMirror, "全身镜", "摆在店里使服装购买意愿增加5个百分点；只对服装生效，多面不叠加。也可试衣和更换已拥有的服装。", 230, FurnitureSlot.Floor, .7, .25, true) { Role = FurnitureRole.Wardrobe, WeightKg = 10 });

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -54,14 +55,57 @@ namespace PCShopSell.Game.UI
                     sleepConfirmed = true;
                     foreach (var button in w.Content.GetComponentsInChildren<Button>(true))
                         button.interactable = false;
-                    if (sleep()) w.Close();
-                    else
+                    void FinishBedWindow(bool slept)
                     {
-                        sleepConfirmed = false;
-                        w.Rebuild();
+                        if (w.Closed) return;
+                        if (slept) w.Close();
+                        else
+                        {
+                            sleepConfirmed = false;
+                            w.Rebuild();
+                        }
                     }
+                    if (CanAnimateUi) _ctrl.StartCoroutine(PlaySleepTransition(sleep, FinishBedWindow));
+                    else FinishBedWindow(sleep());
                 });
             });
+        }
+
+        private IEnumerator PlaySleepTransition(Func<bool> sleep, Action<bool> finishBedWindow)
+        {
+            var session = S;
+            var transition = OpenWindow("睡眠转场", 0, 0, _ => { }, closable: false,
+                scrollContent: false, showTitleBar: false, fullScreen: true);
+            // Keep the fade above any notifications raised while advancing to the wake time.
+            var screen = transition.Root;
+            screen.SetParent(_tipCanvas.transform, false);
+            screen.Fill();
+            var fade = screen.gameObject.AddComponent<CanvasGroup>();
+            var wake = Ui.Label(screen, "", 34, TextAnchor.MiddleCenter, Ui.ChromeInk);
+            wake.rectTransform.Anchor(.1f, .5f, .9f, .5f, 0, -54, 0, -54);
+
+            var closeEyes = new UiReveal();
+            closeEyes.Add(screen, 0, .18f, progress => fade.alpha = progress);
+            yield return closeEyes.Play();
+            if (transition.Closed || S != session) yield break;
+
+            long start = session.Clock.Now.TotalMinutes;
+            bool slept = sleep();
+            finishBedWindow(slept);
+            if (transition.Closed || S != session) yield break;
+
+            long duration = session.Clock.Now.TotalMinutes - start;
+            if (slept && duration > 0)
+            {
+                wake.text = $"<b>已起床 · {Ui.Hm(session.Clock.MinuteOfDay)}</b>\n<size=22>睡了 {SleepDurationText(duration)}</size>";
+                yield return new WaitForSecondsRealtime(.75f);
+                if (transition.Closed || S != session) yield break;
+            }
+
+            var openEyes = new UiReveal();
+            openEyes.Add(screen, 0, .28f, progress => fade.alpha = 1f - progress);
+            yield return openEyes.Play();
+            transition.Close();
         }
 
         public void OpenStorageWindow()
@@ -196,7 +240,7 @@ namespace PCShopSell.Game.UI
             int n = pick.Count;
             string one = key == "rice" ? "1 千克" : "一份";
             string unit = key == "rice" ? "千克" : "份";
-            if (!otherResidence && _boxSide != "bag" && key.StartsWith("furn:"))
+            if (_boxSide != "bag" && key.StartsWith("furn:"))
             {
                 string fid = key.Substring(5);
                 Ui.Size(Ui.Button(bottom, "摆出来", () => PlaceFromStorage(shop, fid), 16, Ui.ButtonBg), 90);
@@ -687,14 +731,8 @@ namespace PCShopSell.Game.UI
                 value => { _wakeMinute = value; w.RequestRebuild(); }, showLabel: false);
             Ui.Size(Ui.Button(picker, "睡到这个时间", () => confirmSleep(() => S.SleepUntil(_wakeMinute)),
                 19, Ui.ButtonHot, S.IsSleepTime && duration > 0), 150, 42);
-            string preview = "请选择与当前不同的起床时间";
-            if (duration > 0)
-            {
-                string hours = duration >= 60 ? $"{duration / 60} 小时" : "";
-                string minutes = duration % 60 > 0 ? $"{duration % 60} 分钟" : "";
-                string durationText = (hours + " " + minutes).Trim();
-                preview = $"{WakeLabel(duration)} · 睡 {durationText}";
-            }
+            string preview = duration > 0 ? $"{WakeLabel(duration)} · 睡 {SleepDurationText(duration)}"
+                : "请选择与当前不同的起床时间";
             Line(w.Content, preview, 17, Ui.Dim).name = "SleepWakePreview";
 
             var help = Ui.Button(w.Content, (showHelp ? "▾ " : "▸ ") + "睡眠说明", toggleHelp, 16, Ui.PanelBg);
@@ -706,6 +744,13 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, S.WeatherSummary + " · " + S.CityComfortSummary
                     + (primaryHome ? "。床、窗帘和室温会影响休息效果。" : "。这套住宅使用房间里配好的床。"), 16, Ui.Dim);
             }
+        }
+
+        private static string SleepDurationText(long duration)
+        {
+            string hours = duration >= 60 ? $"{duration / 60} 小时" : "";
+            string minutes = duration % 60 > 0 ? $"{duration % 60} 分钟" : "";
+            return (hours + " " + minutes).Trim();
         }
 
         private static void SleepPreset(Transform parent, string title, string wake, Action sleep, Color color, bool enabled)
@@ -914,10 +959,12 @@ namespace PCShopSell.Game.UI
                 if (!S.DebugHomeWorkbenchEnabled && !S.HomeWorkbenchInstalled)
                 {
                     if (!S.OwnsHomeWorkbench) return S.HomeWorkbenchInTransit ? "居家办公台正在送货" : "到米家购买居家办公台";
-                    if (S.HomeTier < GameSession.HomeWorkbenchMinimumResidenceTier) return "需要中型及以上住宅安装";
-                    return "回家摆放居家办公台";
+                    if (!S.CanDecorateCurrentResidence) return "到收货的住处安装";
+                    if (S.FurnitureToPlace(false, GameSession.HomeWorkbenchId) == 0)
+                        return "工作台不在当前住处，请到收货地址，或先把它存入这里的后仓。";
+                    return S.FurnitureEditBlocker(false) ?? "点击开始摆放居家办公台";
                 }
-                return !_ctrl.InHome ? "回家后可用" : S.IsWorking ? "下班后可用" : "结束当前活动或行程后可用";
+                return !S.CanDecorateCurrentResidence ? "回家后可用" : S.IsWorking ? "下班后可用" : "结束当前活动或行程后可用";
             }
         }
         private enum MyPage { Profile, Food, Residence, Contacts, Relations, Assets }
@@ -1078,8 +1125,10 @@ namespace PCShopSell.Game.UI
             BuildPlayerWorkSummary(body, w);
 
             string blocker = WorkbenchAccessReason;
-            Ui.Size(Ui.Button(body, "居家工作台" + (blocker == null ? "" : " · " + blocker), OpenHomeWorkbench,
-                17, blocker == null ? Ui.ButtonHot : Ui.ButtonBg, blocker == null), -1, 38).name = "MyHomeWorkbench";
+            bool canOpenWorkbench = S.CanUseHomeWorkbench || CanStartWorkbenchSetup;
+            string workbenchLabel = CanStartWorkbenchSetup ? "安装居家工作台" : "居家工作台" + (blocker == null ? "" : " · " + blocker);
+            Ui.Size(Ui.Button(body, workbenchLabel, OpenHomeWorkbench, 17,
+                canOpenWorkbench ? Ui.ButtonHot : Ui.ButtonBg, canOpenWorkbench), -1, 38).name = "MyHomeWorkbench";
             if (blocker == "回家后可用")
                 Ui.Size(Ui.Button(body, "回家", () => { CloseModalWindows(); _ctrl.GoToPlace(S.Home); }, 17), -1, 36);
         }
@@ -1106,7 +1155,7 @@ namespace PCShopSell.Game.UI
             Line(body, "我的租约与产权", 22, Ui.Accent);
             bool rented = S.HasResidentialLease(S.Home);
             var residence = MyCard(body, "MyCurrentResidence", -1, 161);
-            Line(residence, "当前住处", 15, Ui.Dim);
+            Line(residence, "主住处", 15, Ui.Dim);
             Line(residence, S.HomeTitle + (rented ? " · 租住中" : " · 自有"), 23);
             var facts = Ui.Row(residence, 70, 6);
             MyFact(facts, rented ? "周租" : "购入价", rented ? S.CurrentHomeRent.ToString() : Money.FromCents(S.HomePriceCents).ToString());
@@ -1133,7 +1182,7 @@ namespace PCShopSell.Game.UI
                 foreach (var place in otherLeases)
                 {
                     string due = S.NextResidentialRentDay(place) is int day ? $" · 下次扣租 {new GameDate(day)} 周日" : "";
-                    Line(body, $"{place.Name} · 周租 {S.SignedResidentialRent(place)}{due}", 17);
+                    ResidenceRow(place, $"{place.Name} · 周租 {S.SignedResidentialRent(place)}{due}");
                 }
             }
 
@@ -1142,10 +1191,45 @@ namespace PCShopSell.Game.UI
                 .Select(place => (place, property: S.PropertyAt(place.Id))).Where(entry => entry.property != null).ToArray();
             if (!rented) Line(body, S.HomeTitle + " · 自住", 17);
             foreach (var (place, property) in owned)
-                Line(body, place.Name + (property.UseMode == "vacant" ? " · 空置" : $" · 出租 · 周租 {Money.FromCents(property.WeeklyRentCents)}"), 17);
+                if (property.UseMode == "vacant")
+                    ResidenceRow(place, place.Name + " · 自有空置");
+                else
+                    Line(body, $"{place.Name} · 出租 · 周租 {Money.FromCents(property.WeeklyRentCents)}", 17);
             if (rented && owned.Length == 0) Line(body, "暂无", 16, Ui.Dim);
             if (S.HomeVisits.Any(visit => visit.Working))
                 Ui.Size(Ui.Button(body, "在家等维修完成", () => { S.WaitForRepair(); w.Rebuild(); }, 17, Ui.ButtonHot, _ctrl.InHome), -1, 38);
+
+            void ResidenceRow(Place place, string caption)
+            {
+                var row = Ui.Row(body, 40, 8);
+                Ui.Size(Ui.Label(row, caption, 17), 0, 40, 1);
+                string blocker = _ctrl.Placing ? "完成装修后可以切换主住处" : S.PrimaryResidenceBlocker(place);
+                var button = Ui.Size(Ui.Button(row, "设为主住处", () => ConfirmPrimaryResidence(w, place), 16, Ui.ButtonBg,
+                    blocker == null), 148, 36);
+                button.name = "SetPrimaryResidence_" + place.Id;
+                if (blocker != null) button.Tip(blocker);
+            }
+        }
+
+        private void ConfirmPrimaryResidence(Window owner, Place place)
+        {
+            OpenWindow("设为主住处", 620, 340, w =>
+            {
+                string retained = S.HasResidentialLease(S.Home) ? "保留原租约，继续按原租金扣款。" : "保留产权，仍可入住。";
+                Para(w.Content, $"把{place.Name}设为主住处？{S.HomeTitle}{retained}", 19);
+                Para(w.Content, "各套住宅的家具和后仓留在原地址。底栏的回家目的地会随主住处更新。", 17, Ui.Dim);
+                var row = Ui.Row(w.Content, 44, 8);
+                Ui.Size(Ui.Button(row, "取消", w.Close, 17), 0, 42, 1);
+                Ui.Size(Ui.Button(row, "确认切换", () =>
+                {
+                    if (!S.SetPrimaryResidence(place)) return;
+                    _myLeaseExpanded = false;
+                    RefreshShortcutMenus();
+                    RefreshHomeDockVisibility(force: true);
+                    w.Close();
+                    owner.Rebuild();
+                }, 17, Ui.ButtonHot), 0, 42, 1);
+            }, fitContent: true);
         }
 
         private static string FurnitureLabel(string id, int count)
@@ -1199,14 +1283,20 @@ namespace PCShopSell.Game.UI
             }
             OpenWindow("歇业装修", 640, 380, w =>
             {
+                bool guided = S.OpeningRenovationStep == OpeningRenovationLesson.StartPlacement;
                 Ui.Size(Ui.Label(w.Content, "店里要改造，得歇业装修一天：\n· 现在起店今天不再营业，已经在店里排队的客人也不再接待；\n· 装修期间可以随便摆放、挪动、收起店里的摆设；\n· 明天早上恢复营业。", 19, TextAnchor.UpperLeft), -1, 200);
                 RectTransform row = Ui.Row(w.Content, 52);
-                Ui.Size(Ui.Button(row, "确认歇业，开始装修", () =>
+                var confirm = Ui.Size(Ui.Button(row, "确认歇业，开始装修", () =>
                 {
                     if (!S.BeginRenovation()) return;
                     w.Close();
                     Begin();
                 }, 19, Ui.Warn), 300);
+                if (guided)
+                {
+                    _openingRenovationConfirmWindow = w;
+                    _openingRenovationConfirmButton = confirm;
+                }
                 Ui.Size(Ui.Button(row, "再想想", w.Close, 19), 140);
             });
         }
@@ -1450,7 +1540,7 @@ namespace PCShopSell.Game.UI
         // ---------- 摆放模式面板 ----------
 
         internal const float HomeDockWidth = 430f;
-        private Button _homeDockToggle, _homePlacementConfirm;
+        private Button _homeDockToggle, _homePlacementConfirm, _homePlacementFinish;
         private RectTransform _homeDock, _homeDockContent;
         private Text _homeDockToggleLabel, _homeDockTitle, _homeDockTenure, _homePlacementStatus;
         private bool _homeDockCollapsed;
@@ -1458,6 +1548,8 @@ namespace PCShopSell.Game.UI
         private string _homeDockResidence;
         private KeyValuePair<string, int>[] _homeDockStored = Array.Empty<KeyValuePair<string, int>>();
         private bool HomeDockOpen => _homeDock != null && _homeDock.gameObject.activeSelf;
+        private bool HomeDockAvailable => S.CanDecorateCurrentResidence && !MainMenuOpen && !S.IsGameOver
+            && !S.IsWorking && !OpeningMealRestricted && !ExpoHudOpen && !_ctrl.PlacingShop;
 
         private void BuildHomeDockToggle(Transform parent)
         {
@@ -1475,7 +1567,7 @@ namespace PCShopSell.Game.UI
 
         private void RefreshHomeDockVisibility(bool force = false)
         {
-            string residence = _ctrl.InHome ? S.Home.Id : null;
+            string residence = S.CanDecorateCurrentResidence ? S.CurrentPlace.Id : null;
             if (_homeDockSession != S || _homeDockResidence != residence)
             {
                 _homeDockSession = S;
@@ -1483,8 +1575,7 @@ namespace PCShopSell.Game.UI
                 _homeDockCollapsed = false;
                 force = true;
             }
-            bool visible = _ctrl.InHome && !MainMenuOpen && !S.IsGameOver && !S.IsWorking
-                && !OpeningMealRestricted && !ExpoHudOpen && !_ctrl.PlacingShop;
+            bool visible = HomeDockAvailable;
             if (_homeDockToggle.gameObject.activeSelf != visible) _homeDockToggle.gameObject.SetActive(visible);
             bool showDock = visible && !_homeDockCollapsed;
             if (showDock && _homeDock == null) BuildHomeDock();
@@ -1517,13 +1608,14 @@ namespace PCShopSell.Game.UI
 
         private void RefreshHomeDock(bool force = false)
         {
-            if (!HomeDockOpen) return;
+            if (!HomeDockOpen || !S.CanDecorateCurrentResidence) return;
             var stored = S.FurnitureToPlaceList(false).Where(entry => entry.Value > 0 && FurnitureCatalog.Get(entry.Key) != null).ToArray();
-            string tenure = S.HasResidentialLease(S.Home) ? "租住中" : "自有";
+            string title = _ctrl.InHome ? S.HomeTitle : S.CurrentPlace.Name;
+            string tenure = S.HasResidentialLease(S.CurrentPlace) ? "租住中" : "自有";
             if (!force && _homeDockStored.SequenceEqual(stored)
-                && _homeDockTitle.text == S.HomeTitle && _homeDockTenure.text == tenure) return;
+                && _homeDockTitle.text == title && _homeDockTenure.text == tenure) return;
             _homeDockStored = stored;
-            _homeDockTitle.text = S.HomeTitle;
+            _homeDockTitle.text = title;
             _homeDockTenure.text = tenure;
             var scroll = _homeDockContent.parent.parent.GetComponent<ScrollRect>();
             float previousScroll = scroll.verticalNormalizedPosition;
@@ -1531,7 +1623,7 @@ namespace PCShopSell.Game.UI
             Line(_homeDockContent, "装修", 21, Ui.Accent);
 
             _homePlacementStatus = null;
-            _homePlacementConfirm = null;
+            _homePlacementConfirm = _homePlacementFinish = null;
             bool editing = _ctrl.Placing && !_ctrl.PlacingShop;
             if (!editing)
             {
@@ -1542,14 +1634,13 @@ namespace PCShopSell.Game.UI
             {
                 Line(_homeDockContent, (_ctrl.PlaceHoldsPlaced ? "移动 · " : "摆放 · ") + FurnitureLabel(_ctrl.PlaceId, 1), 18, Ui.Accent);
                 _homePlacementStatus = Line(_homeDockContent, "", 16, Ui.Dim);
-                Ui.Size(_homePlacementStatus, -1, 32);
+                Ui.Size(_homePlacementStatus, -1, 40);
                 var actions = Ui.Row(_homeDockContent, 36, 4);
                 Ui.Size(Ui.Button(actions, "旋转（R）", _ctrl.RotateGhost, 15), 86, 36);
                 _homePlacementConfirm = Ui.Size(Ui.Button(actions, _ctrl.PlaceHoldsPlaced ? "确认移动" : "确认摆放",
-                    _ctrl.ConfirmHomeFurniturePlacement, 16, Ui.ButtonHot), 0, 36, 1);
+                    _ctrl.ConfirmHomeFurniturePlacement, 16, Ui.ButtonBg), 0, 36, 1);
                 _homePlacementConfirm.name = "HomeDockConfirmPlacement";
                 Ui.Size(Ui.Button(actions, "取消", _ctrl.CancelPlacementSelection, 15), 60, 36).name = "HomeDockCancelPlacement";
-                UpdateHomePlacementStatus();
             }
             else
             {
@@ -1573,7 +1664,10 @@ namespace PCShopSell.Game.UI
                 var history = Ui.Row(_homeDockContent, 36, 5);
                 Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 14, Ui.ButtonBg, S.CanUndoLayout), 0, 36, 1);
                 Ui.Size(Ui.Button(history, "重做 Ctrl+Y", () => _ctrl.UndoPlacement(true), 14, Ui.ButtonBg, S.CanRedoLayout), 0, 36, 1);
-                Ui.Size(Ui.Button(_homeDockContent, "完成装修", _ctrl.EndPlacement, 17, Ui.ButtonHot), -1, 38).name = "HomeDockFinishPlacement";
+                string finish = _ctrl.PlaceId == null ? "完成装修" : _ctrl.PlaceHoldsPlaced ? "移动并完成" : "摆放并完成";
+                _homePlacementFinish = Ui.Size(Ui.Button(_homeDockContent, finish, _ctrl.FinishHomePlacement, 17, Ui.ButtonHot), -1, 38);
+                _homePlacementFinish.name = "HomeDockFinishPlacement";
+                UpdateHomePlacementStatus();
             }
             scroll.StopMovement();
             scroll.verticalNormalizedPosition = editing && _ctrl.PlaceId != null ? 1 : previousScroll;
@@ -1595,12 +1689,16 @@ namespace PCShopSell.Game.UI
 
         private void UpdateHomePlacementStatus()
         {
-            if (!HomeDockOpen || _homePlacementStatus == null || _homePlacementConfirm == null) return;
+            if (!HomeDockOpen || _homePlacementFinish == null) return;
+            bool pending = _ctrl.PlaceId != null;
             bool picked = _ctrl.HasHomePlacementTarget;
-            string issue = _ctrl.PlaceError;
-            _homePlacementStatus.text = !picked ? "点击房间选择位置" : issue ?? "可以放在这里 · 点确认完成";
-            _homePlacementStatus.color = !picked ? Ui.Dim : issue == null ? Ui.Good : Ui.Warn;
-            _homePlacementConfirm.interactable = picked && issue == null;
+            string issue = pending ? S.FurnitureEditBlocker(false) ?? _ctrl.PlaceError : null;
+            bool canConfirm = picked && issue == null;
+            _homePlacementFinish.interactable = !pending || canConfirm;
+            if (_homePlacementStatus == null || _homePlacementConfirm == null) return;
+            _homePlacementStatus.text = issue ?? (picked ? "可以放在这里" : "点击房间选择位置");
+            _homePlacementStatus.color = issue != null ? Ui.Warn : picked ? Ui.Good : Ui.Dim;
+            _homePlacementConfirm.interactable = canConfirm;
         }
 
         private RectTransform _placePanel;

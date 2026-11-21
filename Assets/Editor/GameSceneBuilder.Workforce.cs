@@ -97,13 +97,13 @@ namespace PCShopSell.EditorTools
             Frame(0);
             Shot("vs1_employees_staff_tab");
             _game.Ui.CloseAllWindows();
-            Check(s.PostJobAd(), "满员也可以招聘，先雇员工再安排工作");
             s.Clock.Restore(s.Clock.Today, 23 * 60 + 59);
             s.AdvanceClock(2);
             Check(s.FindEmployee(buyer.Id).Shop.Place.Id == second.Id && s.FindEmployee(buyer.Id).Role == EmployeeRole.Cashier,
                 "次日同一个员工到新店换成收银岗位");
             s.Clock.Restore(s.Clock.Today, 8 * 60 + 59);
             s.AdvanceClock(2);
+            Check(s.Candidates.Count == GameSession.DailyCandidateCount, "每日有四名应聘者");
             _game.Ui.CloseAllWindows();
             _game.Ui.OpenDock();
             _game.Ui.DebugSelectTab(5);

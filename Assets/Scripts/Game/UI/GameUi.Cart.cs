@@ -263,8 +263,18 @@ namespace PCShopSell.Game.UI
 
         private void CheckoutCart(Window window, bool defaultToShop)
         {
-            if (S.Checkout(defaultToShop)) SoundFx.Play(Sfx.Purchase);
-            window.Rebuild();
+            if (!S.Checkout(defaultToShop))
+            {
+                window.Rebuild();
+                return;
+            }
+            SoundFx.Play(Sfx.Purchase);
+            // The next lesson points at the HUD, so release the furniture catalog after the opening purchase.
+            if (QuestPopups && S.AtMall && S.PendingQuestCompletion()?.Id == "mall"
+                && S.OpeningRenovationStep == OpeningRenovationLesson.Travel)
+                window.Close();
+            else window.Rebuild();
+            UpdateQuestTracker();
         }
 
         private static RectTransform CartColumnBox(Transform row, out RectTransform list)
@@ -377,12 +387,6 @@ namespace PCShopSell.Game.UI
                         string blocker = forCart ? S.CartResidenceBlocker(address) : S.TruckDestinationBlocker(address);
                         var (fee, minutes) = S.TruckQuote(address);
                         string note = address == S.CurrentPlace ? "你就在这里" : blocker ?? $"每辆 {fee} · 约 {minutes} 分钟";
-                        if (forCart && blocker == null)
-                        {
-                            int tier = address == S.Home ? S.HomeTier : S.ResidentialTier(address);
-                            if (tier < GameSession.HomeWorkbenchMinimumResidenceTier) note += " · 需中型及以上住宅安装";
-                            else if (address != S.Home) note += " · 搬入后可安装";
-                        }
                         bool chosen = address == selected;
                         Ui.Size(Ui.Button(column, S.PlaceTitle(address) + (chosen ? "  ✓" : "") + "\n<size=14>" + note + "</size>", () =>
                         {

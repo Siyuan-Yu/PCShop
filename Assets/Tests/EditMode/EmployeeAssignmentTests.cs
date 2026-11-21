@@ -40,7 +40,6 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                Assert.True(s.PostJobAd());
                 s.Clock.Restore(new GameDate(1), 8 * 60 + 59);
                 s.AdvanceClock(2);
                 int candidates = s.Candidates.Count;

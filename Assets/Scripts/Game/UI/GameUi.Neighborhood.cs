@@ -37,11 +37,24 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content,"帮孩子找家人",20,Ui.Accent);Line(w.Content,child.Message,17);
                 if(child.Stage!="following")Action("孩子在"+S.City.GetPlace(child.Place).Name,"前往",()=>Go(child.Place));
-                if(!child.Asked)Action("到孩子身边问清线索","询问孩子",()=>{if(!S.AskLostChild())Toast("请先到孩子身边。");w.Rebuild();});
+                if (!child.Asked) Action("到孩子身边问清线索", "询问孩子", () =>
+                {
+                    if (!S.AskLostChild()) { Toast("请先到孩子身边。"); return; }
+                    string place = S.City.GetPlace(child.CluePlace).Name;
+                    w.Rebuild();
+                    OpenDialogue("lost_child", "走散的孩子", "", "", null, start: ctx => ctx.Show(
+                        $"我刚才跟家人走散了。我们说过，要是找不到对方，就去{place}附近等。你能陪我过去吗？",
+                        ReturnToActivity(ctx, "记下线索")));
+                });
                 if(child.Asked&&child.Helper==null)
                 {
                     Action("陪孩子去"+S.City.GetPlace(child.CluePlace).Name,"按线索找家人",()=>{if(S.EscortLostChild())Go(child.CluePlace);else Toast("先到孩子身边再陪同。");});
-                    Action("当面确认后交接5分钟","与家人确认",()=>{if(S.ReuniteLostChild())Start("child-reunion");else {Toast("需先询问，并陪孩子到实际家人身边。");w.Rebuild();}});
+                    Action("当面确认后交接5分钟", "与家人确认", () =>
+                    {
+                        if (!S.ReuniteLostChild()) { Toast("需先询问，并陪孩子到实际家人身边。"); w.Rebuild(); return; }
+                        OpenActivityReply(child.Parent, "对，是我们家孩子。我刚才一直在这儿等，谢谢你陪孩子过来。", "继续交接",
+                            () => { if (!w.Closed) Start("child-reunion"); });
+                    });
                 }
                 if(child.Helper==null)
                 {

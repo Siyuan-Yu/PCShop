@@ -40,7 +40,8 @@ namespace PCShopSell.Game.UI
                 }
                 if(S.StaffCommitted(shop)<GameSession.StaffLimit(shop.Place.Size))
                 {
-                    Ui.Size(Ui.Button(w.Content,"发布值守招聘（"+GameSession.JobAdFee+"）",()=>{S.PostJobAd();w.Rebuild();},17,Ui.ButtonBg,S.JobAdDay<0),-1,40);
+                    Line(w.Content, S.Candidates.Count == 0 ? $"下一批应聘者 {S.NextCandidateArrivalText} 到店"
+                        : $"值守招聘 · 今日剩 {S.Candidates.Count} 位应聘者", 17, Ui.Accent);
                     foreach(var candidate in S.Candidates.Select((person,index)=>new{person,index}).ToArray())
                     {
                         var c=candidate;

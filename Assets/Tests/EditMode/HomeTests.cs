@@ -833,7 +833,7 @@ namespace PCShopSell.Tests
             Money fee = s.CourierQuote(false).fee;
             Money before = s.Ledger.Balance;
             var source = s.CurrentPlace;
-            foreach (string id in new[] { Gifts.Fruit, "produce:rice", "produce:veg", "produce:egg" })
+            foreach (string id in new[] { Gifts.Drink, "produce:rice", "produce:veg", "produce:egg" })
                 Assert.True(s.CartAddRetailWholesale(source, id, s.CitySupplierRemaining(source.Id, id)));
             s.CartAllToTruck();
             double kg = s.CartTruckKg;

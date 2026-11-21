@@ -73,6 +73,7 @@ namespace PCShopSell.Game.Runtime
                 case "rug": Rug(root, w, d); break;
                 case "plant": Plant(root, 0.4f, 0.9f, c); break;
                 case "shop_plant": Plant(root, 0.5f, 1.3f, c); break;
+                case FurnitureCatalog.HomeWorkbench:
                 case "desk": Desk(root, w, d, c); break;
                 case "sofa": Sofa(root, w, d, c, new Color(0.55f, 0.4f, 0.3f)); break;
                 case "shop_sofa": Sofa(root, w, d, c, new Color(0.25f, 0.4f, 0.6f)); break;

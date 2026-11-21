@@ -76,10 +76,11 @@ namespace PCShopSell.Core.Session
         {
             string why=ResidenceBlocker(tier,false);if(why!=null)return Fail(why);
             Money rent=HomeTierRentQuote(tier);
-            if(!PayForResidenceMove(tier,"搬家",rent+Money.FromYuan(500),"住处首周租金及搬家费")) return false;
+            if(!PayForResidenceMove(tier,"搬家",rent+Money.FromYuan(500),"住处首周租金及搬家费",targetResidence:ResidencePlace(tier))) return false;
             _homeLeaseRentCents=rent.Cents;
             _homeLeaseSignedDay=Clock.Today.TotalDays;
             _residentialHomeId=null;
+            ConsolidateHomeFreight();
             Say("已换为"+HomeTitle+"。家具与储物保留，首周结束后每周日扣租。"); return true;
         }
         public bool BuyHome(bool mortgage)

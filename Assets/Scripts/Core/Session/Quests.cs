@@ -112,10 +112,10 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
-                Id = "hire", Title = "雇一名店员", Target = QuestTarget.Staff,
-                Short = $"雇一个人{K("看店")}",
-                Hint = $"有人看店，{K("你才能出门进货")}。",
-                Done = s => s.Employee != null || s.EverHired,
+                Id = "hire", Title = "招聘并安排开店分工", Target = QuestTarget.Staff,
+                Short = "按店型招人、分配岗位并安排进货",
+                Hint = "到本店「员工」页查看开店所需的岗位。",
+                Done = s => s.OpeningStaffDone(s.FirstStaffingShop),
             },
             new QuestDef
             {
@@ -140,16 +140,16 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
-                Id = "bank_securities", Title = "了解股市", Target = QuestTarget.BankSecurities,
-                Short = $"去{K("城郊银行")}学习证券交易",
-                Hint = $"点任务卡上的{K("前往银行")}。到柜台后打开{K("证券交易")}，看完说明后点{K("已了解，继续开店")}。",
+                Id = "bank_securities", Title = "了解借款和证券", Target = QuestTarget.BankSecurities,
+                Short = $"去{K("城郊银行")}了解借款和证券交易",
+                Hint = $"有空时去{K("城郊银行")}。到柜台后，先了解借款金额、利息和还款日期，再学习证券交易。",
                 Lesson = true,
-                LessonReady = s => s.AtBank && s.BankBlocker() == null,
+                LessonReady = s => s.AtBank && s.BankBlocker() == null && s.BankBorrowLessonCompleted,
                 QuietTransition = true,
                 Done = s => s.BankPlace == null || s.QuestLessonRead("bank_securities") || s.QuestCompleted("second_shop")
                     || s.OperatingStorefrontCount >= 2 || s.RacingUnlocked,
-                Progress = s => s.AtBank ? "已到银行 · 打开证券交易"
-                    : s.CityIntent?.TargetPlaceId == s.BankPlace?.Id ? "正在前往银行" : "到银行查看证券入门说明",
+                Progress = s => s.AtBank ? (s.BankBorrowLessonCompleted ? "已到银行 · 了解证券交易" : "已到银行 · 了解借款")
+                    : s.CityIntent?.TargetPlaceId == s.BankPlace?.Id ? "正在前往银行" : null,
             },
             new QuestDef
             {
@@ -222,6 +222,8 @@ namespace PCShopSell.Core.Session
         {
             if (source?.Id == "second_shop" || source?.Id == "third_shop")
                 return s.ExpansionOpeningGuide(source, source.Id == "second_shop" ? 2 : 3);
+            if (source?.Id == "hire" && s.FirstStaffingShop is OwnedShop staffingShop)
+                return s.OpeningStaffGuide(source, staffingShop);
             if (source?.Target == QuestTarget.Cooker)
             {
                 if (s.Pantry.Cooking == null && s.Pantry.CookedBowls == 0) return source;
@@ -310,7 +312,7 @@ namespace PCShopSell.Core.Session
                 if(q.Id=="shelf") q.Short="把货架设成基础宠物用品，陈列首批商品";
                 if(q.Id=="stock") q.Short="到暖爪宠物用品批发市场补货";
             }
-            if(q.Id=="sale"&&s.RetailKind=="restaurant"){q.Short="接待一桌客人，完成备菜、烹饪与上菜";q.Hint="顾客吃完后付款，记入餐饮收入。";}
+            if(q.Id=="sale"&&s.RetailKind=="restaurant"){q.Short="接待一桌客人，完成备菜、烹饪与上菜";q.Hint=GameSession.RestaurantOpeningServiceHint;}
             return q;
         }
     }
@@ -320,7 +322,7 @@ namespace PCShopSell.Core.Session
         private const string OpeningMealTutorialFlag = "tutorial:opening-meal-pending";
         private const string OpeningAgencyGuideFlag = "tutorial:opening-agency-pending";
         private const string MealDeliveryGuidePending = "guide:meal-delivery:pending";
-        private const string SecuritiesTravelStarted = "guide:securities:travel-started";
+        private const string BankBorrowLessonRead = "guide:bank-borrow:read";
         public bool OpeningMealTutorialPending => Flags.Contains(OpeningMealTutorialFlag);
         public bool OpeningAgencyGuidePending => CurrentPlace == null && !IsGameOver && LookingForFirstShop
             && Flags.Contains(OpeningAgencyGuideFlag) && City.HasPlace("agency");
@@ -330,28 +332,26 @@ namespace PCShopSell.Core.Session
         public bool ScooterTutorialPaused => Flags.Contains(ScooterGuidePending) && CanPauseForTutorial
             && CanUse(VehicleKind.EBike) && (Vehicle == VehicleKind.EBike
                 || CarriedKg <= CommuteVehicle(VehicleKind.EBike).CargoCapacity * Backpack.KgPerSpace + 1e-9);
-        public bool SecuritiesTutorialPaused
+        public bool BankTutorialPaused
         {
             get
             {
-                if (!QuestCompleted("scooter") || QuestCompleted("bank_securities") || !CanPauseForTutorial)
+                if (!AtBank || !QuestCompleted("scooter") || QuestCompleted("bank_securities")
+                    || !CanPauseForTutorial || BankBlocker() != null)
                     return false;
                 var lesson = Quests.Get("bank_securities");
-                if (lesson.Done(this) || !QuestStageReady(lesson)) return false;
-                if (AtBank) return lesson.LessonReady(this);
-                return !Flags.Contains(SecuritiesTravelStarted) && CityIntent?.TargetPlaceId != BankPlace.Id && LeaveBlocker == null;
+                return !lesson.Done(this) && QuestStageReady(lesson);
             }
         }
 
-        public bool StartSecuritiesTutorialTravel()
-        {
-            if (BankPlace is not Place bank || !BeginCityTravel(bank.Id)) return false;
-            Flags.Add(SecuritiesTravelStarted);
-            return true;
-        }
+        internal bool BankBorrowLessonCompleted => Flags.Contains(BankBorrowLessonRead);
+        public bool BankBorrowTutorialPending => BankTutorialPaused && !BankBorrowLessonCompleted;
+        public bool ConfirmBankBorrowTutorial() => BankBorrowTutorialPending && Flags.Add(BankBorrowLessonRead);
         public bool MealDeliveryTutorialPaused => HasSmartphone && !MealDeliveryEnabled
             && Flags.Contains(MealDeliveryGuidePending) && CanPauseForTutorial;
-        public bool RequiredTutorialPaused => MealDeliveryTutorialPaused || ScooterTutorialPaused || SecuritiesTutorialPaused;
+        public bool RequiredTutorialPaused => MealDeliveryTutorialPaused || ScooterTutorialPaused || BankTutorialPaused
+            || OpeningRenovationStep != OpeningRenovationLesson.None || OpeningShelfTutorialPaused
+            || OpeningCounterTutorialPaused || OpeningStaffStep != OpeningStaffLesson.None;
 
         public const string OpeningMealLeaveBlock = "先做饭，吃一碗，再把剩下的饭全部装进背包，才能出门。";
         public bool OpeningMealEaten => Flags.Contains("tutorial:opening-meal-eaten");

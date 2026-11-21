@@ -287,10 +287,16 @@ namespace PCShopSell.Tests
         [Test]
         public void FittedShop_SkipsToShelvesStockAndFirstSale()
         {
-            GameSession s = Make(true);
+            using var s = Make(true);
+            GameSessionTests.Teleport(s, "pc");
             Assert.AreEqual("sale", s.CurrentQuest().Id, "开局送的店设施齐全、货架设置好、有货，下一步是卖出第一单");
+            Assert.AreEqual(OpeningStaffLesson.None, s.OpeningStaffStep, "首单还没结账时，员工教学不能打断营业");
             s.Ledger.Credit(s.Clock.Today, ShopSimulation.SalesCategory, Money.FromYuan(100), "测试");
             Assert.AreEqual("hire", s.CurrentQuest().Id);
+            Assert.True(s.OpeningSaleCompletionPending);
+            Assert.AreEqual(OpeningStaffLesson.None, s.OpeningStaffStep, "玩家确认首单完成前，员工教学必须等待");
+            s.ConfirmOpeningSaleCompletion();
+            Assert.AreEqual(OpeningStaffLesson.StaffTab, s.OpeningStaffStep, "确认首单完成后才高亮员工页");
         }
 
         [Test]
@@ -359,21 +365,11 @@ namespace PCShopSell.Tests
             Assert.AreEqual("sale", afterPurchase.CurrentQuest().Id);
         }
 
-        private static void HireSomeone(GameSession s)
-        {
-            GameSessionTests.Teleport(s, "pc");
-            s.PostJobAd();
-            for (int i = 0; i < 12 * 24 && s.Candidates.Count == 0; i++) s.AdvanceClock(60);
-            Assert.Greater(s.Candidates.Count, 0, "贴了启事要来人");
-            Assert.IsTrue(s.Hire(0));
-        }
-
         [Test]
         public void PhoneAndQr_ContinueIntoGrowthGuide()
         {
             GameSession s = Make(true);
-            s.Ledger.Credit(s.Clock.Today, ShopSimulation.SalesCategory, Money.FromYuan(100), "测试");
-            HireSomeone(s);
+            FinishBefore(s, "phone");
             Assert.AreEqual("qr", s.CurrentQuest().Id, "雇了人、有手机，只差收款码");
             s.SetSmartphone(false);
             Assert.AreEqual("qr", s.CurrentQuest().Id, "已完成手机教学不会倒退");
@@ -383,11 +379,46 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.Qr), "店里不能直接买收款码");
             GameSessionTests.Teleport(s, "phone");
             Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Qr));
+            s.Clock.Restore(s.Clock.Today.AddDays(1), 10 * 60);
             Assert.AreEqual("scooter", s.CurrentQuest().Id);
         }
 
         private static GameSession Reload(GameSession s) => GameSession.Load(s.City,
             UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave())));
+
+        [Test]
+        public void OpeningPurchaseTasksWaitForTheNextDayAndEnoughCash()
+        {
+            using var s = Make(true, cash: 1600);
+            s.SetSmartphone(false);
+            FinishBefore(s, "hire");
+            Assert.True(s.DebugCompleteQuest());
+            Assert.IsNull(s.CurrentQuest(), "现金够了也要等招聘完成后的次日");
+
+            using var loaded = Reload(s);
+            Assert.IsNull(loaded.CurrentQuest(), "当天读档仍需等待");
+            var oneYuan = Money.FromYuan(1);
+            Assert.True(loaded.Ledger.TryDebit(loaded.Clock.Today, "测试", oneYuan));
+            loaded.Clock.Restore(loaded.Clock.Today.AddDays(1), 10 * 60);
+            Assert.IsNull(loaded.CurrentQuest(), "次日现金不足两倍，手机任务仍未派发");
+            loaded.Ledger.Credit(loaded.Clock.Today, "测试", oneYuan, "补足手机任务门槛");
+            Assert.AreEqual("phone", loaded.CurrentQuest()?.Id);
+
+            GameSessionTests.Teleport(loaded, "phone");
+            Assert.True(loaded.BuySmartphone());
+            Assert.True(loaded.BuyUpgrade(ShopUpgrades.Qr));
+            var scooterThreshold = 2 * Money.FromYuan(MotorCatalog.Legacy(VehicleKind.EBike).Price);
+            loaded.Ledger.Credit(loaded.Clock.Today, "测试", scooterThreshold - loaded.Ledger.Balance, "补足小电驴任务门槛");
+            Assert.IsNull(loaded.CurrentQuest(), "买手机当天现金够了也先不派发小电驴任务");
+
+            using var again = Reload(loaded);
+            Assert.IsNull(again.CurrentQuest());
+            Assert.True(again.Ledger.TryDebit(again.Clock.Today, "测试", oneYuan));
+            again.Clock.Restore(again.Clock.Today.AddDays(1), 10 * 60);
+            Assert.IsNull(again.CurrentQuest(), "次日现金仍需达到小电驴价格的两倍");
+            again.Ledger.Credit(again.Clock.Today, "测试", oneYuan, "补足小电驴任务门槛");
+            Assert.AreEqual("scooter", again.CurrentQuest()?.Id);
+        }
 
         // A returning player's completed teaching history; live business conditions remain unchanged.
         private static void FinishBefore(GameSession s, string id)

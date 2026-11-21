@@ -29,9 +29,9 @@ namespace PCShopSell.Game.UI
         private static Color ClosenessColor(int level) =>
             level >= 60 ? new Color(0.95f, 0.78f, 0.3f) : level >= 30 ? new Color(0.45f, 0.82f, 0.72f) : new Color(0.55f, 0.6f, 0.66f);
 
-        public void OpenRelationsPanel() => OpenPeopleWorkspace("relations", w => BuildRelationsContent(w));
+        public void OpenRelationsPanel() => OpenPeopleWorkspace("relations", w => BuildRelationsContent(w, 1090, 710));
 
-        private void BuildRelationsContent(Window w, float width = GraphWidth, float height = GraphHeight, bool showPlayerPortrait = false)
+        private void BuildRelationsContent(Window w, float width, float height, bool showPlayerPortrait = false)
         {
             List<ContactInfo> people = S.Contacts();
             if (_contactSel != null && people.All(c => c.Id != _contactSel)) _contactSel = null;

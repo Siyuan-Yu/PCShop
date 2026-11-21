@@ -50,7 +50,6 @@ namespace PCShopSell.Game.UI
                 var raw = stage.gameObject.AddComponent<RawImage>();
                 raw.raycastTarget = false;
                 raw.texture = view.Texture;
-                if (ride == AmusementRide.FerrisWheel) BuildCabinWindow(stage);
 
                 var footer = Ui.Panel(w.Content, "RideControls", Ui.Chrome).rectTransform.Anchor(.05f, .025f, .95f, .10f);
                 Action<float> step = ride == AmusementRide.RingToss
@@ -72,35 +71,18 @@ namespace PCShopSell.Game.UI
             return true;
         }
 
-        private static void BuildCabinWindow(RectTransform stage)
-        {
-            Strip(0, 0, 1, .07f);
-            Strip(0, .963f, 1, 1);
-            Strip(0, .07f, .021f, .963f);
-            Strip(.979f, .07f, 1, .963f);
-            var sill = Ui.Panel(stage, "CabinWindowSill", ArtDirection.Hex("797D74"));
-            sill.rectTransform.Anchor(.021f, .071f, .979f, .084f);
-            sill.raycastTarget = false;
-
-            void Strip(float xMin, float yMin, float xMax, float yMax)
-            {
-                var trim = Ui.Panel(stage, "CabinWindowTrim", Ui.Chrome);
-                trim.raycastTarget = false;
-                trim.rectTransform.Anchor(xMin, yMin, xMax, yMax);
-            }
-        }
-
         private Action<float> BuildRideControls(Window w, CityActivity activity, AmusementRide ride, RectTransform footer, AmusementRideCamera view)
         {
             var session = S;
             bool wheel = ride == AmusementRide.FerrisWheel;
             bool garden = activity.VenueId == CityLifeCatalog.GardenAmusementVenue;
-            float duration = wheel ? 15f : ride == AmusementRide.RollerCoaster ? 10f : 8f;
+            float duration = wheel ? 24f : ride == AmusementRide.RollerCoaster ? 10f : 8f;
             float elapsed = 0;
             bool talked = false;
             var companion = activity.Participants.FirstOrDefault(p => session.Relation(p.PersonId) >= 5);
             var name = companion == null ? null : session.CityPerson(companion.PersonId)?.Name;
-            var hint = Ui.Label(footer, wheel ? "方向键 / WASD 或按住鼠标右键转头 · V 回正" : "乘坐中…", 18);
+            const string wheelLookHint = "方向键 / WASD 或按住鼠标右键转头 · V 回正";
+            var hint = Ui.Label(footer, wheel ? wheelLookHint : "乘坐中…", 18);
             hint.rectTransform.Anchor(.02f, 0, .69f, 1);
             var talk = Ui.Button(footer, name == null ? "" : "听" + name + "说说", () =>
             {
@@ -132,13 +114,13 @@ namespace PCShopSell.Game.UI
                 float progress = elapsed / duration;
                 if (wheel)
                 {
-                    // Ease through the highest point while leaving the whole city under player control.
-                    progress = elapsed <= 7.5f ? .5f * Mathf.SmoothStep(0, 1, elapsed / 7.5f)
-                        : .5f + .5f * Mathf.SmoothStep(0, 1, (elapsed - 7.5f) / 7.5f);
-                    bool atTop = name != null && !talked && elapsed >= 5.5f && elapsed <= 10.5f;
-                    talk.gameObject.SetActive(atTop);
-                    hint.text = atTop ? name + "：你看那边。　·　方向键 / WASD 转头"
-                        : "方向键 / WASD 或按住鼠标右键转头 · V 回正";
+                    // Ease away from the platform and keep moving slowly through the highest part of the arc.
+                    const float revolution = 2f * Mathf.PI;
+                    float eased = Mathf.SmoothStep(0, 1, progress);
+                    progress = eased + .90f * Mathf.Sin(revolution * eased) / revolution;
+                    bool canTalk = name != null && !talked && Mathf.Abs(progress - .5f) <= .09f;
+                    talk.gameObject.SetActive(canTalk);
+                    hint.text = canTalk ? name + "：你看那边。　·　" + wheelLookHint : wheelLookHint;
                 }
                 else if (ride == AmusementRide.RollerCoaster) progress -= .095f * Mathf.Sin(progress * Mathf.PI * 2);
                 view.Render(progress);

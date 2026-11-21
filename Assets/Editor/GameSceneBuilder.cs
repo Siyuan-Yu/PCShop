@@ -417,18 +417,21 @@ namespace PCShopSell.EditorTools
                 {
                     if (sold == 0)
                     {
-                        int queued = s.PlayerShop.Queue.Count;
                         _game.Interior.StandAtShelf(0);
-                        Frame(0.05f);
-                        _game.Checkout(s.PlayerShop.Queue[0].Id);
-                        Check(s.PlayerShop.Queue.Count == queued, "老板不在收银台时没法结账，顾客接着排队");
-                        _game.Interior.StandAtCounter();
-                        Frame(0.05f);
-                        Check(_game.TryGetInteract(out _, out string counterHint) && counterHint.Contains("结账"), "柜台边有“给顾客结账”提示");
-                        Shot("vs1_57_counter_hint");
+                        Frame(0);
                     }
                     var cashBeforeSale = s.Ledger.Balance;
-                    _game.Checkout(s.PlayerShop.Queue[0].Id);
+                    int customerId = s.PlayerShop.Queue[0].Id;
+                    _game.Checkout(customerId);
+                    if (sold == 0)
+                    {
+                        Check(s.Ledger.Balance == cashBeforeSale, "从货架边点结账时，角色走到柜台前不会入账");
+                        for (int j = 0; j < 120 && s.PlayerShop.Queue.Any(customer => customer.Id == customerId); j++) Frame(0.05f);
+                        Frame(0);
+                        Check(s.Ledger.Balance > cashBeforeSale && _game.Interior.NearCounter, "角色自动走到柜台并完成指定顾客的结账");
+                        Check(_game.TryGetInteract(out _, out string counterHint) && counterHint.Contains("收银"), "柜台边有收银提示");
+                        Shot("vs1_57_counter_hint");
+                    }
                     if (s.Ledger.Balance > cashBeforeSale) sold++;
                 }
             }

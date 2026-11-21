@@ -35,7 +35,6 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public const string HomeWorkbenchId = FurnitureCatalog.HomeWorkbench;
-        public const int HomeWorkbenchMinimumResidenceTier = 1;
         public HomeAutomationSettings HomeAutomation { get; private set; }=new HomeAutomationSettings();
         private readonly List<WorkbenchPriceDay> _workbenchPrices=new List<WorkbenchPriceDay>();
         private readonly Dictionary<string,string> _workbenchAlerts=new Dictionary<string,string>();
@@ -43,18 +42,23 @@ namespace PCShopSell.Core.Session
         private int _workbenchSleepDay=-1,_workbenchSupplyDay=-1,_workbenchMealDay=-1,_workbenchMealSpent;
         private bool _workbenchSleepPending;
         private bool _workbenchAutomationConfigured;
-        public bool HomeWorkbenchInstalled => HomeTier >= HomeWorkbenchMinimumResidenceTier && HomeLayout.Any(item => item.Id == HomeWorkbenchId);
-        public bool OwnsHomeWorkbench => HomeLayout.Any(item => item.Id == HomeWorkbenchId) || FurnitureInStock(HomeWorkbenchId) > 0
+        private static bool LayoutHasWorkbench(IReadOnlyList<PlacedFurniture> layout) =>
+            layout != null && layout.Any(item => item.Id == HomeWorkbenchId);
+
+        public bool HomeWorkbenchInstalled => LayoutHasWorkbench(HomeLayout)
+            || _residenceFreight.Any(entry => LayoutHasWorkbench(entry.Value.Layout)
+                && City.HasPlace(entry.Key) && CanSleepAt(City.GetPlace(entry.Key)));
+        public bool OwnsHomeWorkbench => LayoutHasWorkbench(HomeLayout) || FurnitureInStock(HomeWorkbenchId) > 0
             || HomeBox.FurnitureCount(HomeWorkbenchId) > 0 || HomeTemp.FurnitureCount(HomeWorkbenchId) > 0
             || Backpack.FurnitureCount(HomeWorkbenchId) > 0 || _mallStash.Any(item => item.Id == HomeWorkbenchId)
-            || _residenceFreight.Values.Any(storage => storage.Box.FurnitureCount(HomeWorkbenchId) > 0)
+            || _residenceFreight.Values.Any(storage => LayoutHasWorkbench(storage.Layout) || storage.Box.FurnitureCount(HomeWorkbenchId) > 0)
             || _shops.Any(shop => shop.Locker.FurnitureCount(HomeWorkbenchId) > 0 || shop.Temp.FurnitureCount(HomeWorkbenchId) > 0
                 || shop.Layout.Any(item => item.Id == HomeWorkbenchId));
         public bool HomeWorkbenchInTransit => _parcels.Any(item => item.Kind == ParcelKind.Furniture && item.Id == HomeWorkbenchId)
             || _couriers.Any(run => run.Items.Any(item => item.Kind == CourierItemKind.Furniture && item.Id == HomeWorkbenchId));
         public string HomeWorkbenchPurchaseBlocker => CurrentPlace?.Business != PhoneBusiness || !IsPlaceOpen(CurrentPlace)
             ? "请到营业中的米家购买" : OwnsHomeWorkbench ? "已拥有居家办公台" : HomeWorkbenchInTransit ? "居家办公台正在送货" : null;
-        public bool CanUseHomeWorkbench => !IsGameOver && CurrentPlace == Home && (HomeWorkbenchInstalled || DebugHomeWorkbenchEnabled)
+        public bool CanUseHomeWorkbench => !IsGameOver && CanDecorateCurrentResidence && (HomeWorkbenchInstalled || DebugHomeWorkbenchEnabled)
             && !IsWorking && !CityActivityExclusive && Trip == null;
 
         private bool BuyHomeWorkbench(Place residence)
@@ -67,9 +71,14 @@ namespace PCShopSell.Core.Session
         }
         public IReadOnlyList<WorkbenchAlert> WorkbenchAlerts=>_workbenchAlerts.Select(p=>new WorkbenchAlert{Key=p.Key,Text=p.Value}).ToArray();
         public int WorkbenchMealSpent=>_workbenchMealDay==Clock.Today.TotalDays?_workbenchMealSpent:0;
-        public int WorkbenchMealsAvailable=>(HomeHas(FurnitureRole.Cooker)?Pantry.CookedBowls:0)+(HomeHas(FurnitureRole.Fridge)?HomeFridge.Food.Packed.Where(b=>b.Count>0&&FastFoodCatalog.Packed(b.Id)?.Drink!=true).Sum(b=>b.Count):0)
-            +(HomeHas(FurnitureRole.Storage)?HomeBox.Food.Packed.Where(b=>b.Count>0&&FastFoodCatalog.Packed(b.Id)?.Drink!=true).Sum(b=>b.Count):0)
-            +Backpack.Food.Packed.Where(b=>b.Count>0&&FastFoodCatalog.Packed(b.Id)?.Drink!=true).Sum(b=>b.Count);
+        private Backpack WorkbenchWarehouse => CanDecorateCurrentResidence && HasWarehouseHere ? WarehouseBagHere : null;
+
+        private static int WorkbenchMealCount(Backpack bag) =>
+            bag?.Food.Packed.Where(b => b.Count > 0 && FastFoodCatalog.Packed(b.Id)?.Drink != true).Sum(b => b.Count) ?? 0;
+
+        public int WorkbenchMealsAvailable => (AtHome && HomeHas(FurnitureRole.Cooker) ? Pantry.CookedBowls : 0)
+            + (CanDecorateCurrentResidence && CanOpenFridge ? WorkbenchMealCount(CurrentFridge) : 0)
+            + WorkbenchMealCount(WorkbenchWarehouse) + WorkbenchMealCount(Backpack);
         public bool SetHomeAutomation(HomeAutomationSettings settings)
         {
             if(!CanUseHomeWorkbench || settings==null)return Fail("在家安装居家办公台后才能设置生活托管。");
@@ -151,32 +160,35 @@ namespace PCShopSell.Core.Session
             var a=HomeAutomation;int day=to.Date.TotalDays;
             if((a.Meals||a.Takeaway)&&(Player.Hunger<25||CrossesWorkbench(from,to,12*60)||CrossesWorkbench(from,to,18*60+30)))EatMeal("托管用餐");
             WorkbenchAlertState("food","家中可用饭食不足两餐，请补给或开启自动点饭。",a.Meals&&WorkbenchMealsAvailable<2);
-            WorkbenchAlertState("wardrobe","自动换衣需要在家中摆放衣柜。",a.Clothing&&!HomeHas(FurnitureRole.Wardrobe));
-            if(a.Clothing&&HomeHas(FurnitureRole.Wardrobe)&&to.TotalMinutes/180!=_workbenchOutfitAt)
+            bool hasWardrobe = ResidenceHasHere(FurnitureRole.Wardrobe);
+            WorkbenchAlertState("wardrobe","自动换衣需要在当前住处摆放衣柜。",a.Clothing&&!hasWardrobe);
+            if(a.Clothing&&hasWardrobe&&to.TotalMinutes/180!=_workbenchOutfitAt)
             { _workbenchOutfitAt=to.TotalMinutes/180;EquipForCurrentWeather(); }
+            var warehouse = WorkbenchWarehouse;
             if(a.Supplies&&CrossesWorkbench(from,to,16*60)&&_workbenchSupplyDay!=day)
             {
                 _workbenchSupplyDay=day;
-                bool accessible=HomeHas(FurnitureRole.Storage)&&HomeBox.GiftCount(a.SupplyId)>0;
-                WorkbenchAlertState("supply","自动取用的家中消耗品不足，或尚未摆放纸箱。",!accessible);
+                bool accessible=warehouse?.GiftCount(a.SupplyId)>0;
+                WorkbenchAlertState("supply","当前住处的后仓里没有可自动取用的消耗品。",!accessible);
                 if(accessible)
                 {
-                    HomeBox.TakeGift(a.SupplyId);
+                    warehouse.TakeGift(a.SupplyId);
                     ApplyDiet(a.SupplyId==Gifts.Soda?-3:a.SupplyId==Gifts.Fruit?5:1,a.SupplyId==Gifts.Soda?8:a.SupplyId==Gifts.Fruit?2:4);
                     Player.Hunger=Math.Min(100,Player.Hunger+(a.SupplyId==Gifts.Soda?2:a.SupplyId==Gifts.Fruit?8:10));
                     Say("生活托管使用了"+Gifts.Get(a.SupplyId).Name+"。");
                 }
             }
-            if(!a.Supplies||HomeHas(FurnitureRole.Storage)&&HomeBox.GiftCount(a.SupplyId)>0)_workbenchAlerts.Remove("supply");
+            if(!a.Supplies||warehouse?.GiftCount(a.SupplyId)>0)_workbenchAlerts.Remove("supply");
             int sleepMinute=a.SleepHour*60,wakeMinute=a.WakeHour*60;
             bool restWindow=sleepMinute<wakeMinute?to.MinuteOfDay>=sleepMinute&&to.MinuteOfDay<wakeMinute:to.MinuteOfDay>=sleepMinute||to.MinuteOfDay<wakeMinute;
             int restDay=day-(sleepMinute>wakeMinute&&to.MinuteOfDay<wakeMinute?1:0);
+            bool hasBed = ResidenceHasHere(FurnitureRole.Bed);
             if(a.Sleep&&restWindow&&_workbenchSleepDay!=restDay)
             {
-                WorkbenchAlertState("bed","自动睡觉需要家中有床。",!HomeHas(FurnitureRole.Bed));
-                if(HomeHas(FurnitureRole.Bed)&&PendingEvent==null){_workbenchSleepDay=restDay;_workbenchSleepPending=true;}
+                WorkbenchAlertState("bed","自动睡觉需要当前住处有床。",!hasBed);
+                if(hasBed&&PendingEvent==null){_workbenchSleepDay=restDay;_workbenchSleepPending=true;}
             }
-            if(!a.Sleep||HomeHas(FurnitureRole.Bed))_workbenchAlerts.Remove("bed");
+            if(!a.Sleep||hasBed)_workbenchAlerts.Remove("bed");
         }
         private static bool CrossesWorkbench(GameTimestamp from,GameTimestamp to,int minute)
         {
@@ -187,7 +199,7 @@ namespace PCShopSell.Core.Session
         private void ProcessWorkbenchSleep()
         {
             if(!_workbenchSleepPending)return;_workbenchSleepPending=false;
-            if(CanUseHomeWorkbench&&!_sleeping&&PendingEvent==null&&HomeAutomation.Sleep&&HomeHas(FurnitureRole.Bed))SleepUntil(HomeAutomation.WakeHour*60);
+            if(CanUseHomeWorkbench&&!_sleeping&&PendingEvent==null&&HomeAutomation.Sleep&&ResidenceHasHere(FurnitureRole.Bed))SleepUntil(HomeAutomation.WakeHour*60);
         }
         private bool EatWorkbenchMeal(string meal)
         {
@@ -195,9 +207,10 @@ namespace PCShopSell.Core.Session
             var a=HomeAutomation;
             if(a.Meals)
             {
+                var warehouseFood = WorkbenchWarehouse?.Food.Packed;
                 List<FoodBatch> food=HasAutomaticHomeMeal&&HomeHas(FurnitureRole.Cooker)?Pantry.Cooked:
-                    HomeHas(FurnitureRole.Fridge)&&HasMeal(HomeFridge.Food.Packed)?HomeFridge.Food.Packed:
-                    a.Supplies&&HomeHas(FurnitureRole.Storage)&&HasMeal(HomeBox.Food.Packed)?HomeBox.Food.Packed:
+                    CanOpenFridge&&HasMeal(CurrentFridge.Food.Packed)?CurrentFridge.Food.Packed:
+                    a.Supplies&&warehouseFood!=null&&HasMeal(warehouseFood)?warehouseFood:
                     HasMeal(Backpack.Food.Packed)?Backpack.Food.Packed:null;
                 if(food!=null)
                 {

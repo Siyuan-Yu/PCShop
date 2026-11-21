@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -55,6 +56,12 @@ namespace PCShopSell.Game.Runtime
             var visual = new PlaceVisual { Place = p, Entrance = entrance, Root = root.gameObject };
             Places[p.Id] = visual; _cur = visual;
             float width = Mathf.Max(6, (float)p.Width), depth = Mathf.Max(6, (float)p.Depth);
+            if (GameSession.IsCommercialPremises(p))
+            {
+                var room = RoomSpec.ForShop(p.Size);
+                width = (float)room.Width;
+                depth = (float)room.Depth;
+            }
             bool venue = (p.Business ?? "").StartsWith("venue_", StringComparison.Ordinal);
             if (venue || p.Business=="服装") CityVenueView.Build(root, p, width, depth);
             else

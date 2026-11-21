@@ -246,7 +246,7 @@ namespace PCShopSell.Core.Session
             if (!CandidateAvailable(_candidates[index])) return Fail("这位应聘者已经离开了。");
             var hired=_candidates[index];AddShopEmployee(_focus,EmployeeRole.Buyer,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
             EverHired = true;
-            _candidates.Clear();
+            _candidates.RemoveAt(index);
             Say($"{hired.Name}入职进货岗位，日薪 {hired.DailyWage}。点“员工”安排采购清单和交通方式。");
             return true;
         }

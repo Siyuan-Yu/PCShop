@@ -94,7 +94,8 @@ namespace PCShopSell.Core.Session
         public bool hasEmployee;
         public bool everHired;
         public SaveEmployee[] candidates;
-        public int jobAdDay;
+        public int dailyCandidateDay;
+        public long openingStaffWaitUntil;
 
         public bool monthGoalEvaluated;
         public bool monthGoalPassed;
@@ -112,6 +113,7 @@ namespace PCShopSell.Core.Session
         /// <summary>手机里装的 app（旧存档没有这个字段，视为全装了）。</summary>
         public string[] apps;
         public string[] flags;
+        public int phoneQuestEarliestDay, scooterQuestEarliestDay;
         public int[] scheduledDays;
         public long[] scheduledCents;
         public string[] scheduledMemos;
@@ -468,8 +470,11 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveResidentialFreight
     {
+        public bool hasLayout;
+        public SavePlaced[] layout;
         public string residenceId;
         public SaveStorage storage;
+        public SaveStorage fridge;
     }
 
     [Serializable]

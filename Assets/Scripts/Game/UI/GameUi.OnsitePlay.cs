@@ -164,7 +164,25 @@ namespace PCShopSell.Game.UI
                 var guests=S.RunningCityActivity.Participants;for(int i=0;i<guests.Length;i++)
                 {
                     int person=i;Label((s.TalkMasks[i]!=0?"✓ ":"")+S.CityPerson(guests[i].PersonId)?.Name);
-                    var row=Ui.Row(list,38,5);for(int j=0;j<3;j++){int topic=j;Ui.Size(Ui.Button(row,new[]{"路线","预算","近况"}[j],()=>{S.TalkOnsiteGuest(person,topic);w.RequestRebuild();},16,Ui.ButtonBg,s.Pending==null&&s.TalkMasks[i]==0),-1,36,1);}
+                    var row = Ui.Row(list, 38, 5);
+                    string[] topics = { "路线", "预算", "近况" };
+                    for (int j = 0; j < topics.Length; j++)
+                    {
+                        int topic = j;
+                        Ui.Size(Ui.Button(row, topics[j], () =>
+                        {
+                            if (!S.TalkOnsiteGuest(person, topic)) return;
+                            string personId = guests[person].PersonId;
+                            string reply = topic switch
+                            {
+                                0 => "去湖边的话，我会从市场后面那条路绕。虽然多走一点，但中途有地方歇脚。",
+                                1 => "我习惯先把车费和吃饭的钱算好。想加个项目，我们再看看每个人愿意出多少。",
+                                _ => S.CityPerson(personId)?.Topics?.ElementAtOrDefault(2) ?? "这阵子手头挺忙的。今天能和你们坐下来，我挺高兴。"
+                            };
+                            OpenActivityReply(personId, reply, "回到聚会");
+                            w.RequestRebuild();
+                        }, 16, Ui.ButtonBg, s.Pending == null && s.TalkMasks[i] == 0), -1, 36, 1);
+                    }
                 }
             }
             else if(s.Number==53)
@@ -182,7 +200,21 @@ namespace PCShopSell.Game.UI
                 {
                     Ui.Size(Ui.Label(list,s.Round==0?"曾玉：我想试试几个搭配，你想先尝哪杯？":"曾玉：要不要再换个口味？",21,color:Ui.Accent),-1,92);
                     string[] replies={"柠檬苏打吧，清爽一点。","蜂蜜咖啡，浓一些怎么样？","我想尝尝偏甜的姜汁乌龙。"};
-                    for(int i=0;i<replies.Length;i++){int option=i;Button(replies[i],()=>S.ChooseTastingDialogue(option));}
+                    for (int i = 0; i < replies.Length; i++)
+                    {
+                        int option = i;
+                        Button(replies[i], () =>
+                        {
+                            if (!S.ChooseTastingDialogue(option)) return;
+                            string reply = option switch
+                            {
+                                0 => "好，我先挤点柠檬，糖就少放一点。你喝的时候留意一下，酸味过后还有没有香气。",
+                                1 => "可以，我先用一点蜂蜜打底。咖啡一倒进去香气就起来了，甜味留在后面。",
+                                _ => "好，姜先泡一会儿，等味道出来再加乌龙。我调好你尝尝，不够甜我们再添。"
+                            };
+                            OpenActivityReply("resident_zengyu", reply, "回到吧台");
+                        });
+                    }
                 }
             }
             else if (readyToFinish)
@@ -214,9 +246,34 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(aim, "方向 →", () => MoveAim(3), 17, interactable: canAim), -1, 38, 1);
                     Label("方向 " + s.Angle.ToString("0") + "° · 回合 " + s.Round);
                 }
-                if(s.Number==55&&s.Round>=3&&s.Mask==7)for(int i=0;i<3;i++){int n=i;Button(new[]{"反馈抓地力","反馈急停脚感","反馈回弹"}[i],()=>S.OnsiteCourtFeedback(n),s.Feedback<0);}
-                if(s.Number==58&&s.Round>=3)
-                {Button("谈用途、型号和保修",()=>S.DecideOnsiteProcurement(0),!s.ProcurementDecided);Button("谈预算、数量和交期",()=>S.DecideOnsiteProcurement(1),!s.ProcurementDecided);Button("这次不承诺供货",()=>S.DecideOnsiteProcurement(2),!s.ProcurementDecided);}
+                if (s.Number == 55 && s.Round >= 3 && s.Mask == 7)
+                {
+                    string[] captions = { "反馈抓地力", "反馈急停脚感", "反馈回弹" };
+                    string[] replies = { "我记下了。下次我换双鞋在同一块位置试，看看鞋底会不会影响抓地力。",
+                        "我会再试试急停那一步。等地面用过几天，我们找同一条线再跑几次。", "我把回弹记下来。下次拿同一个球去旧地板试一下，差别就听得出来了。" };
+                    for (int i = 0; i < captions.Length; i++)
+                    {
+                        int topic = i;
+                        Button(captions[i], () =>
+                        {
+                            if (S.OnsiteCourtFeedback(topic)) ReplyFromCompanion(replies[topic]);
+                        }, s.Feedback < 0);
+                    }
+                }
+                if (s.Number == 58 && s.Round >= 3)
+                {
+                    string[] captions = { "谈用途、型号和保修", "谈预算、数量和交期", "这次不承诺供货" };
+                    string[] replies = { "我们先把实际用来做什么聊清楚，再定配置。保修和出问题找谁，也一起写在报价里吧。",
+                        "先把能交付的数量和日期给我。预算可以另谈，交货时间得留够。", "行，今天就聊到这儿。后面真有合适的单子，我再把需求发给你。" };
+                    for (int i = 0; i < captions.Length; i++)
+                    {
+                        int topic = i;
+                        Button(captions[i], () =>
+                        {
+                            if (S.DecideOnsiteProcurement(topic)) ReplyFromCompanion(replies[topic] + "\n\n<size=16>" + s.Message + "</size>");
+                        }, !s.ProcurementDecided);
+                    }
+                }
                 if (!s.IsBasketball) Label("按住屏幕下方按钮或空格蓄力");
             }
             else if(s.Number==76)
@@ -230,6 +287,13 @@ namespace PCShopSell.Game.UI
                 Pair("构图左移","构图右移",()=>Frame(s.PhotoYaw,s.PhotoPitch,s.PhotoDistance,s.PhotoOffset-.3,(int)s.Exposure),()=>Frame(s.PhotoYaw,s.PhotoPitch,s.PhotoDistance,s.PhotoOffset+.3,(int)s.Exposure));
                 Button("曝光："+new[]{"偏暗","正常","偏亮"}[(int)s.Exposure],()=>Frame(s.PhotoYaw,s.PhotoPitch,s.PhotoDistance,s.PhotoOffset,((int)s.Exposure+1)%3));
                 Button("拍照并保存",()=>{if(!_ctrl.CaptureOnsitePhoto())Toast("照片未保存，请检查现场、相机和写入空间。");});Button("查看相册",OpenOnsiteAlbum);
+            }
+            if (activity.DefinitionId == "golf" && s.Phase is not ("charging" or "flight"))
+            {
+                var definition = S.CityActivityService(activity);
+                foreach (int topic in ActivityTopicIndices(activity, definition))
+                    Button(definition.Choices[topic], () => SelectCityActivityOption(activity, definition, topic, "回到练习场"),
+                        !activity.Choices.Contains(topic.ToString()));
             }
             var rail=Ui.Panel(w.Content,"OnsiteBottom",Ui.Chrome);
             if (s.IsBasketball) rail.rectTransform.Anchor(.25f, .03f, .75f, .135f);
@@ -280,6 +344,12 @@ namespace PCShopSell.Game.UI
             }
             else if (!drinkTasting)
                 Ui.Button(rail.transform,"完成现场步骤后结算",null,19,Ui.ButtonBg,false).GetComponent<RectTransform>().Anchor(.74f,.3f,.98f,.75f);
+
+            void ReplyFromCompanion(string line)
+            {
+                var person = ActivitySpeakers(activity, null).FirstOrDefault();
+                if (person != null) OpenActivityReply(person.Id, line, "回到场上");
+            }
         }
 
         private bool OnsiteReadyToFinish(CityActivity activity) => GameSession.IsVenueSport(activity)
@@ -366,12 +436,12 @@ namespace PCShopSell.Game.UI
                 return;
             }
             var runningActivity = S.RunningCityActivity;
-            bool basketballFinished = s.IsBasketball && OnsiteReadyToFinish(runningActivity);
-            bool held = !basketballFinished && (_onsiteHeld || Input.GetKey(KeyCode.Space));
+            bool ballGameFinished = (s.IsBasketball || s.IsFootballPenalty) && OnsiteReadyToFinish(runningActivity);
+            bool held = !ballGameFinished && (_onsiteHeld || Input.GetKey(KeyCode.Space));
             if (GameSession.IsOnsiteSport(runningActivity))
             {
-                if (s.IsFootballPenalty) UpdateFootballAim(s);
-                else if (s.IsBasketball && !basketballFinished)
+                if (s.IsFootballPenalty && !ballGameFinished) UpdateFootballAim(s);
+                else if (s.IsBasketball && !ballGameFinished)
                 {
                     UpdateBasketballControls(s, dt);
                     held |= _onsiteBasketballMouseHeld;
@@ -382,14 +452,14 @@ namespace PCShopSell.Game.UI
             }
             _onsiteWasHeld=held;s=S.CurrentOnsite;
             if (s == null) { ReturnFromOnsitePlay(); return; }
-            if (s.IsBasketball && (basketballFinished || OnsiteReadyToFinish(runningActivity)))
+            if (s.IsBasketball && (ballGameFinished || OnsiteReadyToFinish(runningActivity)))
             {
                 _onsiteBasketballMouseLook = _onsiteBasketballMouseHeld = _onsiteHeld = _onsiteWasHeld = false;
                 CaptureBasketballMouse(false);
                 if (_onsiteBasketballControls != null) _onsiteBasketballControls.text = BasketballControlHint(true);
                 if (_onsiteBasketballAimDot != null) _onsiteBasketballAimDot.enabled = false;
             }
-            if(OnsiteLayoutKey(s)!=_onsiteLayoutKey&&s.Phase!="charging")_onsiteWindow.RequestRebuild();
+            if(!s.IsFootballPenalty&&OnsiteLayoutKey(s)!=_onsiteLayoutKey&&s.Phase!="charging")_onsiteWindow.RequestRebuild();
             bool showRoundResult = _onsiteRoundResult != null && s.Phase == "result";
             if (_onsiteRoundResult != null) _onsiteRoundResult.gameObject.SetActive(showRoundResult);
             if (!_onsiteIllustratedBar) _ctrl.RenderOnsiteScene();

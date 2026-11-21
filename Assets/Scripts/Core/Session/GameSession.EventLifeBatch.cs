@@ -261,13 +261,34 @@ namespace PCShopSell.Core.Session
             new[]{"型号、数量、到货条件","包装颜色","只看卖家承诺"},new[]{"立即当现货卖","不用管","到店入库才是现货"},new[]{"不检查直接买","核查真伪和保修","加倍买"},new[]{"需求、库存与现金","仅看宣传","越多越好"},
             new[]{"先反驳","立刻降价","了解具体诉求"},new[]{"隐瞒","及时说明并协商","不回复"},new[]{"确认用途和预算","猜一个","直接发最贵的"},new[]{"什么都答应","先收钱再说","只承诺能履约的条件"}};
         private static readonly int[] LifeCorrect={1,0,2,1,0,2,1,0,2,1,0,2};
+        private static readonly string[] LifeLessonExplanations =
+        {
+            "借来的钱虽然进了账，日后还得还。记一笔现金增加，再记一笔债务。",
+            "今天卖了多少是营业额。把货款、工资和其他成本扣掉，剩下的才是利润。",
+            "把退款记回原来的销售那笔账，再核对钱从哪儿退回去。",
+            "月底把账上的现金和库存跟手头的对一遍。还有没收回来的钱和没付的账，也得查清楚。",
+            "下单前把型号、数量和到货条件对清楚。同样的名字，发来的货也可能是另一个版本。",
+            "进货单只能说明货在来的路上。到店点清楚、入库以后，才算有现货。",
+            "先弄清是不是正品、保修谁负责。再好的单价，拿到货没法卖也得赔。",
+            "看看能卖多少、手里还剩多少，再留出够用的现金。三项都算过再定数量。",
+            "先听清顾客哪儿不满意。型号买错了和东西坏了，处理起来完全是两回事。",
+            "一知道赶不上，就告诉对方。一起商量新的日期，比等人来催强。",
+            "先问对方买来做什么，还有愿意花多少。等这两件事说清楚，再提方案。",
+            "只把你确定能办到的事答应下来。拿不准的地方，查实后再回对方。"
+        };
         public string LifeLessonQuestion=>_lifeCourse==null?"":LifeQuestions[LifeLessonIndex];
         public string[] LifeLessonAnswers=>_lifeCourse==null?Array.Empty<string>():LifeAnswers[LifeLessonIndex].ToArray();
-        public bool AnswerLifeLesson(int choice)
+        public bool AnswerLifeLesson(int choice) => AnswerLifeLesson(choice, out _);
+
+        public bool AnswerLifeLesson(int choice, out string reply)
         {
+            reply = null;
             var t=_lifeTasks.FirstOrDefault(t=>t.Kind=="lesson"&&t.Activity==_lifeCourse?.Activity&&!t.Done);var a=_cityActivities.FirstOrDefault(a=>a.Id==t?.Activity);
             if(t==null||t.Mode>=0||choice<0||choice>2||a?.State!=CityActivityPhase.Running||!LifeHere(LifeServicePlace))return false;
-            t.Mode=choice;return true;
+            t.Mode = choice;
+            int lesson = LifeLessonIndex;
+            reply = (choice == LifeCorrect[lesson] ? "对。" : "咱们再捋一下。") + LifeLessonExplanations[lesson];
+            return true;
         }
         private bool LifeActivityReady(CityActivity a)=>NeighborhoodActivityReady(a)&&(a.DefinitionId!=NightSchoolActivityId||_lifeTasks.Any(t=>t.Activity==a.Id&&t.Kind=="lesson"&&t.Mode>=0));
         private void CompleteLifeActivity(CityActivity a)

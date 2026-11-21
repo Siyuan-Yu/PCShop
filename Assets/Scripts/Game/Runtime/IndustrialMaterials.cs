@@ -84,6 +84,12 @@ namespace PCShopSell.Game.Runtime
                     v=curtain*(.38f+.60f*lamp)*(.91f+.09f*noise);
                 }
                 else if(kind=="wood")v*=.78f+.22f*Mathf.PerlinNoise(x*.15f,y*.006f);
+                else if(kind=="old_plaster")
+                {
+                    float u=x/(float)n,t=y/(float)n;
+                    float worn=WrappedNoise(u,t,3.0f)*.68f+WrappedNoise(u,t,8.0f)*.32f;
+                    v=.83f+.13f*worn+.04f*noise;
+                }
                 else if(kind=="asphalt")v*=.8f+.2f*noise;
                 else if(kind=="meadow")
                 {

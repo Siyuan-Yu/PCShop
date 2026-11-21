@@ -231,6 +231,7 @@ namespace PCShopSell.Game
         private void OnCityTravelRequested(CityTravelIntent intent)
         {
             if(intent==null)return;
+            CancelCheckout();
             Session.CancelPlayerRestaurantWork();
             _pendingEnter=null;CancelHomeBedTrip();Ui.CloseDock();
             if(Session.CurrentPlace?.Id==intent.TargetPlaceId){Session.ActivateCityTravel(intent.Id);return;}

@@ -53,6 +53,8 @@ namespace PCShopSell.Game.UI
                 int index = i;
                 if (index == 1 && state.Visited >= 3) continue;
                 bool available = state.Pending == null;
+                if (IsActivityTopic(definition, index)) available &= !activity.Choices.Contains(index.ToString())
+                    && ActivitySpeakers(activity, definition.Choices[index]).Length > 0;
                 if (state.Number == 69 && index is >= 2 and <= 4)
                     available &= state.Visited >= 3 && state.Answers == 0 && state.QuoteCents.Length >= 2 && index - 2 < state.QuoteCents.Length;
                 if (state.Number == 69 && index == 5) available &= !state.Negotiated;
@@ -60,8 +62,7 @@ namespace PCShopSell.Game.UI
                 if (state.Number == 70 && index == 3) available &= state.Tested && !state.Negotiated;
                 Ui.Size(Ui.Button(w.Content, S.EventActivityChoiceLabel(definition, index), () =>
                 {
-                    S.ChooseCityActivity(activity.Id, index);
-                    w.RequestRebuild();
+                    if (SelectCityActivityOption(activity, definition, index)) w.RequestRebuild();
                 }, 18, Ui.ButtonBg, available), -1, 44).name = "CityActivityChoice_" + index;
             }
         }

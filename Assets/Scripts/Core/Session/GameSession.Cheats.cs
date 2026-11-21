@@ -72,8 +72,7 @@ namespace PCShopSell.Core.Session
         {
             QuestDef q = CurrentQuest();
             if (q == null) return false;
-            Flags.Add("tutorial:issued:" + q.Id);
-            Flags.Add("tutorial:" + q.Id);
+            RecordQuestCompletion(q);
             q.Grant?.Invoke(this);
             Say($"作弊：任务「{q.Title}」直接完成，奖励：{q.RewardText(this)}。");
             return true;

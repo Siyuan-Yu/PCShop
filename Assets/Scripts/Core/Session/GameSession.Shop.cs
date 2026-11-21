@@ -49,8 +49,8 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
-        public static readonly Money JobAdFee = Money.FromYuan(50);
         public const int CandidateMinute = 9 * 60;
+        public const int DailyCandidateCount = 4;
         public const int DutyStartMinute = 9 * 60;
         public const int DutyEndMinute = 21 * 60;
 
@@ -83,10 +83,11 @@ namespace PCShopSell.Core.Session
         public bool EverHired { get; private set; }
         public IReadOnlyList<Employee> Candidates => _candidates;
 
-        /// <summary>贴了招聘启事的日期；-1 表示没贴。</summary>
-        public int JobAdDay { get; private set; } = -1;
+        private int _lastCandidateDay = -1;
 
         public const int CandidateLeaveMinute = 18 * 60;
+        public string RecruitmentHoursText => $"每天 {Hm(CandidateMinute)} 来 {DailyCandidateCount} 位应聘者，{Hm(CandidateLeaveMinute)} 离开。";
+        public string NextCandidateArrivalText => $"{(Clock.MinuteOfDay < CandidateMinute && _lastCandidateDay < Clock.Today.TotalDays ? "今天" : "明天")} {Hm(CandidateMinute)}";
         public bool CandidateAvailable(Employee person) => person != null && _candidates.Contains(person)
             && person.CandidateLeavesAt > Clock.Now.TotalMinutes;
         public string CandidateWaitText(Employee person)
@@ -96,14 +97,19 @@ namespace PCShopSell.Core.Session
         }
         private void ExpireCandidates()
         {
-            var departed = new List<string>();
             for (int i = _candidates.Count - 1; i >= 0; i--)
             {
                 var person = _candidates[i];
                 if (person.CandidateLeavesAt > Clock.Now.TotalMinutes) continue;
-                departed.Add(person.Name); _candidates.RemoveAt(i);
+                _candidates.RemoveAt(i);
+                if (!_cityEmployeeAliases.TryGetValue(person.Id, out string id) || Flags.Contains(MetFlag(id))) continue;
+                if (CityLifeCatalog.Person(id) == null)
+                {
+                    _cityPeople.Remove(id);
+                    _cityExtraDefinitions.Remove(id);
+                }
+                _cityEmployeeAliases.Remove(person.Id);
             }
-            if (departed.Count > 0) Say("应聘等待时间已到，" + string.Join("、", departed) + "离开了。需要招人可以贴招聘告示。");
         }
 
         // ---------- 店里 ----------
@@ -114,6 +120,7 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return false;
             int minutes = PlayerShop.Checkout(customerId);
             if (minutes < 0) return false;
+            RecordOpeningStaffPracticeSale(CurrentShop);
             AdvanceClock(minutes + (Player.Tired ? 1 : 0));
             return true;
         }
@@ -202,16 +209,6 @@ namespace PCShopSell.Core.Session
 
         // ---------- 招人 ----------
 
-        public bool PostJobAd()
-        {
-            if (!InPlayerShop) return Fail("要在店门口贴招聘启事。");
-            if (JobAdDay >= 0) return Fail("已经贴过了，明天 9:00 会有人来。");
-            if (!Ledger.TryDebit(Clock.Today, "招聘", JobAdFee, "招聘启事")) return Fail("钱不够。");
-            JobAdDay = Clock.Today.TotalDays;
-            Say("招聘启事贴出去了，明天 9:00 会有人来面试。");
-            return true;
-        }
-
         public bool Hire(int candidateIndex)
         {
             if (IsGameOver || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
@@ -220,7 +217,7 @@ namespace PCShopSell.Core.Session
             var hired=_candidates[candidateIndex];AddShopEmployee(_focus,EmployeeRole.Cashier,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
             EverHired = true;
             PlayerShop.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(Employee) - 1;
-            _candidates.Clear();
+            _candidates.RemoveAt(candidateIndex);
             Show("雇到人了",IsDedicatedVenue(PlayerShopPlace)?$"{hired.Name}受聘为场馆值守员，默认每天 9:00–21:00，日薪 {hired.DailyWage}，按实际排班与到岗结算。可在员工管理调整班次。":$"{hired.Name} 每天 9:00–21:00 在本店收银（可在员工管理重新安排岗位），日薪 {hired.DailyWage}，每天结算。\n他在班就持续收银，你在店内装机或外出都不影响。");
             return true;
         }
@@ -277,17 +274,18 @@ namespace PCShopSell.Core.Session
             return (false, "无在岗收银员，装机员代收银，离开后继续营业");
         }
 
-        private void OnCandidateHour(GameDate today)
+        private void RefreshDailyCandidates()
         {
-            if (JobAdDay < 0 || today.TotalDays <= JobAdDay) return;
-            JobAdDay = -1;
-            int newStart = _candidates.Count;
-            for (int i = 0; i < 2; i++)
+            int day = Clock.Today.TotalDays;
+            if (day <= _lastCandidateDay || Clock.MinuteOfDay < CandidateMinute || Clock.MinuteOfDay >= CandidateLeaveMinute
+                || IsGameOver || MyShopCount == 0) return;
+            _lastCandidateDay = day;
+            while (_candidates.Count < DailyCandidateCount)
             {
                 bool fast = Random.Chance(0.5);
                 var e = new Employee
                 {
-                    CandidateLeavesAt = (long)today.TotalDays * 1440 + CandidateLeaveMinute,
+                    CandidateLeavesAt = (long)day * GameTimestamp.MinutesPerDay + CandidateLeaveMinute,
                     Name = Surnames[Random.Next(0, Surnames.Length)] + GivenNames[Random.Next(0, GivenNames.Length)],
                     CheckoutMinutes = fast ? 2 : 4,
                     Charm = Random.Next(20, 91),
@@ -302,8 +300,6 @@ namespace PCShopSell.Core.Session
                 BindCityCandidate(e);
                 _candidates.Add(e);
             }
-            Show("有人来应聘", $"{_candidates[newStart].Name}（{_candidates[newStart].Description}，日薪 ¥{_candidates[newStart].DailyWageYuan}）\n" +
-                             $"{_candidates[newStart + 1].Name}（{_candidates[newStart + 1].Description}，日薪 ¥{_candidates[newStart + 1].DailyWageYuan}）\n应聘者会等到今天 18:00，之后离开。请去店里的'招人'面板决定。");
         }
 
         private void PayWages(GameDate day)

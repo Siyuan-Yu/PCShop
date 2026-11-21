@@ -32,9 +32,12 @@ namespace PCShopSell.Core.Session
             new Dictionary<string, (Money rent, int signedDay)>();
         private sealed class ResidenceFreightStorage
         {
-            public readonly Backpack Box = new Backpack();
-            public readonly Stock Parts = new Stock(double.MaxValue);
-            public bool IsEmpty => Box.IsEmpty && Parts.IsEmpty;
+            public Backpack Box = new Backpack();
+            public Stock Parts = new Stock(double.MaxValue);
+            public Backpack Fridge = new Backpack();
+            public List<PlacedFurniture> Layout;
+            public List<PlacedFurniture> DefaultLayout;
+            public bool IsEmpty => Box.IsEmpty && Parts.IsEmpty && Fridge.IsEmpty;
         }
 
         private readonly Dictionary<string, ResidenceFreightStorage> _residenceFreight = new Dictionary<string, ResidenceFreightStorage>();
@@ -47,6 +50,39 @@ namespace PCShopSell.Core.Session
         }
 
         public bool HasSecondaryResidenceWarehouse => CurrentPlace?.Kind == PlaceKind.Home && !AtHome && CanSleepAt(CurrentPlace);
+        public bool CanDecorateCurrentResidence => AtHome || HasSecondaryResidenceWarehouse;
+        public RoomSpec CurrentResidenceRoom => HasSecondaryResidenceWarehouse
+            ? RoomSpec.ForResidence(ResidentialTier(CurrentPlace)) : ResidenceRoom;
+        public IReadOnlyList<PlacedFurniture> CurrentResidenceLayout => PlacementLayout(false);
+
+        private List<PlacedFurniture> SecondaryLayoutHere()
+        {
+            var storage = FreightStorageAt(CurrentPlace.Id);
+            return storage.Layout ?? (storage.DefaultLayout ??= CreateVisitResidenceLayout(CurrentPlace, true));
+        }
+
+        public List<PlacedFurniture> CreateVisitResidenceLayout(Place home, bool withStorage)
+        {
+            var room = RoomSpec.ForResidence(ResidentialTier(home));
+            var furniture = FurnitureCatalog.StartHomeLayout();
+            furniture.RemoveAll(item => item.Id == "fan_broken" || item.Id == "junk");
+            var bed = furniture[0];
+            bed.Id = SecondaryResidenceBed(home);
+            bed.Z = room.Depth - FurnitureCatalog.Get(bed.Id).Depth * .5 - .05;
+            furniture[1].X += room.Width - RoomSpec.Home.Width;
+            furniture[2].X += room.Width - RoomSpec.Home.Width;
+            furniture[2].Z += room.Depth - RoomSpec.Home.Depth;
+            furniture[3].X += room.Width - RoomSpec.Home.Width;
+            furniture[3].Z += room.Depth - RoomSpec.Home.Depth;
+            if (ResidentialTier(home) >= 2)
+            {
+                furniture[1].Id = "wardrobe_wood";
+                furniture.Add(new PlacedFurniture { Id = "sofa", X = 1.2, Z = .65 });
+            }
+            if (withStorage) furniture.Add(new PlacedFurniture { Id = FurnitureCatalog.HomeBox, X = .62, Z = 1.5 });
+            return furniture;
+        }
+
         public Backpack WarehouseBagHere => InPlayerShop ? ShopLocker
             : HasSecondaryResidenceWarehouse ? FreightStorageAt(CurrentPlace.Id).Box : HomeBox;
         public Stock WarehousePartsHere => InPlayerShop ? PlayerShop.Stock
@@ -55,7 +91,11 @@ namespace PCShopSell.Core.Session
         private string ResidenceFreightBlocker(Place place)
         {
             if (place?.Kind != PlaceKind.Home || place == Home) return null;
-            if (_residenceFreight.TryGetValue(place.Id, out var storage) && !storage.IsEmpty) return "请先清空这套住宅的后仓";
+            if (_residenceFreight.TryGetValue(place.Id, out var storage))
+            {
+                if (!storage.Box.IsEmpty || !storage.Parts.IsEmpty) return "请先清空这套住宅的后仓";
+                if (!storage.Fridge.IsEmpty) return "请先清空这套住宅的冰箱";
+            }
             return _couriers.Any(run => !run.ToShop && run.ResidenceId == place.Id) ? "还有货车正在送来，请等到货后搬走" : null;
         }
 
@@ -67,6 +107,9 @@ namespace PCShopSell.Core.Session
                 if (residence != Home && (HasResidentialLease(residence) || OwnsResidence(residence))) continue;
                 var storage = _residenceFreight[id];
                 MergeStorage(storage.Box, HomeBox);
+                MergeStorage(storage.Fridge, residence == Home ? HomeFridge : HomeBox);
+                if (residence != Home && storage.Layout != null)
+                    foreach (var item in storage.Layout) HomeBox.AddFurniture(item.Id, 1);
                 foreach (var line in storage.Parts.Lines()) HomeBoxParts.ForceAdd(line.Part, line.Boxed, line.Count);
                 _residenceFreight.Remove(id);
             }
@@ -75,6 +118,78 @@ namespace PCShopSell.Core.Session
         public void SetCityHomeShortcut(Place place)
         {
             if (CanSleepAt(place)) CityHomeShortcut = place.Id;
+        }
+
+        public string PrimaryResidenceBlocker(Place place)
+        {
+            if (place == Home) return "这里已经是主住处";
+            if (place?.Kind != PlaceKind.Home || !CanSleepAt(place)) return "只能选择可入住的自家住宅";
+            if (IsGameOver || IsWorking || _sleeping || Trip != null || CityActivityExclusive) return "当前活动或行程结束后可更换主住处";
+            if (OpeningMealTutorialPending || Pantry.Cooking != null) return "等家里的用餐或烹饪结束后再切换主住处";
+            if (_visits.Count > 0) return "请先处理原住处已预约的上门维修";
+            return null;
+        }
+
+        public bool SetPrimaryResidence(Place place)
+        {
+            if (PrimaryResidenceBlocker(place) is string blocker) return Fail(blocker);
+            var previous = Home;
+            var incomingProperty = PropertyAt(place.Id);
+            Money incomingRent = SignedResidentialRent(place);
+            int incomingSignedDay = incomingProperty == null ? ResidentialLeaseSignedDay(place) : Clock.Today.TotalDays;
+            var incoming = FreightStorageAt(place.Id);
+            var newLayout = incoming.Layout ?? CreateVisitResidenceLayout(place, true);
+            var outgoing = new ResidenceFreightStorage
+            {
+                Box = HomeBox,
+                Parts = HomeBoxParts,
+                Fridge = HomeFridge,
+                Layout = new List<PlacedFurniture>(_homeLayout),
+            };
+
+            // Secondary homes use one warehouse and don't track food in a cooker.
+            MergeStorage(HomeTemp, outgoing.Box);
+            foreach (var line in HomeTempParts.Lines()) outgoing.Parts.ForceAdd(line.Part, line.Boxed, line.Count);
+            HomeTempParts.Clear();
+            _homeTempSince = 0;
+            MergePantryIngredients(Pantry, outgoing.Box.Food);
+            outgoing.Box.Food.Packed.AddRange(Pantry.Cooked);
+            outgoing.Box.Food.Packed.AddRange(Pantry.Packed);
+            Pantry.Cooked.Clear();
+            Pantry.Packed.Clear();
+
+            if (HasResidentialLease(previous))
+                _additionalResidentialLeases[previous.Id] = (CurrentHomeRent, _homeLeaseSignedDay);
+            else
+                _properties.Add(new OwnedProperty
+                {
+                    PlaceId = previous.Id, PriceCents = HomePriceCents, CitySchema = 1, UseMode = "vacant",
+                    BoughtDay = Clock.Today.TotalDays, LastSettledMonth = Clock.Today.TotalDays / 30,
+                });
+            _additionalResidentialLeases.Remove(place.Id);
+            if (incomingProperty != null) _properties.Remove(incomingProperty);
+
+            _residenceFreight[previous.Id] = outgoing;
+            _residenceFreight.Remove(place.Id);
+            HomeBox = incoming.Box;
+            HomeBoxParts = incoming.Parts;
+            HomeFridge = incoming.Fridge;
+            _homeLayout.Clear();
+            _homeLayout.AddRange(newLayout);
+            HomeTier = ResidentialTier(place);
+            HomePriceCents = incomingProperty?.PriceCents ?? 0;
+            HomeMortgageCents = HomeMonthlyPrincipalCents = 0;
+            _homeLeaseRentCents = incomingRent.Cents;
+            _homeLeaseSignedDay = incomingSignedDay;
+            _residentialHomeId = place.Id;
+            SetCityHomeShortcut(place);
+
+            foreach (var run in _couriers)
+                if (!run.ToShop && string.IsNullOrEmpty(run.ResidenceId)) run.ResidenceId = previous.Id;
+            CloseCourierRuns();
+            EndLayoutHistory();
+            Say($"已将{place.Name}设为主住处，{previous.Name}仍可入住。");
+            return true;
         }
 
         public Place[] ResidentialPlaces => City.Places.Where(p=>p.Kind==PlaceKind.Home).ToArray();
@@ -185,7 +300,7 @@ namespace PCShopSell.Core.Session
                 var rent = SignedResidentialRent(next);
                 int signedDay = HasResidentialLease(next) ? ResidentialLeaseSignedDay(next) : Clock.Today.TotalDays;
                 var property = PropertyAt(next.Id);
-                if (!PayForResidenceMove(ResidentialTier(next), "房租", Money.Zero, next.Name, allowPackedFridge: true)) return false;
+                if (!PayForResidenceMove(ResidentialTier(next), "房租", Money.Zero, next.Name, allowPackedFridge: true, targetResidence: next)) return false;
                 _homeLeaseRentCents = rent.Cents;
                 _homeLeaseSignedDay = signedDay;
                 _additionalResidentialLeases.Remove(next.Id);
@@ -307,7 +422,7 @@ namespace PCShopSell.Core.Session
             string why=ResidentialTradeBlocker(id,false);if(why!=null)return Fail(why);
             var place=City.GetPlace(id);var owned=PropertyAt(id);
             Money due=Money.FromYuan(500)+(owned==null?ResidentialRent(place):Money.Zero);
-            if(!PayForResidenceMove(ResidentialTier(place),"搬家",due,owned==null?place.Name+"首周租金及搬家费":place.Name+"搬家费"))return false;
+            if(!PayForResidenceMove(ResidentialTier(place),"搬家",due,owned==null?place.Name+"首周租金及搬家费":place.Name+"搬家费",targetResidence:place))return false;
             _additionalResidentialLeases.Remove(place.Id);
             _residentialHomeId=place.Id;
             ConsolidateHomeFreight();
@@ -330,7 +445,7 @@ namespace PCShopSell.Core.Session
             if(selfUse&&(!keepCurrentResidence||place==Home))
             {
                 bool sameHome=place==Home;
-                if(!PayForResidenceMove(ResidentialTier(place),"购置住宅",due,place.Name,attribution))return false;
+                if(!PayForResidenceMove(ResidentialTier(place),"购置住宅",due,place.Name,attribution,targetResidence:place))return false;
                 _residentialHomeId=place.Id;HomePriceCents=price.Cents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
                 ConsolidateHomeFreight();
                 Say(sameHome?"已购入"+HomeTitle+"，该住宅不再缴周租。":"已购入并搬入"+HomeTitle+"，不再缴周租；家具与储物保留。");
@@ -355,7 +470,9 @@ namespace PCShopSell.Core.Session
             if (ResidenceFreightBlocker(City.GetPlace(id)) is string freight) return Fail(freight + "。");
             Money net=PropertySaleNet(property);
             if(net.IsPositive)Ledger.Credit(Clock.Today,"住宅出售",net,City.GetPlace(id).Name,LedgerAttribution.ForAsset(id,"residential:sale:"+id+":"+Clock.Now.TotalMinutes));
-            _properties.Remove(property);Say("产权已出售，原住户和住所、人物关系保留。");return true;
+            _properties.Remove(property);
+            ConsolidateHomeFreight();
+            Say("产权已出售，原住户和住所、人物关系保留。");return true;
         }
     }
 }

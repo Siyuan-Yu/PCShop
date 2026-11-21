@@ -65,8 +65,10 @@ namespace PCShopSell.Game.UI
             var booking = S.PendingVenueActivity(place, activityId);
             var outing = S.RunningCityActivity;
             bool marketVisit = GameSession.IsOldMarketVisit(outing);
+            var definition = marketVisit ? S.CityActivityService(outing) : null;
+            var topics = marketVisit ? ActivityTopicIndices(outing, definition) : System.Array.Empty<int>();
             bool showReserved = booking?.ServiceConfirmed == true && !GameSession.IsCommunityMarketOuting(booking);
-            var goods = BuildRosterFrame(w, place, showReserved ? 470 : 310);
+            var goods = BuildRosterFrame(w, place, showReserved ? 470 : topics.Length > 0 ? 370 : 310);
             Line(goods, CityPlaceHours(place), 17, Ui.Dim);
             if (marketVisit)
             {
@@ -83,6 +85,15 @@ namespace PCShopSell.Game.UI
                     }, 16), 110, 37);
                 else
                     Ui.Size(Ui.Button(row, "提前离开", () => ConfirmEndCityActivity(outing, false), 16), 110, 37);
+                if (topics.Length > 0)
+                {
+                    var conversations = Ui.Row(goods, 42, 8);
+                    foreach (int topic in topics)
+                        Ui.Size(Ui.Button(conversations, definition.Choices[topic], () =>
+                        {
+                            if (SelectCityActivityOption(outing, definition, topic, "继续逛市场")) w.RequestRebuild();
+                        }, 16, Ui.ButtonBg, !outing.Choices.Contains(topic.ToString())), 0, 40, 1);
+                }
             }
             else if (GameSession.IsCommunityMarketOuting(booking))
                 Para(goods, S.VenueAppointmentStartBlocker(booking) ?? "等待周维成到场。", 17, Ui.Dim);

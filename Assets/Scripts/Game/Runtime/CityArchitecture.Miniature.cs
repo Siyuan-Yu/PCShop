@@ -9,20 +9,27 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root,"Stone entrance forecourt",new Vector3(0,.075f,-1.65f),new Vector3(width+.6f,.09f,3.6f),
                 IndustrialMaterials.Surface("paving",ArtDirection.Hex("DDD0B5"),new Vector2(width/4,.9f)));
         }
-        internal static void SculptedRoofTiles(Transform parent,Vector3 at,float w,float d,float rise,Color color,bool hip)
+        internal static void SculptedRoofTiles(Transform parent,Vector3 at,float w,float d,float rise,Color color,bool hip,
+            int repairSeed = -1)
         {
             var b=new MiniatureDetailMesh();
             var mats=new[]{Mats.Lit(color,.14f),Mats.Lit(Color.Lerp(color,ArtDirection.Hex("DBA77D"),.045f),.12f),
                 Mats.Lit(Color.Lerp(color,ArtDirection.Hex("76564D"),.04f),.14f)};
             int nx=Mathf.Clamp(Mathf.CeilToInt(w/.53f),8,44),nz=Mathf.Clamp(Mathf.CeilToInt(d/.64f),8,56);
             float sx=w/nx,sz=d/nz;
+            Material repair = repairSeed < 0 ? null : Mats.Lit(Color.Lerp(color,ArtDirection.Hex("978A7D"),.55f),.12f);
+            int patchColumn = repairSeed % 2 == 0 ? 1 : nx - 5;
+            int patchRow = nz / 4 + (repairSeed & 3);
             float H(float x,float z) => Mathf.Max(0,hip?Mathf.Min(rise*(1-Mathf.Abs(x)/(w/2)),rise*(d/2-Mathf.Abs(z))/(d*.23f)):rise*(1-Mathf.Abs(x)/(w/2)));
             for(int row=0;row<nz;row++)for(int col=0;col<nx;col++)
             {
                 float x=(col+.5f)*sx-w/2,z=(row+.5f)*sz-d/2;
                 float dx=(H(x+.02f,z)-H(x-.02f,z))/.04f,dz=(H(x,z+.02f)-H(x,z-.02f))/.04f;
                 var tilt=Quaternion.FromToRotation(Vector3.up,new Vector3(-dx,1,-dz).normalized);
-                b.RoofTile(at+new Vector3(x,H(x,z)+.10f,z),new Vector3(sx*.96f,.075f,sz*.94f),mats[(((row*73856093)^(col*19349663))&int.MaxValue)%3],tilt);
+                bool replaced = repair != null && row >= patchRow && row < patchRow + 3
+                    && col >= patchColumn && col < patchColumn + 4 && (row != patchRow || col != patchColumn);
+                var material = replaced ? repair : mats[(((row*73856093)^(col*19349663))&int.MaxValue)%3];
+                b.RoofTile(at+new Vector3(x,H(x,z)+.10f,z),new Vector3(sx*.96f,.075f,sz*.94f),material,tilt);
             }
             float ridgeLength=hip?d*.55f:d;
             for(float z=-ridgeLength/2;z<ridgeLength/2;z+=.54f)

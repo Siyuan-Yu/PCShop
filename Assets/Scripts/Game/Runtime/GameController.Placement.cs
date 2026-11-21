@@ -24,7 +24,7 @@ namespace PCShopSell.Game
         public bool Placing { get; private set; }
 
         /// <summary>是在店里摆放（否则是在家里）。</summary>
-        public bool PlacingShop => _placeShop;
+        public bool PlacingShop => Placing && _placeShop;
 
         /// <summary>手里拿着的家具（来自背包或从屋里拾起的）；没有则为空。</summary>
         public string PlaceId => _placeId;
@@ -32,23 +32,26 @@ namespace PCShopSell.Game
         /// <summary>手里这件是屋里原来就有的（可以收进纸箱）。</summary>
         public bool PlaceHoldsPlaced => _placeId != null && _placeIndex >= 0;
         private Vector3? _homePlacementPoint;
+        private string _placementResidenceId;
         public bool HasHomePlacementTarget => Placing && !_placeShop && _homePlacementPoint.HasValue;
 
         /// <summary>当前这个位置摆不了的原因；能摆则为空。</summary>
         public string PlaceError { get; private set; }
 
-        private RoomSpec PlaceRoom => _placeShop ? Session.ShopRoom : Session.ResidenceRoom;
+        private RoomSpec PlaceRoom => _placeShop ? Session.ShopRoom : Session.CurrentResidenceRoom;
         private Vector3 PlaceOrigin => _placeShop ? ShopInteriorView.Origin : HomeRoomView.Origin;
-        private IReadOnlyList<PlacedFurniture> PlaceLayout => _placeShop ? Session.ShopLayout : Session.HomeLayout;
-        private RoomFurniture PlaceVisuals => _placeShop ? Interior.Furniture : HomeRoom.Furniture;
+        private IReadOnlyList<PlacedFurniture> PlaceLayout => _placeShop ? Session.ShopLayout : Session.CurrentResidenceLayout;
+        private RoomFurniture PlaceVisuals => _placeShop ? Interior.Furniture : ActiveResidence.Furniture;
+        private bool AtPlacementResidence => Session.CanDecorateCurrentResidence && Session.CurrentPlace.Id == _placementResidenceId;
 
         /// <summary>开始摆放。店里必须已经歇业装修（由界面先确认并调用 <c>BeginRenovation</c>）。</summary>
         public bool BeginPlacement(bool shop)
         {
             if (Placing || Session.IsGameOver) return false;
-            if (shop ? !InInterior || !Session.CanEditShop : !InHome) return false;
+            if (shop ? !InInterior || !Session.CanEditShop : !Session.CanDecorateCurrentResidence) return false;
             Ui.CloseAllWindows();
             _placeShop = shop;
+            _placementResidenceId = shop ? null : Session.CurrentPlace.Id;
             Session.BeginLayoutHistory(shop);
             Placing = true;
             _placeId = null;
@@ -118,13 +121,23 @@ namespace PCShopSell.Game
             Ui.RefreshPlacementPanel();
         }
 
-        public void ConfirmHomeFurniturePlacement()
+        public void ConfirmHomeFurniturePlacement() => TryConfirmHomeFurniturePlacement();
+
+        public void FinishHomePlacement()
         {
-            if (!InHome || !HasHomePlacementTarget || _placeId == null) return;
+            if (!Placing || _placeShop || !AtPlacementResidence) return;
+            if (_placeId != null && !TryConfirmHomeFurniturePlacement()) return;
+            EndPlacement();
+        }
+
+        private bool TryConfirmHomeFurniturePlacement()
+        {
+            if (!HasHomePlacementTarget || !AtPlacementResidence || _placeId == null) return false;
             var def = FurnitureCatalog.Get(_placeId);
             UpdatePlacementGhost(def, _homePlacementPoint.Value);
-            if (_ghostValid) ConfirmPlace(def, _ghostAt);
-            else Ui.RefreshPlacementPanel();
+            if (_ghostValid && ConfirmPlace(def, _ghostAt)) return true;
+            Ui.RefreshPlacementPanel();
+            return false;
         }
 
         /// <summary>把手里这件（屋里原有的）收进纸箱。</summary>
@@ -141,7 +154,7 @@ namespace PCShopSell.Game
         {
             FurnitureDef def = FurnitureCatalog.Get(_placeId);
             if (def == null) return;
-            Transform parent = _placeShop ? Interior.Root : HomeRoom.Root;
+            Transform parent = _placeShop ? Interior.Root : ActiveResidence.Root;
             string shelfKind = _placeIndex >= 0 ? PlaceLayout[_placeIndex].Item : null;
             _ghost = FurnitureVisuals.Build(parent, def, false, shelfKind);
             foreach (Renderer r in _ghost.GetComponentsInChildren<Renderer>())
@@ -304,7 +317,7 @@ namespace PCShopSell.Game
         private void UpdatePlacementCore()
         {
             if (!Placing) return;
-            bool wrongRoom = _placeShop ? !InInterior : !InHome;
+            bool wrongRoom = _placeShop ? !InInterior : !AtPlacementResidence;
             if (wrongRoom || Session.IsGameOver || (_placeShop && !Session.CanEditShop))
             {
                 EndPlacement();
@@ -371,12 +384,13 @@ namespace PCShopSell.Game
             _ghostAt = RoomPlanner.Snap(PlaceRoom, def, local.x, local.z, _placeRot);
             FurnitureVisuals.Place(_ghost, def, _ghostAt, PlaceRoom);
             _ghost.SetActive(true);
-            PlaceError = Session.PlacementError(_placeShop, def, _ghostAt, _placeIndex, _placeShop ? Interior.FixedBlockers() : null);
+            PlaceError = Session.FurnitureEditBlocker(_placeShop)
+                ?? Session.PlacementError(_placeShop, def, _ghostAt, _placeIndex, _placeShop ? Interior.FixedBlockers() : null);
             _ghostValid = PlaceError == null;
             _ghostOutline.SetValid(_ghostValid);
         }
 
-        private void ConfirmPlace(FurnitureDef def, PlacedFurniture at)
+        private bool ConfirmPlace(FurnitureDef def, PlacedFurniture at)
         {
             IReadOnlyList<RectD> extra = _placeShop ? Interior.FixedBlockers() : null;
             bool ok;
@@ -390,7 +404,7 @@ namespace PCShopSell.Game
                 ok = Session.PlaceFromStock(_placeShop, def.Id, at, extra);
                 keep = ok && _placeShop && Session.FurnitureToPlace(_placeShop, def.Id) > 0;
             }
-            if (!ok) return;
+            if (!ok) return false;
             if (keep)
             {
                 _ghostAt = null;
@@ -400,6 +414,7 @@ namespace PCShopSell.Game
                 CancelGhost();
             }
             Ui.RefreshPlacementPanel();
+            return true;
         }
 
         /// <summary>鼠标射线打到后墙 / 右墙的墙面上（离地 0.4~3.2 米）：找挂在那一段墙上的家具（海报、灯屏等没有碰撞体，只能这样点）。</summary>

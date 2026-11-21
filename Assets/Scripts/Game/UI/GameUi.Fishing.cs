@@ -103,6 +103,24 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(roster, S.CityPerson(person)?.Name ?? "同行者", 16, color: Ui.Accent), 78, 38);
                 }
             }
+            if (fish?.Phase == FishingPhase.Ready && S.RunningCityActivity is CityActivity outing)
+            {
+                var service = S.CityActivityService(outing);
+                var topics = ActivityTopicIndices(outing, service);
+                if (topics.Length > 0)
+                {
+                    var talks = Ui.Rect(w.Content, "FishingConversation").Anchor(.025f, .64f, .27f, .82f);
+                    Ui.VList(talks, 6, 0);
+                    foreach (int topic in topics)
+                    {
+                        bool unused = !outing.Choices.Contains(topic.ToString()) && (outing.DefinitionId != "social_60" || fish.Style == 0);
+                        Ui.Size(Ui.Button(talks, service.Choices[topic], () =>
+                        {
+                            if (SelectCityActivityOption(outing, service, topic, "继续钓鱼")) w.RequestRebuild();
+                        }, 17, Ui.ButtonBg, unused), -1, 40);
+                    }
+                }
+            }
             Ui.Label(header.transform, $"剩余 {S.ManualAttemptsLeft} 次 · 本场钓获 {fish?.Catches ?? 0} 条 · 时间暂停", 18, TextAnchor.MiddleCenter)
                 .rectTransform.Anchor(.32f, 0, .76f, 1, 0, 12, 0, 12);
             void FinishFishing()

@@ -27,10 +27,11 @@ namespace PCShopSell.Core.Session
         public double AimX = 1.36, AimY = .32, Power, Accumulator, Waiting, RollTime;
         public bool OpponentTurn, Rolling, Charging, Finished, Scratch;
         public int PocketedThisShot;
+        public bool CanShoot => !Rolling && !OpponentTurn && !Finished;
 
         internal void Aim(double x, double y)
         {
-            if (!Rolling && !OpponentTurn && !Finished)
+            if (CanShoot)
             {
                 AimX = x;
                 AimY = y;

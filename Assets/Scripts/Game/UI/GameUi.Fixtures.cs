@@ -152,7 +152,7 @@ namespace PCShopSell.Game.UI
             Para(C, FitChecklistText(), 15);
             if (S.IsPetShop(S.CurrentShop)) BuildPetRenovation();
             string label = S.IsRenovating ? "继续摆放" : S.ShopFitted ? "重新布置" : "开始装修";
-            Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);
+            _openingRenovationStartButton = Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);
             var furniture=S.FurnitureToPlaceList(true).Where(kv=>kv.Value>0&&FurnitureCatalog.Get(kv.Key)!=null)
                 .OrderBy(kv=>FurnitureCatalog.Get(kv.Key).IsFixture?0:1).ThenBy(kv=>FurnitureCatalog.Get(kv.Key).Name).ToArray();
             Line(C,"待摆放物品 · "+furniture.Length+" 种",18,Ui.Accent).name="RenovationInventoryHeading";

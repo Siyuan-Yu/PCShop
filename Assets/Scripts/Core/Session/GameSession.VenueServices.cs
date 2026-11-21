@@ -98,10 +98,11 @@ namespace PCShopSell.Core.Session
         {
             if (activity == null) return false;
             if (activity.SourceId?.StartsWith("walk-in:meal:", StringComparison.Ordinal) == true) return true;
+            string serviceId = string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId;
+            if (serviceId is "social_41" or "social_45" or "social_46" or "social_47") return true;
             string venue = activity.VenueId;
             if (venue != "life_restaurant" && venue?.StartsWith("life_restaurant_tier", StringComparison.Ordinal) != true)
                 return false;
-            string serviceId = string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId;
             return CityLifeCatalog.Activity(serviceId) is { EventOnly: false };
         }
 
@@ -127,7 +128,8 @@ namespace PCShopSell.Core.Session
                 if (meal.State != CityActivityPhase.Running) return false;
             }
             if (!IsAutomaticMeal(meal) || CurrentPlace?.Id != meal.VenueId) return false;
-            return FinishManualCityActivity(meal.Id);
+            // Meals with conversation finish from the dining scene after the player has had time to talk.
+            return IsRestaurantMeal(meal) || FinishManualCityActivity(meal.Id);
         }
 
         private CityActivity FindPendingVenueActivity(Place place, string activityId = null, bool onsiteOnly = false)

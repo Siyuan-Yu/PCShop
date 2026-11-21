@@ -52,7 +52,8 @@ namespace PCShopSell.EditorTools
             Check(s.EmployeePurchaseTrips.Any(t => t.EmployeeId == buyer.Person.Id && t.Items.Length == 3), "次日自动再次执行整份清单，不是只能进一次货");
             _game.Ui.CloseAllWindows();
             _game.Ui.OpenDock(); _game.Ui.DebugSelectTab(5);
-            Check(ActiveButtons().Any(b => ButtonText(b).StartsWith("再贴招聘告示")), "保留其他候选人时也能再贴招聘告示");
+            Check(ActiveButtons().Count(b => ButtonText(b) == "聘用并安排工作") == GameSession.DailyCandidateCount,
+                "第二天自动显示四位应聘者");
             Check(ActiveButtons().Any(b => ButtonText(b) == "离开店铺"), "离店按钮只显示离开店铺");
             Shot("vs1_procurement_05_recruit_again");
         }

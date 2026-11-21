@@ -696,11 +696,20 @@ namespace PCShopSell.Core.Session
                 AddRelation(personId, amount);
         }
 
-        public bool ChooseCityActivity(string activityId,int choice)
+        public bool ChooseCityActivity(string activityId, int choice)
         {
+            if (!ChooseCityActivity(activityId, choice, out var detail)) return false;
+            if (detail != null) Say(detail);
+            return true;
+        }
+
+        public bool ChooseCityActivity(string activityId, int choice, out string detail)
+        {
+            detail = null;
             var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId&&x.State==CityActivityPhase.Running);
             var def=CityActivityService(a);
-            if(def==null||IsOnsiteBasketball(a)||IsAutomaticMeal(a)||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
+            if (def == null || IsOnsiteBasketball(a) || (IsAutomaticMeal(a) && !IsRestaurantMeal(a))
+                || choice < 0 || choice >= def.Choices.Length || CurrentPlace?.Id != a.VenueId) return false;
             if (IsCookTasting(a) && choice > 0) return Fail("请在新菜试吃页面尝过菜后，再给罗师傅具体意见。");
             if (a.DefinitionId == "social_60" && choice == 3 && FishingActive && _fishing.Phase != FishingPhase.Ready)
                 return Fail("请先处理当前鱼口或鱼获，再换钓位");
@@ -708,9 +717,11 @@ namespace PCShopSell.Core.Session
             string key=choice.ToString();
             if (a.Choices.Contains(key) && !OutdoorRepeatChoice(a, choice))
             {
-                Say(IsManualPlayActivity(a) ? "已经做过这个互动，可以继续完成现场步骤。" : "已经做过这个互动，可以继续相处等待活动结束。");
+                detail = "已经做过这个互动。";
                 return true;
             }
+            if (a.DefinitionId == "social_60" && choice > 0 && FishingActive && _fishing.Style != 0)
+                return Fail("本场已选定相处方式。");
             string outdoorReply = null;
             if (!TryOutdoorChoice(a,choice,out outdoorReply)) return false;
             a.Choices=a.Choices.Union(new[]{key}).ToArray();
@@ -724,7 +735,9 @@ namespace PCShopSell.Core.Session
                 }
             }
             OnCityActivityChoice(a,choice);
-            Say(def.Choices[choice]+"："+(outdoorReply ?? FishingInvitationChoiceReply(a,choice) ?? SocialBatchChoiceReply(a,choice) ?? (choice<def.ServiceCount?CityActivityMidText(a):"聊到各自的兴趣和近况。")));return true;
+            detail = outdoorReply ?? FishingInvitationChoiceReply(a, choice) ?? SocialBatchChoiceReply(a, choice);
+            if (detail == null && choice < def.ServiceCount) detail = def.Choices[choice] + "：" + CityActivityMidText(a);
+            return true;
         }
         public bool CancelCityActivity(string id,bool early=false)
         {

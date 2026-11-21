@@ -114,6 +114,7 @@ namespace PCShopSell.Game.UI
             int selected = 0;
             bool honey = booking?.BarHoneyAdded ?? false;
             float playback = 0;
+            bool finishDrink = false;
 
             _barCounterWindow = OpenWindow(place.Name, 1920, 1080, w =>
             {
@@ -165,6 +166,21 @@ namespace PCShopSell.Game.UI
                 {
                     Line(details, name, 27, Ui.Accent);
                     var status = Line(details, "", 21);
+                    var topics = ActivityTopicIndices(booking, definition);
+                    var conversation = topics.Length == 0 ? null : Ui.Row(details, 42, 6);
+                    if (conversation != null)
+                    {
+                        foreach (int topic in topics)
+                        {
+                            Button button = null;
+                            button = Ui.Size(Ui.Button(conversation, definition.Choices[topic], () =>
+                            {
+                                if (SelectCityActivityOption(booking, definition, topic, "回到吧台")) button.interactable = false;
+                            }, 16, Ui.ButtonBg, !booking.Choices.Contains(topic.ToString())), 0, 40, 1);
+                        }
+                        Ui.Size(Ui.Button(conversation, "喝完结算", () => finishDrink = true, 16, Ui.ButtonHot), 0, 40, 1);
+                        conversation.gameObject.SetActive(playback >= .8f);
+                    }
                     if (cup != null) cup.enabled = false;
                     w.RefreshContent = () =>
                     {
@@ -173,9 +189,10 @@ namespace PCShopSell.Game.UI
                         if (_windows.LastOrDefault() != w || !Application.isFocused) return;
                         playback += Time.unscaledDeltaTime;
                         if (cup != null) cup.enabled = playback >= .8f;
+                        if (conversation != null) conversation.gameObject.SetActive(playback >= .8f);
                         status.text = playback < .8f && bartender != null
                             ? $"{session.CityPerson(bartender.PersonId).Name}正在调饮" : basic ? "喝饮品中…" : "品尝套餐中…";
-                        if (playback < 1.8f || !session.FinishManualCityActivity(booking.Id)) return;
+                        if (playback < 1.8f || conversation != null && !finishDrink || !session.FinishManualCityActivity(booking.Id)) return;
                         w.Close();
                     };
                     return;
@@ -311,7 +328,8 @@ namespace PCShopSell.Game.UI
                 BuildLeisureBackdrop(w.Content, "event_karaoke");
                 var header = BuildLeisureHeader(w, place.Name + " · 包间", "结束包间", w.Close);
                 var clock = header.Find("VenueClock").GetComponent<Text>();
-                bool hasChoices = activity.DefinitionId == "social_49";
+                var topics = ActivityTopicIndices(activity, service);
+                bool hasChoices = topics.Length > 0;
                 float top = hasChoices ? .66f : partner != null ? .61f : .55f;
                 var sheet = Ui.Panel(w.Content, "KaraokeControls", Ui.PanelBg).rectTransform.Anchor(
                     singing ? .16f : .535f, .065f, singing ? .84f : .97f, singing ? top : top - .17f);
@@ -373,15 +391,13 @@ namespace PCShopSell.Game.UI
                 if (hasChoices)
                 {
                     var checks = Ui.Row(box, 42, 8);
-                    for (int i = service.ServiceCount; i < service.Choices.Length; i++)
+                    foreach (int index in topics)
                     {
-                        int index = i;
-                        var check = Ui.Size(Ui.Button(checks, S.EventActivityChoiceLabel(service, index), () =>
+                        Button check = null;
+                        check = Ui.Size(Ui.Button(checks, S.EventActivityChoiceLabel(service, index), () =>
                         {
-                            session.ChooseCityActivity(activity.Id, index);
-                            EventSystem.current?.SetSelectedGameObject(null);
+                            if (SelectCityActivityOption(activity, service, index, "回到包间")) check.interactable = false;
                         }, 16, Ui.ButtonBg, !activity.Choices.Contains(index.ToString())), 0, 40, 1);
-                        check.onClick.AddListener(() => check.interactable = !activity.Choices.Contains(index.ToString()));
                     }
                 }
 

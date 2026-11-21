@@ -150,12 +150,9 @@ namespace PCShopSell.Tests
             // 懒玩家：不招人、不送礼、不扩建，只偶尔补货
             if (!_lazy) Invest(today);
 
-            // 招人：第 3 天贴启事，来了就雇便宜的
-            if (!_lazy && _s.Employee == null && !_s.EverHired)
-            {
-                if (_s.Candidates.Count > 0) _s.Hire(0);
-                else if (today >= 3 && _s.JobAdDay < 0) _s.PostJobAd();
-            }
+            // 第 3 天起，从当日应聘者中招人。
+            if (!_lazy && today >= 3 && _s.Employee == null && !_s.EverHired && _s.Candidates.Count > 0)
+                _s.Hire(0);
 
             // 升级：按顺序买第一个买得起（留 ¥1500 周转）的
             foreach (string id in UpgradeOrder)

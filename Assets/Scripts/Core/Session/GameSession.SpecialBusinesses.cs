@@ -610,9 +610,9 @@ namespace PCShopSell.Core.Session
             if (!SpecialPlayer(shop) || shop.RetailKind != "restaurant") return false;
             var state = SpecialBusiness(shop.Place.Id);
             if (state.Workers.Any(worker => worker.Busy && worker.OrderId == id)) return false;
-            return ClearRestaurantOrder(shop, state, state.Orders.FirstOrDefault(order => order.Id == id), Clock.Now);
+            return ClearRestaurantOrder(shop, state, state.Orders.FirstOrDefault(order => order.Id == id), Clock.Now, handledByPlayer: true);
         }
-        private bool ClearRestaurantOrder(OwnedShop shop,SpecialBusinessState state,DiningOrder order,GameTimestamp now)
+        private bool ClearRestaurantOrder(OwnedShop shop,SpecialBusinessState state,DiningOrder order,GameTimestamp now,bool handledByPlayer)
         {
             if(order?.NeedsClearing!=true)return false;
             if (order.Stage == DiningStage.Burnt
@@ -622,6 +622,7 @@ namespace PCShopSell.Core.Session
             {
                 if (Furnished(shop, FurnitureCatalog.ShopCounter) == 0) return false;
                 SettleRestaurantTable(shop, state, order, now);
+                if (handledByPlayer) RecordOpeningStaffPracticeSale(shop);
             }
             return state.Orders.Remove(order);
         }

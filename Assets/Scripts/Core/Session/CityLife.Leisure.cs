@@ -89,7 +89,7 @@ namespace PCShopSell.Core.Session
             Add("cinema_park", "陶昕然", "公园电影院售票员", ParkCinema, Home(4), 600, 1380, "我开门前先去放映厅检查一遍，再回柜台售票。");
             Add("oldmarket", "许秋实", "旧物市场摊主", GameSession.OldMarketVenueId, Home(0), 540, 1320, "淘货次数在我这里买，几处摊位都能用。");
             Add("ferris_day", "孟春禾", "社区摩天轮售票员", CommunityFerrisVenue, Home(1), 540, 960, "坐到最高处的时候，往左看能认出公园旁那条路。");
-            Add("ferris_evening", "蒋晓岚", "社区摩天轮晚班售票员", CommunityFerrisVenue, Home(2), 930, 1320, "天黑以后，沿岸的灯会一盏接一盏亮起来。");
+            Add("ferris_evening", "蒋晓岚", "社区摩天轮晚班售票员", CommunityFerrisVenue, Home(2), 930, 1440, "天黑以后，沿岸的灯会一盏接一盏亮起来。");
             Add("amusement_day", "陆晓晴", "花园游乐园售票员", GardenAmusementVenue, Home(7), 600, 1020, "每个项目单独买票，同行的人可以一直一起玩。");
             Add("amusement_evening", "林星河", "花园游乐园晚班售票员", GardenAmusementVenue, Home(7), 990, 1380, "摩天轮看得到湖对岸的灯。过山车前排也还有空位。");
             Add("bar_backup", "苏昀", "街坊酒吧吧台调酒师", "life_bar", Home(0), 1080, 120, "晚班我和夏澄一起照看吧台。");

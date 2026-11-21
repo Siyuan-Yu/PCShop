@@ -209,18 +209,19 @@ namespace PCShopSell.Game.Runtime
         // ---------- 家具与互动点 ----------
 
         /// <summary>按当前布局重建家具，并重新算互动点。</summary>
-        private void SyncFurniture(GameSession s)
+        private void SyncFurniture(IReadOnlyList<PlacedFurniture> layout, bool secondary = false, bool force = false)
         {
-            if (!_furniture.Sync(s.HomeLayout, Room)) return;
+            if (!_furniture.Sync(layout, Room) && !force) return;
             CancelBedWalk();
             StandUp();
             _spots.Clear();
             bool hasBed = false;
-            foreach (PlacedFurniture p in s.HomeLayout)
+            foreach (PlacedFurniture p in layout)
             {
                 FurnitureDef def = FurnitureCatalog.Get(p.Id);
                 string id = def == null ? null : RoleId(def.Role);
                 if (id == null) continue;
+                if (secondary && id != Bed && id != Storage && id != Fridge) continue;
                 if (def.Role == FurnitureRole.Bed) hasBed = true;
                 RectD f = RoomPlanner.Footprint(Room, def, p);
                 string label = def.Role==FurnitureRole.Climate?"风扇/空调：模式与设温":def.Role == FurnitureRole.Fridge ? "冰箱：存取食物" : def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
@@ -402,6 +403,7 @@ namespace PCShopSell.Game.Runtime
 
         private readonly Dictionary<string, GameObject> _visitResidents = new Dictionary<string, GameObject>();
         private string _visitAddress;
+        private bool _visitEditable;
 
         public bool CanReachResident(string id) =>
             _visitResidents.TryGetValue(id, out var figure) && figure.activeSelf &&
@@ -410,45 +412,23 @@ namespace PCShopSell.Game.Runtime
         public void UpdateVisit(GameSession session)
         {
             var home = session.CurrentPlace;
-            bool canSleep = session.CanSleepAt(home);
-            if (_visitAddress != home.Id)
+            bool canSleep = session.CanDecorateCurrentResidence;
+            bool changedAddress = _visitAddress != home.Id;
+            if (changedAddress)
             {
                 _visitAddress = home.Id;
                 ResetOwner();
                 foreach (var figure in _visitResidents.Values) Kill.It(figure);
                 _visitResidents.Clear();
 
-                var furniture = FurnitureCatalog.StartHomeLayout();
-                furniture.RemoveAll(item => item.Id == "fan_broken" || item.Id == "junk");
-                var bed = furniture[0];
-                bed.Id = session.SecondaryResidenceBed(home);
-                bed.Z = Depth - FurnitureCatalog.Get(bed.Id).Depth*.5 - .05;
-                furniture[1].X += Width - RoomSpec.Home.Width;
-                furniture[2].X += Width - RoomSpec.Home.Width;
-                furniture[2].Z += Depth - RoomSpec.Home.Depth;
-                furniture[3].X += Width - RoomSpec.Home.Width;
-                furniture[3].Z += Depth - RoomSpec.Home.Depth;
-                if (home.Tier >= 2)
-                {
-                    furniture[1].Id = "wardrobe_wood";
-                    furniture.Add(new PlacedFurniture { Id = "sofa", X = 1.2, Z = .65 });
-                }
-                if (canSleep) furniture.Add(new PlacedFurniture { Id = FurnitureCatalog.HomeBox, X = .62, Z = 1.5 });
-                _furniture.Sync(furniture, Room);
-                _spots.Clear();
-                _spots.Add(new Spot { Id = Door, Area = _doorArea, Height = 2.5f });
-                RectD footprint = RoomPlanner.Footprint(Room, FurnitureCatalog.Get(bed.Id), bed);
-                _spots.Add(new Spot { Id = Bed, Label = "睡觉 / 小睡", Height = 1.1f,
-                    Area = new Rect((float)footprint.MinX, (float)footprint.MinZ, (float)(footprint.MaxX - footprint.MinX), (float)(footprint.MaxZ - footprint.MinZ)) });
-                if (canSleep)
-                {
-                    var box = furniture[furniture.Count - 1];
-                    RectD area = RoomPlanner.Footprint(Room, FurnitureCatalog.Get(box.Id), box);
-                    _spots.Add(new Spot { Id = Storage, Label = "纸箱：存取东西", Height = 1f,
-                        Area = new Rect((float)area.MinX, (float)area.MinZ, (float)(area.MaxX - area.MinX), (float)(area.MaxZ - area.MinZ)) });
-                }
                 ApplyFinish(home.Tier);
             }
+            bool changedRoom = changedAddress || _visitEditable != canSleep;
+            _visitEditable = canSleep;
+            if (canSleep)
+                SyncFurniture(session.CurrentResidenceLayout, secondary: true, force: changedRoom);
+            else if (changedRoom)
+                SyncFurniture(session.CreateVisitResidenceLayout(home, false), secondary: true, force: true);
 
             if (_dressed != session.EquippedOutfit)
             {
@@ -491,9 +471,9 @@ namespace PCShopSell.Game.Runtime
             if (canSleep)
             {
                 float nearestFurniture = .6f;
-                for (int i = 1; i < _spots.Count; i++)
+                foreach (var spot in _spots)
                 {
-                    var spot = _spots[i];
+                    if (spot.Id == Door) continue;
                     float distance = DistToRect(new Vector2(owner.x, owner.z), spot.Area);
                     if (distance > nearestFurniture) continue;
                     nearestFurniture = distance;
@@ -518,7 +498,7 @@ namespace PCShopSell.Game.Runtime
                 _dressed = s.EquippedOutfit;
                 Prims.Dress(_owner, _dressed);
             }
-            SyncFurniture(s);
+            SyncFurniture(s.HomeLayout);
             UpdateSeat(realDt);
             foreach (var furniture in _furniture.Entries)
             {

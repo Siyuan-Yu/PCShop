@@ -13,8 +13,9 @@ namespace PCShopSell.Core.Home
         public Money Price { get; }
         public double WeightKg { get; }
 
-        /// <summary>在哪一类店里有得卖（地点的 Business）。</summary>
+        /// <summary>线下销售地点的 Business。没有线下货源时为 null。</summary>
         public string SoldAt { get; }
+        public bool IsSoldAt(string business) => SoldAt != null && SoldAt == business;
         public string IngredientId, MealId;
         public int ShelfDays;
         public string ModelSeries;
@@ -59,7 +60,7 @@ namespace PCShopSell.Core.Home
             new GiftDef(Drink, "一箱饮料", "一整箱，很沉。", 100, 6.0, TobaccoBusiness),
             new GiftDef(Snack, "一盒点心", "精致的点心盒。", 120, 0.8, TobaccoBusiness),
             new GiftDef(Soda, "可乐（瓶）", "自己喝：饥饿 +2、心情 +8、营养 −3。也能请店员喝。", 5, 0.5, TobaccoBusiness),
-            new GiftDef(Fruit, "一箱水果", "农贸市场的时令水果，一箱也不轻。", 120, 3.0, FarmBusiness),
+            new GiftDef(Fruit, "一箱水果", "一箱时令水果，可在手机网购。", 120, 3.0, null),
             new GiftDef(VisitHamper, "家常臻选礼盒", "精选茶点和时令干货的做客伴手礼，可带去家宴或当面赠送。", 1000, 1.5, TobaccoBusiness),
         }.Concat(RetailProducts.All).ToArray();
 
@@ -69,7 +70,7 @@ namespace PCShopSell.Core.Home
 
         public static bool IsCigarette(string id) => id == Cig || id == CigHi;
 
-        public static IEnumerable<GiftDef> SoldAtBusiness(string business) => All.Where(g => g.SoldAt == business);
+        public static IEnumerable<GiftDef> SoldAtBusiness(string business) => All.Where(g => g.IsSoldAt(business));
     }
 
     /// <summary>

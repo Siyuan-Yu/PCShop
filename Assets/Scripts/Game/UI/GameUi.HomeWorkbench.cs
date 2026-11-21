@@ -70,6 +70,9 @@ namespace PCShopSell.Game.UI
             graphic.color = data.Length > 1 ? Ui.ChangeColor(data.Last().Price - data.First().Price) : Ui.Dim;
             return rect;
         }
+        private bool CanStartWorkbenchSetup => HomeDockAvailable && !_ctrl.Placing && S.Trip == null && !S.CityActivityExclusive
+            && !S.DebugHomeWorkbenchEnabled && !S.HomeWorkbenchInstalled && S.OwnsHomeWorkbench;
+
         private void RefreshWorkbenchAccess()
         {
             if(_workbenchLauncher==null)
@@ -85,9 +88,9 @@ namespace PCShopSell.Game.UI
             float launcherTop = (besideHomeToggle ? 74 : 68) + HudFunctionOffset;
             if (launcherRect.offsetMin.x != launcherLeft || launcherRect.offsetMax.y != -launcherTop)
                 launcherRect.Anchor(1, 1, 1, 1, launcherLeft, -112 - HudFunctionOffset, besideHomeToggle ? 208 : 18, launcherTop);
-            bool visible=S.CurrentPlace==S.Home&&!_ctrl.Placing&&!S.IsGameOver&&!MainMenuOpen;
+            bool visible=S.CanDecorateCurrentResidence&&!_ctrl.Placing&&!S.IsGameOver&&!MainMenuOpen;
             _workbenchLauncher.gameObject.SetActive(visible);
-            _workbenchLauncher.interactable=S.CanUseHomeWorkbench;
+            _workbenchLauncher.interactable=S.CanUseHomeWorkbench || CanStartWorkbenchSetup;
             _workbenchLauncher.GetComponentInChildren<Text>().text = S.DebugHomeWorkbenchEnabled ? "居家工作台 · 测试"
                 : S.HomeWorkbenchInstalled ? "居家工作台" : S.OwnsHomeWorkbench ? "居家工作台 · 待安装"
                 : S.HomeWorkbenchInTransit ? "居家工作台 · 配送中" : "居家工作台 · 米家有售";
@@ -96,7 +99,14 @@ namespace PCShopSell.Game.UI
         }
         public void OpenHomeWorkbench()
         {
-            if(!S.CanUseHomeWorkbench){Toast(WorkbenchAccessReason);return;}
+            if (!S.CanUseHomeWorkbench)
+            {
+                if (CanStartWorkbenchSetup && S.FurnitureToPlace(false, GameSession.HomeWorkbenchId) > 0
+                    && S.FurnitureEditBlocker(false) == null)
+                    StartPlacement(false, GameSession.HomeWorkbenchId);
+                else Toast(WorkbenchAccessReason);
+                return;
+            }
             if(_homeWorkbench!=null)return;
             _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false);
             // 大屏接近全屏：背后的 HUD 几乎压黑，看起来是一块独立的屏幕。
@@ -296,7 +306,7 @@ namespace PCShopSell.Game.UI
                 Toggle("Supplies","自动取用 · 后仓饭食及每日消耗品",current.Supplies,a=>a.Supplies=!a.Supplies);
                 string[] supply={Gifts.Fruit,Gifts.Snack,Gifts.Soda};Ui.Size(Ui.Choice(w.Content,supply.Select(id=>Gifts.Get(id).Name).ToArray(),Array.IndexOf(supply,current.SupplyId),i=>Apply(a=>a.SupplyId=supply[i])),-1,38);
                 Line(w.Content,"已有可用饭食 "+S.WorkbenchMealsAvailable+" 份 · 今日点饭已花 ¥"+S.WorkbenchMealSpent,18,Ui.Accent);
-                Para(w.Content,"只在家且拥有大屏时执行。睡觉正常推进时间；衣服和床不按日消耗。缺货、缺设施或预算不足会提醒，同一未解决问题不反复弹窗。",16,Ui.Dim);
+                Para(w.Content,"办公台安装后，生活托管会在你入住的住宅运行，使用当前住处的设施和后仓。缺货、缺设施或预算不足时会提醒。",16,Ui.Dim);
             });
         }
     }

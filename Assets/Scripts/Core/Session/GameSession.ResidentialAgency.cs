@@ -43,21 +43,27 @@ namespace PCShopSell.Core.Session
         {
             string why = ResidenceBlocker(tier, true, mortgage); if (why != null) return Fail(why);
             Money price = ResidencePrice(tier);
-            if (!PayForResidenceMove(tier, "购置住宅", ResidencePurchaseDue(tier, mortgage), ResidenceName(tier) + (tier == HomeTier ? "" : "（含搬家费）"))) return false;
+            if (!PayForResidenceMove(tier, "购置住宅", ResidencePurchaseDue(tier, mortgage), ResidenceName(tier) + (tier == HomeTier ? "" : "（含搬家费）"),
+                targetResidence: ResidencePlace(tier))) return false;
             HomePriceCents = price.Cents; HomeMortgageCents = 0;
             _residentialHomeId = null;
             HomeMonthlyPrincipalCents = 0;
+            ConsolidateHomeFreight();
             Say("已全款购入" + HomeTitle + "，家具与储物保留，不再支付周租；月维护费为房价0.1%。");
             return true;
         }
 
         private bool PayForResidenceMove(int tier, string category, Money due, string memo, LedgerAttribution attribution = null,
-            bool allowPackedFridge = false)
+            bool allowPackedFridge = false, Place targetResidence = null)
         {
             var room = RoomSpec.ForResidence(tier);
-            if (room == ResidenceRoom) return !due.IsPositive || Ledger.TryDebit(Clock.Today, category, due, memo, attribution);
+            List<PlacedFurniture> existingLayout = null;
+            if (targetResidence != null && _residenceFreight.TryGetValue(targetResidence.Id, out var storage))
+                existingLayout = storage.Layout;
+            if (room == ResidenceRoom && existingLayout == null)
+                return !due.IsPositive || Ledger.TryDebit(Clock.Today, category, due, memo, attribution);
 
-            var layout = new List<PlacedFurniture>();
+            var layout = existingLayout == null ? new List<PlacedFurniture>() : new List<PlacedFurniture>(existingLayout);
             var packed = new List<PlacedFurniture>();
             // Keep the cold storage usable when moving to a smaller residence.
             foreach (var item in _homeLayout.OrderByDescending(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge))

@@ -266,6 +266,8 @@ namespace PCShopSell.Core.Session
             if (InPlayerShop)
             {
                 PlayerShop.PlayerPresent = true;
+                ExpireCandidates();
+                RefreshDailyCandidates();
             }
             else if (place.Kind == PlaceKind.Wholesaler)
             {
@@ -499,8 +501,8 @@ namespace PCShopSell.Core.Session
 
             TickEnergyExhaustion();
             if (!_pendingFaint) UpdatePlayerWork(to);
-            if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
             ExpireCandidates();
+            RefreshDailyCandidates();
             if (dailyEventDue) RollDailyEvent(to.Date, activityAtEventTime);
             CheckAppointments(to);
             DeliverOnlineOrders(to);

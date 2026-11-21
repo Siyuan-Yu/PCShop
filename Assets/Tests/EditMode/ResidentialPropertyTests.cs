@@ -116,6 +116,45 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(principal,s.HomeMortgageCents);Assert.AreEqual(cash-50000,s.Ledger.Balance.Cents);Assert.Zero(s.CurrentHomeRent.Cents);
             }
         }
+
+        [Test]
+        public void SwitchingPrimaryResidenceKeepsTheOriginalLeaseAndAddressStorageAfterReload()
+        {
+            using var s = Make();
+            var original = s.Home;
+            var improved = s.City.GetPlace("home_tier1");
+            AtAgency(s, improved.Id);
+            Assert.True(s.BuyResidentialHome(improved.Id, false, true, keepCurrentResidence: true));
+
+            var rent = s.CurrentHomeRent;
+            var nextRent = s.NextResidentialRentDay(original);
+            var cash = s.Ledger.Balance;
+            var oldLayout = s.HomeLayout.Select(item => (item.Id, item.X, item.Z, item.Rot)).ToArray();
+            s.HomeBox.Food.RiceKg = 4;
+            s.HomeFridge.Food.RiceKg = 2;
+
+            Assert.True(s.SetPrimaryResidence(improved));
+            Assert.AreEqual(improved, s.Home);
+            Assert.AreEqual(improved.Id, s.CityHomeShortcut);
+            Assert.AreEqual(cash, s.Ledger.Balance);
+            Assert.AreEqual(rent, s.SignedResidentialRent(original));
+            Assert.AreEqual(nextRent, s.NextResidentialRentDay(original));
+            Assert.Zero(s.HomeBox.Food.RiceKg);
+            Assert.Zero(s.HomeFridge.Food.RiceKg);
+            s.HomeBox.Food.RiceKg = 7;
+
+            using var loaded = Reload(s);
+            Assert.AreEqual(improved.Id, loaded.Home.Id);
+            Assert.AreEqual(7, loaded.HomeBox.Food.RiceKg);
+            Assert.True(loaded.SetPrimaryResidence(original));
+            Assert.AreEqual(nextRent, loaded.NextResidentialRentDay(original));
+            Assert.AreEqual(rent, loaded.CurrentHomeRent);
+            Assert.AreEqual("vacant", loaded.PropertyAt(improved.Id).UseMode);
+            Assert.AreEqual(4, loaded.HomeBox.Food.RiceKg);
+            Assert.AreEqual(2, loaded.HomeFridge.Food.RiceKg);
+            CollectionAssert.AreEqual(oldLayout, loaded.HomeLayout.Select(item => (item.Id, item.X, item.Z, item.Rot)).ToArray());
+        }
+
         [Test] public void WrongAgencyAndDuplicatePurchaseCannotDebitOrCreateOwnership()
         {
             using(var s=Make())

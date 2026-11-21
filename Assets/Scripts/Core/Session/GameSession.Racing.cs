@@ -146,6 +146,7 @@ namespace PCShopSell.Core.Session
             {
                 Flags.Add("guide:scooter:purchased");
                 Flags.Add(ScooterGuidePending);
+                RefreshQuestProgress();
             }
             Say(m.Name+(m.Kind==VehicleKind.Van?"已加入员工进货车队，不占车位，不可通勤或参赛。":forCommute?"已设为通勤车，不占车库车位；参赛前需在车库改为入库车辆。":"已停入"+RegionalGarages.Get(garageId).Name+"。"));return true;
         }

@@ -95,8 +95,43 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
+        private const string QuestCompletionNoticePrefix = "tutorial:completion-pending:";
+        private int _phoneQuestEarliestDay, _scooterQuestEarliestDay;
+
+        private static class QuestCompletionNotices
+        {
+            internal static readonly (QuestDef Quest, string Flag)[] Entries = Quests.All
+                .Select(q => (q, QuestCompletionNoticePrefix + q.Id)).ToArray();
+        }
+
         public bool QuestCompleted(string id) => Flags.Contains("tutorial:" + id);
         public bool QuestLessonRead(string id) => Flags.Contains("tutorial:read:" + id);
+
+        public QuestDef PendingQuestCompletion()
+        {
+            foreach (var (quest, flag) in QuestCompletionNotices.Entries)
+                if (quest.Id == "sale" ? OpeningSaleCompletionPending : Flags.Contains(flag)) return quest;
+            return null;
+        }
+
+        public void ConfirmQuestCompletion(string id)
+        {
+            if (id == "sale") ConfirmOpeningSaleCompletion();
+            else Flags.Remove(QuestCompletionNoticePrefix + id);
+        }
+
+        private void RecordQuestCompletion(QuestDef quest)
+        {
+            Flags.Add("tutorial:" + quest.Id);
+            // Start the wait after both the first sale and the staffing lesson are complete, in either order.
+            if ((quest.Id == "sale" || quest.Id == "hire") && QuestCompleted("sale") && QuestCompleted("hire"))
+                _phoneQuestEarliestDay = Clock.Today.TotalDays + 1;
+            if (quest.Id == "phone") _scooterQuestEarliestDay = Clock.Today.TotalDays + 1;
+            if (quest.Id == "sale") Flags.Add(OpeningSaleCompletionFlag);
+            else if (Flags.Contains("tutorial:issued:" + quest.Id) && (quest.Chapter == 0 || RetailKind == "computer")
+                && !(quest.Id == "community_goal" && FirstChapterTrialCompleted))
+                Flags.Add(QuestCompletionNoticePrefix + quest.Id);
+        }
 
         private void RecordConfirmedShopPricing()
         {
@@ -116,13 +151,14 @@ namespace PCShopSell.Core.Session
             foreach (var q in Quests.All)
                 if (!QuestCompleted(q.Id) && q.Done(this))
                 {
-                    Flags.Add("tutorial:" + q.Id);
+                    RecordQuestCompletion(q);
                     if (q.Grant != null)
                     {
                         q.Grant(this);
                         Say($"任务完成「{q.Title}」，奖励：{q.RewardText(this)}。");
                     }
                 }
+            RefreshOpeningStaffWait();
         }
         public void VisitQuestTarget(QuestTarget target)
         {
@@ -151,7 +187,16 @@ namespace PCShopSell.Core.Session
                 // Basic instructions follow actual opening progress, never an old manually pinned task.
                 if (q.Id != "rent" && q.Target != QuestTarget.Cooker && q.Target != QuestTarget.CommunityGoal && !HasShop)
                     return false;
-                return Quests.All.TakeWhile(x => x.Id != q.Id).All(x => QuestCompleted(x.Id));
+                if (!Quests.All.TakeWhile(x => x.Id != q.Id).All(x => QuestCompleted(x.Id))) return false;
+                if (Flags.Contains("tutorial:issued:" + q.Id)) return true;
+                return q.Id switch
+                {
+                    "phone" => Clock.Today.TotalDays >= _phoneQuestEarliestDay && Ledger.CanAfford(2 * PhonePrice),
+                    "scooter" => Clock.Today.TotalDays >= Math.Max(_phoneQuestEarliestDay, _scooterQuestEarliestDay)
+                        && Ledger.CanAfford(2 * Money.FromYuan(MotorCatalog.Legacy(VehicleKind.EBike).Price)),
+                    "second_shop" => SecondStorefrontQuestReady(),
+                    _ => true
+                };
             }
             if (FirstChapterTrial || !HasShop || Quests.All.Any(x => x.Chapter == 0 && !QuestCompleted(x.Id))) return false;
             // Once a real milestone has issued a task, a temporary cash/reputation dip won't erase it.

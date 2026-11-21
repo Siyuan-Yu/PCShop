@@ -319,7 +319,8 @@ namespace PCShopSell.Core.Session
         {
             GiftDef g = Gifts.Get(id);
             if (g == null || count <= 0) return false;
-            if (!AtBusiness(g.SoldAt)) return Fail(g.SoldAt == FarmBusiness ? "请到农贸市场批发采购。" : "要去烟酒茶行买。");
+            if (g.SoldAt == null) return Fail("这件商品可在手机网购。");
+            if (!g.IsSoldAt(CurrentPlace?.Business)) return Fail(g.SoldAt == FarmBusiness ? "请到农贸市场批发采购。" : "要去烟酒茶行买。");
             if (g.SoldAt == FarmBusiness) return CartAddRetailWholesale(CurrentPlace, id, count);
             PutLine(_cart, new CartLine
             {

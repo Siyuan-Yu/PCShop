@@ -85,6 +85,7 @@ namespace PCShopSell.Core.Session
                 Flags.Add(MealDeliveryGuidePending);
                 Popup?.Invoke(MealDeliveryUnlockedTitle, "打开手机里的「外卖」，就能点餐或设置自动订餐。开启后，饭点或饿了时会优先吃手头的食物，缺餐时按选定价位下单。");
             }
+            RefreshQuestProgress();
             return true;
         }
 
@@ -106,10 +107,10 @@ namespace PCShopSell.Core.Session
         public double HomeBoxLimitKg => WarehouseCapacity;
 
         /// <summary>家里的后仓：背包里能装的东西（米菜、饭盒、礼品、家具）都能放，只看重量；吃的照样隔天会坏。</summary>
-        public Backpack HomeBox { get; } = new Backpack();
+        public Backpack HomeBox { get; private set; } = new Backpack();
 
         /// <summary>放在后仓里的配件。</summary>
-        public Stock HomeBoxParts { get; } = new Stock(double.MaxValue);
+        public Stock HomeBoxParts { get; private set; } = new Stock(double.MaxValue);
 
         /// <summary>家里的临时存放：送到家但后仓放不下的东西先堆在这里，打开后仓时必须清空才能关。</summary>
         public Backpack HomeTemp { get; } = new Backpack();
@@ -540,8 +541,6 @@ namespace PCShopSell.Core.Session
 
         // ---------- 买礼品 ----------
 
-        private bool AtBusiness(string business) => CurrentPlace != null && CurrentPlace.Business == business;
-
         /// <summary>买礼品时可装进背包或叫车配送。农贸市场遵循批发规则。</summary>
         public bool BuyGift(string id, int count = 1)
         {
@@ -550,7 +549,8 @@ namespace PCShopSell.Core.Session
             if (ClothingProducts.IsClothing(id)) return Fail("个人衣服请在服装店柜台购买；经营进货请使用批发入口。");
             if (g.LimitedEdition) return Fail("限定模型只在漫展现场出售。 ");
             if (g.SoldAt == FarmBusiness) return BuyFarmWholesale(id, count);
-            if (!AtBusiness(g.SoldAt)) return Fail("要去烟酒茶行买。");
+            if (g.SoldAt == null) return Fail("这件商品可在手机网购。");
+            if (!g.IsSoldAt(CurrentPlace?.Business)) return Fail("要去烟酒茶行买。");
             string what = g.Name + (count > 1 ? "×" + count : "");
             Money price = CityGoodsRetailPrice(g) * count;
             if (SendByCourier)

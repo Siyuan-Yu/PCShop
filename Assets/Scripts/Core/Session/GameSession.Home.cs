@@ -72,14 +72,18 @@ namespace PCShopSell.Core.Session
 
         private Backpack BoxOf(bool shop) => shop ? ShopLocker : HomeBox;
         private Backpack TempOf(bool shop) => shop ? ShopTemp : HomeTemp;
+        private Backpack PlacementBox(bool shop) => !shop && HasSecondaryResidenceWarehouse ? WarehouseBagHere : BoxOf(shop);
+        private Backpack PlacementTemp(bool shop) => !shop && HasSecondaryResidenceWarehouse ? null : TempOf(shop);
+        private double PlacementFridgeWeight(bool shop) => shop ? FridgeOf(true).WeightKg : ResidenceFridgeHere.WeightKg;
 
         /// <summary>在这间屋（家 / 当前这家店）摆放时手边能拿来摆的某件家具：临时存放 + 后仓 + 以前收着的。</summary>
         public int FurnitureToPlace(bool shop, string id) =>
-            TempOf(shop).FurnitureCount(id) + BoxOf(shop).FurnitureCount(id) + FurnitureInStock(id);
+            (PlacementTemp(shop)?.FurnitureCount(id) ?? 0) + PlacementBox(shop).FurnitureCount(id) + FurnitureInStock(id);
 
         /// <summary>在这间屋摆放时能拿来摆的全部家具（临时存放、后仓里的和以前收着的合在一起）。</summary>
         public IEnumerable<KeyValuePair<string, int>> FurnitureToPlaceList(bool shop) =>
-            TempOf(shop).FurnitureLines.Concat(BoxOf(shop).FurnitureLines).Concat(FurnitureStock)
+            (PlacementTemp(shop)?.FurnitureLines ?? Enumerable.Empty<KeyValuePair<string, int>>())
+                .Concat(PlacementBox(shop).FurnitureLines).Concat(FurnitureStock)
                 .GroupBy(kv => kv.Key).Select(g => new KeyValuePair<string, int>(g.Key, g.Sum(kv => kv.Value)));
 
         /// <summary>家具放进这间屋的后仓，放不下的进临时存放。返回进临时存放的件数。</summary>
@@ -95,16 +99,19 @@ namespace PCShopSell.Core.Session
             layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d != null);
 
         /// <summary>睡眠质量倍数：摆出来的最好的床 + 空调/风扇/窗帘 + 装饰分（上限 +0.08）。没有床只能睡地上。</summary>
-        public double HomeSleepQuality => CurrentPlace != Home && CanSleepAt(CurrentPlace)
-            ? FurnitureCatalog.Get(SecondaryResidenceBed(CurrentPlace)).BedQuality + ResidentialTier(CurrentPlace) * .08
+        public double HomeSleepQuality => HasSecondaryResidenceWarehouse
+            ? BedSleepQuality(PlacedDefs(SecondaryLayoutHere())) + ResidentialTier(CurrentPlace) * .08
             : PrimaryHomeSleepQuality;
+
+        private static double BedSleepQuality(IEnumerable<FurnitureDef> defs) =>
+            defs.Where(d => d.Role == FurnitureRole.Bed).Select(d => d.BedQuality).DefaultIfEmpty(NoBedSleepQuality).Max();
 
         public double PrimaryHomeSleepQuality
         {
             get
             {
                 var defs = PlacedDefs(_homeLayout).ToList();
-                double bed = defs.Where(d => d.Role == FurnitureRole.Bed).Select(d => d.BedQuality).DefaultIfEmpty(NoBedSleepQuality).Max();
+                double bed = BedSleepQuality(defs);
                 double bonus = defs.Where(d => !CityWeather.IsDevice(d.Id)).Sum(d => d.SleepBonus);
                 double appeal = defs.Sum(d => d.Appeal);
                 return bed + bonus + HomeSeasonalFacilityBonus + Math.Min(0.08, 0.01 * appeal) + HomeTier * .08;
@@ -124,6 +131,8 @@ namespace PCShopSell.Core.Session
         }
 
         public bool HomeHas(FurnitureRole role) => PlacedDefs(_homeLayout).Any(d => d.Role == role);
+        private bool ResidenceHasHere(FurnitureRole role) =>
+            CanDecorateCurrentResidence && PlacedDefs(CurrentResidenceLayout).Any(d => d.Role == role);
 
         public double ShopDecorAppeal => Math.Min(DecorMaxPoints, PlacedDefs(_shopLayout).Sum(d => d.Appeal));
 
@@ -292,25 +301,28 @@ namespace PCShopSell.Core.Session
         }
 
         private List<PlacedFurniture> LayoutOf(bool shop) => shop ? _shopLayout : _homeLayout;
+        private List<PlacedFurniture> PlacementLayout(bool shop) => !shop && HasSecondaryResidenceWarehouse
+            ? SecondaryLayoutHere() : LayoutOf(shop);
 
-        private bool CanEdit(bool shop)
+        private bool CanEdit(bool shop) => FurnitureEditBlocker(shop) is not string reason || Fail(reason);
+
+        public string FurnitureEditBlocker(bool shop)
         {
-            if (LifeQuietBlock(shop ? PlayerShopPlace.Id : Home.Id)) return Fail("已和邻居约定白天处理，请在07:00–22:00调整摆设。");
-            if(shop&&IsDedicatedVenue(PlayerShopPlace))return Fail("专用场馆保留原用途，不能按普通商铺装修。");
+            if (!shop && !CanDecorateCurrentResidence) return "要在自己的住处才能摆。";
+            if (LifeQuietBlock(shop ? PlayerShopPlace.Id : CurrentPlace.Id)) return "已和邻居约定白天处理，请在07:00–22:00调整摆设。";
+            if (shop && IsDedicatedVenue(PlayerShopPlace)) return "专用场馆保留原用途，不能按普通商铺装修。";
             if (shop)
             {
-                if (!InPlayerShop) return Fail("要在自己的店里才能摆。");
-                if (!CanEditShop) return Fail("请先歇业装修，才能调整店内摆设。");
-                return true;
+                if (!InPlayerShop) return "要在自己的店里才能摆。";
+                if (!CanEditShop) return "请先歇业装修，才能调整店内摆设。";
             }
-            if (CurrentPlace != Home) return Fail("要在家里才能摆。");
-            return true;
+            return null;
         }
 
         public string PlacementError(bool shop, FurnitureDef def, PlacedFurniture cand, int ignore, IReadOnlyList<RectD> extra = null)
         {
-            if (def.Id == HomeWorkbenchId && (shop || HomeTier < HomeWorkbenchMinimumResidenceTier))
-                return "居家办公台只能安装在中型及以上住宅。";
+            if (def.Id == HomeWorkbenchId && (shop || !CanDecorateCurrentResidence))
+                return "请在可入住的自家住宅安装居家办公台。";
             int capacity = PetShopCatalog.HouseCapacity(def.Id);
             if (capacity > 0 || PetShopCatalog.IsToyFixture(def.Id))
             {
@@ -331,8 +343,8 @@ namespace PCShopSell.Core.Session
                 }
             }
             string limit=ShopFixturePlacementBlocker(shop,def,ignore);if(limit!=null)return limit;
-            RoomSpec room = shop ? ShopRoom : ResidenceRoom;
-            return RoomPlanner.Check(room, LayoutOf(shop), def, cand, ignore, extra);
+            RoomSpec room = shop ? ShopRoom : CurrentResidenceRoom;
+            return RoomPlanner.Check(room, PlacementLayout(shop), def, cand, ignore, extra);
         }
 
         /// <summary>把手边的家具摆出来：先用临时存放里的，再用后仓里的，最后是以前收着的。</summary>
@@ -340,12 +352,13 @@ namespace PCShopSell.Core.Session
         {
             id = FurnitureCatalog.Canonical(id);
             FurnitureDef def = FurnitureCatalog.Get(id);
-            if (def == null || FurnitureToPlace(shop, id) <= 0) return false;
+            if (def == null || FurnitureToPlace(shop, id) <= 0) return Fail("这件家具已不在可摆放的库存里。");
             if (!CanEdit(shop)) return false;
             string err = PlacementError(shop, def, at, -1, extra);
             if (err != null) return Fail(err);
             RememberLayout(shop);
-            if (!TempOf(shop).TakeFurniture(id, 1) && !BoxOf(shop).TakeFurniture(id, 1)) _furnStock[id] = FurnitureInStock(id) - 1;
+            if (PlacementTemp(shop)?.TakeFurniture(id, 1) != true && !PlacementBox(shop).TakeFurniture(id, 1))
+                _furnStock[id] = FurnitureInStock(id) - 1;
             var oldHouse = shop && PetShopCatalog.HouseCapacity(id) > 0 ? PetHouse(_focus) : null;
             if (oldHouse != null)
             {
@@ -353,15 +366,15 @@ namespace PCShopSell.Core.Session
                 StoreFurnitureHere(true, oldHouse.Id, 1);
             }
             TrackTempClocks();
-            RecordLifeNoise(shop ? PlayerShopPlace.Id : Home.Id);
-            LayoutOf(shop).Add(new PlacedFurniture { Id = id, X = at.X, Z = at.Z, Rot = at.Rot });
+            RecordLifeNoise(shop ? PlayerShopPlace.Id : CurrentPlace.Id);
+            PlacementLayout(shop).Add(new PlacedFurniture { Id = id, X = at.X, Z = at.Z, Rot = at.Rot });
             if (shop) ApplyUpgrades();
             return true;
         }
 
         public bool MoveFurniture(bool shop, int index, PlacedFurniture at, IReadOnlyList<RectD> extra = null)
         {
-            List<PlacedFurniture> l = LayoutOf(shop);
+            List<PlacedFurniture> l = PlacementLayout(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
             FurnitureDef def = FurnitureCatalog.Get(l[index].Id);
             string err = PlacementError(shop, def, at, index, extra);
@@ -371,24 +384,25 @@ namespace PCShopSell.Core.Session
             l[index].X = at.X;
             l[index].Z = at.Z;
             l[index].Rot = at.Rot;
-            if (changed) RecordLifeNoise(shop ? PlayerShopPlace.Id : Home.Id);
+            if (changed) RecordLifeNoise(shop ? PlayerShopPlace.Id : CurrentPlace.Id);
             return true;
         }
 
         /// <summary>把摆出来的家具收起来：放进这间屋的后仓，放不下的进临时存放。</summary>
         public bool StoreFurniture(bool shop, int index)
         {
-            List<PlacedFurniture> l = LayoutOf(shop);
+            List<PlacedFurniture> l = PlacementLayout(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
             if (shop && PetShopCatalog.HouseCapacity(l[index].Id) > 0 && PetsStaying(_focus))
                 return Fail("宠物屋里还有客人。可以摆放更大的宠物屋直接替换。");
             if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge
-                && FridgeOf(shop).WeightKg > FridgeCapacityOf(l.Where((_, i) => i != index)) + 1e-9)
+                && PlacementFridgeWeight(shop) > FridgeCapacityOf(l.Where((_, i) => i != index)) + 1e-9)
                 return Fail("冰箱里还有食物，先取出一些再收起冰箱。不能丢失冷藏食物。");
             RememberLayout(shop);
             string id = l[index].Id;
             l.RemoveAt(index);
-            StoreFurnitureHere(shop, id, 1);
+            if (!shop && HasSecondaryResidenceWarehouse) PlacementBox(false).AddFurniture(id, 1);
+            else StoreFurnitureHere(shop, id, 1);
             TrackTempClocks();
             if (shop) ApplyUpgrades();
             return true;
@@ -624,7 +638,7 @@ namespace PCShopSell.Core.Session
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(CurrentFridge.Food.Packed));
                 _lastAutomaticMealMinute=mealMinute;
-                Say($"{meal}吃了{(AtHome ? "家里" : "当前店铺")}冰箱里的食物。");
+                Say($"{meal}吃了{(InPlayerShop ? "当前店铺" : "住处")}冰箱里的食物。");
                 return;
             }
             if (Backpack.Lunchboxes > 0)
@@ -782,10 +796,13 @@ namespace PCShopSell.Core.Session
                 cookReadyMinute = Pantry.Cooking == null ? 0 : Pantry.Cooking.ReadyMinute,
                 packLunch = ToSave(Backpack.Food.Packed),
                 couriers = SaveCouriers(),
-                residentialFreight = _residenceFreight.Where(entry => !entry.Value.IsEmpty).Select(entry => new SaveResidentialFreight
+                residentialFreight = _residenceFreight.Where(entry => !entry.Value.IsEmpty || entry.Value.Layout != null).Select(entry => new SaveResidentialFreight
                 {
                     residenceId = entry.Key,
                     storage = ToSaveStorage(entry.Value.Box, entry.Value.Parts),
+                    fridge = entry.Value.Fridge.IsEmpty ? null : ToSaveStorage(entry.Value.Fridge),
+                    hasLayout = entry.Value.Layout != null,
+                    layout = entry.Value.Layout == null ? null : ToSave(entry.Value.Layout),
                 }).ToArray(),
                 furnitureBuybacks = _furnitureBuybacks.Select(order => order.Copy()).ToArray(),
                 nextFurnitureBuybackId = _nextFurnitureBuybackId,
@@ -862,6 +879,8 @@ namespace PCShopSell.Core.Session
                 if (string.IsNullOrEmpty(entry?.residenceId)) continue;
                 var storage = FreightStorageAt(City.CanonicalPlaceId(entry.residenceId));
                 FromSaveStorage(entry.storage, storage.Box, storage.Parts);
+                FromSaveStorage(entry.fridge, storage.Fridge);
+                if (entry.hasLayout) storage.Layout = FromSave(entry.layout);
             }
             RestoreFurnitureBuybacks(h);
             SendByCourier = h != null && h.sendByCourier;

@@ -366,11 +366,12 @@ namespace PCShopSell.Game.UI
             {
                 int id=customer.Id;var row=Ui.Row(C,58,5);
                 Ui.Size(Ui.Label(row,customer.ItemName+"\n应收 "+customer.Spend,16),-1,58,1);
-                var checkout=Ui.Button(row,"结账",()=>_ctrl.Checkout(id),17,Ui.ButtonHot,_ctrl.Interior!=null&&_ctrl.Interior.NearCounter);
+                var checkout=Ui.Button(row,"结账",()=>_ctrl.Checkout(id),17,Ui.ButtonHot,_ctrl.CanRequestCheckout);
                 Ui.Size(checkout,90,40).name="UsedCheckout_"+id;
-                _counterRefresh.Add(()=>checkout.interactable=_ctrl.Interior!=null&&_ctrl.Interior.NearCounter);
+                _openingCounterButtons[id] = checkout;
+                _counterRefresh.Add(()=>checkout.interactable=_ctrl.CanRequestCheckout);
             }
-            Para(C, "走到收银台旁按 F 或点击结账；也可安排收银员在岗收款。", 14, Ui.Dim);
+            CounterText(CounterCheckoutHint, 14, Ui.Dim);
         }
         private void BuildUsedSalesHistory(Transform parent,SpecialBusinessState state)
         {

@@ -404,12 +404,12 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             Teleport(s, "pc");
-            Assert.IsTrue(s.PostJobAd());
             s.Leave();
             s.Clock.Restore(new GameDate(1), 8 * 60 + 50);
             s.AdvanceClock(20);
-            Assert.AreEqual(2, s.Candidates.Count);
+            Assert.AreEqual(4, s.Candidates.Count);
             Assert.IsTrue(s.Hire(0));
+            Assert.AreEqual(3, s.Candidates.Count);
             Assert.AreEqual(s.CityEmployeeAvailable(s.Employee,s.MainShop),s.PlayerShop.IsOpen,"雇佣本身不能绕过真实到岗");
             for(int i=0;i<180&&!s.CityEmployeeAvailable(s.Employee,s.MainShop);i++)s.AdvanceClock(1);
             Assert.IsTrue(s.CityEmployeeAvailable(s.Employee,s.MainShop),"录用后沿真实路线到岗");

@@ -115,7 +115,10 @@ namespace PCShopSell.Game.UI
                         int choice = i;
                         Ui.Size(Ui.Button(w.Content, dish.Opinions[i], () =>
                         {
-                            if (S.ReviewCooksDish(id, dishIndex, choice) != null) w.Rebuild();
+                            var reply = S.ReviewCooksDish(id, dishIndex, choice);
+                            if (reply == null) return;
+                            w.Rebuild();
+                            OpenActivityReply("res_cook", reply, "回到餐桌");
                         }, 19), -1, 42).name = $"CookTastingReview_{dishIndex}_{choice}";
                     }
                 }
@@ -175,9 +178,9 @@ namespace PCShopSell.Game.UI
             var row = Ui.Row(w.Content, 40, 6);
             void Interact(bool holdHands)
             {
-                string name = S.CityPerson(S.ActivityPartnerId(activity))?.Name;
+                string partner = S.ActivityPartnerId(activity);
                 string reply = S.InteractWithActivityPartner(activity.Id, holdHands);
-                if (reply != null) Toast(name + "：" + reply);
+                OpenActivityReply(partner, reply);
             }
             Ui.Size(Ui.Button(row, "牵手", () => Interact(true), 16), -1, 40, 1);
             Ui.Size(Ui.Button(row, "聊聊心事", () => Interact(false), 16), -1, 40, 1);

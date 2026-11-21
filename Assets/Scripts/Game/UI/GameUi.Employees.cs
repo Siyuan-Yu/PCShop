@@ -241,10 +241,12 @@ namespace PCShopSell.Game.UI
         {
             var worker = S.FindEmployee(employeeId);
             if (worker == null || worker.Role != EmployeeRole.Buyer) return;
+            bool guided = worker.Shop == S.CurrentShop && S.OpeningStaffStep == OpeningStaffLesson.Purchase;
             var catalog = S.EmployeePurchaseCatalog();
             var offersByDestination = catalog.ToLookup(o => S.PurchaseDestination(o.Source));
             var draft = _purchaseDrafts.TryGetValue(employeeId, out var savedDraft) ? savedDraft.Copy() : worker.Person.PurchasePlan.Copy();
             S.PrepareEmployeePurchaseDraft(draft, catalog);
+            if (guided) draft.InventoryThreshold = false;
             _purchaseDrafts[employeeId] = draft;
             string browseSource = draft.BrowseSourceSelected ? S.EmployeePurchaseBrowseSource(draft, catalog) : null;
             if (!draft.BrowseSourceSelected || (draft.BrowseSourceId != null && browseSource == null))
@@ -300,12 +302,19 @@ namespace PCShopSell.Game.UI
 
                 string intro = importedOrderId.HasValue ? "订单 #" + importedOrderId.Value + " 缺件已合并，点“完成”保存。" : S.EmployeePurchaseStorageText(employeeId);
                 Ui.Size(Ui.Label(left, intro, 14, TextAnchor.MiddleLeft, Ui.Accent), -1, 22);
+                if (guided || !threshold && !savedPlan.Daily && !importedOrderId.HasValue)
+                {
+                    string example = worker.Shop.RetailKind == "restaurant" ? "例如从农贸市场选大米和配菜。"
+                        : "选和本店货架品类相同的商品。";
+                    Para(left, "先选货源，再用商品旁的数量控件加入清单。" + example
+                        + "右侧选采购频率和交通，核对货款、车费和运费，最后保存。步行或打车时，货物由货车送回店。", 15, guided ? Ui.Accent : Ui.Dim);
+                }
                 if (threshold)
                 {
                     var note = Ui.FlatPanel(left, "BuyerThresholdNote", Ui.FlatBand, Ui.FlatCardEdge).rectTransform;
                     Ui.VList(note, 8, 16); Ui.Size(note, -1, 170);
                     Ui.Size(Ui.Label(note, "<b>现在是「按补货清单自动补」</b>", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, 30);
-                    Ui.Size(Ui.Label(note, "进货员不看这里的商品，而是按店里补货清单的目标 / 下限：库存低于下限，就补到目标。右边是按现在库存算出的下一趟。\n想自己挑店家和数量，点右边的「固定清单」。", 16, TextAnchor.UpperLeft, Ui.Dim), -1, 80);
+                    Ui.Size(Ui.Label(note, "先到「补货清单」给商品设置目标库存和触发下限，并指定进货员。库存低于下限时，进货员会补到目标。右侧按现有库存预览下一趟。\n要自己选货源和每次买多少，切回「固定清单」。", 16, TextAnchor.UpperLeft, Ui.Dim), -1, 80);
                     Ui.Size(Ui.Button(note, "去调整补货清单 ›", () => { w.Close(); OpenCityProcurementFor(worker.Shop); }, 17, Ui.ButtonBg), 200, 38).name = "BuyerOpenRestock";
                 }
                 else
@@ -441,9 +450,13 @@ namespace PCShopSell.Game.UI
                 var head = Ui.Row(right, 34, 8);
                 Ui.Size(Ui.Label(head, "<b>采购了什么</b>", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, 32, 1);
                 if (!threshold) Ui.Size(Ui.Button(head, "清空", () => { selected.Clear(); Sync(); w.Rebuild(); }, 14), 64, 30);
-                var modes = Ui.Row(right, 36, 6);
-                Ui.Size(Ui.Button(modes, "固定清单", () => { draft.InventoryThreshold = false; w.Rebuild(); }, 15, Ui.SelectedButton(!threshold)), -1, 34, 1).name = "BuyerModeFixed";
-                Ui.Size(Ui.Button(modes, "按补货清单自动补", () => { draft.InventoryThreshold = true; w.Rebuild(); }, 15, Ui.SelectedButton(threshold)), -1, 34, 1).name = "BuyerModeThreshold";
+                if (guided) Line(right, "教学 · 固定清单", 17, Ui.Accent);
+                else
+                {
+                    var modes = Ui.Row(right, 36, 6);
+                    Ui.Size(Ui.Button(modes, "固定清单", () => { draft.InventoryThreshold = false; w.Rebuild(); }, 15, Ui.SelectedButton(!threshold)), -1, 34, 1).name = "BuyerModeFixed";
+                    Ui.Size(Ui.Button(modes, "按补货清单自动补", () => { draft.InventoryThreshold = true; w.Rebuild(); }, 15, Ui.SelectedButton(threshold)), -1, 34, 1).name = "BuyerModeThreshold";
+                }
 
                 var chosenList = GoodsList(right, 140);
                 ((RectTransform)chosenList.parent.parent).name = "PurchaseSelected";
@@ -489,7 +502,8 @@ namespace PCShopSell.Game.UI
                 }
 
                 string schedule = savedPlan.Daily ? $"已生效 · {savedPlan.FrequencyText} · {S.EmployeePurchaseNextText(employeeId)}" : "尚未启用定期采购";
-                var scheduleStatus = Ui.Size(Ui.Label(right, schedule + " · 点「完成」保存", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 38);
+                string statusHint = guided && draft.Items.Length == 0 ? "先从左侧至少加一种商品" : "点「完成」保存";
+                var scheduleStatus = Ui.Size(Ui.Label(right, schedule + " · " + statusHint, 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 38);
                 scheduleStatus.name = "BuyerStatus";
                 var frequency = Ui.Row(right, 36, 6);
                 Ui.Size(Ui.Label(frequency, "频率", 15, TextAnchor.MiddleLeft, Ui.Dim), 44, 34);
@@ -528,7 +542,9 @@ namespace PCShopSell.Game.UI
                 actions.name = "PurchaseActions";
                 Ui.Size(Ui.Button(actions, "完成", () =>
                 {
-                    Sync(); draft.Daily = draft.InventoryThreshold || draft.Items.Length > 0;
+                    Sync();
+                    if (guided && draft.Items.Length == 0) return;
+                    draft.Daily = draft.InventoryThreshold || draft.Items.Length > 0;
                     var session = S;
                     string failure = null;
                     void CaptureFailure(string reason) => failure = reason;
@@ -544,10 +560,11 @@ namespace PCShopSell.Game.UI
                     }
                     _purchaseDrafts.Remove(employeeId);
                     Toast(draft.Daily ? $"采购安排已保存 · {draft.FrequencyText} · {S.EmployeePurchaseNextText(employeeId)}" : "已清空采购安排，不再自动进货。");
-                    if (parent != null) { w.Close(); parent.Rebuild(); RebuildDock(); }
+                    if (guided) { w.Close(); S.RefreshQuestProgress(); RebuildDock(); }
+                    else if (parent != null) { w.Close(); parent.Rebuild(); RebuildDock(); }
                     else CloseModalWindows();
-                }, 20, Ui.ButtonHot), -1, 48, 1).name = "PurchaseDone";
-                if (savedPlan.Daily)
+                }, 20, Ui.ButtonHot, !guided || draft.Items.Length > 0), -1, 48, 1).name = "PurchaseDone";
+                if (savedPlan.Daily && !guided)
                     Ui.Size(Ui.Button(actions, "暂停采购", () =>
                     {
                         var plan = savedPlan.Copy(); plan.Daily = false;
@@ -558,7 +575,7 @@ namespace PCShopSell.Game.UI
                             else CloseModalWindows();
                         }
                     }, 15), 110, 48);
-            }, scrollContent: false);
+            }, closable: !guided, scrollContent: false);
         }
 
     }

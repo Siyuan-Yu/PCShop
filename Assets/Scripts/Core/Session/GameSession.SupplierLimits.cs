@@ -149,15 +149,30 @@ namespace PCShopSell.Core.Session
             return null;
         }
         private int EmployeeSupplyAvailable(string employeeId,PurchaseOffer offer,int day)=>Math.Max(0,PurchaseRemaining(offer)-OtherSupplierReservations(employeeId,offer,day%7,day));
+
+        private static bool IsRetiredFruitPurchase(PurchaseLine line) => line?.Kind == PurchaseGoodsKind.Gift && line.PartId == Gifts.Fruit;
+
         private void LoadWeeklySupplierPlans()
         {
+            var staff = Employees;
+            foreach (var worker in staff)
+            {
+                var plan = worker.Person.PurchasePlan;
+                if (plan?.Items?.Any(IsRetiredFruitPurchase) != true) continue;
+                plan.Items = plan.Items.Where(line => !IsRetiredFruitPurchase(line)).ToArray();
+                if (plan.Items.Length == 0 && !plan.InventoryThreshold) plan.Daily = false;
+            }
+            foreach (var trip in _employeeTrips)
+                if (trip.RemainingItems?.Any(IsRetiredFruitPurchase) == true)
+                    trip.RemainingItems = trip.RemainingItems.Where(line => !IsRetiredFruitPurchase(line)).ToArray();
+
             bool NeedsPurchaseMigration(PurchaseLine line, EmployeePurchasePlan plan)
             {
                 string source = line.SourceId ?? plan.SourceId;
                 return IsFormerFarmRetailLine(line, source) || (line.Kind == PurchaseGoodsKind.Part && City.HasPlace(source)
                     && PurchaseDestinationId(source) != source);
             }
-            var buyers=Employees.Where(e=>e.Role==EmployeeRole.Buyer&&e.Person.PurchasePlan!=null).ToArray();
+            var buyers=staff.Where(e=>e.Role==EmployeeRole.Buyer&&e.Person.PurchasePlan!=null).ToArray();
             foreach(var buyer in buyers.Where(e=>!e.Person.PurchasePlan.Daily))
             {
                 var plan=buyer.Person.PurchasePlan;

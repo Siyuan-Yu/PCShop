@@ -42,13 +42,14 @@ namespace PCShopSell.Tests
             Assert.True(s.PlaceFromStock(false, GameSession.HomeWorkbenchId, WorkbenchPlacement()));
         }
 
-        [Test] public void MiHomeWorkbenchShipsToHomeAndRequiresInstallationAfterMoving()
+        [Test] public void MiHomeWorkbenchCanBeInstalledInEitherResidenceAndUsedFromBoth()
         {
             var data = GameSessionTests.Layout();
             data.places = data.places.Concat(new[]
             {
                 new LayoutPlaceData { id = "phone", name = "米家", kind = "shop", node = "dl", size = "small", business = GameSession.PhoneBusiness },
-                new LayoutPlaceData { id = "mall", name = "家具城", kind = "shop", node = "dl", size = "large", business = GameSession.MallBusiness }
+                new LayoutPlaceData { id = "mall", name = "家具城", kind = "shop", node = "dl", size = "large", business = GameSession.MallBusiness },
+                new LayoutPlaceData { id = "workbench_second_home", name = "第二住处", kind = "home", node = "home" }
             }).ToArray();
             using var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(2_000_000), GameTimestamp.From(new GameDate(0), 600));
             s.EventsEnabled = false;
@@ -78,10 +79,30 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(loaded, loaded.Home.Id);
             Assert.True(loaded.OwnsHomeWorkbench);
             Assert.False(loaded.CanUseHomeWorkbench);
-            Assert.False(loaded.PlaceFromStock(false, id, WorkbenchPlacement()));
-
-            MoveAndInstallWorkbench(loaded);
+            Assert.AreEqual(0, loaded.HomeTier);
+            var compactPlacement = new PlacedFurniture { Id = id, X = 3.5, Z = .75 };
+            Assert.True(loaded.PlaceFromStock(false, id, compactPlacement));
             Assert.True(loaded.CanUseHomeWorkbench);
+
+            const string secondHome = "workbench_second_home";
+            GameSessionTests.Teleport(loaded, "agency");
+            Assert.True(loaded.BuyResidentialHome(secondHome, false, true, keepCurrentResidence: true));
+            GameSessionTests.Teleport(loaded, secondHome);
+            Assert.True(loaded.CanUseHomeWorkbench);
+
+            GameSessionTests.Teleport(loaded, loaded.Home.Id);
+            Assert.True(loaded.StoreFurniture(false, loaded.HomeLayout.ToList().FindIndex(item => item.Id == id)));
+            Assert.True(loaded.HomeBox.TakeFurniture(id, 1));
+            GameSessionTests.Teleport(loaded, secondHome);
+            Assert.False(loaded.CanUseHomeWorkbench);
+            loaded.WarehouseBagHere.AddFurniture(id, 1);
+            Assert.True(loaded.PlaceFromStock(false, id, compactPlacement));
+            Assert.True(loaded.CanUseHomeWorkbench);
+            Assert.True(loaded.OwnsHomeWorkbench);
+
+            using var restored = GameSession.Load(loaded.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(loaded.CreateSave())));
+            GameSessionTests.Teleport(restored, restored.Home.Id);
+            Assert.True(restored.CanUseHomeWorkbench);
             GameSessionTests.Teleport(loaded, "phone");
             Assert.False(loaded.CanUseHomeWorkbench);
             Assert.False(loaded.CartAddFurniture(id));

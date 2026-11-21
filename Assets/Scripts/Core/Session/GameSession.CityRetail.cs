@@ -84,7 +84,7 @@ namespace PCShopSell.Core.Session
         }
         public bool CityComicExpoOpen => CurrentPlace?.Id == "life_expo" && Clock.Today.Day >= 22 && Clock.Today.Day <= 24 && IsPlaceOpen(CurrentPlace);
         public bool CityRetailGoodsAvailable(Place source, GiftDef product) => source != null && product != null && !product.LimitedEdition
-            && (product.SoldAt == source.Business || source.Business == FarmBusiness && RetailProducts.IsDrink(product.Id))
+            && (product.IsSoldAt(source.Business) || source.Business == FarmBusiness && RetailProducts.IsDrink(product.Id))
             && (source.Business != FarmBusiness || !FishingCatalog.RequiresCatch(product.IngredientId))
             && (!ClothingProducts.IsClothing(product.Id) || source.Id == "clothing_wholesale");
         public Money CityRetailWholesalePrice(Place source, GiftDef product)

@@ -1509,7 +1509,13 @@ namespace PCShopSell.Tests
                 Assert.AreSame(market, r.Workspace("market"));
                 StringAssert.DoesNotContain("市场变化与原创模型", r.Text);
                 r.Ui.CloseAllWindows(); r.Ui.OpenContactsPanel(); var people = r.Workspace("people");
-                r.Button("PeopleTab_relations").onClick.Invoke(); r.Button("PeopleTab_contacts").onClick.Invoke();
+                var peoplePanel = (RectTransform)people.Find("Panel");
+                var peopleSize = peoplePanel.sizeDelta;
+                var peoplePosition = peoplePanel.anchoredPosition;
+                r.Button("PeopleTab_relations").onClick.Invoke();
+                Assert.AreEqual(peopleSize, peoplePanel.sizeDelta);
+                Assert.AreEqual(peoplePosition, peoplePanel.anchoredPosition);
+                r.Button("PeopleTab_contacts").onClick.Invoke();
                 Assert.AreSame(people, r.Workspace("people"));
                 r.Ui.CloseAllWindows(); Assert.False(r.S.Time.IsHeld);
             }
@@ -1534,7 +1540,7 @@ namespace PCShopSell.Tests
             {
                 r.Ui.OpenMyPanel(); StringAssert.Contains("到米家购买居家办公台", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);
                 r.S.HomeBox.AddFurniture(GameSession.HomeWorkbenchId, 1); r.Ui.RebuildWindows();
-                StringAssert.Contains("需要中型及以上住宅安装", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);
+                StringAssert.Contains("在任一可入住的自家住宅摆放居家办公台", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);
                 HomeWorkbenchTests.MoveAndInstallWorkbench(r.S);
                 GameSessionTests.Teleport(r.S, r.S.MainShop.Place.Id); r.Ui.RebuildWindows();
                 StringAssert.Contains("回家后可用", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);

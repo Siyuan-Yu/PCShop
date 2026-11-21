@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.World;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -39,19 +40,17 @@ namespace PCShopSell.Game.UI
 
             string serviceName = GameSession.VenueServiceName(definition, Math.Max(0, activity.ServiceChoice));
             bool withCompanions = activity.Participants.Length > 0;
-            int topicCount = (definition.Choices?.Length ?? 0) - definition.ServiceCount;
-            bool hasConversation = withCompanions && topicCount > 0;
-            bool walkConversation = !dining && hasConversation;
+            var topics = ActivityTopicIndices(activity, definition);
+            bool hasConversation = topics.Length > 0;
             string[] companionNames = activity.Participants.Select(p => session.CityPerson(p.PersonId)?.Name ?? "同行者").ToArray();
-            var topics = Enumerable.Range(definition.ServiceCount, topicCount);
-            bool HasUnusedWalkTopic() => topics.Any(topic => !activity.Choices.Contains(topic.ToString()));
-            bool choosingWalkTopic = walkConversation && HasUnusedWalkTopic();
+            bool HasUnusedTopic() => topics.Any(topic => !activity.Choices.Contains(topic.ToString()));
+            bool choosingTopic = HasUnusedTopic();
             string startText = dining ? "上菜中…" : "走上步道…";
             string activityText = dining ? (withCompanions ? "和同行者一起用餐…" : "用餐中…")
                 : (withCompanions ? $"和{string.Join("、", companionNames)}沿步道散步…" : "沿步道散步…");
             float playback = 0f;
             float duration = hasConversation ? 7f : 4.5f;
-            float walkStop = duration * .5f;
+            float conversationStop = dining ? 1.4f : duration * .5f;
             _cityActivityHud?.gameObject.SetActive(false);
             _venueActivityCgWindow = OpenWindow(serviceName, 0, 0, w =>
             {
@@ -79,22 +78,15 @@ namespace PCShopSell.Game.UI
                         Button button = null;
                         button = Ui.Button(actions, definition.Choices[choice], () =>
                         {
-                            if (walkConversation)
-                            {
-                                if (!choosingWalkTopic || !OpenParkWalkConversation(activity, definition, choice, () =>
-                                    { if (!HasUnusedWalkTopic()) choosingWalkTopic = false; })) return;
-                                button.interactable = false;
-                                return;
-                            }
-                            if (session.ChooseCityActivity(activity.Id, choice)) button.interactable = false;
+                            if (!choosingTopic || !SelectCityActivityOption(activity, definition, choice,
+                                dining ? "回到餐桌" : "回到步道")) return;
+                            button.interactable = false;
+                            choosingTopic = HasUnusedTopic();
                         }, 17, Ui.SelectedButton(used), !used);
                         Ui.Size(button, 0, -1, 1);
                     }
-                    if (walkConversation)
-                    {
-                        Ui.Size(Ui.Button(actions, "继续散步", () => choosingWalkTopic = false, 17, Ui.ButtonHot), 0, -1, 1);
-                        actions.gameObject.SetActive(choosingWalkTopic);
-                    }
+                    Ui.Size(Ui.Button(actions, dining ? "继续吃饭" : "继续散步", () => choosingTopic = false, 17, Ui.ButtonHot), 0, -1, 1);
+                    actions.gameObject.SetActive(choosingTopic && playback >= .7f);
                 }
 
                 w.RefreshContent = () =>
@@ -106,47 +98,16 @@ namespace PCShopSell.Game.UI
                     }
                     if (_windows.LastOrDefault() != w || !Application.isFocused) return;
                     playback += Mathf.Min(Time.unscaledDeltaTime, .1f);
-                    if (choosingWalkTopic) playback = Mathf.Min(playback, walkStop);
-                    if (walkConversation) actions.gameObject.SetActive(choosingWalkTopic);
+                    if (choosingTopic) playback = Mathf.Min(playback, conversationStop);
+                    if (actions != null) actions.gameObject.SetActive(choosingTopic && playback >= .7f);
                     animateScene(playback);
-                    status.text = playback < .7f ? startText : choosingWalkTopic && playback >= walkStop ? "在湖边歇一会儿…" : activityText;
+                    status.text = playback < .7f ? startText : !dining && choosingTopic && playback >= conversationStop ? "在湖边歇一会儿…" : activityText;
                     if (playback < duration) return;
 
                     CompleteVenueActivityCg(w, activity);
                 };
             }, closable: false, scrollContent: false, showTitleBar: false, fullScreen: true);
             return true;
-        }
-
-        private bool OpenParkWalkConversation(CityActivity activity, CityActivityDefinition definition, int choice, Action onClosed)
-        {
-            var session = S;
-            var companions = activity.Participants.Where(p => p.Phase == CityParticipantPhase.Participating && session.CitySamePlace(p.PersonId))
-                .Select(p => session.CityPerson(p.PersonId)).Where(person => person != null).ToArray();
-            if (companions.Length == 0 || activity.Choices.Contains(choice.ToString())
-                || !session.ChooseCityActivity(activity.Id, choice)) return false;
-
-            bool sharingExperience = definition.Choices[choice] == "分享经历";
-            var first = companions[0];
-            OpenDialogue(first.Id, first.Name, session.CityPersonRole(first.Id), "", null, onClosed: onClosed,
-                start: ctx => ShowTopic(ctx, 0, false));
-            return true;
-
-            void ShowTopic(TalkCtx ctx, int index, bool followUp)
-            {
-                var person = companions[index];
-                ctx.SpeakerId = person.Id;
-                string line = sharingExperience && !followUp ? session.SharePersonalExperience(person.Id)
-                    : session.CityTalk(person.Id, followUp && !sharingExperience ? "interest" : "life");
-                var replies = new List<TalkOpt>();
-                if (!followUp)
-                    replies.Add(new TalkOpt { Label = sharingExperience ? "那你最近过得怎么样？" : "平时喜欢做些什么？",
-                        Act = () => ShowTopic(ctx, index, true) });
-                if (index + 1 < companions.Length)
-                    replies.Add(new TalkOpt { Label = $"听{companions[index + 1].Name}说说", Act = () => ShowTopic(ctx, index + 1, false) });
-                replies.Add(new TalkOpt { Label = "回到步道", Hot = true, Act = () => ctx.W.Close() });
-                ctx.Show(string.IsNullOrWhiteSpace(line) ? "难得有空出来走走。我们在这儿多待一会儿吧。" : line, replies.ToArray());
-            }
         }
 
         private void CompleteVenueActivityCg(Window window, CityActivity activity)
@@ -163,7 +124,7 @@ namespace PCShopSell.Game.UI
             if (S != session || session.CurrentPlace != place || session.IsGameOver) return;
             void ReturnToVenue()
             {
-                if (S == session && session.CurrentPlace == place && !session.IsGameOver && !AnyModalOpen)
+                if (S == session && session.CurrentPlace == place && place.Kind != PlaceKind.Home && !session.IsGameOver && !AnyModalOpen)
                     OpenCityVenue(place);
             }
 

@@ -9,7 +9,8 @@ namespace PCShopSell.Game.Runtime
     {
         private const int Cabins = 12;
         private const float EyeAtBottom = 2.4f;
-        internal static float WheelRadius(bool garden) => ((garden ? 82f : 44f) - EyeAtBottom) * .5f;
+        private static readonly Vector3 CabinEye = new Vector3(0, .74f, -.39f);
+        internal static float WheelRadius(bool garden) => ((garden ? 164f : 88f) - EyeAtBottom) * .5f;
 
         internal static void Build(Transform root, Place place, float width, float depth)
         {
@@ -32,7 +33,8 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root, "CounterTop", new Vector3(garden ? -8f : 5.3f, 1.34f, 6), new Vector3(4.4f, .15f, 2.4f), pale);
 
             float radius = WheelRadius(garden);
-            var wheel = Child(root, "FerrisWheel", new Vector3(garden ? -18 : -11, radius + EyeAtBottom, garden ? 29 : 16));
+            // Clear the neighboring coaster as the larger garden wheel passes through its lower arc.
+            var wheel = Child(root, "FerrisWheel", new Vector3(garden ? -26 : -11, radius + EyeAtBottom - CabinEye.y, garden ? 29 : 16));
             var rim = Child(wheel, "Rim", Vector3.zero);
             foreach (float z in new[] { -.85f, .85f })
             {
@@ -47,20 +49,39 @@ namespace PCShopSell.Game.Runtime
                     }
                 }
             }
+            // Mount the cabins on the scenic side of the wheel, with the support legs behind them.
+            float cabinSide = garden ? 1f : -1f;
+            float cabinOffset = garden ? 3.55f : -3.75f;
+            var upholstery = Mats.Lit(ArtDirection.Hex("B8A08A"), .12f);
+            var interior = Mats.Lit(ArtDirection.Hex("E1D4BF"), .2f);
+            var glass = Mats.Unlit(new Color(.66f, .82f, .86f, .07f));
             for (int i = 0; i < Cabins; i++)
             {
-                var cabin = Child(wheel, "Cabin" + i, WheelOffset(radius, i / (float)Cabins));
+                var carriage = Child(wheel, "Cabin" + i, WheelOffset(radius, i / (float)Cabins));
+                var cabin = Child(carriage, "PassengerCabin", new Vector3(0, 0, cabinOffset));
+                cabin.localRotation = Quaternion.Euler(0, garden ? -37f : -103f, 0);
+                Beam(carriage, "CabinSuspension", new Vector3(0, 0, .85f * cabinSide),
+                    new Vector3(0, 1.52f, cabinOffset), .24f, blue);
                 Material body = i % 3 == 0 ? blue : i % 3 == 1 ? red : pale;
-                Prims.Box(cabin, "CarBase", new Vector3(0, -.57f, 1.18f), new Vector3(2.55f, 1.1f, 2.85f), body);
-                Prims.Box(cabin, "CurvedRoof", new Vector3(0, 1.18f, 1.18f), new Vector3(2.62f, .23f, 2.91f), body);
-                foreach (float x in new[] { -1.22f, 1.22f })
-                    foreach (float z in new[] { -.17f, 2.5f })
-                        Prims.Box(cabin, "WindowPost", new Vector3(x, .58f, z), new Vector3(.12f, 1.2f, .12f), body);
-                Prims.Box(cabin, "CabinLamp", new Vector3(0, 1.07f, 2.62f), new Vector3(.62f, .15f, .16f), gold);
+                Prims.Box(cabin, "CarFloor", new Vector3(0, -.57f, 0), new Vector3(3.2f, .16f, 2.5f), body);
+                Prims.Box(cabin, "CabinRoof", new Vector3(0, 1.46f, 0), new Vector3(3.24f, .15f, 2.58f), interior);
+                foreach (float x in new[] { -1.52f, 1.52f })
+                {
+                    Prims.Box(cabin, "SideSill", new Vector3(x, -.31f, 0), new Vector3(.10f, .37f, 2.41f), body);
+                    Prims.Box(cabin, "SideGlass", new Vector3(x, .63f, 0), new Vector3(.02f, 1.53f, 2.35f), glass);
+                    foreach (float z in new[] { -1.2f, 1.2f })
+                        Prims.Box(cabin, "WindowPost", new Vector3(x, .63f, z), new Vector3(.085f, 1.53f, .085f), interior);
+                }
+                Prims.Box(cabin, "PanoramicGlass", new Vector3(0, .63f, 1.2f), new Vector3(2.97f, 1.53f, .02f), glass);
+                Prims.Box(cabin, "FrontSill", new Vector3(0, -.31f, 1.2f), new Vector3(3.1f, .37f, .10f), interior);
+                Prims.Box(cabin, "RearWall", new Vector3(0, .44f, -1.2f), new Vector3(3.09f, 1.89f, .10f), body);
+                Prims.Box(cabin, "BenchSeat", new Vector3(0, -.12f, -.76f), new Vector3(2.68f, .17f, .65f), upholstery);
+                Prims.Box(cabin, "BenchBack", new Vector3(0, .22f, -1.06f), new Vector3(2.68f, .57f, .17f), upholstery);
+                if (i == 0) Child(cabin, "SeatedEye", CabinEye);
             }
             foreach (float side in new[] { -1f, 1f })
-                Beam(wheel, "SupportLeg", new Vector3(side * (garden ? 10f : 6f), -wheel.localPosition.y, -2.4f),
-                    new Vector3(0, 0, -.85f), garden ? 1.25f : .85f, blue);
+                Beam(wheel, "SupportLeg", new Vector3(side * (garden ? 10f : 6f), -wheel.localPosition.y, -2.4f * cabinSide),
+                    new Vector3(0, 0, -.85f * cabinSide), garden ? 1.25f : .85f, blue);
             Prims.Box(wheel, "Axle", Vector3.zero, new Vector3(2.7f, 2.7f, 2.6f), red);
             if (!garden) return;
 
@@ -133,7 +154,7 @@ namespace PCShopSell.Game.Runtime
     internal sealed class AmusementRideCamera : System.IDisposable
     {
         private readonly Camera _camera, _worldCamera;
-        private readonly Transform _venue, _wheel, _carousel, _stall;
+        private readonly Transform _venue, _wheel, _wheelSeat, _carousel, _stall;
         private readonly AmusementRide _ride;
         private readonly bool _garden;
         private readonly int _seat;
@@ -148,6 +169,7 @@ namespace PCShopSell.Game.Runtime
             _ride = ride;
             _seat = seat;
             _wheel = _venue.Find("FerrisWheel");
+            _wheelSeat = _wheel?.Find("Cabin0/PassengerCabin/SeatedEye");
             _carousel = _venue.Find("Carousel/Turntable");
             _stall = _venue.Find("RingTossStall");
             Texture = new RenderTexture(1600, 900, 24) { name = "AmusementRideView" };
@@ -156,7 +178,7 @@ namespace PCShopSell.Game.Runtime
             _camera.enabled = false;
             _camera.cullingMask &= ~(1 << ShopBeacon.StreetPropertyEffectLayer);
             _camera.orthographic = false;
-            _camera.fieldOfView = 52;
+            _camera.fieldOfView = ride == AmusementRide.FerrisWheel ? 54f : 52f;
             _camera.nearClipPlane = .12f;
             _camera.farClipPlane = 3300;
             _camera.targetTexture = Texture;
@@ -169,8 +191,8 @@ namespace PCShopSell.Game.Runtime
 
         internal void Look(Vector2 delta)
         {
-            _yaw = Mathf.Repeat(_yaw + delta.x + 180, 360) - 180;
-            _pitch = Mathf.Clamp(_pitch + delta.y, -44f, 50f);
+            _yaw = Mathf.Clamp(_yaw + delta.x, -72f, 72f);
+            _pitch = Mathf.Clamp(_pitch + delta.y, -28f, 34f);
         }
 
         internal void ResetLook() => _yaw = _pitch = 0;
@@ -185,8 +207,8 @@ namespace PCShopSell.Game.Runtime
             {
                 float radius = AmusementParkView.WheelRadius(_garden);
                 AmusementParkView.TurnWheel(_wheel, radius, progress);
-                at = _wheel.TransformPoint(AmusementParkView.WheelOffset(radius, progress) + Vector3.forward * 2.75f);
-                angles = new Vector3(Mathf.Lerp(3f, _garden ? 17f : 24f, Mathf.Sin(progress * Mathf.PI)), _garden ? 143f : -103f, 0);
+                at = _wheelSeat.position;
+                angles = new Vector3(Mathf.Lerp(5f, _garden ? 16f : 14f, Mathf.Sin(progress * Mathf.PI)), _wheelSeat.eulerAngles.y, 0);
             }
             else if (_ride == AmusementRide.RollerCoaster)
             {

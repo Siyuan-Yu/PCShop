@@ -16,7 +16,7 @@ namespace PCShopSell.Core.Session
         public double OutfitComfortMin => CurrentClothing.ComfortMinC;
         public double OutfitComfortMax => CurrentClothing.ComfortMaxC;
         public bool CanChangeCityClothing => Trip==null && !IsWorking && !CityActivityExclusive &&
-            (CurrentPlace==Home&&HomeHas(FurnitureRole.Wardrobe) || CurrentPlace!=null &&
+            (ResidenceHasHere(FurnitureRole.Wardrobe) || CurrentPlace!=null &&
              (IsCityClothingRetail(CurrentPlace)&&IsPlaceOpen(CurrentPlace) || MyShops.Any(s=>s.Place==CurrentPlace&&s.Layout.Any(f=>f.Id=="fitting_mirror"))));
         public bool IsCityClothingRetail(Place p)=>p!=null&&(p.Id=="shop02"||p.Id=="clothing_boutique")&&!IsMyShop(p)&&!IsVacant(p)&&VentureAt(p.Id)==null;
         public IReadOnlyList<OutfitDef> CityClothingSelection(Place p)=>Outfits.All.Where(o=>o.Id!=Outfits.Default &&

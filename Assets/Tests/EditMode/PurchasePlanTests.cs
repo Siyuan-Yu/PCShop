@@ -486,21 +486,23 @@ namespace PCShopSell.Tests
             plan.IntervalDays = 3; Assert.AreEqual(2, plan.Copy().NextPurchaseDay);
         }
         [Test]
-        public void PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow()
+        public void DailyRecruitment_RefreshesFourCandidatesAndKeepsRemainingCandidatesOnReload()
         {
             using (var s = GameSessionTests.Make(50000, 9 * 60))
             {
                 s.EventsEnabled = false;
                 GameSessionTests.Teleport(s, "pc");
-                Assert.True(s.PostJobAd());
                 s.Clock.Restore(new GameDate(1), 8 * 60 + 59); s.AdvanceClock(2);
                 var originals = s.Candidates.Select(x => x.Id).ToArray();
-                Assert.AreEqual(2, originals.Length);
-                Assert.True(s.PostJobAd());
-                Assert.AreEqual(2, s.Candidates.Count, "重贴告示不能删除原候选人");
-                s.Clock.Restore(new GameDate(2), 8 * 60 + 59); s.AdvanceClock(2);
-                Assert.AreEqual(4, s.Candidates.Count);
-                Assert.True(originals.All(id => s.Candidates.Any(x => x.Id == id)));
+                Assert.AreEqual(4, originals.Length);
+                Assert.IsTrue(s.Hire(0));
+                using var loaded = GameSession.Load(s.City, s.CreateSave());
+                CollectionAssert.AreEqual(originals.Skip(1), loaded.Candidates.Select(x => x.Id));
+                loaded.Clock.Restore(new GameDate(1), 17 * 60 + 59); loaded.AdvanceClock(1);
+                Assert.Zero(loaded.Candidates.Count);
+                loaded.Clock.Restore(new GameDate(2), 8 * 60 + 59); loaded.AdvanceClock(2);
+                Assert.AreEqual(4, loaded.Candidates.Count);
+                Assert.False(loaded.Candidates.Any(x => originals.Contains(x.Id)));
             }
         }
     }

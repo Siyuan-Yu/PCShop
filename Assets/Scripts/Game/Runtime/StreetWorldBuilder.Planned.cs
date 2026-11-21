@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.Collections;
+using PCShopSell.Core.Home;
+using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -82,6 +84,7 @@ namespace PCShopSell.Game.Runtime
                 IndustrialMaterials.Surface("paving",paving,new Vector2(w/4,d/4)));
             Prims.Box(root,"EntryPath",new Vector3(0,.025f,-1),new Vector3(1.6f,.04f,2),
                 IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(.5f,.6f)));
+            if(block.model=="oldhome") return;
             if(block.tier==0)
             {
                 Prims.Box(root,"SmallPorch",new Vector3(-w*.3f,.25f,-.45f),new Vector3(1.4f,.5f,.8f),Mats.Lit(ArtDirection.Sage));
@@ -107,6 +110,12 @@ namespace PCShopSell.Game.Runtime
             root.rotation=Quaternion.Euler(0,(float)p.Heading,0);
             var vis=new PlaceVisual{Place=p,Entrance=door,Root=root.gameObject,ResidentialBlock=block};Places[p.Id]=vis;_cur=vis;
             float w=(float)p.Width,d=(float)p.Depth;
+            if (GameSession.IsCommercialPremises(p))
+            {
+                var room = RoomSpec.ForShop(p.Size);
+                w = (float)room.Width;
+                d = (float)room.Depth;
+            }
             if(p.Kind==PlaceKind.Garage)
             {
                 BuildRegionalGarage(root,p,node,door,vis);return;
@@ -144,6 +153,9 @@ namespace PCShopSell.Game.Runtime
             else if(p.Kind==PlaceKind.Station)StarterMetro(root,p,w,d);
             else PlannedBuilding(root,p.Model,p.Tier,w,d,p,(float)(block?.height ?? 0),block?.variant ?? 0);
             if (block != null) BuildResidentialPlot(root, block);
+            else if (p.Kind == PlaceKind.Home && p.Model == "oldhome")
+                StarterPart(root, "Plain residence entry path", new Vector3(0, .035f, -1.65f), new Vector3(1.7f, .06f, 3.3f),
+                    ArtDirection.Hex("BFB4A0"), "paving", new Vector2(.5f, .85f));
             // The route node is on the road; its approach ends at the actual public door.
             var delta=door-node;
             if(!_city.IsLakeCity)
@@ -157,6 +169,17 @@ namespace PCShopSell.Game.Runtime
         private static float PlannedHeight(string model,int tier)=>model=="villa"?6:model=="oldhome"?6:model=="luxury_apartment"?22:model=="apartment"?14:model=="office"?16:model=="warehouse"?6:4.5f+tier*.65f;
         private static float PlannedPlaceHeight(Place p)
         {
+            if(p.Id==StarterHome && p.Model=="oldhome")return StarterResidenceHeight+1.4f;
+            if (GameSession.IsCommercialPremises(p))
+            {
+                int variation = StableCityHash(p.Id) % 3;
+                return p.Size switch
+                {
+                    ShopSize.Large => 12f + variation * 2f,
+                    ShopSize.Medium => 8.2f + variation * 1.2f,
+                    _ => 5.6f + variation * .6f
+                };
+            }
             if(p.Model=="villa")return 9.5f;
             if(p.Model=="apartment"||p.Model=="luxury_apartment")return ResidenceArtHeight(PlannedHeight(p.Model,p.Tier),p.Tier,StableCityHash(p.Id))+1.5f;
             if(p.Model!="shop")return PlannedHeight(p.Model,p.Tier);
@@ -169,6 +192,11 @@ namespace PCShopSell.Game.Runtime
             int seed=StableCityHash(p?.Id??(root.name+"_"+variation));
             float h=configuredHeight>0?configuredHeight:PlannedHeight(model,tier);
             if(p!=null && model=="shop")h=PlannedPlaceHeight(p);
+            if(model=="oldhome" && (p==null || p.Kind==PlaceKind.Home))
+            {
+                BuildOldResidence(root,p,w,d,h,seed,starter:p?.Id==StarterHome);
+                return;
+            }
             if(model=="apartment"||model=="luxury_apartment")
             {
                 ReferenceResidence(root,w,d,h,tier,seed);

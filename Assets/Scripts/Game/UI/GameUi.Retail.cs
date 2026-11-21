@@ -222,7 +222,7 @@ namespace PCShopSell.Game.UI
             }
             else
             {
-                foreach(var product in Gifts.All.Where(g=>g.SoldAt==source.Business && !g.LimitedEdition))
+                foreach(var product in Gifts.SoldAtBusiness(source.Business).Where(g=>!g.LimitedEdition))
                 {
                     var item=product;
                     Offer("gift:"+item.Id,item.Name,ShelfKinds.ForGift(item.Id)?.Name??"商品",item.WeightKg,S.CityGoodsRetailPrice(item),item.Description,()=>S.CartAddGift(item.Id));
@@ -326,7 +326,7 @@ namespace PCShopSell.Game.UI
                 if (farm) price += item.Key switch
                 {
                     "wholesale:produce:rice" => "/袋",
-                    "wholesale:" + Gifts.Fruit or "wholesale:" + Gifts.Drink => "/箱",
+                    "wholesale:" + Gifts.Drink => "/箱",
                     "wholesale:" + Gifts.Soda => "/瓶",
                     _ => "/份"
                 };

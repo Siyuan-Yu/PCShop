@@ -9,12 +9,14 @@ namespace PCShopSell.Core.Session
         public static double FridgeCapacityOf(System.Collections.Generic.IEnumerable<PlacedFurniture> layout) =>
             layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d?.Role == FurnitureRole.Fridge).Sum(d => d.FridgeCapacityKg);
         public double FridgeLimitKg(bool shop) => FridgeCapacityOf(LayoutOf(shop));
-        public readonly Backpack HomeFridge = new Backpack();
+        public Backpack HomeFridge { get; private set; } = new Backpack();
         public Backpack FridgeOf(bool shop) => shop ? CurrentShop.Fridge : HomeFridge;
         public int FridgeCount(bool shop) => LayoutOf(shop).Count(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge);
-        public bool CanOpenFridge => (AtHome || InPlayerShop) && FridgeCount(InPlayerShop) > 0;
-        public Backpack CurrentFridge => FridgeOf(InPlayerShop);
-        public double CurrentFridgeLimitKg => FridgeLimitKg(InPlayerShop);
+        private Backpack ResidenceFridgeHere => HasSecondaryResidenceWarehouse ? FreightStorageAt(CurrentPlace.Id).Fridge : HomeFridge;
+        public bool CanOpenFridge => InPlayerShop ? FridgeCount(true) > 0 : ResidenceHasHere(FurnitureRole.Fridge);
+        public Backpack CurrentFridge => InPlayerShop ? FridgeOf(true) : ResidenceFridgeHere;
+        public double CurrentFridgeLimitKg => HasSecondaryResidenceWarehouse
+            ? FridgeCapacityOf(CurrentResidenceLayout) : FridgeLimitKg(InPlayerShop);
 
         private static int FridgeUnitsThatFit(double roomKg, double unitKg, int requested) =>
             unitKg <= 0 ? requested : (int)Math.Min(requested, Math.Floor(Math.Max(0, roomKg) / unitKg + 1e-9));
@@ -124,7 +126,7 @@ namespace PCShopSell.Core.Session
             if (warehouse && !HasWarehouseHere) return Fail("这里还没有可用的后仓。");
             var sk = ParseStored(key);
             if (sk == null) return false;
-            var other = warehouse ? BoxOf(InPlayerShop) : Backpack;
+            var other = warehouse ? WarehouseBagHere : Backpack;
             var from = intoFridge ? other : CurrentFridge;
             var to = intoFridge ? CurrentFridge : other;
             double amount = Math.Min(count, StoredHave(sk, from, null));
@@ -163,7 +165,7 @@ namespace PCShopSell.Core.Session
         // so time in any fridge never consumes its remaining outdoor shelf life.
         private void PreserveFridges()
         {
-            foreach (var bag in _shops.Select(shop => shop.Fridge).Prepend(HomeFridge))
+            foreach (var bag in _shops.Select(shop => shop.Fridge).Prepend(HomeFridge).Concat(_residenceFreight.Values.Select(storage => storage.Fridge)))
                 foreach (var batch in bag.Food.Packed)
                     batch.ExpireDay++;
         }

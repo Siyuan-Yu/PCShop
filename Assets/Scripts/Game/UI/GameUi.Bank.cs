@@ -14,7 +14,7 @@ namespace PCShopSell.Game.UI
     {
         private enum BankPage { Transfers, Borrow, Loans }
         private Window _bankWindow;
-        private Button _bankSecuritiesTab;
+        private Button _bankBorrowTab, _bankBorrowLessonButton, _bankSecuritiesTab;
         private BankDeskDraft _bankDraft;
 
         private sealed class BankDeskDraft
@@ -78,18 +78,21 @@ namespace PCShopSell.Game.UI
 
         private void BuildBank(Window w, BankDeskDraft draft)
         {
+            _bankBorrowLessonButton = null;
             var tabs = Ui.Row(w.Content, 38, 6);
-            void Tab(BankPage page, string label, string name)
+            Button Tab(BankPage page, string label, string name)
             {
-                Ui.Tab(tabs, label, () =>
+                var button = Ui.Tab(tabs, label, () =>
                 {
                     draft.Page = page;
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
-                }, draft.Page == page).name = name;
+                }, draft.Page == page);
+                button.name = name;
+                return button;
             }
             Tab(BankPage.Transfers, "存取款", "BankTransfersTab");
-            Tab(BankPage.Borrow, "借款", "BankBorrowTab");
+            _bankBorrowTab = Tab(BankPage.Borrow, "借款", "BankBorrowTab");
             Tab(BankPage.Loans, "我的贷款", "BankLoansTab");
             _bankSecuritiesTab = Ui.Tab(tabs, "证券交易", OpenBankSecurities, false);
             _bankSecuritiesTab.name = "BankSecuritiesTab";
@@ -161,6 +164,16 @@ namespace PCShopSell.Game.UI
 
         private void BuildBankBorrow(Window w, BankDeskDraft draft)
         {
+            if (S.BankBorrowTutorialPending)
+            {
+                var lesson = Ui.Row(w.Content, 108, 10);
+                Ui.Size(Ui.Label(lesson, "<b>柜台借款</b>\n先填金额和期限，核对利息、到期应还金额和扣款日期。确定要借时，点「申请借款」完成验证。提前结清按已用月份计息。",
+                    16, TextAnchor.MiddleLeft), 0, 108, 1);
+                _bankBorrowLessonButton = Ui.Size(Ui.Button(lesson, "已了解借款", () =>
+                {
+                    if (S.ConfirmBankBorrowTutorial()) w.Rebuild();
+                }, 18, Ui.ButtonHot), 148, 46);
+            }
             BuildLoanCredit(w.Content);
             var inputs = Ui.Row(w.Content, 74, 12);
             var amountField = Ui.Size(Ui.Rect(inputs, "BankLoanAmountField"), 0, 74, 1);

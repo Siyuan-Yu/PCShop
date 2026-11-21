@@ -107,6 +107,7 @@ namespace PCShopSell.Game.Runtime
 
         /// <summary>老板站在柜台旁边（能给排队的人结账）。</summary>
         public bool NearCounter { get; private set; }
+        internal bool HasCounter => _hasCounter;
 
         /// <summary>收银台头顶的位置（给“按 F 收银”提示用）；还没摆收银台就在老位置。</summary>
         public Vector3 CounterWorld => Origin + new Vector3(_counterPos.x, 2.3f, _counterPos.y);
@@ -725,7 +726,11 @@ namespace PCShopSell.Game.Runtime
 
         private List<Vector3> _cityExitPath;
         private int _cityExitIndex;
+        private List<Vector3> _checkoutPath;
+        private int _checkoutPathIndex;
         private readonly System.Action<Vector3, float> _moveAlongRoute;
+        private Rect IndoorWalkArea => Rect.MinMaxRect(.3f, .4f, Width - .3f, Depth - .3f);
+
         public void CancelCityDoorWalk(){_cityExitPath=null;_cityExitIndex=0;}
         public int WalkToDoor(float dt)
         {
@@ -733,13 +738,43 @@ namespace PCShopSell.Game.Runtime
             var at=_owner.transform.localPosition;
             if(_cityExitPath==null)
             {
-                var walkArea = Rect.MinMaxRect(.3f, .4f, Width - .3f, Depth - .3f);
-                _cityExitPath = CityRoomRoute.Find(at, walkArea, NearDoorAt, _decor.Blockers);
+                _cityExitPath = CityRoomRoute.Find(at, IndoorWalkArea, NearDoorAt, _decor.Blockers);
                 _cityExitIndex=0;if(_cityExitPath==null)return -1;
             }
             if (_cityExitIndex >= _cityExitPath.Count) return -1;
             return CityRoomRoute.Advance(_cityExitPath, ref _cityExitIndex, _owner.transform, dt,
                 OwnerWalkSpeed, _moveAlongRoute) ? 0 : -1;
+        }
+
+        internal bool PlanCheckoutWalk()
+        {
+            if (!_hasCounter) return false;
+            Vector3 at = _owner.transform.localPosition;
+            Rect area = IndoorWalkArea;
+            // Prefer the cashier side. A counter placed against a wall can still be used from the aisle.
+            _checkoutPath = CityRoomRoute.Find(at, area, point => NearCounterAt(point, cashierSideOnly: true), _decor.Blockers)
+                ?? CityRoomRoute.Find(at, area, point => NearCounterAt(point), _decor.Blockers);
+            _checkoutPathIndex = 0;
+            return _checkoutPath != null;
+        }
+
+        internal int WalkToCheckoutCounter(float dt)
+        {
+            if (_checkoutPath == null && !PlanCheckoutWalk()) return -1;
+            var owner = _owner.transform;
+            if (!CityRoomRoute.Advance(_checkoutPath, ref _checkoutPathIndex, owner, dt, OwnerWalkSpeed, _moveAlongRoute))
+                return -1;
+            if (_checkoutPathIndex < _checkoutPath.Count) return 0;
+            if (!NearCounterAt(owner.localPosition)) return -1;
+            var towardCounter = new Vector3(_counterPos.x, 0, _counterPos.y) - owner.localPosition;
+            if (towardCounter.sqrMagnitude > .001f) owner.localRotation = Quaternion.LookRotation(towardCounter);
+            return 1;
+        }
+
+        internal void CancelCheckoutWalk()
+        {
+            _checkoutPath = null;
+            _checkoutPathIndex = 0;
         }
 
         private bool CanStand(Vector3 to, Vector3 from)
@@ -850,6 +885,15 @@ namespace PCShopSell.Game.Runtime
             if (_hasBench) _owner.transform.localPosition = _benchFront;
         }
 
+        private bool NearCounterAt(Vector3 point, bool cashierSideOnly = false)
+        {
+            if (!_hasCounter) return false;
+            Vector3 local = Quaternion.Inverse(_counterRot) * (point - new Vector3(_counterPos.x, 0, _counterPos.y));
+            float halfDepth = _counterSize.y / 2f;
+            float frontLimit = cashierSideOnly ? halfDepth : -halfDepth - 1f;
+            return Mathf.Abs(local.x) < _counterSize.x / 2f + .3f && local.z > frontLimit && local.z < halfDepth + .6f;
+        }
+
         private void UpdateNearbyShelf(bool active)
         {
             NearbyShelf = -1;
@@ -860,12 +904,7 @@ namespace PCShopSell.Game.Runtime
             NearBox = false; NearFridge = false;
             if (!active) return;
             Vector3 op = _owner.transform.localPosition;
-            if (_hasCounter)
-            {
-                // 收银台自己的坐标系里：沿长边不超出两端 0.3 米，前面（顾客那侧）1 米内、后面（老板那侧）0.6 米内都算站在柜台边
-                Vector3 rel = Quaternion.Inverse(_counterRot) * (op - new Vector3(_counterPos.x, 0, _counterPos.y));
-                NearCounter = Mathf.Abs(rel.x) < _counterSize.x / 2f + 0.3f && rel.z > -(_counterSize.y / 2f + 1.0f) && rel.z < _counterSize.y / 2f + 0.6f;
-            }
+            NearCounter = NearCounterAt(op);
             Vector3 lp = _owner.transform.localPosition;
             float best = 1.5f;
             foreach (ShelfDisplay sh in _shelves)
@@ -1298,7 +1337,11 @@ namespace PCShopSell.Game.Runtime
             ShopSimulation shop = s.PlayerShop;
             UpdateEmergencyLighting(climateShop?.EmergencyLighting ?? default, s.Clock.Today.TotalDays, s.Clock.Now.TotalMinutes);
             UpdateOpenLook(shop.IsOpen, realDt);
-            if (_decor.Sync(s.ShopLayout, s.ShopRoom)) CancelCityDoorWalk();
+            if (_decor.Sync(s.ShopLayout, s.ShopRoom))
+            {
+                CancelCityDoorWalk();
+                CancelCheckoutWalk();
+            }
             if (_fxVersion != _decor.Version) RebuildFixtures();
             _owner.SetActive(s.InPlayerShop);
             UpdateNearbyShelf(s.InPlayerShop);
@@ -1870,6 +1913,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Clear()
         {
+            CancelCheckoutWalk();
             ClearUsedSellerFigures();
             foreach (var v in _visitors.Values) Kill.It(v.Go);
             foreach (var v in _leaving) Kill.It(v.Go);

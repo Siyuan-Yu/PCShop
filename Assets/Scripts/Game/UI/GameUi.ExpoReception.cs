@@ -43,6 +43,11 @@ namespace PCShopSell.Game.UI
                 OpenWindow("云帆会展中心 · 现场预约", 860, 620, w => BuildOnsiteAppointment(w, place, activityId));
                 return;
             }
+            if (place?.Id == "life_expo" && S.RunningCityActivity is CityActivity outing && outing.VenueId == place.Id)
+            {
+                OpenCityActivityDetail(outing.Id);
+                return;
+            }
             if (place?.Id == "life_expo" && S.PendingVenueActivity(place, activityId) is { ServiceConfirmed: true } booking
                 && S.CityActivityService(booking) is CityActivityDefinition reserved)
             {

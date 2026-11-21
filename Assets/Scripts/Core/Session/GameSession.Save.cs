@@ -163,7 +163,8 @@ namespace PCShopSell.Core.Session
                 assembler = Assembler != null ? ToSave(Assembler) : null,
                 everHired = EverHired,
                 candidates = _candidates.Select(ToSave).ToArray(),
-                jobAdDay = JobAdDay,
+                dailyCandidateDay = _lastCandidateDay + 1,
+                openingStaffWaitUntil = _openingStaffWaitUntil,
 
                 monthGoalEvaluated = MonthGoalEvaluated,
                 monthGoalPassed = MonthGoalPassed,
@@ -307,8 +308,8 @@ namespace PCShopSell.Core.Session
                 if (candidate.CandidateLeavesAt <= 0) candidate.CandidateLeavesAt = (long)Clock.Today.TotalDays * 1440 + CandidateLeaveMinute;
                 _candidates.Add(candidate);
             }
-            ExpireCandidates();
-            JobAdDay = d.jobAdDay;
+            _lastCandidateDay = d.dailyCandidateDay - 1;
+            _openingStaffWaitUntil = d.openingStaffWaitUntil;
 
             MonthGoalEvaluated = d.monthGoalEvaluated;
             MonthGoalPassed = d.monthGoalPassed;
@@ -392,6 +393,8 @@ namespace PCShopSell.Core.Session
             RestoreKolStreaming(d);
             RefreshBrandTraffic();
             EnsureFirstShopListings(Clock.Today.TotalDays);
+            ExpireCandidates();
+            RefreshDailyCandidates();
         }
 
         private const string AutoBuildFlag = "employee:auto-build";

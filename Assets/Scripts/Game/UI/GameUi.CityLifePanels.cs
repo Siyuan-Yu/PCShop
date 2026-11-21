@@ -991,13 +991,13 @@ namespace PCShopSell.Game.UI
                         int index = i; bool done = a.Choices.Contains(index.ToString()) && !S.OutdoorRepeatChoice(a, index);
                         var outdoor = S.OutdoorActivityState(a.Id);
                         bool available = outdoor?.Pending == null;
+                        if (IsActivityTopic(def, index)) available &= !done && ActivitySpeakers(a, def.Choices[index]).Length > 0;
                         if (outdoor?.Number == 69 && index >= 2 && index <= 4)
                             available &= outdoor.Visited >= 3 && index - 2 < outdoor.QuoteCents.Length;
                         Ui.Size(Ui.Button(w.Content, (done ? "✓ " : "") + S.EventActivityChoiceLabel(def, index), () =>
                         {
-                            if (!manual) CloseAllWindows();
-                            S.ChooseCityActivity(activityId, index);
-                            if (manual) w.RequestRebuild();
+                            if (SelectCityActivityOption(a, def, index, beforeOtherChoice: manual ? null : CloseAllWindows) && !w.Closed)
+                                w.RequestRebuild();
                         }, 18, Ui.SelectedButton(done), available), -1, 44);
                     }
                     BuildLifeActivityInteraction(w, a);

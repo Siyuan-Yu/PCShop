@@ -108,21 +108,26 @@ namespace PCShopSell.Game.UI
         /// <summary>选这个货架摆哪一类货：一个小窗口，点哪类就是哪类。owner 是从货架窗口打开的就一起刷新。</summary>
         public void OpenShelfKindChooser(int layoutIndex, Window owner = null)
         {
-            string group=S.ShelfKindAt(layoutIndex)?.BrowseGroup??(S.RetailKind=="computer"?"电脑配件":S.RetailKind=="clothing"?"服装":S.RetailKind=="models"?"模型手办":S.RetailKind==PetShopCatalog.ShopKind?"宠物用品":"零售商品");
+            var guidedKind = owner == null && S.OpeningShelfTutorialPaused && S.OpeningShelfStockVisited
+                && layoutIndex == S.OpeningShelfTutorialIndex()
+                ? S.OpeningShelfTutorialKind() : null;
+            string group=guidedKind?.BrowseGroup??S.ShelfKindAt(layoutIndex)?.BrowseGroup??(S.RetailKind=="computer"?"电脑配件":S.RetailKind=="clothing"?"服装":S.RetailKind=="models"?"模型手办":S.RetailKind==PetShopCatalog.ShopKind?"宠物用品":"零售商品");
             OpenCompactWindow("这个货架摆什么", 1000, w =>
             {
+                if (guidedKind != null) _openingShelfChooser = w;
                 var shop=S.PlayerShop;var current=S.ShelfKindAt(layoutIndex);
                 Line(w.Content,"先选大类，再选具体品类；所有店都能混合陈列，后仓现货会自动摆上来。",15,Ui.Dim);
                 var groups=Ui.Row(w.Content,38,6);
                 foreach(string name in new[]{"全部","服装","电脑配件","模型手办","宠物用品","零售商品"})
                 {
                     string choice=name;
-                    var button=Ui.Size(Ui.Button(groups,choice,()=>{group=choice;w.Rebuild();},16,Ui.SelectedButton(group==choice)),-1,38,1);
+                    var button=Ui.Size(Ui.Button(groups,choice,()=>{group=choice;w.Rebuild();},16,Ui.SelectedButton(group==choice), guidedKind == null),-1,38,1);
                     button.name="ShelfGroup_"+choice;
                 }
                 void Pick(string id)
                 {
                     if(!S.SetShelfKind(layoutIndex,id))return;
+                    if (guidedKind != null) S.RefreshQuestProgress();
                     w.Close();owner?.Rebuild();RebuildDock();
                 }
                 foreach(var section in ShelfKinds.All.Where(k=>group=="全部" || k.BrowseGroup==group).GroupBy(k=>k.BrowseGroup))
@@ -137,14 +142,17 @@ namespace PCShopSell.Game.UI
                         int count=kind.Id=="secondhand"?S.SpecialBusiness(S.CurrentShop.Place.Id).Used.Count(i=>i.Owned&&!i.Sold):kind.IsParts?PartCatalog.InCategory(kind.Category).Sum(p=>shop.Stock.CountAll(p)):kind.GiftIds.Sum(id=>shop.Stock.GoodsCount(id));
                         int shelves=S.ShelvesOfKind(kind.Id);
                         string info=$"在库 {count} 件 · {(shelves==0?"尚未陈列":shelves+" 个货架")}";
-                        var button=Ui.Size(Ui.Button(row,kind.Name+(current?.Id==kind.Id?" ✓":"")+"\n<size=13>"+info+"</size>",()=>Pick(option.Id),17,current?.Id==kind.Id?Ui.ButtonHot:Ui.ButtonBg),0,-1,1);
+                        bool highlighted = guidedKind == kind;
+                        var button=Ui.Size(Ui.Button(row,kind.Name+(current?.Id==kind.Id?" ✓":"")+"\n<size=13>"+info+"</size>",()=>Pick(option.Id),17,
+                            highlighted || current?.Id==kind.Id ? Ui.ButtonHot : Ui.ButtonBg, guidedKind == null || highlighted),0,-1,1);
                         button.name="ShelfKind_"+kind.Id;
+                        if (highlighted) _openingShelfKindOption = button;
                     }
                     for (int i = n % columns; i > 0 && i < columns; i++)
                         Ui.Size(Ui.Rect(row, "Pad"), 0, -1, 1);
                 }
                 var actions=Ui.Row(w.Content,46,8);
-                Ui.Size(Ui.Button(actions,"清空这个货架",()=>Pick(null),17,Ui.ButtonBg,current!=null),-1,46,1);
+                Ui.Size(Ui.Button(actions,"清空这个货架",()=>Pick(null),17,Ui.ButtonBg,current!=null && guidedKind == null),-1,46,1);
                 Ui.Size(Ui.Button(actions,"取消",w.Close,17),160,46);
             });
         }

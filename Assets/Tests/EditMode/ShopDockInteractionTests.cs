@@ -142,7 +142,7 @@ namespace PCShopSell.Tests
                 state.LocationPlaceId=s.Home.Id;
                 typeof(GameUi).GetMethod("RefreshDock",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(ui,null);
                 StringAssert.DoesNotContain("导购与销售接待",Card(cashier.Id).GetComponentInChildren<Text>().text);
-                Assert.True(Dock().GetComponentsInChildren<Text>().Any(t=>t.text.Contains("招聘告示")),"招聘入口保留");
+                Assert.True(Dock().GetComponentsInChildren<Text>().Any(t=>t.text == "招聘"), "员工页保留每日招聘区");
             });
         }
         [Test]

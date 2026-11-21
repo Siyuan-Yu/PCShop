@@ -10,13 +10,18 @@ namespace PCShopSell.Game.UI
     internal sealed class OpeningGuideInputBlock : Image
     {
         public Button PassThrough { get; set; }
+        public RectTransform PassThroughArea { get; set; }
+        public RectTransform PassThroughViewport { get; set; }
 
         public override bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
         {
             if (PassThrough == null) return base.IsRaycastLocationValid(screenPoint, eventCamera);
+            var rect = PassThroughArea != null ? PassThroughArea : PassThrough.image.rectTransform;
             var canvas = PassThrough.image.canvas;
             var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
-            return !RectTransformUtility.RectangleContainsScreenPoint(PassThrough.image.rectTransform, screenPoint, camera);
+            return !RectTransformUtility.RectangleContainsScreenPoint(rect, screenPoint, camera)
+                || (PassThroughViewport != null
+                    && !RectTransformUtility.RectangleContainsScreenPoint(PassThroughViewport, screenPoint, camera));
         }
     }
 
@@ -195,6 +200,17 @@ namespace PCShopSell.Game.UI
         }
 
         private Button _mealDeliveryGuideButton;
+        private Window _openingRenovationConfirmWindow;
+        private Button _openingRenovationStartButton, _openingRenovationConfirmButton;
+        private Window _openingShelfChooser;
+        private Button _openingShelfCategoryButton, _openingShelfKindOption;
+        private readonly Dictionary<int, Button> _openingCounterButtons = new Dictionary<int, Button>();
+        private System.Action _refreshOpeningRestaurantTables;
+        private (int id, RestaurantJob job)? _openingCounterPendingAction, _openingCounterRejectedAction;
+        private Window _openingStaffLessonWindow;
+        private Button _openingStaffDockControl, _openingStaffLessonDone, _openingStaffFirstApplicant;
+        private Button _openingStaffPurchaseButton;
+        private RectTransform _openingStaffCandidates;
         private RectTransform _firstUseGuideRoot, _firstUseGuideCard;
         private Text _firstUseGuideText, _firstUseGuideArrow;
         private readonly Image[] _firstUseGuideFrame = new Image[4];
@@ -202,15 +218,16 @@ namespace PCShopSell.Game.UI
         private OpeningGuideInputBlock _firstUseInputBlock;
         private Button _requiredGuideTarget;
         private Navigation _requiredGuideNavigation;
+        private RectTransform _requiredGuideArea;
         public bool RequiredTutorialControlVisible => _requiredGuideTarget != null;
 
         private void UpdateFirstUseGuide()
         {
             bool meal = S.MealDeliveryTutorialPaused;
             bool scooter = S.ScooterTutorialPaused;
-            bool securities = !scooter && S.SecuritiesTutorialPaused;
+            bool bank = !scooter && S.BankTutorialPaused;
             bool canShow = !MainMenuOpen && !S.IsGameOver && !S.IsWorking && !S.Racing && !_ctrl.Placing
-                && !_ctrl.PetFocusActive && !PopupOpen && S.Trip == null
+                && !_ctrl.PetFocusActive && !PopupOpen && !QuestAnnouncementBlocksGuide && S.Trip == null
                 && (_guideRoot == null || !_guideRoot.gameObject.activeSelf);
             if (meal && canShow && !OpeningMealRestricted && _mealDeliveryTutorialWindow?.Closed != false)
             {
@@ -218,9 +235,11 @@ namespace PCShopSell.Game.UI
                 Canvas.ForceUpdateCanvases();
             }
             Button target = null;
+            RectTransform targetArea = null;
             string text = null;
             Window top = AnyModalOpen ? _windows[_windows.Count - 1] : null;
             bool showLesson = false;
+            bool counterLesson = false;
             if (meal)
             {
                 if (top != null && top == _mealDeliveryTutorialWindow) target = _mealDeliveryGuideButton;
@@ -231,16 +250,9 @@ namespace PCShopSell.Game.UI
                 target = _vehicleButtons.FirstOrDefault(entry => entry.kind == VehicleKind.EBike).b;
                 text = "教学暂停 · 点「小电驴」\n切换出行方式后继续";
             }
-            else if (securities)
+            else if (bank)
             {
-                if (top == null && !S.AtBank && canShow)
-                {
-                    if (_questSeen != "bank_securities" || !_questPanel.gameObject.activeSelf)
-                        UpdateQuestTracker();
-                    if (_questSeen == "bank_securities") target = _questActionButton;
-                    text = "点任务卡上的「前往银行」\n到银行学习证券交易";
-                }
-                else if (top == null && S.AtBank && canShow)
+                if (top == null && canShow)
                 {
                     OpenBank(S.CurrentPlace);
                     Canvas.ForceUpdateCanvases();
@@ -252,15 +264,77 @@ namespace PCShopSell.Game.UI
                     showLesson = true;
                     text = "看完说明，点「已了解，继续开店」";
                 }
-                else if (top != null && top == _bankWindow && S.BankBlocker() == null)
+                else if (top != null && top == _bankWindow)
                 {
-                    target = _bankSecuritiesTab;
-                    text = "教学暂停 · 点「证券交易」";
+                    if (S.BankBorrowTutorialPending)
+                    {
+                        showLesson = _bankBorrowLessonButton != null;
+                        target = showLesson ? _bankBorrowLessonButton : _bankBorrowTab;
+                        text = showLesson ? "看完借款说明，点「已了解借款」" : "教学暂停 · 点「借款」";
+                    }
+                    else
+                    {
+                        target = _bankSecuritiesTab;
+                        text = "教学暂停 · 点「证券交易」";
+                    }
+                }
+            }
+            else if (canShow && S.OpeningRenovationStep is var renovation && renovation != OpeningRenovationLesson.None)
+            {
+                (target, text) = OpeningRenovationGuideTarget(renovation, top);
+            }
+            else if (canShow && S.OpeningShelfTutorialPaused)
+            {
+                (target, text) = OpeningShelfGuideTarget(top);
+            }
+            else if (canShow && top == null && _ctrl.InInterior && S.OpeningCounterLessonAvailable)
+            {
+                (target, text) = OpeningCounterGuideTarget();
+                counterLesson = true;
+            }
+            else if (canShow && S.OpeningStaffStep is OpeningStaffLesson staffing && staffing != OpeningStaffLesson.None)
+            {
+                if (top == null)
+                {
+                    bool open = DockOpen;
+                    if (!open) OpenDock();
+                    if (staffing == OpeningStaffLesson.StaffTab)
+                    {
+                        target = _tabButtons.FirstOrDefault(entry => entry.tab == ShopTab.Staff).b;
+                        text = "教学暂停 · 点「员工」\n看看这家店需要哪些岗位";
+                    }
+                    else
+                    {
+                        if (_tab != ShopTab.Staff) SelectTab(ShopTab.Staff);
+                        if (staffing == OpeningStaffLesson.Hire)
+                        {
+                            target = _openingStaffFirstApplicant;
+                            targetArea = _openingStaffCandidates;
+                            text = "选一位应聘者\n点「聘用并安排工作」";
+                        }
+                        else
+                        {
+                            bool purchase = staffing == OpeningStaffLesson.Purchase;
+                            target = purchase ? _openingStaffPurchaseButton : _openingStaffDockControl;
+                            showLesson = purchase;
+                            text = purchase ? "在进货员这一行\n点「安排进货」，设置采购清单"
+                                : "点「查看本店岗位」\n了解每个人负责的工作";
+                        }
+                        if (!ReferenceEquals(target, _requiredGuideTarget)) RevealFirstUseDockControl(target);
+                    }
+                    if (!open || !ReferenceEquals(target, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
+                }
+                else if (top == _openingStaffLessonWindow && staffing == OpeningStaffLesson.Roles)
+                {
+                    target = _openingStaffLessonDone;
+                    showLesson = true;
+                    text = "看完本店分工后，点高亮按钮";
                 }
             }
             bool show = canShow && target != null && target.IsInteractable() && target.gameObject.activeInHierarchy
                 && (top == null || target.transform.IsChildOf(top.Root));
-            SetRequiredGuideTarget(show ? target : null);
+            S.FocusOpeningCounterTutorial(show && counterLesson);
+            SetRequiredGuideTarget(show ? target : null, show ? targetArea : null);
             if (_firstUseGuideRoot != null) _firstUseGuideRoot.gameObject.SetActive(show);
             if (!show || _tutorialCanvas == null) return;
             if (_firstUseGuideRoot == null)
@@ -299,9 +373,32 @@ namespace PCShopSell.Game.UI
             }
             _firstUseGuideRoot.SetAsLastSibling();
             _firstUseInputBlock.PassThrough = target;
+            var groupScroll = targetArea != null ? targetArea.GetComponentInParent<ScrollRect>() : null;
+            var viewport = groupScroll != null ? groupScroll.viewport : null;
+            _firstUseInputBlock.PassThroughArea = targetArea;
+            _firstUseInputBlock.PassThroughViewport = viewport;
+            if (viewport != null)
+            {
+                var group = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, targetArea);
+                float topGap = viewport.rect.yMax - group.max.y;
+                float bottomGap = viewport.rect.yMin - group.min.y;
+                float offset = Mathf.Clamp(0, Mathf.Min(topGap, bottomGap), Mathf.Max(topGap, bottomGap));
+                float overflow = groupScroll.content.rect.height - viewport.rect.height;
+                if (overflow > 0 && Mathf.Abs(offset) > .5f)
+                {
+                    groupScroll.StopMovement();
+                    groupScroll.verticalNormalizedPosition = Mathf.Clamp01(groupScroll.verticalNormalizedPosition - offset / overflow);
+                }
+            }
             var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
-            Rect hole = GuideTargetBounds((RectTransform)target.transform, size, 5);
-            // The whole securities lesson stays legible, while only its confirmation button accepts clicks.
+            Rect hole = GuideTargetBounds(targetArea != null ? targetArea : (RectTransform)target.transform, size, 5);
+            if (viewport != null)
+            {
+                var bounds = GuideTargetBounds(viewport, size, 0);
+                hole = Rect.MinMaxRect(Mathf.Max(hole.xMin, bounds.xMin), Mathf.Max(hole.yMin, bounds.yMin),
+                    Mathf.Min(hole.xMax, bounds.xMax), Mathf.Min(hole.yMax, bounds.yMax));
+            }
+            // Keep the lesson text legible while its confirmation button is highlighted.
             Rect spotlight = showLesson ? GuideTargetBounds((RectTransform)target.transform.parent, size, 6) : hole;
             GuideRect(_firstUseGuideDim[0].rectTransform, 0, spotlight.yMax, size.x, size.y - spotlight.yMax);
             GuideRect(_firstUseGuideDim[1].rectTransform, 0, 0, size.x, spotlight.yMin);
@@ -326,13 +423,136 @@ namespace PCShopSell.Game.UI
                 above ? hole.yMax + 2 : hole.yMin - 28, 32, 26);
         }
 
-        private void SetRequiredGuideTarget(Button target)
+        private (Button target, string text) OpeningRenovationGuideTarget(OpeningRenovationLesson step, Window top)
         {
-            if (!ReferenceEquals(_requiredGuideTarget, target))
+            if (top != null)
+                return top == _openingRenovationConfirmWindow
+                    ? (_openingRenovationConfirmButton, "确认歇业后进入装修\n今天可以摆放开店设施") : (null, null);
+
+            if (step == OpeningRenovationLesson.Travel)
             {
-                if (_requiredGuideTarget != null) _requiredGuideTarget.navigation = _requiredGuideNavigation;
+                if (!_questPanel.gameObject.activeSelf || _questSeen != "place" || _questActionText.text != "前往店铺")
+                    UpdateQuestTracker();
+                if (_questSeen != "place" || _questActionText.text != "前往店铺") return (null, null);
+                if (!ReferenceEquals(_questActionButton, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
+                return (_questActionButton, "家具已买齐\n点「前往店铺」出发");
+            }
+
+            if (!DockOpen) OpenDock();
+            if (step == OpeningRenovationLesson.RenovationTab)
+            {
+                var tab = _tabButtons.FirstOrDefault(entry => entry.tab == ShopTab.Renovate).b;
+                if (!ReferenceEquals(tab, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
+                return (tab, "已经到店了\n点「装修」查看开业设施清单");
+            }
+
+            if (_tab != ShopTab.Renovate || _openingRenovationStartButton == null || !_openingRenovationStartButton.gameObject.activeInHierarchy)
+                SelectTab(ShopTab.Renovate);
+            RevealFirstUseDockControl(_openingRenovationStartButton);
+            string label = _openingRenovationStartButton?.GetComponentInChildren<Text>().text;
+            return (_openingRenovationStartButton, $"点「{label}」\n进入摆放模式，布置开店设施");
+        }
+
+        private (Button target, string text) OpeningShelfGuideTarget(Window top)
+        {
+            if (top != null)
+            {
+                if (top != _openingShelfChooser) return (null, null);
+                string name = S.OpeningShelfTutorialKind()?.Name;
+                string explanation = S.RetailKind == "restaurant" ? "堂食顾客可以加购货架上的饮料" : "后仓有货时会自动摆上货架";
+                return (_openingShelfKindOption, $"点「{name}」设置这架货架\n{explanation}");
+            }
+
+            if (!DockOpen) OpenDock();
+            if (!S.OpeningShelfStockVisited)
+            {
+                var inventory = _tabButtons.FirstOrDefault(entry => entry.tab == ShopTab.Stock).b;
+                if (!ReferenceEquals(inventory, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
+                return (inventory, "教学暂停 · 点「库存」\n设置店里的第一架货架");
+            }
+
+            if (_tab != ShopTab.Stock || _openingShelfCategoryButton == null || !_openingShelfCategoryButton.gameObject.activeInHierarchy)
+                SelectTab(ShopTab.Stock);
+            RevealFirstUseDockControl(_openingShelfCategoryButton);
+            string label = S.ShelfKindAt(S.OpeningShelfTutorialIndex())?.Name ?? "选择摆什么";
+            return (_openingShelfCategoryButton, $"点「{label}」\n选择货架上要摆的商品品类");
+        }
+
+        private (Button target, string text) OpeningCounterGuideTarget()
+        {
+            if (_ctrl.CheckoutPending) return (null, null);
+            if (DockOpen && (ChoiceDropdown.OpenInside(_dock) || ListScrollbar.PressedInside(_dock))) return (null, null);
+            bool restaurant = S.RetailKind == "restaurant";
+            if (!restaurant && _ctrl.OpeningCheckoutInstructionFollowed) return (null, null);
+            var (order, job) = restaurant ? S.OpeningRestaurantCounterAction() : default;
+            if (order != null && _openingCounterPendingAction is { } pending)
+            {
+                // The actor is idle again. If the same job is still offered, let the player adjust the layout or retry freely.
+                if (pending == (order.Id, job)) _openingCounterRejectedAction = pending;
+                _openingCounterPendingAction = null;
+            }
+            var queue = S.PlayerShop.Queue;
+            if (restaurant ? order == null || _openingCounterRejectedAction == (order.Id, job) : queue.Count == 0)
+                return (null, null);
+
+            if (!S.OpeningCounterTabVisited)
+            {
+                if (!DockOpen) OpenDock();
+                var tab = _tabButtons.FirstOrDefault(entry => entry.tab == ShopTab.Counter).b;
+                if (!ReferenceEquals(tab, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
+                return (tab, restaurant ? "客人已经下单\n点「柜台」查看餐桌订单" : "有顾客在排队\n点「柜台」查看待结账顾客");
+            }
+
+            if (!DockOpen) OpenDock();
+            if (_tab != ShopTab.Counter) SelectTab(ShopTab.Counter);
+            int key = restaurant ? order.Table : queue[0].Id;
+            if (restaurant && (!_openingCounterButtons.TryGetValue(key, out var current) || !ReferenceEquals(current, _requiredGuideTarget)))
+                _refreshOpeningRestaurantTables?.Invoke();
+            if (!_openingCounterButtons.TryGetValue(key, out var action) || !action.IsInteractable())
+            {
+                RefreshDock();
+                if (!_openingCounterButtons.TryGetValue(key, out action) || !action.IsInteractable()) return (null, null);
+            }
+            RevealFirstUseDockControl(action);
+            if (!restaurant) return (action, "点「结账」\n角色会到收银台交货、收款");
+
+            string caption = action.GetComponentInChildren<Text>().text;
+            string hint = job switch
+            {
+                RestaurantJob.Cook => "角色会到灶台备料并下锅",
+                RestaurantJob.Serve => "把做好的菜送到餐桌",
+                RestaurantJob.Clear when order.Stage == DiningStage.Burnt => "清锅后可以重新备料",
+                _ => "客人吃完了，收桌并收款"
+            };
+            return (action, $"点「{caption}」 · {order.Table + 1}号桌\n{hint}");
+        }
+
+        private void RevealFirstUseDockControl(Button button)
+        {
+            if (button == null || ReferenceEquals(button, _requiredGuideTarget)) return;
+            Canvas.ForceUpdateCanvases();
+            for (Transform parent = button.transform.parent; parent != null && parent != _dock; parent = parent.parent)
+            {
+                if (!parent.TryGetComponent<ScrollRect>(out var scroll)) continue;
+                var visible = scroll.viewport.rect;
+                float overflow = scroll.content.rect.height - visible.height;
+                if (overflow <= 0) continue;
+                var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, button.transform);
+                float offset = bounds.min.y < visible.yMin ? visible.yMin - bounds.min.y + 8
+                    : Mathf.Min(0, visible.yMax - bounds.max.y);
+                scroll.StopMovement();
+                scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition - offset / overflow);
+            }
+        }
+
+        private void SetRequiredGuideTarget(Button target, RectTransform area)
+        {
+            if (!ReferenceEquals(_requiredGuideTarget, target) || !ReferenceEquals(_requiredGuideArea, area))
+            {
+                if (_requiredGuideTarget != null && _requiredGuideArea == null) _requiredGuideTarget.navigation = _requiredGuideNavigation;
                 _requiredGuideTarget = target;
-                if (target != null)
+                _requiredGuideArea = area;
+                if (target != null && area == null)
                 {
                     _requiredGuideNavigation = target.navigation;
                     target.navigation = new Navigation { mode = Navigation.Mode.None };
@@ -341,7 +561,11 @@ namespace PCShopSell.Game.UI
             if (target == null) return;
             var events = EventSystem.current;
             if (events != null && !events.alreadySelecting && events.currentSelectedGameObject != target.gameObject)
+            {
+                var selected = events.currentSelectedGameObject;
+                if (area != null && selected != null && selected.transform.IsChildOf(area)) return;
                 events.SetSelectedGameObject(target.gameObject);
+            }
         }
 
         private void UpdateOpeningMealGuide()
@@ -462,7 +686,7 @@ namespace PCShopSell.Game.UI
 
         private bool UpdateOpeningAgencyGuide()
         {
-            bool show = S.OpeningAgencyGuidePending && !MainMenuOpen && !AnyModalOpen;
+            bool show = S.OpeningAgencyGuidePending && !MainMenuOpen && !AnyModalOpen && !QuestAnnouncementBlocksGuide;
             if (show && _openingMealInputBlock.PassThrough == null)
             {
                 _questHidden = false;

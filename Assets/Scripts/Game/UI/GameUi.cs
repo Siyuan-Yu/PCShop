@@ -214,12 +214,19 @@ namespace PCShopSell.Game.UI
             }
             UpdateAutoExpoChoices();
             UpdateDisplayPreview();
+            _slowTimer -= dt;
+            bool refreshSlowHud = _slowTimer <= 0;
+            if (refreshSlowHud)
+            {
+                _slowTimer = 0.4f;
+                if (!MainMenuOpen && !S.IsWorking) UpdateQuestTracker();
+            }
             UpdateOpeningMealGuide();
             UpdateFirstUseGuide();
             bool tutorialPaused = S.RequiredTutorialPaused;
             if (!tutorialPaused) CheckCookTasting();
             if (MainMenuOpen) return;
-            if (!tutorialPaused)
+            if (!tutorialPaused && !QuestAnnouncementOpen)
             {
                 ShowPendingCommunityIntroCall();
                 UpdateEventBatch();
@@ -250,13 +257,10 @@ namespace PCShopSell.Game.UI
             UpdateQueueLabels();
             UpdateToasts();
             UpdateTip(dt);
-            _slowTimer -= dt;
-            if (_slowTimer <= 0)
+            if (refreshSlowHud)
             {
-                _slowTimer = 0.4f;
                 RefreshShortcutMenus();
                 UpdateVehicleButtons();
-                UpdateQuestTracker();
                 if (!pointerBusy) { RefreshDock(); RefreshHomeDock(); }
             }
             RefreshToastPlacement();
@@ -807,7 +811,8 @@ namespace PCShopSell.Game.UI
                     button.onClick.RemoveAllListeners();
                     button.onClick.AddListener(() => _ctrl.Checkout(id));
                     var c = FindCustomer(id);
-                    string act = _ctrl.Interior.NearCounter ? "结账" : "等你到收银台";
+                    const string act = "结账";
+                    button.interactable = _ctrl.CanRequestCheckout;
                     text.text = c != null ? $"{act} {c.Spend}\n<size=12>{c.ItemName}</size>" : act;
                     Vector3 sp = _ctrl.Cam.WorldToScreenPoint(kv.Value);
                     RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)_labelCanvas.transform, sp, LabelCam, out Vector2 local);
@@ -1203,6 +1208,13 @@ namespace PCShopSell.Game.UI
                 }
                 else if (choice.Details == null)
                 {
+                    if (choice.Conversation.HasValue)
+                    {
+                        if (!S.ResolveEventConversation(index, out var reply)) return;
+                        w.Close();
+                        if (!S.IsGameOver) OpenActivityReply(reply.PersonId, reply.Text, "继续");
+                        return;
+                    }
                     bool scratchLottery = def.Id == "money_win_lottery";
                     int? previousTicket = scratchLottery ? S.ScratchTicket?.Id : null;
                     if (!S.ResolveEvent(index)) return;

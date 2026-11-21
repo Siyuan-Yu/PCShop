@@ -74,9 +74,7 @@ namespace PCShopSell.Game.UI
                 BuildPeopleNavigation(w, tab);
                 build(w);
             }
-            if (tab == "contacts" || _peopleReturnPhone is { Closed: false })
-                OpenPhoneAppWorkspace("people", tab, "人物", Build, isTab: true, scrollContent: false);
-            else OpenWorkspace("people", tab, "人物", 1300, 850, Build, isTab: true, scrollContent: false);
+            OpenPhoneAppWorkspace("people", tab, "人物", Build, isTab: true, scrollContent: false);
         }
 
         private void BuildPeopleNavigation(Window w, string selected)

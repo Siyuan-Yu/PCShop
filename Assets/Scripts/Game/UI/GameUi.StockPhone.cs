@@ -114,6 +114,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenBankSecurities()
         {
+            if (S.BankBorrowTutorialPending) return;
             string blocker = S.BankBlocker();
             if (blocker != null) { Toast(blocker); return; }
             EnsureStockSessionState();
@@ -214,7 +215,7 @@ namespace PCShopSell.Game.UI
             if (!_stockEmbedded && _stockAtBank && S.AtBank && S.CurrentQuest()?.Id == "bank_securities")
             {
                 var lesson = Ui.Row(root, 88, 12);
-                Ui.Size(Ui.Label(lesson, "证券入门\n先看股价和涨跌，点 + 或 − 选择待成交股数，再点「成交」。最低 1 股，买卖收取 0.2% 手续费。\n可以先买 1 股体验；股价会波动，请为门店留足周转资金。智能手机自带的「证券」可以查看同一持仓。", 17), 0, 88, 1);
+                Ui.Size(Ui.Label(lesson, "证券入门\n先看股价和涨跌，点 + 或 − 选择待成交股数，再点「成交」。最低 1 股，买卖收取 0.2% 手续费。\n股价会波动，留足门店周转资金。手机里的「证券」也能查看持仓。", 17), 0, 88, 1);
                 _securitiesLessonButton = Ui.Size(Ui.Button(lesson, "已了解，继续开店", () =>
                 {
                     if (!S.CompleteQuestLesson("bank_securities")) return;

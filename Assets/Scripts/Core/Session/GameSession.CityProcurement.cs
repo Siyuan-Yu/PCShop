@@ -373,7 +373,7 @@ namespace PCShopSell.Core.Session
             var policies = _cityProcurementPolicies.Values.Where(p => p.ShopId == row.Shop.Place.Id).Select(p => p.Copy()).ToList();
             foreach (var entry in row.Shop.Restock)
                 if (!policies.Any(p => p.Kind == PurchaseGoodsKind.Part && p.ProductId == entry.Key)) policies.Add(ProcurementPolicyFor(row.Shop.Place.Id, PurchaseGoodsKind.Part, entry.Key));
-            foreach (var policy in policies.Where(p => p.Primary == ProcurementMethod.Employee && (p.EmployeeId == null || p.EmployeeId == row.Person.Id) && p.Target > 0))
+            foreach (var policy in policies.Where(p => AppliesToEmployeePurchase(p, row.Person.Id)))
             {
                 int need = ProcurementCoverageFor(row.Shop.Place.Id, policy.Kind, policy.ProductId, row.Person.Id).Uncovered;
                 if (need <= 0) continue;
@@ -386,6 +386,15 @@ namespace PCShopSell.Core.Session
             }
             plan.Items = lines.ToArray(); return plan;
         }
+
+        private static bool AppliesToEmployeePurchase(ProcurementPolicy policy, string employeeId) =>
+            policy.Primary == ProcurementMethod.Employee && policy.Target > 0
+            && (policy.EmployeeId == null || policy.EmployeeId == employeeId);
+
+        private bool HasEmployeeRestockTarget(OwnedShop shop, string employeeId) => _cityProcurementPolicies.Values.Any(policy =>
+            policy.ShopId == shop.Place.Id && AppliesToEmployeePurchase(policy, employeeId))
+            || shop.Restock.Keys.Select(part => ProcurementPolicyFor(shop.Place.Id, PurchaseGoodsKind.Part, part))
+                .Any(policy => AppliesToEmployeePurchase(policy, employeeId));
 
         private EmployeePurchasePlan AutomaticEmployeePurchasePlan(EmployeeAssignment row)
         {

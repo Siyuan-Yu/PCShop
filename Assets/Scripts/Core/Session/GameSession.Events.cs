@@ -56,6 +56,7 @@ namespace PCShopSell.Core.Session
         public (string Key, string Label)? Selection;
         public (string Payment, long Start, int Minutes, Money Price, bool AskHost, string Note)? Appointment;
         public (PartDef Part, OwnedShop Destination, int MaxQuantity)? OnlinePurchase;
+        public (string PersonId, Func<GameSession, string> Line)? Conversation;
 
         /// <summary>这个选项现在能不能选（比如钱够不够）。为 null 表示总能选。</summary>
         public Func<GameSession, bool> Enabled;
@@ -434,6 +435,9 @@ namespace PCShopSell.Core.Session
         private static EventChoice Choose(string text, Func<GameSession, string> apply,
             Func<GameSession, bool> enabled = null, string reason = null) =>
             new EventChoice { Text = text, Apply = apply, Enabled = enabled, DisabledReason = reason };
+
+        private static EventChoice ChooseConversation(string text, string personId, Func<GameSession, string> line,
+            Func<GameSession, string> apply) => new EventChoice { Text = text, Conversation = (personId, line), Apply = apply };
 
         private static EventChoice ViewEventDetails(string text, string details) =>
             new EventChoice { Text = text, Details = details };
@@ -860,7 +864,8 @@ namespace PCShopSell.Core.Session
             if (personId == Npcs.Zhang)
             {
                 return ShopEventScene(template, shop, $"张绍文走进{ShopTitle(shop)}，问你开店这几天还顺利吗？",
-                    Choose("坐下聊聊 · 15 分钟", s =>
+                    ChooseConversation("坐下聊聊 · 15 分钟", personId,
+                        _ => "刚开店的时候，有人肯坐下说说话就挺难得的。你忙你的，我不着急。对了，留个电话吧，哪天有空也来我家坐坐。", s =>
                     {
                         Mark();
                         s.Meet(personId, 22);
@@ -870,8 +875,11 @@ namespace PCShopSell.Core.Session
                         s.Flags.Add("home-invitation:" + personId);
                         return $"张绍文和你互留了号码，说有空可以去他家坐坐。住址已存到人物资料：{address}。";
                     }),
-                    Choose("聊聊店里的生意", s => { Mark(); s.Meet(personId, 16); return "你和张绍文聊了几句，互留了号码。"; }),
-                    Choose("先打个照面", s => { Mark(); s.AddRelation(personId, Math.Max(0, 8 - s.Relation(personId))); return "张绍文打了个招呼，说下次有空再聊。"; }));
+                    ChooseConversation("聊聊店里的生意", personId,
+                        _ => "我路过几次，都看见你在忙。刚开始客人不多也正常。熟客多来几趟，慢慢就知道哪儿找你了。",
+                        s => { Mark(); s.Meet(personId, 16); return "你们互留了号码。"; }),
+                    ChooseConversation("先打个照面", personId, _ => "你好，我是张绍文。你先忙，改天我再过来坐坐。",
+                        s => { Mark(); s.AddRelation(personId, Math.Max(0, 8 - s.Relation(personId))); return null; }));
             }
             if (personId == Npcs.Lin)
             {
@@ -884,29 +892,33 @@ namespace PCShopSell.Core.Session
                 }
                 return ShopEventScene(template, shop, $"发小林远航听说{ShopTitle(shop)}开张了，特意过来看看。",
                     Choose("约顿饭", s => Reconnect(s) + "\n" + s.ScheduleLegacyCityMeeting(personId, "dinner", "legacy-lin-reunion:" + s.Clock.Today.TotalDays)),
-                    Choose("在店里聊会儿", s => Reconnect(s) + "你们在店里聊起了小时候的事。"));
+                    ChooseConversation("在店里聊会儿", personId,
+                        _ => "你还记得吗？小时候我们从学校回来，路过卖零件的铺子，总要隔着玻璃看半天。我那时哪想得到，现在会来你开的店里坐。",
+                        Reconnect));
             }
 
             shop = LandladyShop();
             if (shop == null) return null;
+            string SupplySources(GameSession s) => string.Join("、", s.EmployeePurchaseCatalog().Where(o => shop.RetailKind == "computer"
+                ? o.Kind == PurchaseGoodsKind.Part : o.Kind == PurchaseGoodsKind.Gift && RetailShopTypes.Sells(shop.RetailKind, o.Id))
+                .Select(o => o.Source.Name).Distinct().Take(2));
             return ShopEventScene(template, shop, $"李秀兰来看看{ShopTitle(shop)}，顺便问你刚接手铺面有没有什么不清楚的。",
-                Choose("问下次交租日", s =>
+                ChooseConversation("问下次交租日", personId, s => $"下次是{new GameDate(NextShopRentDay(shop))}，这间铺子的周租是{s.RentOf(shop)}。你记在日历上，省得到时忙忘了。", s =>
                 {
                     Mark();
                     s.Meet(personId, 22);
-                    return $"已存下李秀兰的号码。{ShopTitle(shop)}下次在{new GameDate(NextShopRentDay(shop))}缴周租 {s.RentOf(shop)}。";
+                    return "已存下李秀兰的号码。";
                 }),
-                Choose("问问附近去哪儿进货", s =>
+                ChooseConversation("问问附近去哪儿进货", personId, s => SupplySources(s) is { Length: > 0 } sources
+                    ? $"你可以先去{sources}转一圈。问清楚起订量再下单，刚开店用不着把每样货都备满。"
+                    : "附近有些店也做批发。你告诉我想进什么货，回头我帮你留意一下。", s =>
                 {
                     Mark();
                     s.Meet(personId, 16);
-                    string sources = string.Join("、", s.EmployeePurchaseCatalog().Where(o => shop.RetailKind == "computer"
-                        ? o.Kind == PurchaseGoodsKind.Part : o.Kind == PurchaseGoodsKind.Gift && RetailShopTypes.Sells(shop.RetailKind, o.Id))
-                        .Select(o => o.Source.Name).Distinct().Take(2));
-                    return sources.Length == 0 ? "李秀兰和你互留了号码，让你有经营上的问题随时找她。"
-                        : $"李秀兰推荐你先去{sources}看看，也把号码留给了你。";
+                    return "已存下李秀兰的号码。";
                 }),
-                Choose("今天忙，改天再聊", s => { Mark(); return "李秀兰点点头，说有问题可以再来问她。"; }));
+                ChooseConversation("今天忙，改天再聊", personId, _ => "行，你忙。铺子上有什么弄不明白的，回头上楼问我。",
+                    _ => { Mark(); return null; }));
         }
 
         private int NextShopRentDay(OwnedShop shop)
@@ -920,15 +932,16 @@ namespace PCShopSell.Core.Session
             var shop = ShopAt(CurrentPlace) ?? InspectionShop();
             if (shop == null) return null;
             return ShopEventScene(template, shop, $"张绍文下班后到{ShopTitle(shop)}歇脚，问你有空聊两句吗？",
-                Choose("就在店里坐会儿 · 15 分钟", s =>
+                ChooseConversation("就在店里坐会儿 · 15 分钟", Npcs.Zhang,
+                    _ => "下班从你店门口过，见灯还亮着，就想进来坐会儿。这条街晚上安静得多，白天的事聊一聊，也就放下了。", s =>
                 {
                     s.EventRest(15);
                     s.AddRelation(Npcs.Zhang, 2);
-                    return "你们在店里聊了会儿近况。交情 +2。";
+                    return "交情 +2。";
                 }),
                 Choose("约到家常馆吃饭", s => s.ScheduleLegacyCityMeeting(Npcs.Zhang, "dinner", "legacy-zhang-chat:" + s.Clock.Today.TotalDays)),
                 Choose("约去市场逛逛", s => s.ScheduleLegacyCityMeeting(Npcs.Zhang, "market", "legacy-zhang-market:" + s.Clock.Today.TotalDays)),
-                Choose("今天忙，改天再聊", _ => "张绍文说那就下次见。"));
+                ChooseConversation("今天忙，改天再聊", Npcs.Zhang, _ => "行，那我先回去了。下回路过再进来。", _ => null));
         }
 
         private static string RentEventKey(OwnedShop shop) => $"event:rent:{shop.Place.Id}:{shop.Lease.SignedDay}";
@@ -1677,8 +1690,14 @@ namespace PCShopSell.Core.Session
         /// <summary>结算事件选项。禁用或只供查看的选项不结算。结果通过 Popup 告诉玩家。</summary>
         public bool ResolveEvent(int choiceIndex) => ResolveEvent(choiceIndex, 0);
 
-        public bool ResolveEvent(int choiceIndex, int quantity)
+        public bool ResolveEvent(int choiceIndex, int quantity) => ResolveEvent(choiceIndex, quantity, false, out _);
+
+        public bool ResolveEventConversation(int choiceIndex, out (string PersonId, string Text) reply) =>
+            ResolveEvent(choiceIndex, 0, true, out reply);
+
+        private bool ResolveEvent(int choiceIndex, int quantity, bool inDialogue, out (string PersonId, string Text) reply)
         {
+            reply = default;
             EventDef def = PendingEvent;
             if (def == null || choiceIndex < 0 || choiceIndex >= def.Choices.Count) return false;
             EventChoice choice = def.Choices[choiceIndex];
@@ -1694,8 +1713,15 @@ namespace PCShopSell.Core.Session
             if (choice.ApplyCg != null) ShowEventCg(def.Title, choice.ApplyCg(this), def.IllustrationShop);
             else
             {
+                string line = choice.Conversation?.Line(this);
                 string result = choice.Apply(this);
-                if (!string.IsNullOrEmpty(result)) Show(def.Title, result);
+                if (choice.Conversation is { } conversation && !string.IsNullOrWhiteSpace(line))
+                {
+                    if (inDialogue) reply = (conversation.PersonId, string.IsNullOrWhiteSpace(result) ? line
+                        : line + "\n\n<size=16><color=#655E52>" + result + "</color></size>");
+                    else Show(def.Title, string.IsNullOrWhiteSpace(result) ? line : line + "\n\n" + result);
+                }
+                else if (!string.IsNullOrEmpty(result)) Show(def.Title, result);
             }
             return true;
         }

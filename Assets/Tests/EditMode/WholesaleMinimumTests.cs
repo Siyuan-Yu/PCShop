@@ -104,12 +104,12 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                var source=Source(s,Gifts.Fruit);GameSessionTests.Teleport(s,source.Id);
-                Assert.True(s.CartAddRetailWholesale(source,Gifts.Fruit,10));
+                var source=Source(s,Gifts.Drink);GameSessionTests.Teleport(s,source.Id);
+                Assert.True(s.CartAddRetailWholesale(source,Gifts.Drink,10));
                 Assert.Greater(s.CartBagKg,0);Assert.Greater(s.CartTruckKg,0);
                 Assert.IsNull(s.CheckoutBlocker(true));Assert.True(s.Checkout(true));
                 s.AdvanceClock(180);
-                Assert.AreEqual(10,s.Backpack.GiftCount(Gifts.Fruit)+s.MainShop.Sim.Stock.GoodsCount(Gifts.Fruit));
+                Assert.AreEqual(10,s.Backpack.GiftCount(Gifts.Drink)+s.MainShop.Sim.Stock.GoodsCount(Gifts.Drink));
             }
         }
 
@@ -132,6 +132,8 @@ namespace PCShopSell.Tests
             Assert.AreSame(s.MainShop, s.CourierShop(true));
             Assert.AreEqual("stock", s.CurrentQuest().Id);
             Assert.False(s.BuyGift(Gifts.Fruit));
+            Assert.False(s.CartAddRetailWholesale(farm, Gifts.Fruit, 10));
+            Assert.False(s.EmployeePurchaseCatalog().Any(offer => offer.Source == farm && offer.Id == Gifts.Fruit));
             var fridge = s.MainShop.Fridge;
             var fridgeCapacity = GameSession.FridgeCapacityOf(s.MainShop.Layout);
             if (hasFridge) fridge.Food.RiceKg += fridgeCapacity - fridge.WeightKg;

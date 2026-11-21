@@ -98,14 +98,19 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>为什么现在签不了这一间；能签返回 null。newShop 见 <see cref="LeaseCost"/>。</summary>
-        public string LeaseBlocker(ShopListing l, bool newShop = false)
+        public string LeaseBlocker(ShopListing l, bool newShop = false) =>
+            LeaseTermsBlocker(l, newShop, InAgency ? CurrentPlace : null)
+            ?? (Ledger.Balance < LeaseCost(l, newShop) ? "钱不够" : null);
+
+        private string LeaseTermsBlocker(ShopListing l, bool newShop, Place agency)
         {
             if (l == null || !City.HasPlace(l.PlaceId)) return "该铺位当前无法签约";
-            string protection = CommercialPremisesBlocker(ListingPlace(l));
+            var place = ListingPlace(l);
+            string protection = CommercialPremisesBlocker(place);
             if (protection != null) return protection;
-            if(Lease!=null&&!newShop&&(IsDedicatedVenue(ListingPlace(l))||IsDedicatedVenue(PlayerShopPlace)))return "专用场馆需要独立接手，不能与普通店铺搬店混用";
-            if (InAgency && !AgencyServes(CurrentPlace, ListingPlace(l)))
-                return "这家中介只办理" + City.AgencyCoverageName(CurrentPlace) + "的房源，请到房源所属片区的中介";
+            if(Lease!=null&&!newShop&&(IsDedicatedVenue(place)||IsDedicatedVenue(PlayerShopPlace)))return "专用场馆需要独立接手，不能与普通店铺搬店混用";
+            if (agency != null && !AgencyServes(agency, place))
+                return "这家中介只办理" + City.AgencyCoverageName(agency) + "的房源，请到房源所属片区的中介";
             if (VentureAt(l.PlaceId) != null || PropertyAt(l.PlaceId) != null) return "这间铺子已纳入你的经营资产";
             if (PendingLease != null) return $"你已提前签下{City.GetPlace(PendingLease.PlaceId).Name}，{ShopHandoverText(PendingLease.StartDay)}。交房前不能再签";
             if (ShopAt(l.PlaceId) != null) return "这已经是你的店了";
@@ -119,7 +124,6 @@ namespace PCShopSell.Core.Session
                 double cap = ShopSettings.Capacity(l.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
                 if (PlayerShop.Stock.UsedSpace + IncomingShopSpace > cap + 1e-9) return $"铺子太小，放不下现在的 {PlayerShop.Stock.UsedSpace:0.#} 格货";
             }
-            if (Ledger.Balance < LeaseCost(l, newShop)) return "钱不够";
             return null;
         }
 
@@ -675,12 +679,14 @@ namespace PCShopSell.Core.Session
             }
             foreach (SaveListing l in d.listings)
             {
-                if (!City.HasPlace(l.place) || !IsCommercialPremises(City.GetPlace(l.place))) continue;
+                if (!City.HasPlace(l.place)) continue;
+                var place = City.GetPlace(l.place);
+                if (!IsCommercialPremises(place)) continue;
                 _listings.Add(new ShopListing
                 {
-                    PlaceId = l.place, Size = (ShopSize)l.size, OpenDay = l.openDay, CloseDay = l.closeDay,
+                    PlaceId = l.place, Size = place.Size, OpenDay = l.openDay, CloseDay = l.closeDay,
                     Rent = d.shopFootfallVersion < CurrentShopFootfallVersion
-                        ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents),
+                        ? ShopRentQuote(place) : Money.FromCents(l.rentCents),
                 });
             }
             if (d.agencyStreetVersion < 1) SeedStreetListings(Clock.Today.TotalDays);

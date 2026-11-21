@@ -250,6 +250,13 @@ namespace PCShopSell.Core.Session
                 pool.Aim(x, y);
         }
 
+        public void CancelBilliardsCharge()
+        {
+            if (LiveLeisure?.Billiards is not { Charging: true } pool) return;
+            pool.Charging = false;
+            pool.Power = 0;
+        }
+
         public void MoveClaw(double dx)
         {
             if (LiveLeisure?.Claw is GiftClawPlay claw && double.IsFinite(dx)) claw.Move(dx);

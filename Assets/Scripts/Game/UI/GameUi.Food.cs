@@ -138,7 +138,7 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, restaurant
                     ? "厨房只从冰箱取料，大米也需要放进去。送货时冰箱装不下的食材会留在门店后仓。"
                     : "成品在冰箱里暂停保质期，取出后继续计时。", 16, Ui.Dim);
-                if (!shop && S.Pantry.CookedBowls > 0)
+                if (_ctrl.InHome && S.Pantry.CookedBowls > 0)
                     Ui.Size(Ui.Button(w.Content, "把锅里的饭全部放入冰箱", () => { S.ChillCookedFood(S.Pantry.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
                 var columns = Ui.Row(w.Content, 700, 14);
                 var fridge = FoodStorageColumn(columns, "冰箱", S.CanOpenFridge
@@ -150,7 +150,7 @@ namespace PCShopSell.Game.UI
                 if (warehouse)
                 {
                     var storage = FoodStorageColumn(columns, "后仓", "食材可移入冰箱或取到背包");
-                    BuildFridgeFoodRows(w, storage, shop ? S.ShopLocker : S.HomeBox, FoodStorageSource.Warehouse, true);
+                    BuildFridgeFoodRows(w, storage, S.WarehouseBagHere, FoodStorageSource.Warehouse, true);
                 }
                 var backpack = FoodStorageColumn(columns, "背包", "随身携带的食材与食物");
                 BuildFridgeFoodRows(w, backpack, S.Backpack, FoodStorageSource.Backpack, warehouse);

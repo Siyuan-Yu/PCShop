@@ -130,6 +130,8 @@ namespace PCShopSell.Game
         private void StartSession(GameSession s, int saveSlot = 0, string campaignId = null)
         {
             ResetCommunityReveal();
+            CancelCheckout();
+            OpeningCheckoutInstructionFollowed = false;
             if (PetFocusActive) ExitPetFocus();
             Ui?.CloseAllWindows();
             ClearPachinkoRoom();
@@ -201,8 +203,7 @@ namespace PCShopSell.Game
             // revealing the session. Do not wait for the first gameplay Update.
             SyncViews(0, initialize: true);
             SnapCamera();
-            if (s.CurrentPlace != null && !s.IsGameOver && !s.ScooterTutorialPaused
-                && (!s.SecuritiesTutorialPaused || s.AtBank)) Ui.OnEnteredPlace(s.CurrentPlace);
+            if (s.CurrentPlace != null && !s.IsGameOver && !s.ScooterTutorialPaused) Ui.OnEnteredPlace(s.CurrentPlace);
             if(s.CityIntent!=null&&s.Trip==null&&!s.IsGameOver)
             {
                 OnCityTravelRequested(s.CityIntent);
@@ -417,15 +418,70 @@ namespace PCShopSell.Game
             else Ui.Toast("床边的路被家具挡住了，请先留出通道。");
         }
 
-        /// <summary>收银：老板得站在收银台后面，把货交给顾客、收钱。不在收银台就收不了，顾客接着排队。</summary>
+        private const string CheckoutPathBlocked = "收银台周围没有可走的通道，请调整家具位置。";
+        private (OwnedShop Shop, int CustomerId)? _checkoutRequest;
+        internal bool OpeningCheckoutInstructionFollowed { get; private set; }
+        internal bool CheckoutPending => _checkoutRequest.HasValue;
+        internal bool CanRequestCheckout => InInterior && Interior?.HasCounter == true && !CheckoutPending
+            && !Placing && !PetFocusActive && Ui?.AnyModalOpen != true && !Session.IsGameOver && !Session.IsWorking
+            && !Session.IsRenovating && !Session.CityActivityExclusive;
+
+        /// <summary>给指定顾客结账。远离柜台时先安排走到可操作的位置。</summary>
         public void Checkout(int customerId)
         {
-            if (InInterior && !Interior.NearCounter)
+            if (!CanRequestCheckout || !Session.PlayerShop.Queue.Any(customer => customer.Id == customerId)) return;
+            if (Session.OpeningCounterTutorialPaused)
             {
-                Ui.Toast("先走到收银台后面，才能给顾客交货收钱。");
+                OpeningCheckoutInstructionFollowed = true;
+                Session.FocusOpeningCounterTutorial(false);
+            }
+            if (!Interior.NearCounter && !Interior.PlanCheckoutWalk())
+            {
+                Ui.Toast(CheckoutPathBlocked);
                 return;
             }
-            if (Session.Checkout(customerId)) Ui.RebuildDock();
+            Session.CancelCityTravel();
+            _cityExitIntent = null;
+            Interior.CancelCityDoorWalk();
+            CancelHomeBedTrip();
+            Session.CancelPlayerRestaurantWork();
+            if (Interior.NearCounter)
+            {
+                if (Session.Checkout(customerId)) Ui.RebuildDock();
+                return;
+            }
+            _checkoutRequest = (Session.CurrentShop, customerId);
+            Session.Time.SetPaused(false);
+        }
+
+        private void UpdateCheckout(float dt)
+        {
+            if (_checkoutRequest is not { } request) return;
+            if (!InInterior || Session.CurrentShop != request.Shop || Session.IsGameOver || Session.IsWorking || Placing || Session.IsRenovating)
+            {
+                CancelCheckout();
+                return;
+            }
+            if (!request.Shop.Sim.Queue.Any(customer => customer.Id == request.CustomerId))
+            {
+                CancelCheckout();
+                Ui.Toast("这位顾客已不在结账队列中。");
+                return;
+            }
+            if (!Session.Time.IsRunning || Ui.AnyModalOpen || Session.RequiredTutorialPaused || PetFocusActive || Session.CityActivityExclusive)
+                return;
+
+            int arrived = Interior.WalkToCheckoutCounter(IndoorWalkDelta(dt));
+            if (arrived == 0) return;
+            CancelCheckout();
+            if (arrived < 0) Ui.Toast(CheckoutPathBlocked);
+            else if (Session.Checkout(request.CustomerId)) Ui.RebuildDock();
+        }
+
+        private void CancelCheckout()
+        {
+            _checkoutRequest = null;
+            Interior?.CancelCheckoutWalk();
         }
 
         private void CounterInteract()
@@ -618,6 +674,7 @@ namespace PCShopSell.Game
             UpdatePetFocus();
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
             if (InVisit) VisitRoom.UpdateVisit(Session);
+            UpdateCheckout(dt);
             UpdateHomeBedTrip(dt);
             UpdateCityTravel(dt);
             FigureMotion.AdvanceAll(dt, worldRunning);
@@ -710,7 +767,7 @@ namespace PCShopSell.Game
             if (Session.RequiredTutorialPaused)
             {
                 _orbiting = false;
-                if ((Session.ScooterTutorialPaused || Session.SecuritiesTutorialPaused) && !Ui.AnyModalOpen) return;
+                if ((Session.ScooterTutorialPaused || Session.BankTutorialPaused) && !Ui.AnyModalOpen) return;
                 if (Input.GetKeyDown(KeyCode.Escape) && (!Ui.AnyModalOpen || !Ui.RequiredTutorialControlVisible)
                     && !Ui.CloseTopWindow()) Ui.TryHotkey(KeyCode.Escape);
                 return;
@@ -854,6 +911,7 @@ namespace PCShopSell.Game
             }
 
             Session.Time.SetPaused(false);
+            CancelCheckout();
             CancelHomeBedTrip();
             Session.CancelCityTravel();_cityExitIntent=null;Interior?.CancelCityDoorWalk();
             Session.CancelPlayerRestaurantWork();
@@ -915,6 +973,7 @@ namespace PCShopSell.Game
             if (target == HomeRoomView.Door) LeaveHome();
             else if (target == HomeRoomView.Bed && Session.CanSleepAt(Session.CurrentPlace)) Ui.OpenBedWindow();
             else if (target == HomeRoomView.Storage && Session.HasSecondaryResidenceWarehouse) Ui.OpenStorageWindow();
+            else if (target == HomeRoomView.Fridge && Session.CanOpenFridge) Ui.OpenFridgeWindow();
             else if (target != null && Session.CitySamePlace(target) && VisitRoom.CanReachResident(target))
                 Ui.OpenCityPerson(target);
             else Ui.Toast("走近住户或房门，再按 F。");
@@ -1128,6 +1187,7 @@ namespace PCShopSell.Game
         public void LeaveCurrentPlace()
         {
             if (Session.CurrentPlace == null) return;
+            CancelCheckout();
             Session.Leave();
             if (Session.CurrentPlace == null) Session.Time.SetPaused(false);
         }

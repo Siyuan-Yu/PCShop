@@ -288,6 +288,7 @@ namespace PCShopSell.Game.UI
                 var layout = controls.GetComponent<VerticalLayoutGroup>();
                 layout.childAlignment = TextAnchor.UpperLeft;
                 layout.childForceExpandHeight = false;
+                Func<bool, bool> readBilliardsCharge = null;
                 ProcessControls();
 
                 void Finish()
@@ -322,6 +323,7 @@ namespace PCShopSell.Game.UI
                     {
                         if (S.LiveLeisure != state) { w.Close(); return; }
                         bool focused = _windows.LastOrDefault() == w && Application.isFocused;
+                        bool held = readBilliardsCharge?.Invoke(focused) ?? (pointerHeld || Input.GetKey(KeyCode.Space));
                         if (focused)
                         {
                             if (state.Pachinko != null)
@@ -329,7 +331,7 @@ namespace PCShopSell.Game.UI
                                 if (Input.GetKeyDown(KeyCode.Escape)) exitAfterBeads = true;
                                 S.AimPachinko(DirectionalInput.Horizontal * Math.Min(.06, Time.unscaledDeltaTime) * 1.6);
                             }
-                            S.StepLeisure(Time.unscaledDeltaTime, !exitAfterBeads && (pointerHeld || Input.GetKey(KeyCode.Space)));
+                            S.StepLeisure(Time.unscaledDeltaTime, !exitAfterBeads && held);
                         }
                         if (exitAfterHand && state.Poker?.HandActive == false) { Finish(); return; }
                         if (exitAfterBeads && S.CanFinishLeisure) { Finish(); return; }
@@ -394,14 +396,26 @@ namespace PCShopSell.Game.UI
                     var score = Readout("", 65);
                     var message = Readout("", 65, Ui.Accent);
                     var power = Readout("");
+                    Readout("移动鼠标瞄准\n按住左键或空格蓄力，松手出杆", 70, Ui.ChromeInk);
                     var spacer = Ui.Size(Ui.Rect(controls, "ActionSpace"), -1, 0);
                     spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
                     var fire = Hold("按住蓄力，松手出杆");
+                    bool tableHeld = false;
                     Vector3 previous = Input.mousePosition;
-                    return () =>
+                    readBilliardsCharge = focused =>
                     {
+                        if (!focused)
+                        {
+                            S.CancelBilliardsCharge();
+                            tableHeld = pointerHeld = false;
+                            return false;
+                        }
                         var mouse = Input.mousePosition;
-                        if (mouse != previous && RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        bool leftPressed = Input.GetMouseButtonDown(0);
+                        bool leftHeld = Input.GetMouseButton(0);
+                        // Freeze the cue direction from the press through the release frame.
+                        if (!tableHeld && pool.CanShoot && (mouse != previous || leftPressed)
+                            && RectTransformUtility.ScreenPointToLocalPointInRectangle(
                             board.rectTransform, mouse, null, out var local))
                         {
                             var rect = board.rectTransform.rect;
@@ -410,14 +424,20 @@ namespace PCShopSell.Game.UI
                                 var pos = Rect.PointToNormalized(rect, local);
                                 var (x, y) = LeisureBoardGraphic.ToTable(pos);
                                 S.AimBilliards(x, y);
+                                tableHeld = leftPressed;
                             }
                         }
                         previous = mouse;
+                        tableHeld &= leftHeld;
+                        return tableHeld || pointerHeld && leftHeld || Input.GetKey(KeyCode.Space);
+                    };
+                    return () =>
+                    {
                         board.SetVerticesDirty();
                         score.text = $"你 {pool.PlayerScore} : {pool.OpponentScore} {pool.OpponentName}\n先打进 3 球获胜";
                         message.text = pool.Message;
-                        power.text = $"力度 {pool.Power:P0} · 鼠标瞄准";
-                        fire.interactable = !pool.Finished && !pool.OpponentTurn && !pool.Rolling;
+                        power.text = $"力度 {pool.Power:P0}";
+                        fire.interactable = pool.CanShoot;
                     };
                 }
 
@@ -473,6 +493,7 @@ namespace PCShopSell.Game.UI
                 }
             }, holds: false, closable: false, onClosed: () =>
             {
+                if (state.Billiards != null && S?.LiveLeisure == state) S.CancelBilliardsCharge();
                 cabinet?.Dispose();
                 _leisureGameWindow = null;
             }, scrollContent: false, showTitleBar: false, fullScreen: true);

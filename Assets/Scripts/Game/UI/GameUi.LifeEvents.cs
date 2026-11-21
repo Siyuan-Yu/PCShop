@@ -42,6 +42,8 @@ namespace PCShopSell.Game.UI
                     Action("到场后继续","前往",()=>{CloseAllWindows();_ctrl.GoToPlace(S.City.GetPlace(t.Place));});
                 if(t.Activity!=null)Action("需与人物实际同场","查看预约",()=>OpenCityActivityDetail(t.Activity));
                 else if(t.Kind=="leak-repair")Line(w.Content,"师傅到场后自动施工，可离店；无需按开始。",17);
+                else if (t.Kind == "chat" && !t.Started)
+                    Action("打给" + (S.CityPerson(t.Person)?.Name ?? "老朋友"), "拨打电话", () => OpenLifeTaskCall(w, t.Id, t.Person));
                 else if(t.Kind!="book-feedback")
                     Action(t.Fee>0?"开始时支付¥"+t.Fee:t.Kind=="dog-walk"?"需在街上实际走动20米以上":"实际时间推进，离开暂停",t.Started?"暂停":"开始",()=>
                     {if(t.Started){S.PauseLifeTask(t.Id);w.Rebuild();}else if(S.StartLifeTask(t.Id)){CloseWindowSilently(w);S.Time.SetPaused(false);}});
@@ -123,6 +125,25 @@ namespace PCShopSell.Game.UI
         Action("服务站有图书角、晚课与主粮","前往服务站",()=>{CloseAllWindows();_ctrl.GoToPlace(S.City.GetPlace(GameSession.LifeServicePlace));});
         }
 
+        private void OpenLifeTaskCall(Window parent, string taskId, string personId)
+        {
+            var session = S;
+            var friend = session.CityPerson(personId);
+            if (friend == null || !session.StartLifeTask(taskId)) return;
+            OpenDialogue(personId, friend.Name, session.CityPersonRole(personId) + " · 电话", "", null, remote: true,
+                onClosed: () =>
+                {
+                    if (S != session) return;
+                    if (!parent.Closed) CloseWindowSilently(parent);
+                    session.Time.SetPaused(false);
+                }, start: ctx => ctx.Show("喂，是我。好久没听到你声音了。你最近忙吗？",
+                    new TalkOpt { Label = "最近在忙店里的事", Act = () => ctx.Show("开店总有忙不完的事吧。你想说说的话，我正好有空听。",
+                        ReturnToActivity(ctx, "挂断电话")) },
+                    new TalkOpt { Label = "你最近怎么样？", Act = () => ctx.Show("前几天路过常去的那条街，还想起咱们上次在那儿碰见。等都有空了，再出来坐坐吧。",
+                        ReturnToActivity(ctx, "挂断电话")) },
+                    ReturnToActivity(ctx, "挂断电话")));
+        }
+
         private void BuildLifeActivityInteraction(Window w, CityActivity activity)
         {
             if (activity.DefinitionId == GameSession.NightSchoolActivityId)
@@ -139,7 +160,12 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < answers.Length; i++)
                 {
                     int choice = i;
-                    Ui.Size(Ui.Button(w.Content, answers[i], () => { S.AnswerLifeLesson(choice); w.RequestRebuild(); }, 18), -1, 40);
+                    Ui.Size(Ui.Button(w.Content, answers[i], () =>
+                    {
+                        if (!S.AnswerLifeLesson(choice, out var reply)) return;
+                        w.RequestRebuild();
+                        OpenActivityReply("life_teacher", reply, "回到课堂");
+                    }, 18), -1, 40);
                 }
             }
             else if (activity.DefinitionId == GameSession.StreetMusicActivityId)

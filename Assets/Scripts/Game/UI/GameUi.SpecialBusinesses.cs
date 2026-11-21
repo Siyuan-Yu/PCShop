@@ -152,6 +152,7 @@ namespace PCShopSell.Game.UI
                 refreshTables[table] = BuildRestaurantTableSlot(state, table, RefreshTables);
             if (tableCount == 0) Line(C, "暂无餐桌", 16, Ui.Dim);
             RefreshTables();
+            _refreshOpeningRestaurantTables = RefreshTables;
             _counterRefresh.Add(RefreshTables);
 
             void RefreshTables()
@@ -238,9 +239,25 @@ namespace PCShopSell.Game.UI
                     if (state.Workers.Any(w => w.Busy && w.ActorId == GameSession.RestaurantPlayer && w.OrderId == displayed.Id))
                         S.CancelPlayerRestaurantWork();
                 }
-                else if (job != RestaurantJob.None) _ctrl.RequestRestaurantWork(displayed.Id, job);
+                else if (job != RestaurantJob.None)
+                {
+                    bool guided = S.OpeningCounterTutorialPaused;
+                    var requested = (displayed.Id, job);
+                    bool started = _ctrl.RequestRestaurantWork(displayed.Id, job);
+                    if (guided)
+                    {
+                        S.FocusOpeningCounterTutorial(false);
+                        if (started)
+                        {
+                            _openingCounterPendingAction = requested;
+                            S.Time.SetPaused(false);
+                        }
+                        else _openingCounterRejectedAction = requested;
+                    }
+                }
                 refresh();
             }, 15, Ui.ButtonHot);
+            _openingCounterButtons[table] = action;
             action.image.rectTransform.Fill();
             action.Tip(() => ingredientBlocker);
             var caption = action.GetComponentInChildren<Text>();

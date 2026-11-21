@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
@@ -343,6 +344,12 @@ namespace PCShopSell.Game.Runtime
         private Vector3 BuildShop(Transform root, Place p, Vector3 entrance)
         {
             float w = WidthOf(p.Size), d = DepthOf(p.Size);
+            if (GameSession.IsCommercialPremises(p))
+            {
+                var room = RoomSpec.ForShop(p.Size);
+                w = (float)room.Width;
+                d = (float)room.Depth;
+            }
             if(p.Business=="服装")
             {
                 var interior=new GameObject("ClothingShowroom").transform;interior.SetParent(root,false);interior.localPosition=new Vector3(entrance.x,0,FrontZ);

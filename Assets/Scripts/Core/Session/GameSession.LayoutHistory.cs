@@ -19,45 +19,55 @@ namespace PCShopSell.Core.Session
         private readonly List<LayoutSnapshot> _layoutUndo = new List<LayoutSnapshot>();
         private readonly List<LayoutSnapshot> _layoutRedo = new List<LayoutSnapshot>();
         private bool _layoutHistoryActive, _layoutHistoryShop;
-        public bool CanUndoLayout => _layoutHistoryActive && _layoutUndo.Count > 0;
-        public bool CanRedoLayout => _layoutHistoryActive && _layoutRedo.Count > 0;
+        private string _layoutHistoryPlaceId;
+        private bool InLayoutHistoryPlace => _layoutHistoryActive && CurrentPlace?.Id == _layoutHistoryPlaceId;
+        public bool CanUndoLayout => InLayoutHistoryPlace && _layoutUndo.Count > 0;
+        public bool CanRedoLayout => InLayoutHistoryPlace && _layoutRedo.Count > 0;
         public void BeginLayoutHistory(bool shop)
         {
+            if (shop) RecordOpeningRenovationStarted();
             _layoutHistoryShop = shop; _layoutHistoryActive = true;
+            _layoutHistoryPlaceId = CurrentPlace?.Id;
             _layoutUndo.Clear(); _layoutRedo.Clear();
         }
         public void EndLayoutHistory() { _layoutHistoryActive = false; _layoutUndo.Clear(); _layoutRedo.Clear(); }
         private LayoutSnapshot CaptureLayout() => new LayoutSnapshot
         {
-            Layout = LayoutOf(_layoutHistoryShop).Select(p => p.Clone()).ToList(),
+            Layout = PlacementLayout(_layoutHistoryShop).Select(p => p.Clone()).ToList(),
             Furniture = new Dictionary<string, int>(_furnStock),
-            BoxFurniture = BoxOf(_layoutHistoryShop).FurnitureLines.ToList(),
-            TempFurniture = TempOf(_layoutHistoryShop).FurnitureLines.ToList(),
+            BoxFurniture = PlacementBox(_layoutHistoryShop).FurnitureLines.ToList(),
+            TempFurniture = PlacementTemp(_layoutHistoryShop)?.FurnitureLines.ToList(),
             Parts = PlayerShop.Stock.Lines(), Goods = PlayerShop.Stock.GoodsLines(),
             Displays = PlayerShop.DisplayPcs.ToArray()
         };
         private void RememberLayout(bool shop)
         {
-            if (!_layoutHistoryActive || shop != _layoutHistoryShop) return;
+            if (!shop && HasSecondaryResidenceWarehouse)
+                FreightStorageAt(CurrentPlace.Id).Layout ??= SecondaryLayoutHere();
+            if (!InLayoutHistoryPlace || shop != _layoutHistoryShop) return;
             _layoutUndo.Add(CaptureLayout()); _layoutRedo.Clear();
             if (_layoutUndo.Count > 30) _layoutUndo.RemoveAt(0);
         }
         private bool RestoreLayout(List<LayoutSnapshot> from, List<LayoutSnapshot> to)
         {
-            if (!_layoutHistoryActive || !Time.IsHeld || from.Count == 0) return false;
+            if (!InLayoutHistoryPlace || !Time.IsHeld || from.Count == 0) return false;
             var state = from[from.Count - 1];
             if (_layoutHistoryShop && PetGuests(_focus).Count > state.Layout.Select(p => PetShopCatalog.HouseCapacity(p.Id)).DefaultIfEmpty().Max())
                 return Fail("宠物屋里还有客人，这次操作会减少可用名额。");
             double fridgeCapacity = FridgeCapacityOf(state.Layout);
-            if (FridgeOf(_layoutHistoryShop).WeightKg > fridgeCapacity + 1e-9)
+            if (PlacementFridgeWeight(_layoutHistoryShop) > fridgeCapacity + 1e-9)
                 return Fail("冰箱里还有食物，这次撤销/重做会减少冷藏容量。请先取出食物。");
             to.Add(CaptureLayout());
             from.RemoveAt(from.Count - 1);
-            var layout = LayoutOf(_layoutHistoryShop); layout.Clear(); layout.AddRange(state.Layout.Select(p => p.Clone()));
+            var layout = PlacementLayout(_layoutHistoryShop); layout.Clear(); layout.AddRange(state.Layout.Select(p => p.Clone()));
             _furnStock.Clear(); foreach (var item in state.Furniture) _furnStock[item.Key] = item.Value;
-            Backpack box = BoxOf(_layoutHistoryShop), temp = TempOf(_layoutHistoryShop);
+            Backpack box = PlacementBox(_layoutHistoryShop), temp = PlacementTemp(_layoutHistoryShop);
             box.ClearFurniture(); foreach (var item in state.BoxFurniture) box.AddFurniture(item.Key, item.Value);
-            temp.ClearFurniture(); foreach (var item in state.TempFurniture) temp.AddFurniture(item.Key, item.Value);
+            if (temp != null)
+            {
+                temp.ClearFurniture();
+                foreach (var item in state.TempFurniture) temp.AddFurniture(item.Key, item.Value);
+            }
             if (_layoutHistoryShop)
             {
                 PlayerShop.Stock.Clear();
