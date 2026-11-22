@@ -10,6 +10,13 @@ namespace PCShopSell.Core.Shop
     public sealed partial class ShopSimulation
     {
         public Func<IEnumerable<ResaleOffer>> ResaleOffers;
+
+        public double ResalePurchaseIntentAtPrice(long referencePrice, long price)
+        {
+            double ratio = price / (double)Math.Max(1, referencePrice);
+            return AssistedPurchaseIntent(Math.Clamp(1.15 - ratio * .65, .01, .90));
+        }
+
         private void FillResaleShelves(IReadOnlyList<ShelfFill> shelves)
         {
             var remaining = (ResaleOffers?.Invoke()??Enumerable.Empty<ResaleOffer>()).OrderBy(o=>o.Id).ToList();
@@ -40,8 +47,7 @@ namespace PCShopSell.Core.Shop
                 double pick = Random.Next(0, 1000000) / 1000000.0 * offers.Sum(Weight);
                 foreach (var candidate in offers) { pick -= Weight(candidate); if (pick < 0) { offer = candidate; break; } }
             }
-            double ratio=offer.Price/(double)Math.Max(1,offer.ReferencePrice);
-            if(!Random.Chance(AssistedPurchaseIntent(Math.Max(.01,Math.Min(.9,1.15-ratio*.65)))))
+            if(!Random.Chance(ResalePurchaseIntentAtPrice(offer.ReferencePrice, offer.Price)))
             {Leave(c,LeaveReason.TooExpensive);return;}
             if(!CanPay(c)){Leave(c,LeaveReason.NoCash);return;}
             c.ResaleId=offer.Id;c.ResaleName=offer.Name;c.Spend=Money.FromYuan(offer.Price);

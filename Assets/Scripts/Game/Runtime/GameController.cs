@@ -132,6 +132,7 @@ namespace PCShopSell.Game
             ResetCommunityReveal();
             CancelCheckout();
             OpeningCheckoutInstructionFollowed = false;
+            OpeningPetIntakeInstructionFollowed = false;
             if (PetFocusActive) ExitPetFocus();
             Ui?.CloseAllWindows();
             ClearPachinkoRoom();
@@ -147,6 +148,7 @@ namespace PCShopSell.Game
                 Session.TripArrived -= OnTripArrived;
                 Session.ShopCustomerArrived -= OnCustomerArrived;
                 Session.ShopGuestChanged -= OnShopGuestChanged;
+                Session.ResidenceSleepFinished -= Ui.OnResidenceSleepFinished;
                 Session.Clock.DayAdvanced -= OnDayAdvanced;
                 Session.CityTravelRequested-=OnCityTravelRequested;
                 Session.CityPlaceEntered-=OnCityPlaceEntered;
@@ -172,6 +174,7 @@ namespace PCShopSell.Game
             s.TripArrived += OnTripArrived;
             s.ShopCustomerArrived += OnCustomerArrived;
             s.ShopGuestChanged += OnShopGuestChanged;
+            s.ResidenceSleepFinished += Ui.OnResidenceSleepFinished;
             s.Clock.DayAdvanced += OnDayAdvanced;
             s.CityTravelRequested+=OnCityTravelRequested;
             s.CityPlaceEntered+=OnCityPlaceEntered;
@@ -220,7 +223,7 @@ namespace PCShopSell.Game
         public void NewGame() => EnterGame(() =>
         {
             StartSession(NewSession());
-            Ui.ShowIntro();
+            Ui.ShowOpeningCinematic();
         });
 
         internal void EnterGame(Action enter)
@@ -418,21 +421,41 @@ namespace PCShopSell.Game
             else Ui.Toast("床边的路被家具挡住了，请先留出通道。");
         }
 
+        internal HomeRoomView BeginResidenceWakeUp()
+        {
+            if (!Session.CanSleepAt(Session.CurrentPlace)) return null;
+            var room = ActiveResidence;
+            return room?.TryBeginWakeUp() == true ? room : null;
+        }
+
         private const string CheckoutPathBlocked = "收银台周围没有可走的通道，请调整家具位置。";
-        private (OwnedShop Shop, int CustomerId)? _checkoutRequest;
+        private enum CounterJob { Checkout, PetIntake, PetSettlement }
+        private (OwnedShop Shop, CounterJob Job, long Id)? _counterRequest;
         internal bool OpeningCheckoutInstructionFollowed { get; private set; }
-        internal bool CheckoutPending => _checkoutRequest.HasValue;
+        internal bool OpeningPetIntakeInstructionFollowed { get; private set; }
+        internal bool CheckoutPending => _counterRequest.HasValue;
         internal bool CanRequestCheckout => InInterior && Interior?.HasCounter == true && !CheckoutPending
             && !Placing && !PetFocusActive && Ui?.AnyModalOpen != true && !Session.IsGameOver && !Session.IsWorking
             && !Session.IsRenovating && !Session.CityActivityExclusive;
 
         /// <summary>给指定顾客结账。远离柜台时先安排走到可操作的位置。</summary>
-        public void Checkout(int customerId)
+        public void Checkout(int customerId) => RequestCounterJob(Session.CurrentShop, CounterJob.Checkout, customerId);
+
+        internal void HandlePetCounterOrder(OwnedShop shop, long id, bool dropOff) =>
+            RequestCounterJob(shop, dropOff ? CounterJob.PetIntake : CounterJob.PetSettlement, id);
+
+        private void RequestCounterJob(OwnedShop shop, CounterJob job, long id)
         {
-            if (!CanRequestCheckout || !Session.PlayerShop.Queue.Any(customer => customer.Id == customerId)) return;
+            if (!CanRequestCheckout || Session.CurrentShop != shop) return;
+            if (CounterJobBlocker(shop, job, id) is string blocker)
+            {
+                if (job != CounterJob.Checkout) Ui.Toast(blocker);
+                return;
+            }
             if (Session.OpeningCounterTutorialPaused)
             {
-                OpeningCheckoutInstructionFollowed = true;
+                if (job == CounterJob.Checkout) OpeningCheckoutInstructionFollowed = true;
+                if (job == CounterJob.PetIntake) OpeningPetIntakeInstructionFollowed = true;
                 Session.FocusOpeningCounterTutorial(false);
             }
             if (!Interior.NearCounter && !Interior.PlanCheckoutWalk())
@@ -447,25 +470,45 @@ namespace PCShopSell.Game
             Session.CancelPlayerRestaurantWork();
             if (Interior.NearCounter)
             {
-                if (Session.Checkout(customerId)) Ui.RebuildDock();
+                CompleteCounterJob(job, id);
                 return;
             }
-            _checkoutRequest = (Session.CurrentShop, customerId);
+            _counterRequest = (shop, job, id);
             Session.Time.SetPaused(false);
+            if (job != CounterJob.Checkout) Ui.Toast("正在前往收银台，WASD / 方向键可接管。");
+        }
+
+        private string CounterJobBlocker(OwnedShop shop, CounterJob job, long id) => job switch
+        {
+            CounterJob.Checkout => shop.Sim.Queue.Any(customer => customer.Id == id) ? null : "这位顾客已不在结账队列中。",
+            CounterJob.PetIntake => Session.PetBoarding(shop)?.Offer?.Id == id
+                ? Session.PetAcceptBlocker(shop) : "这笔送养订单已不在柜台。",
+            _ => Session.PetVisitBlocker(shop, Session.PetGuests(shop).FirstOrDefault(pet => pet.Id == id))
+        };
+
+        private void CompleteCounterJob(CounterJob job, long id)
+        {
+            bool completed = job switch
+            {
+                CounterJob.Checkout => Session.Checkout((int)id),
+                CounterJob.PetIntake => Session.AcceptPetStay(),
+                _ => Session.SettlePetStay(id)
+            };
+            if (completed) Ui.RebuildDock();
         }
 
         private void UpdateCheckout(float dt)
         {
-            if (_checkoutRequest is not { } request) return;
+            if (_counterRequest is not { } request) return;
             if (!InInterior || Session.CurrentShop != request.Shop || Session.IsGameOver || Session.IsWorking || Placing || Session.IsRenovating)
             {
                 CancelCheckout();
                 return;
             }
-            if (!request.Shop.Sim.Queue.Any(customer => customer.Id == request.CustomerId))
+            if (CounterJobBlocker(request.Shop, request.Job, request.Id) is string blocker)
             {
                 CancelCheckout();
-                Ui.Toast("这位顾客已不在结账队列中。");
+                Ui.Toast(blocker);
                 return;
             }
             if (!Session.Time.IsRunning || Ui.AnyModalOpen || Session.RequiredTutorialPaused || PetFocusActive || Session.CityActivityExclusive)
@@ -475,12 +518,12 @@ namespace PCShopSell.Game
             if (arrived == 0) return;
             CancelCheckout();
             if (arrived < 0) Ui.Toast(CheckoutPathBlocked);
-            else if (Session.Checkout(request.CustomerId)) Ui.RebuildDock();
+            else CompleteCounterJob(request.Job, request.Id);
         }
 
         private void CancelCheckout()
         {
-            _checkoutRequest = null;
+            _counterRequest = null;
             Interior?.CancelCheckoutWalk();
         }
 
@@ -535,6 +578,7 @@ namespace PCShopSell.Game
                 if (Input.GetKeyDown(KeyCode.Escape)) Ui?.CloseTopWindow();
                 return;
             }
+            if (Ui.HandleOpeningCinematicInput()) return;
             float dt = Time.unscaledDeltaTime;
             if(UpdateRacing(dt))return;
             if (UpdateCommunityReveal(dt)) return;

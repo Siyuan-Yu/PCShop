@@ -218,17 +218,18 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void LegacyChilledBatchesKeepTheirSavedDeadlinesWithoutLoadBonuses()
+        public void LegacyChilledBatchesGetTheShelfLifeExtensionOnlyOnce()
         {
             using (var s = Make())
             {
                 var data = s.CreateSave();
+                data.foodShelfLifeVersion = 0;
                 data.home.homeFridge.lunch = new[] { new SaveBatch { id = "veg", name = "青菜焖饭", count = 1, expireDay = 3, chilled = true } };
                 using (var loaded = GameSession.Load(s.City, data))
                 using (var again = GameSession.Load(s.City, loaded.CreateSave()))
                 {
-                    Assert.AreEqual(3, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
-                    Assert.AreEqual(3, again.HomeFridge.Food.Packed.Single().ExpireDay);
+                    Assert.AreEqual(5, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
+                    Assert.AreEqual(5, again.HomeFridge.Food.Packed.Single().ExpireDay);
                 }
             }
         }

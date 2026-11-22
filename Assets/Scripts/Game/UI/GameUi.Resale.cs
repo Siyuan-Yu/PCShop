@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Inventory;
+using PCShopSell.Core.Shop;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +12,8 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private static readonly string[] UsedDeskTabs = { "待收购", "待鉴定", "待上架" };
+        private Window _openingUsedDeskWindow;
+        private Button _openingUsedDeskButton, _openingUsedDeskAction;
         private readonly Dictionary<(string Shop, int Item), long> _usedPriceDrafts =
             new Dictionary<(string Shop, int Item), long>();
 
@@ -46,6 +49,7 @@ namespace PCShopSell.Game.UI
             }
             var openDesk = Ui.Size(Ui.Button(card, "打开收购鉴定台  ›", OpenUsedDesk, 17, Ui.ButtonHot), -1, 36);
             openDesk.name = "OpenUsedDesk";
+            _openingUsedDeskButton = openDesk;
             if (pending[0].Length > 0)
             {
                 var dot = Ui.Label(openDesk.transform, "●", 18, TextAnchor.MiddleCenter, Ui.FlatDown);
@@ -177,10 +181,17 @@ namespace PCShopSell.Game.UI
         {
             if (!S.InPlayerShop || S.RetailKind != "secondhand") return;
             var state = S.SpecialBusiness(S.CurrentShop.Place.Id);
-            int tab = Math.Max(0, Array.FindIndex(PendingUsedItems(state), items => items.Length > 0));
-            int selectedId = 0;
+            var lessonItem = S.OpeningUsedDeskLessonItem();
+            int tab = lessonItem == null ? Math.Max(0, Array.FindIndex(PendingUsedItems(state), items => items.Length > 0))
+                : !lessonItem.Owned ? 0 : !lessonItem.Inspected ? 1 : 2;
+            int selectedId = lessonItem?.Id ?? 0;
             OpenWindow("收购鉴定台", 900, 550, w =>
             {
+                if (lessonItem != null)
+                {
+                    _openingUsedDeskWindow = w;
+                    _openingUsedDeskAction = null;
+                }
                 var pending = PendingUsedItems(state);
                 void Select(int nextTab, int itemId = 0)
                 {
@@ -212,6 +223,7 @@ namespace PCShopSell.Game.UI
                 }
 
                 selectedId = selected.Id;
+                bool guided = lessonItem == selected && S.OpeningUsedDeskLessonItem() == selected;
                 var body = Ui.Row(w.Content, 350, 10);
                 var list = Ui.Scroll(body);
                 Ui.Size((RectTransform)list.parent.parent, 258, 350);
@@ -227,15 +239,21 @@ namespace PCShopSell.Game.UI
                 }
 
                 var detail = Ui.Size(Ui.Panel(body, "UsedItemDetail", Ui.PanelBg2), -1, 350, 1).rectTransform;
-                BuildUsedItemAction(detail, selected, nextTab =>
+                BuildUsedItemAction(detail, selected, guided, nextTab =>
                 {
                     RebuildDock();
+                    if (guided && selected.Listed)
+                    {
+                        S.CompleteOpeningUsedDeskLesson();
+                        w.Close();
+                        return;
+                    }
                     Select(nextTab, selected.Id);
                 });
             }, scrollContent: false);
         }
 
-        private void BuildUsedItemAction(RectTransform detail, UsedItem item, Action<int> refresh)
+        private void BuildUsedItemAction(RectTransform detail, UsedItem item, bool guided, Action<int> refresh)
         {
             var parent = Ui.Scroll(detail);
             ((RectTransform)parent.parent.parent).Anchor(0, 0, 1, 1, 14, 64, 14, 14);
@@ -247,6 +265,7 @@ namespace PCShopSell.Game.UI
                 button.name = name + id;
                 button.interactable = enabled;
                 button.image.rectTransform.Anchor(0, 0, 1, 1, 0, 0, 96);
+                if (guided) _openingUsedDeskAction = button;
             }
             Button Secondary(string caption, Action action)
             {
@@ -275,8 +294,13 @@ namespace PCShopSell.Game.UI
                 if (item.ArtifactAssessmentMade)
                     Line(parent, item.ArtifactIdentified ? "收购师判断 · " + GameSession.UsedConditionName(item)
                         : "收购师暂时看不准真伪。", 16, Ui.Dim);
-                var bid = UsedAmountEditor(parent, "我的报价", Draft(item.Asking), 1, 1, 1000000, SaveDraft);
-                Primary("BuyUsed_", "出价收购", () => Complete(S.OfferUsedPrice(id, bid()), 1));
+                var bid = UsedAmountEditor(parent, "我的报价", guided ? item.Asking : Draft(item.Asking), 1, 1, 1000000, SaveDraft);
+                Primary("BuyUsed_", "出价收购", () =>
+                {
+                    if (!S.OfferUsedPrice(id, bid())) return;
+                    if (guided) S.RecordOpeningUsedDeskPurchase(id);
+                    Complete(true, 1);
+                });
                 Secondary("拒收", () => Complete(S.DeclineUsedSeller(id), 0))
                     .name = "DeclineUsed_" + id;
                 return;
@@ -306,8 +330,10 @@ namespace PCShopSell.Game.UI
             }
             if (GameSession.UsedSaleReputation(item) > 0)
                 Line(parent, $"顾客付款后 · 名望 +{GameSession.UsedSaleReputation(item):0.#}", 16, Ui.Good);
+            var intent = Line(parent, "", 16, Ui.Good);
             var price = UsedAmountEditor(parent, "出售标价", Draft(Math.Max(1, item.Price)), 1, 1,
-                GameSession.UsedListingPriceLimit(item), SaveDraft);
+                GameSession.UsedListingPriceLimit(item), SaveDraft,
+                preview: amount => intent.text = $"购买意愿 {PurchaseEstimateText(UsedPurchaseIntent(item, amount))}");
             int NextQueuedTab()
             {
                 var pending = PendingUsedItems(S.SpecialBusiness(S.CurrentShop.Place.Id));
@@ -330,7 +356,7 @@ namespace PCShopSell.Game.UI
         }
 
         private static Func<long> UsedAmountEditor(Transform parent, string label, long amount, long step,
-            long min, long max, Action<long> commit, string inputName = null)
+            long min, long max, Action<long> commit, string inputName = null, Action<long> preview = null)
         {
             var row = Ui.Row(parent, 34, 4);
             if (label != null) Ui.Size(Ui.Label(row, label + " ¥", 16), -1, 34, 1);
@@ -344,11 +370,17 @@ namespace PCShopSell.Game.UI
             {
                 amount = Math.Max(min, Math.Min(max, number));
                 input.SetTextWithoutNotify(amount.ToString());
-                commit(amount);
+                commit?.Invoke(amount);
+                preview?.Invoke(amount);
                 return amount;
             }
             long Read() => long.TryParse(input.text, out long number) ? Math.Max(min, Math.Min(max, number)) : amount;
             input.onEndEdit.AddListener(_ => Save(Read()));
+            if (preview != null)
+            {
+                input.onValueChanged.AddListener(_ => preview(Read()));
+                preview(Read());
+            }
             Ui.Size(Ui.Button(row, "−", () => Save(Read() - step), 18), 40, 34);
             Ui.Size(Ui.Button(row, "+", () => Save(Read() + step), 18), 40, 34);
             input.transform.SetSiblingIndex(label == null ? 1 : 2);
@@ -393,6 +425,18 @@ namespace PCShopSell.Game.UI
             var onShelf=S.PlayerShop.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(i=>i.Id).ToArray();
             Line(parent,pricingOnly?"二手商品定价":"二手转售库存",19,Ui.Accent);
             var items=state.Used.Where(i=>i.Owned&&!i.Sold&&(!shelfOnly||(displayed??onShelf).Contains(i.Id))&&(!pricingOnly||i.Inspected)).ToArray();
+            if (pricingOnly)
+            {
+                var targets = S.UsedUniformPriceTargets();
+                var summary = Ui.Row(parent, 38, 8);
+                string estimate = targets.Length > 0
+                    ? $"陈列商品平均购买意愿 {PurchaseEstimateText(targets.Average(item => UsedPurchaseIntent(item, item.Price)))}"
+                    : "暂无可统一定价的陈列商品";
+                Ui.Size(Ui.Label(summary, estimate, 16, color: Ui.Good), 0, 38, 1)
+                    .Tip("按可购买的陈列商品平均。购买意愿为顾客看到这件商品后的估算，结账还受付款方式影响。");
+                Ui.Size(Ui.Button(summary, "统一定价", OpenUsedUniformPricing, 17, Ui.ButtonHot, targets.Length > 0), 120, 36)
+                    .name = "OpenUsedUniformPricing";
+            }
             const int pageSize = 8;
             int pages = Math.Max(1, (items.Length + pageSize - 1) / pageSize);
             shelfPage = Mathf.Clamp(shelfPage, 0, pages - 1);
@@ -419,7 +463,13 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(title, GameSession.UsedItemName(item) + " #" + id + " · " + status, 17, color: Ui.Accent), 0, -1, 1);
                 Line(card,(item.Inspected?GameSession.UsedConditionName(item):"状态待鉴定")+" · "+GameSession.UsedWeight(item).ToString("0.##")+" 千克 · 成本 ¥"+item.Cost+" · 标价 ¥"+item.Price,15);
                 var row=Ui.Row(card,34,5);
-                Ui.Size(Ui.Button(row,item.Listed?"调整售价":"定价并上架",()=>OpenUsedPrice(id,owner),16,Ui.ButtonBg,item.Inspected&&!reserved),-1,34,1);
+                if (pricingOnly)
+                {
+                    string intent = reserved ? "已锁定成交价" : $"购买意愿 {PurchaseEstimateText(UsedPurchaseIntent(item, item.Price))}";
+                    Ui.Size(Ui.Label(row, intent, 16, color: reserved ? Ui.Dim : Ui.Good), 0, 34, 1).name = "UsedPurchaseIntent_" + id;
+                }
+                Ui.Size(Ui.Button(row,item.Listed?"调整售价":"定价并上架",()=>OpenUsedPrice(id,owner),16,Ui.ButtonBg,
+                    item.Inspected&&!reserved && item.RepairWorkRemaining <= 0), pricingOnly ? 110 : -1, 34, pricingOnly ? -1 : 1);
                 if(item.Listed)Ui.Size(Ui.Button(row,"下架",()=>{S.UnlistUsedItem(id);owner?.Rebuild();RebuildDock();},16,Ui.ButtonBg,!reserved),85,34);
             }
             if (shelfOnly && shelfIndex % 2 != 0) Ui.Size(Ui.Rect(shelfRow, "EmptyUsedShelfSlot"), 0, 148, 1);
@@ -464,6 +514,64 @@ namespace PCShopSell.Game.UI
             }, onClosed: refresh);
         }
 
+        private double UsedPurchaseIntent(UsedItem item, long price) =>
+            S.PlayerShop.ResalePurchaseIntentAtPrice(GameSession.UsedValue(item), price);
+
+        private void OpenUsedUniformPricing()
+        {
+            var items = S.UsedUniformPriceTargets();
+            if (items.Length == 0) return;
+            double multiplier = 1;
+            string before = PurchaseEstimateText(items.Average(item => UsedPurchaseIntent(item, item.Price)));
+            OpenWindow("二手商品统一定价", 840, Math.Min(780, 260 + items.Length * 46), w =>
+            {
+                Line(w.Content, "按每件旧物的参考价乘以同一倍率，更新本次陈列商品的标价。", 17);
+                var summary = Line(w.Content, "", 18, Ui.Good);
+                var labels = new Text[items.Length];
+                var slider = Ui.Size(Ui.Slider(w.Content, (float)ShopSettings.MinMarkup, (float)ShopSettings.MaxMarkup,
+                    (float)multiplier, value =>
+                    {
+                        multiplier = Math.Clamp(Math.Round(value * 20) / 20, ShopSettings.MinMarkup, ShopSettings.MaxMarkup);
+                        Preview();
+                    }), -1, 32);
+                slider.name = "UsedUniformPriceSlider";
+                var list = Ui.Scroll(w.Content);
+                var listSize = Ui.Size((RectTransform)list.parent.parent, -1, 54).GetComponent<LayoutElement>();
+                listSize.flexibleHeight = 1;
+                for (int i = 0; i < items.Length; i++)
+                {
+                    var item = items[i];
+                    var row = Ui.Row(list, 42, 12);
+                    ItemPortrait(row, GameSession.UsedItemPortrait(item), 36);
+                    Ui.Size(Ui.Label(row, $"{UsedItemTitle(item)} · {GameSession.UsedConditionName(item)}", 16), 0, 42, 1);
+                    labels[i] = Ui.Size(Ui.Label(row, "", 16, TextAnchor.MiddleRight, Ui.Good), 280, 42);
+                }
+                Ui.Size(Ui.Button(w.Content, $"应用到 {items.Length} 件商品", () =>
+                {
+                    int applied = S.ApplyUsedUniformPricing(multiplier);
+                    if (applied == 0) { Toast("暂无可统一定价的陈列商品。"); return; }
+                    w.Close();
+                    RebuildDock();
+                    Toast($"已统一调整 {applied} 件二手商品的售价。");
+                }, 18, Ui.ButtonHot), -1, 42).name = "ConfirmUsedUniformPrice";
+                Preview();
+
+                void Preview()
+                {
+                    double total = 0;
+                    for (int i = 0; i < items.Length; i++)
+                    {
+                        var item = items[i];
+                        long price = GameSession.UsedPriceAtMultiplier(item, multiplier);
+                        double intent = UsedPurchaseIntent(item, price);
+                        total += intent;
+                        labels[i].text = $"¥{item.Price:N0} → ¥{price:N0} · 意愿 {PurchaseEstimateText(intent)}";
+                    }
+                    summary.text = $"参考价 × {multiplier:0.00} · 平均购买意愿 {before} → {PurchaseEstimateText(total / items.Length)}";
+                }
+            }, scrollContent: false);
+        }
+
         private void OpenUsedPrice(int id,Window owner)
         {
             var item=S.SpecialBusiness(S.CurrentShop.Place.Id).Used.FirstOrDefault(i=>i.Id==id&&!i.Sold);if(item==null)return;
@@ -473,14 +581,12 @@ namespace PCShopSell.Game.UI
             {
                 ItemLabel(w.Content,GameSession.UsedItemPortrait(item),GameSession.UsedItemName(item)+" · "+GameSession.UsedConditionName(item),20,color:Ui.Accent);
                 Line(w.Content,"收购成本 ¥"+item.Cost+" · 建议售价 ¥"+GameSession.UsedValue(item),17);
-                var row=Ui.Row(w.Content,40,6);
-                Ui.Size(Ui.Button(row,"−",()=>{price=Math.Max(1,price-1);w.Rebuild();},18),55);
-                var input=Ui.TextInput(row,price.ToString(),"售价",text=>{if(long.TryParse(text,out long value))price=Math.Max(1,Math.Min(priceLimit,value));});
-                input.contentType=UnityEngine.UI.InputField.ContentType.IntegerNumber;Ui.Size(input,-1,40,1);
-                Ui.Size(Ui.Button(row,"+",()=>{price=Math.Min(priceLimit,price+1);w.Rebuild();},18),55);
-                Ui.Size(Ui.Button(w.Content, "确认售价并上架", () =>
+                var estimate = Line(w.Content, "", 17, Ui.Good);
+                var readPrice = UsedAmountEditor(w.Content, "售价", price, 1, 1, priceLimit, value => price = value,
+                    preview: value => estimate.text = $"预览购买意愿 {PurchaseEstimateText(UsedPurchaseIntent(item, value))}");
+                Ui.Size(Ui.Button(w.Content, item.Listed ? "确认售价" : "确认售价并上架", () =>
                 {
-                    if (!TryListUsedItem(id, price)) return;
+                    if (!TryListUsedItem(id, readPrice())) return;
                     w.Close();
                     owner?.Rebuild();
                     RebuildDock();

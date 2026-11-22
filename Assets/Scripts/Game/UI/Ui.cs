@@ -9,23 +9,23 @@ using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
-    /// <summary>用代码搭 uGUI 的小工具。灰盒阶段字体用系统微软雅黑。</summary>
+    /// <summary>街坊小店界面共用的 uGUI 控件。</summary>
     public static partial class Ui
     {
         public static Color Gold => Accent;
-        public static readonly Color PanelBg = Tone("FBF6E9");
-        public static readonly Color PanelBg2 = Tone("F2EADB");
-        public static readonly Color Accent = Tone("80551F");
-        public static readonly Color ButtonBg = Tone("F7EFDE");
-        public static readonly Color ButtonHot = Tone("F1BF68");
-        public static readonly Color Warn = Tone("9C4634");
-        public static readonly Color Good = Tone("386047");
+        public static readonly Color PanelBg = Tone("ECE8DE");
+        public static readonly Color PanelBg2 = Tone("E3DFD4");
+        public static readonly Color Accent = Tone("705230");
+        public static readonly Color ButtonBg = Tone("E9E4D9");
+        public static readonly Color ButtonHot = Tone("CEB17C");
+        public static readonly Color Warn = Tone("8B493E");
+        public static readonly Color Good = Tone("365846");
         internal static Color ChangeColor(double change, double threshold = 0) =>
             change > threshold ? Good : change < -threshold ? Warn : Dim;
-        public static readonly Color Dim = Tone("655E52");
-        public static readonly Color TextColor = Tone("292E28");
-        public static readonly Color Edge = Tone("DED3BE");
-        public static readonly Color WarningSurface = Tone("FAE7DA");
+        public static readonly Color Dim = Tone("59584F");
+        public static readonly Color TextColor = Tone("30352E");
+        public static readonly Color Edge = Tone("C9C2B4");
+        public static readonly Color WarningSurface = Tone("F0DFD5");
         internal static string Emphasize(string text, Color? color = null) =>
             $"<b><color=#{ColorUtility.ToHtmlStringRGB(color ?? Accent)}>{text}</color></b>";
 
@@ -68,9 +68,9 @@ namespace PCShopSell.Game.UI
             get
             {
                 if (_roundedPlate != null) return _roundedPlate;
-                const int n = 32, radius = 9;
+                const int n = 32, radius = 6;
                 var texture = new Texture2D(n, n, TextureFormat.RGBA32, false)
-                    { name = "PETSHOP rounded UI", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                    { name = "Neighborhood rounded UI", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
                 var pixels = new Color32[n * n];
                 for (int y = 0; y < n; y++)
                 for (int x = 0; x < n; x++)
@@ -382,11 +382,11 @@ namespace PCShopSell.Game.UI
             // A fixed gutter keeps controls clear of the scrollbar without reflowing the list as it changes.
             viewport.offsetMax = new Vector2(-scrollbarWidth - 4, viewport.offsetMax.y);
 
-            var track = Panel(frame, "VerticalScrollbar", Tone("ECE3D1"));
+            var track = Panel(frame, "VerticalScrollbar", FlatBand);
             track.rectTransform.Anchor(1, 0, 1, 1, -scrollbarWidth - 2, 2, 2, 2);
             var slidingArea = Rect(track.transform, "SlidingArea").Fill(2);
             slidingArea.gameObject.AddComponent<RectMask2D>();
-            var handle = Panel(slidingArea, "Handle", Tone("9B8865"));
+            var handle = Panel(slidingArea, "Handle", Tone("908C7D"));
             // Scrollbar drives anchors but leaves offsets unchanged.
             handle.rectTransform.Fill();
             handle.raycastTarget = false;

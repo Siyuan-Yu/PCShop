@@ -339,8 +339,14 @@ namespace PCShopSell.Core.Shop
 
         private ShopSimulation _reputationOwner;
         public const double NeutralShopReputation = 50;
+        public const double OwnerOnSiteBonus = .20;
+        internal Func<bool> OwnerOnSiteOf;
+        public bool OwnerOnSite => OwnerOnSiteOf?.Invoke() ?? PlayerPresent;
+        public double OwnerTrafficMultiplier => OwnerOnSite ? 1 + OwnerOnSiteBonus : 1;
         public double Awareness { get; private set; }
         public double ShopReputation { get; private set; } = NeutralShopReputation;
+        public double EffectiveShopReputation => OwnerOnSite ? ShopReputation * (1 + OwnerOnSiteBonus) : ShopReputation;
+        public double StandingArrivalMultiplier => (1 + Awareness / 100.0) * OwnerTrafficMultiplier;
 
         /// <summary>原有的共用知名度用于解锁。变动同时计入发生业务的门店，客流读取该店的知名度。</summary>
         public double Reputation
@@ -693,7 +699,7 @@ namespace PCShopSell.Core.Shop
 
         public Func<double> StreetTrafficFactorOf;
         internal double ArrivalTrafficMultiplier => (StreetTrafficFactorOf?.Invoke() ?? 1.0)
-            * TrafficMultiplier * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier)) * (1.0 + Awareness / 100.0);
+            * TrafficMultiplier * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier)) * StandingArrivalMultiplier;
 
         internal static double ArrivalRatePerMinute(ShopSettings settings, GameTimestamp at, ShopSize size, double location, double traffic)
         {

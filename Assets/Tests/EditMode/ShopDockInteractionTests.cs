@@ -87,7 +87,14 @@ namespace PCShopSell.Tests
                     foreach(var figure in figures)
                     {
                         var local=figure.transform.localPosition;
-                        Assert.That(local.x,Is.InRange(.39f,view.Width-.39f));Assert.That(local.z,Is.InRange(.39f,view.Depth-.39f));
+                        Assert.That(local.x, Is.InRange(.39f, view.Width - .39f));
+                        if (figure.PersonId == s.PersonIdOf(buyer))
+                        {
+                            Assert.That(local.z, Is.InRange(-.9f, -.1f), "进货员应在店外靠墙待命");
+                            Assert.That(Mathf.Abs(figure.transform.position.x - view.DoorWorld.x),
+                                Is.GreaterThan(1.1f), "给门口留出通道");
+                        }
+                        else Assert.That(local.z, Is.InRange(.39f, view.Depth - .39f));
                         Assert.True(view.Emotes.Any(e=>e.PersonId==figure.PersonId));
                     }
                     var before=figures.Single(f=>f.PersonId==s.PersonIdOf(sales1)).gameObject;

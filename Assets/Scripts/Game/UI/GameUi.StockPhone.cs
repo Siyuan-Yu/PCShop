@@ -18,7 +18,7 @@ namespace PCShopSell.Game.UI
             new Color32(151,96,31,255), new Color32(42,111,101,255), new Color32(114,78,147,255),
             new Color32(165,65,64,255), new Color32(56,97,151,255), new Color32(105,107,42,255),
             new Color32(161,82,46,255), new Color32(48,116,69,255), new Color32(147,71,117,255),
-            new Color32(35,113,132,255), new Color32(82,92,94,255)
+            new Color32(35,113,132,255), new Color32(81,91,165,255), new Color32(82,92,94,255)
         };
         private const int StockQuoteGap = 6, StockQuoteWidth = 218, StockPositionWidth = 104;
         private const int StockCostWidth = 100, StockDraftWidth = 116, StockActionWidth = 74;
@@ -47,7 +47,6 @@ namespace PCShopSell.Game.UI
             _stockTradeFailed = false;
             _stockTradeRevealPending = false;
             _stockShortMode = false;
-            _stockLotStep = 0;
         }
 
         // 证券页可以放进别的容器（居家工作台「投资」页）：构建期间 _stockHost 指向容器，_stockEmbedded 为真。
@@ -149,7 +148,7 @@ namespace PCShopSell.Game.UI
         private static (Text amount, Text detail) StockCashCard(Transform parent, string amountName,
             string title, int width, bool withDetail = false)
         {
-            var card = Ui.Size(Ui.FlatPanel(parent, "StockCashCard", Ui.FlatWell, Ui.FlatHotEdge),
+            var card = Ui.Size(Ui.FlatPanel(parent, "StockCashCard", Ui.FlatWell, Ui.FlatWellEdge),
                 width, StockCashCardHeight, 0);
             card.raycastTarget = false;
             var layout = Ui.VList(card.rectTransform, 3, 0);
@@ -320,6 +319,7 @@ namespace PCShopSell.Game.UI
             }
 
             var heading = Ui.Row(root, 33, StockQuoteGap);
+            Ui.Trim(heading, "StockHeadingRule", Ui.FlatWellEdge, 0);
             heading.GetComponent<HorizontalLayoutGroup>().padding.right = 20;
             StockFlex(Ui.Label(heading, "公司", 15, color: Ui.Dim), 33);
             var quotes = Ui.Row(heading, 33, StockQuoteGap);
@@ -422,6 +422,7 @@ namespace PCShopSell.Game.UI
             row.name = "StockQuote_" + id;
             var background = row.gameObject.AddComponent<Image>();
             background.raycastTarget = false;
+            Ui.Trim(row, "StockQuoteRule", Ui.FlatCardEdge, 0);
             Ui.Size(Ui.Button(row, S.StockWatched(id) ? "★" : "☆", () => { S.ToggleStockWatch(id); w.Rebuild(); }, 17), 40, 36);
             var name = Ui.Button(row, (expanded ? "▾  " : "▸  ") + StockTitle(id), () =>
             {
@@ -464,7 +465,8 @@ namespace PCShopSell.Game.UI
                 long units = draft.TryGetValue(id, out long value) ? value : 0;
                 pending.text = units == 0 ? "—" : $"{(units > 0 ? "+" : "−")}{Math.Abs(units):N0}{(id == "hardware" ? " 份" : " 股")}";
                 pending.color = units == 0 ? Ui.Dim : Ui.Accent;
-                background.color = units == 0 ? Color.clear : Ui.PanelBg2;
+                pending.fontStyle = units == 0 ? FontStyle.Normal : FontStyle.Bold;
+                background.color = units == 0 ? Color.clear : Ui.PendingSurface;
                 plus.interactable = units < 0 || CanOpenStockPosition(id, shortMode) && units < GameSession.StockOrderLimit;
                 minus.interactable = units > -Math.Min(held, GameSession.StockOrderLimit);
             };
@@ -486,6 +488,9 @@ namespace PCShopSell.Game.UI
             }
             Ui.Size(Ui.Button(heading, _stockCandles ? "切换折线" : "切换K线", () =>
             { _stockCandles = !_stockCandles; w.Rebuild(); }, 15), 110, 32);
+
+            if (CityInvestments.Get(id) is CityEquityDefinition company)
+                StockText(card, company.Industry + " · " + company.Description, 15, Ui.Dim);
 
             var figures = Ui.Row(card, 34, 8);
             long value = S.CityInvestmentPrice(id).Cents * units;
@@ -565,17 +570,19 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(ranges, days == 1 ? "今日" : $"近{days}天", () => { _stockChartDays = days; w.Rebuild(); },
                     16, Ui.SelectedButton(days == _stockChartDays)), 112, 34);
 
-            var chartRow = Ui.Row(body, 430, 12);
+            const int legendRowHeight = 34, legendSpacing = 3;
+            int chartHeight = Math.Max(430, StockIds.Length * (legendRowHeight + legendSpacing) - legendSpacing);
+            var chartRow = Ui.Row(body, chartHeight, 12);
             var legend = Ui.Rect(chartRow, "StockChartLegend");
-            Ui.Size(legend, 264, 430, 0);
-            Ui.VList(legend, 3, 0);
+            Ui.Size(legend, 264, chartHeight, 0);
+            Ui.VList(legend, legendSpacing, 0);
             var indices = Enumerable.Range(0, StockIds.Length).ToArray();
             foreach (int i in indices)
             {
                 string id = StockIds[i];
                 bool hidden = _stockHiddenChartSeries.Contains(id);
                 Color tint = hidden ? Ui.Dim : StockChartColors[i % StockChartColors.Length];
-                var item = Ui.Row(legend, 34, 5);
+                var item = Ui.Row(legend, legendRowHeight, 5);
                 var color = Ui.Panel(item, "SeriesColor", tint);
                 color.raycastTarget = false;
                 Ui.Size(color, 5, 24);
@@ -598,7 +605,7 @@ namespace PCShopSell.Game.UI
                 }
             }
             var graph = Ui.Rect(chartRow, "StockMarketChart");
-            StockFlex(graph, 430);
+            StockFlex(graph, chartHeight);
             var visible = indices.Where(i => !_stockHiddenChartSeries.Contains(StockIds[i])).ToArray();
             var series = visible.Select(i => StockQuotesInRange(StockIds[i], _stockChartDays)).ToArray();
             var colors = visible.Select(i => StockChartColors[i % StockChartColors.Length]).ToArray();

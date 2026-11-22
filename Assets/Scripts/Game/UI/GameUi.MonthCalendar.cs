@@ -64,9 +64,10 @@ namespace PCShopSell.Game.UI
             }
 
             var selected = days[_calendarDay].ToArray();
-            var agenda = Ui.FlatPanel(w.Content, "CalendarDayDetails", Ui.FlatBand, Ui.FlatCardEdge).rectTransform;
+            var agenda = Ui.PaperPanel(w.Content, "CalendarDayDetails").rectTransform;
             Ui.VList(agenda, 5, 10);
             var heading = Ui.Row(agenda, 34);
+            Ui.Trim(heading, "AgendaDateRule", Ui.FlatCardEdge, 0);
             Ui.Size(Ui.Label(heading, "<b>" + DateLabel(_calendarDay) + "</b>", 20), 0, -1, 1).name = "CalendarSelectedDate";
             if (selected.Length == 0)
                 Line(agenda, "当天暂无安排", 17, Ui.Dim);

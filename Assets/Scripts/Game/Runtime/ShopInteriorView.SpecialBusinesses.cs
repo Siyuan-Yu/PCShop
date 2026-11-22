@@ -126,8 +126,17 @@ namespace PCShopSell.Game.Runtime
             _usedSellerShopId = null;
         }
 
-        private readonly Dictionary<string,GameObject> _specialFigures=new Dictionary<string,GameObject>();
+        private readonly Dictionary<int, FigureMotion> _diningGuests = new Dictionary<int, FigureMotion>();
         private readonly Dictionary<string,GameObject> _specialGoods=new Dictionary<string,GameObject>();
+
+        private void ClearSpecialBusinessVisuals()
+        {
+            foreach (var guest in _diningGuests.Values) Kill.It(guest.gameObject);
+            _diningGuests.Clear();
+            foreach (var model in _specialGoods.Values) Kill.It(model);
+            _specialGoods.Clear();
+        }
+
         public bool NearModelPaintBench { get; private set; }
         public Vector3 ModelPaintBenchWorld { get; private set; }
         public int NearbyDiningTable { get; private set; } = -1;
@@ -155,7 +164,7 @@ namespace PCShopSell.Game.Runtime
             NearUsedRepairBench=false;
             NearbyDiningTable = -1;
             if (shop.RetailKind != "secondhand" || _usedBuyDesk == null) ClearUsedSellerFigures();
-            if(!session.IsSpecialBusiness(shop)&&_specialFigures.Count==0&&_specialGoods.Count==0)return;
+            if(!session.IsSpecialBusiness(shop)&&_diningGuests.Count==0&&_specialGoods.Count==0)return;
             if(session.IsSpecialBusiness(shop))
             {
                 var owner=_owner.transform.localPosition;
@@ -171,26 +180,34 @@ namespace PCShopSell.Game.Runtime
                     SpecialFurnitureName=PCShopSell.Core.Home.FurnitureCatalog.Get(nearest.Id).Name;
                 }
             }
-            var wanted=new HashSet<string>();
+            var seatedGuests = new HashSet<int>();
             var goods=new HashSet<string>();
-            Transform Person(string key,Vector3 target)
+            void SeatGuest(DiningOrder order, Vector3 tableCenter, Quaternion facing)
             {
-                wanted.Add(key);
-                if(!_specialFigures.TryGetValue(key,out var figure))
+                seatedGuests.Add(order.Id);
+                if (!_diningGuests.TryGetValue(order.Id, out var guest))
                 {
-                    figure=Prims.Figure(_root,"SpecialCustomer_"+key,new Color(.36f,.62f,.72f),new Color(.95f,.8f,.65f),.95f);
-                    _specialFigures[key]=figure;
+                    var figure = Prims.Figure(_root, "SpecialCustomer_dining:" + order.Id,
+                        new Color(.36f, .62f, .72f), new Color(.95f, .8f, .65f), .95f);
+                    guest = figure.GetComponent<FigureMotion>();
+                    guest.LocomotionEnabled = false;
+                    _diningGuests.Add(order.Id, guest);
                 }
-                figure.SetActive(true);
-                figure.transform.position = ClampIndoorNpc(_root.TransformPoint(target));
-                return figure.transform;
+                guest.transform.localPosition = tableCenter + facing * FurnitureVisuals.DiningSeatPosition;
+                guest.transform.localRotation = facing;
+                Vector3? food = order.Stage == DiningStage.Eating
+                    ? FurnitureVisuals.DiningMealPosition - FurnitureVisuals.DiningSeatPosition : (Vector3?)null;
+                guest.SetDiningSeatPose(FurnitureVisuals.DiningSeatHeight, food, order.Id);
             }
-            void Good(string key,Vector3 target,Color color)
+            void Good(string key,Vector3 target,Color color, bool platedMeal = false)
             {
                 goods.Add(key);
                 if(!_specialGoods.TryGetValue(key,out var model))
                 {
-                    model=Prims.Box(_root,"SpecialGoods_"+key,target,new Vector3(.18f,.12f,.18f),Mats.Lit(color));_specialGoods[key]=model;
+                    model = platedMeal
+                        ? Prims.Shape(PrimitiveType.Sphere, _root, "SpecialGoods_" + key, target, new Vector3(.21f, .062f, .21f), Mats.Lit(color))
+                        : Prims.Box(_root, "SpecialGoods_" + key, target, new Vector3(.18f, .12f, .18f), Mats.Lit(color));
+                    _specialGoods[key] = model;
                 }
                 model.SetActive(true);model.transform.localPosition=target;
                 var renderer=model.GetComponent<Renderer>();if(renderer!=null)renderer.sharedMaterial=Mats.Lit(color);
@@ -202,16 +219,19 @@ namespace PCShopSell.Game.Runtime
                 {
                     if (dt > 0) UpdateRestaurantSounds(state);
                     var tables=shop.Layout.Where(p=>p.Id=="restaurant_table").ToArray();
-                    foreach(var order in state.Orders.Where(o=>!o.TableCleared))
-                        if(order.Table>=0&&order.Table<tables.Length)
-                        {
-                            var table=tables[order.Table];var position=new Vector3((float)table.X,0,(float)table.Z);
-                            if(order.Stage!=DiningStage.Completed&&order.Stage!=DiningStage.Left)
-                                Person("dining:"+order.Id,position+new Vector3(0,0,-.7f));
-                            if(order.Stage==DiningStage.Eating||order.Stage==DiningStage.Checkout||order.Stage==DiningStage.Completed
-                                ||(order.Stage==DiningStage.Left&&order.EatUntil>0))
-                                Good("meal:"+order.Id,position+Vector3.up*.95f,new Color(.9f,.7f,.25f));
-                        }
+                    foreach (var order in state.Orders)
+                    {
+                        if (order.IsFishOrder || order.TableCleared || order.Table < 0 || order.Table >= tables.Length) continue;
+                        var table = tables[order.Table];
+                        var position = new Vector3((float)table.X, 0, (float)table.Z);
+                        var facing = Quaternion.Euler(0, 90f * table.Rot, 0);
+                        if (order.Stage != DiningStage.Completed && order.Stage != DiningStage.Left)
+                            SeatGuest(order, position, facing);
+                        if (order.Stage is DiningStage.Eating or DiningStage.Checkout or DiningStage.Completed
+                            || (order.Stage == DiningStage.Left && order.EatUntil > 0))
+                            Good("meal:" + order.Id, position + facing * FurnitureVisuals.DiningMealPosition,
+                                new Color(.9f, .7f, .25f), platedMeal: true);
+                    }
                     var stoves=shop.Layout.Where(p=>p.Id=="restaurant_stove").ToArray();
                     if (stoves.Length > 0)
                     {
@@ -269,7 +289,11 @@ namespace PCShopSell.Game.Runtime
                     }
                 }
             }
-            foreach(var key in _specialFigures.Keys.Where(k=>!wanted.Contains(k)).ToArray()){if(Application.isPlaying)Object.Destroy(_specialFigures[key]);else Object.DestroyImmediate(_specialFigures[key]);_specialFigures.Remove(key);}
+            foreach (int id in _diningGuests.Keys.Where(id => !seatedGuests.Contains(id)).ToArray())
+            {
+                Kill.It(_diningGuests[id].gameObject);
+                _diningGuests.Remove(id);
+            }
             foreach(var key in _specialGoods.Keys.Where(k=>!goods.Contains(k)).ToArray()){if(Application.isPlaying)Object.Destroy(_specialGoods[key]);else Object.DestroyImmediate(_specialGoods[key]);_specialGoods.Remove(key);}
         }
     }

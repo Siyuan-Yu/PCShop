@@ -24,7 +24,8 @@ namespace PCShopSell.Game.UI
         // ---------- 屋内小窗口 ----------
 
         /// <summary>在出租屋里打开的小窗口：不会离开屋子，关掉就回到屋里。</summary>
-        private void OpenRoomWindow(string title, float w, float h, System.Action<Window> build, bool allowDuringOpeningMeal = false)
+        private void OpenRoomWindow(string title, float w, float h, System.Action<Window> build,
+            bool allowDuringOpeningMeal = false, bool scrollContent = true)
         {
             OpenWindow(title, w, h, win =>
             {
@@ -35,7 +36,7 @@ namespace PCShopSell.Game.UI
                 }
                 build(win);
 
-            }, true, true, allowDuringOpeningMeal: allowDuringOpeningMeal);
+            }, true, true, scrollContent: scrollContent, allowDuringOpeningMeal: allowDuringOpeningMeal);
         }
 
         public void OpenBedWindow()
@@ -71,11 +72,28 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private IEnumerator PlaySleepTransition(Func<bool> sleep, Action<bool> finishBedWindow)
+        private Window _sleepTransition;
+
+        internal void OnResidenceSleepFinished(long duration)
+        {
+            // Manual sleep already owns the fade and wake-up sequence.
+            if (CanAnimateUi && _sleepTransition?.Closed != false)
+                _ctrl.StartCoroutine(PlaySleepTransition(null, null, duration));
+        }
+
+        private IEnumerator PlaySleepTransition(Func<bool> sleep, Action<bool> finishBedWindow, long completedDuration = 0)
         {
             var session = S;
+            var residence = session.CurrentPlace;
+            HomeRoomView wakingRoom = null;
             var transition = OpenWindow("睡眠转场", 0, 0, _ => { }, closable: false,
-                scrollContent: false, showTitleBar: false, fullScreen: true);
+                onClosed: () =>
+                {
+                    wakingRoom?.FinishWakeUp();
+                    _sleepTransition = null;
+                }, scrollContent: false,
+                allowDuringOpeningMeal: true, showTitleBar: false, fullScreen: true);
+            _sleepTransition = transition;
             // Keep the fade above any notifications raised while advancing to the wake time.
             var screen = transition.Root;
             screen.SetParent(_tipCanvas.transform, false);
@@ -89,15 +107,20 @@ namespace PCShopSell.Game.UI
             yield return closeEyes.Play();
             if (transition.Closed || S != session) yield break;
 
-            long start = session.Clock.Now.TotalMinutes;
-            bool slept = sleep();
-            finishBedWindow(slept);
-            if (transition.Closed || S != session) yield break;
-
-            long duration = session.Clock.Now.TotalMinutes - start;
-            if (slept && duration > 0)
+            long duration = completedDuration;
+            if (sleep != null)
             {
-                wake.text = $"<b>已起床 · {Ui.Hm(session.Clock.MinuteOfDay)}</b>\n<size=22>睡了 {SleepDurationText(duration)}</size>";
+                long start = session.Clock.Now.TotalMinutes;
+                bool slept = sleep();
+                finishBedWindow(slept);
+                if (transition.Closed || S != session) yield break;
+                if (slept) duration = session.Clock.Now.TotalMinutes - start;
+            }
+
+            if (duration > 0 && session.CurrentPlace == residence && !session.IsGameOver)
+            {
+                wakingRoom = _ctrl.BeginResidenceWakeUp();
+                wake.text = $"<b>醒来 · {Ui.Hm(session.Clock.MinuteOfDay)}</b>\n<size=22>睡了 {SleepDurationText(duration)}</size>";
                 yield return new WaitForSecondsRealtime(.75f);
                 if (transition.Closed || S != session) yield break;
             }
@@ -105,6 +128,18 @@ namespace PCShopSell.Game.UI
             var openEyes = new UiReveal();
             openEyes.Add(screen, 0, .28f, progress => fade.alpha = 1f - progress);
             yield return openEyes.Play();
+            if (wakingRoom != null)
+            {
+                const float standUpSeconds = 1.85f;
+                float start = Time.unscaledTime;
+                while (!transition.Closed && S == session && session.CurrentPlace == residence && !session.IsGameOver)
+                {
+                    float progress = Mathf.Clamp01((Time.unscaledTime - start) / standUpSeconds);
+                    wakingRoom.SetWakeUpProgress(progress);
+                    if (progress >= 1f) break;
+                    yield return null;
+                }
+            }
             transition.Close();
         }
 
@@ -122,12 +157,14 @@ namespace PCShopSell.Game.UI
         {
             if(!S.InPlayerShop)return CollectStacks(S.WarehouseBagHere,S.WarehousePartsHere);
             var result=CollectStacks(S.ShopLocker,S.PlayerShop.Stock);
+            foreach (var stack in result)
+                stack.StoreInventory = stack.Key.StartsWith("part:");
             foreach(var line in S.PlayerShop.Stock.GoodsLines())
             {
                 var product=Gifts.Get(line.Key);double kg=product.WeightKg*line.Value;
                 var batches=S.PlayerShop.Stock.GoodsLots.Where(b=>b.Id==line.Key&&b.Count>0)
                     .Select(b=>new FoodBatch{Id=b.Id,Name=product.Name,Count=b.Count,ExpireDay=b.ExpireDay,Chilled=b.Chilled}).ToArray();
-                result.Add(new BagStack{Key="stockgift:"+line.Key,Name=product.Name,Kind="本店商品库存（含已陈列商品）",Count=line.Value,Kg=kg,
+                result.Add(new BagStack{Key="stockgift:"+line.Key,Name=product.Name,Kind="本店商品库存（含已陈列商品）",Count=line.Value,Kg=kg,StoreInventory=true,
                     Space=kg/Backpack.KgPerSpace,Color=new Color(.70f,.52f,.18f),Batches=batches.Length==0?null:batches});
             }
             return result;
@@ -149,7 +186,7 @@ namespace PCShopSell.Game.UI
             _boxSel = null;
             _boxSide = null;
             var place=S.CurrentPlace;
-            return OpenWindow("背包与后仓", 820, 880, win =>
+            return OpenWindow("背包与后仓", 1360, 880, win =>
             {
                 if (!S.HasWarehouseHere||S.CurrentPlace!=place)
                 {
@@ -170,26 +207,29 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>
-        /// 同一套 B / F 界面：背包在上，房间内的共享后仓在下，各自独立滚动；
+        /// 同一套 B / F 界面：背包和房间内的共享后仓并排。
         /// 点一格选中，再放进去 / 拿出来。
         /// </summary>
         private void BuildStorage(Window w)
         {
             bool shop = S.InPlayerShop;
-            Line(w.Content,$"—— 我的背包 · 负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克 ——",18,Ui.Accent).name="WarehouseBagHeading";
+            var columns = Ui.Row(w.Content, 320, 12);
+            var columnSize = columns.GetComponent<LayoutElement>();
+            columnSize.flexibleHeight = 1;
+            var backpack = StorageWell(columns, "BackpackWell");
+            var storage = StorageWell(columns, "WarehouseWell");
+            Line(backpack, $"背包 · {S.CarriedKg:0.##} / {S.CarryLimitKg:0.##} 千克", 19).name="WarehouseBagHeading";
             var bagStacks=CollectBag(includeQuestPages: true);
-            var bagGrid=BagGrid(w.Content,bagStacks,Mathf.CeilToInt((float)S.CurrentVehicle.CargoCapacity),_boxSide=="bag"?_boxSel:null,key=>
-            {_boxSide="bag";_boxSel=key;w.Rebuild();},-1);
+            var bagGrid=BagGrid(backpack,bagStacks,Mathf.CeilToInt((float)S.CurrentVehicle.CargoCapacity),_boxSide=="bag"?_boxSel:null,key=>
+            {_boxSide="bag";_boxSel=key;w.Rebuild();},-1, columns: 7);
             bagGrid.parent.parent.name="WarehouseBackpackGrid";
 
             bool otherResidence = S.HasSecondaryResidenceWarehouse;
-            string warehouse = shop ? "本店后仓" : otherResidence ? S.PlaceTitle(S.CurrentPlace) + " · 后仓" : "家中后仓";
-            Line(w.Content,"—— "+warehouse+" · 后仓容量不限 ——",18,Ui.Accent).name="WarehouseStoreHeading";
-            if (!otherResidence)
-                Line(w.Content,"本房间的 "+(shop?S.ShopBoxes:S.HomeBoxes)+" 个纸箱共用一个后仓。背包和运输仍有承重限制，成品保质期照常计算。",15,Ui.Dim);
+            string warehouse = shop ? "本店后仓与商品库存" : otherResidence ? S.PlaceTitle(S.CurrentPlace) + " · 后仓" : "家中后仓";
+            Line(storage, warehouse + (shop ? "" : " · 容量不限"), 19).name="WarehouseStoreHeading";
             var boxStacks=CollectBox();
-            var boxGrid=BagGrid(w.Content,boxStacks,8,_boxSide=="box"?_boxSel:null,key=>
-            {_boxSide="box";_boxSel=key;w.Rebuild();},-1,true);
+            var boxGrid=BagGrid(storage,boxStacks,7,_boxSide=="box"?_boxSel:null,key=>
+            {_boxSide="box";_boxSel=key;w.Rebuild();},-1,true, columns: 7);
             boxGrid.parent.parent.name="WarehouseStoredGrid";
 
             bool hasTemp = S.HasTempHere;
@@ -316,6 +356,7 @@ namespace PCShopSell.Game.UI
             public double Kg, Space;
             public Color Color;
             public FoodBatch[] Batches;
+            public bool StoreInventory;
         }
 
         private string _bagSel;
@@ -404,7 +445,16 @@ namespace PCShopSell.Game.UI
 
 
         /// <summary>一格一格的背包格子：8 列，一叠东西占几格就画几格。</summary>
-        private RectTransform BagGrid(Transform parent, System.Collections.Generic.List<BagStack> stacks, int capacity, string selKey, System.Action<string> onPick, float height,bool compact=false)
+        private static RectTransform StorageWell(Transform parent, string name)
+        {
+            var panel = Ui.Size(Ui.FlatPanel(parent, name, Ui.FlatBand), 0, -1, 1);
+            panel.raycastTarget = false;
+            Ui.VList(panel.rectTransform, 5, 8);
+            return panel.rectTransform;
+        }
+
+        private RectTransform BagGrid(Transform parent, System.Collections.Generic.List<BagStack> stacks, int capacity, string selKey,
+            System.Action<string> onPick, float height, bool compact = false, int columns = BagColumns)
         {
             var cells = new System.Collections.Generic.List<(BagStack st, int n, int? expiry)>();
             int used = 0;
@@ -428,7 +478,7 @@ namespace PCShopSell.Game.UI
                 }
             }
             int total = Mathf.Max(capacity, used);
-            total = (total + BagColumns - 1) / BagColumns * BagColumns;
+            total = (total + columns - 1) / columns * columns;
 
             RectTransform grid = Ui.Scroll(parent, height);
             if(height<0)
@@ -436,22 +486,22 @@ namespace PCShopSell.Game.UI
                 var area=Ui.Size(grid.parent.parent).GetComponent<LayoutElement>();
                 area.minHeight=110;area.flexibleHeight=1;
             }
-            for (int r = 0; r < total / BagColumns; r++)
+            for (int r = 0; r < total / columns; r++)
             {
                 RectTransform row = Ui.Row(grid, 82, 6);
-                for (int c = 0; c < BagColumns; c++)
+                for (int c = 0; c < columns; c++)
                 {
-                    int idx = r * BagColumns + c;
+                    int idx = r * columns + c;
                     if (idx < cells.Count)
                     {
                         BagStack st = cells[idx].st;
                         bool sel = st.Key == selKey;
-                        Color bg = sel ? Ui.SelectedButton(true) : Color.Lerp(Ui.PanelBg2, st.Color, .18f);
+                        Color bg = sel ? Ui.SelectedButton(true) : Ui.FlatWell;
                         int count = cells[idx].n;
                         int? expiry = cells[idx].expiry >= 0 ? cells[idx].expiry : null;
                         var cell = Ui.Size(Ui.Button(row, ShortName(st.Name), () => onPick(st.Key), 14, bg), 80, 80);
                         cell.name="BagItem_"+st.Key;
-                        Ui.FlatBorder(cell.image, sel ? Ui.Accent : st.Color, sel ? 2 : 1);
+                        Ui.FlatBorder(cell.image, sel ? Ui.SelectionEdge : Ui.FlatWellEdge, sel ? 2 : 1);
                         var title = cell.GetComponentInChildren<Text>();
                         title.fontStyle = FontStyle.Bold;
                         float band = expiry.HasValue ? .2f : .02f;
@@ -460,7 +510,7 @@ namespace PCShopSell.Game.UI
                         string amount = st.Key == "rice" ? $"{st.Kg * count / st.Count:0.##}kg" : count > 0 ? $"×{count}" : "…";
                         var quantity = Ui.FlatPanel(cell.transform, "BagQuantity", Ui.PanelBg, Ui.FlatWellEdge);
                         quantity.raycastTarget = false;
-                        float badgeWidth = Mathf.Clamp(7 * amount.Length + 8, 24, 72);
+                        float badgeWidth = Mathf.Clamp(7 * amount.Length + 8, 24, st.StoreInventory ? 46 : 72);
                         quantity.rectTransform.Anchor(1, 1, 1, 1, -badgeWidth - 2, -21, 2, 2);
                         var badge = Ui.Label(quantity.transform, amount, 14, TextAnchor.MiddleCenter, Ui.Accent);
                         badge.fontStyle = FontStyle.Bold;
@@ -469,14 +519,21 @@ namespace PCShopSell.Game.UI
                         badge.resizeTextMaxSize = 14;
                         badge.horizontalOverflow = HorizontalWrapMode.Overflow;
                         badge.rectTransform.Fill(1);
-                        cell.Tip(st.Name);
+                        if (st.StoreInventory)
+                        {
+                            var inventory = Ui.FlatPanel(cell.transform, "BagStoreInventory", Ui.PanelBg, Ui.FlatWellEdge);
+                            inventory.raycastTarget = false;
+                            inventory.rectTransform.Anchor(0, 1, 0, 1, 2, -21, -30, 2);
+                            Ui.Label(inventory.transform, "商品", 11, TextAnchor.MiddleCenter, Ui.Accent).rectTransform.Fill(1);
+                        }
+                        cell.Tip(st.StoreInventory ? $"{st.Name}\n本店商品库存（含货架陈列）" : st.Name);
                         AddFoodExpiry(cell, st.Key, expiry);
                     }
                     else
                     {
                         bool beyond = idx >= capacity;
-                        Color fill = beyond ? Color.Lerp(Ui.FlatBand, Ui.Warn, .18f) : Ui.FlatBand;
-                        Image empty = Ui.FlatPanel(row, "Empty", fill, beyond ? Ui.Warn : Ui.FlatWellEdge);
+                        Color fill = beyond ? Ui.PanelBg2 : Ui.FlatBand;
+                        Image empty = Ui.FlatPanel(row, "Empty", fill, Ui.FlatWellEdge);
                         Ui.Size(empty, 80, 80);
                         if (beyond)
                             Ui.Label(empty.transform, "—", 18, TextAnchor.MiddleCenter, Ui.Dim).rectTransform.Fill();
@@ -690,7 +747,8 @@ namespace PCShopSell.Game.UI
             if (OpeningMealPreludePending) { RemindOpeningMeal(); return; }
             if (S.OpeningMealTutorialPending && S.OpeningMealStep == 0)
                 _cookKg = OpeningMealRiceKg;
-            OpenRoomWindow("电饭锅", 760, 740, BuildCooker, true);
+            _cookFishPickerOpen = false;
+            OpenRoomWindow("电饭锅", CookerWindowWidth, 560, BuildCooker, allowDuringOpeningMeal: true, scrollContent: false);
         }
 
         private int _wakeMinute = 8 * 60;
@@ -767,186 +825,305 @@ namespace PCShopSell.Game.UI
         private double _cookKg = 0.5;
         private string _cookIngredient;
         private string _cookFish;
+        private bool _cookFishPickerOpen;
+        private const float CookerWindowWidth = 760;
+        private const float CookFishPickerSideWidth = 362;
+        private const float CookFishPickerGap = 14;
+        private static readonly Color CookFishFill = new Color32(190, 216, 202, 255);
+        private static readonly Color CookFishInk = new Color32(39, 76, 62, 255);
+
+        private static bool CookFishPickerFitsBeside(Window w) =>
+            w.Root.rect.width >= CookerWindowWidth + 2 * (CookFishPickerSideWidth + CookFishPickerGap + 16);
 
         private void BuildCooker(Window w)
         {
             S.RefreshCooking();
-            Pantry pan = S.Pantry;
-            // Recipe selection and taking food pause as usual. Cooking itself uses
-            // the running world clock, including while this window remains open.
-            bool holdClock=pan.Cooking==null;
-            if(w.Holds!=holdClock)
+            Pantry pantry = S.Pantry;
+            CookJob job = pantry.Cooking;
+            bool canConfigure = !pantry.PotBusy;
+            bool holdClock = job == null;
+            if (w.Holds != holdClock)
             {
-                if(holdClock)S.Time.Hold();
-                else if(S.Time.IsHeld)S.Time.Release();
-                w.Holds=holdClock;
+                if (holdClock) S.Time.Hold();
+                else if (S.Time.IsHeld) S.Time.Release();
+                w.Holds = holdClock;
             }
-            PlayerStats st = S.Player;
+
             double rice = S.HomeCookingRiceKg;
-            Line(w.Content, $"饱腹 {st.Hunger:0}  健康 {st.Health:0}   可用大米：{rice:0.##} 千克   背包里的饭盒：{S.Backpack.Lunchboxes} 盒", 17);
-
-            if (pan.Cooking != null)
+            var fishOptions = canConfigure ? FishingCatalog.Fish
+                .Select(fish => (fish, count: S.HomeCookingIngredientCount(fish.Id)))
+                .Where(option => option.count > 0).ToArray() : Array.Empty<(FishDefinition fish, int count)>();
+            if (canConfigure)
             {
-                int readyMinuteOfDay = (int)(pan.Cooking.ReadyMinute % (24 * 60));
-                Line(w.Content, $"<color=#80551F>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
-                var status=Ui.Rect(w.Content,"CookerCookingStatus");Ui.Size(status,-1,72);
-                var countdown=Ui.Label(status,"",17,TextAnchor.MiddleLeft,Ui.Dim);
-                countdown.rectTransform.Anchor(0,.42f,1,1);
-                var track=Ui.Panel(status,"CookingProgressTrack",Ui.PanelBg2);
-                track.raycastTarget=false;track.rectTransform.Anchor(0,.12f,1,.30f);
-                var fill=Ui.Panel(track.transform,"CookingProgressFill",Ui.Accent);
-                fill.raycastTarget=false;
-                long shownLeft=-1;
-                w.RefreshContent=()=>
-                {
-                    if(pan.Cooking==null){w.RequestRebuild();return;}
-                    long remaining=pan.CookMinutesLeft(S.Clock.Now.TotalMinutes);
-                    if(remaining==shownLeft)return;
-                    shownLeft=remaining;
-                    countdown.text=$"还剩 {remaining} 分钟 · 预计 {readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 煮好";
-                    fill.rectTransform.Anchor(0,0,Mathf.Clamp01(1-remaining/(float)Pantry.CookMinutes),1);
-                };
-                w.RefreshContent();
-                Line(w.Content,"可以关窗等候，饭好后再回来取。",16,Ui.Dim);
-                BindOpeningMealCooker(w);
-                return;
+                _cookKg = rice < Pantry.MinCookRiceKg ? rice : Math.Clamp(_cookKg, Pantry.MinCookRiceKg, rice);
+                _cookIngredient = Ingredients.GetRiceCookerRecipe(_cookIngredient)?.Id;
+                if (!fishOptions.Any(option => option.fish.Id == _cookFish)) _cookFish = null;
             }
+            bool showFishPicker = canConfigure && _cookFishPickerOpen && fishOptions.Length > 0;
+            bool sideBySide = showFishPicker && CookFishPickerFitsBeside(w);
+            bool controlsEnabled = canConfigure && (!showFishPicker || sideBySide);
 
-            // 焖好了：取饭（吃、装饭盒）；取完才能再焖
-            if (pan.CookedBowls > 0)
-            {
-                Line(w.Content, $"饭煮好了 · 锅里有 {pan.CookedBowls} 碗", 18, Ui.Accent);
-                foreach (FoodBatch b in pan.Cooked)
-                    ItemLabel(w.Content, "cooked:" + b.Id, $"{b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, color: Ui.Dim);
-                RectTransform erow = Ui.Row(w.Content, 46);
-                erow.name = "OpeningMealTake";
-                var eat = Ui.Button(erow, "现在吃一碗", () =>
-                {
-                    S.EatBowlAtHome();
-                    w.Rebuild();
-                }, 18, Ui.ButtonHot, pan.CookedBowls > 0);
-                Ui.Size(eat, 220);
-                eat.name = "OpeningMealEat";
+            int cookedBowls = pantry.CookedBowls;
+            FoodBatch batch = job?.Batch ?? pantry.Cooked.FirstOrDefault(food => food.Count > 0);
+            string mealId = canConfigure ? Pantry.MealId(_cookIngredient, _cookFish) : batch?.Id ?? "rice";
+            int fishSeparator = mealId.IndexOf('+');
+            var ingredient = Ingredients.GetRiceCookerRecipe(fishSeparator < 0 ? mealId : mealId.Substring(0, fishSeparator));
+            var addedFish = fishSeparator < 0 ? null : FishingCatalog.Get(mealId.Substring(fishSeparator + 1));
+            double chosenKg = job != null ? (double)job.Batch.Count / Pantry.BowlsPerKg : _cookKg;
+            int need = Pantry.IngredientUnitsForRice(chosenKg);
+            int available = canConfigure && ingredient != null ? S.HomeCookingIngredientCount(ingredient.Id) : 0;
+            bool enoughIngredient = ingredient == null || available >= need;
+            bool enoughRice = rice >= Pantry.MinCookRiceKg;
 
-                Ui.Size(Ui.Button(erow, "装 1 盒进背包", () =>
-                {
-                    S.PackLunch(1);
-                    w.Rebuild();
-                }, 18, Ui.ButtonBg, pan.CookedBowls > 0), 170);
-                var packAll = Ui.Button(erow, "全部装进背包", () =>
-                {
-                    bool tutorial = S.OpeningMealTutorialPending;
-                    if (!S.PackLunch(pan.CookedBowls)) return;
-                    if (tutorial && !S.OpeningMealTutorialPending)
-                    {
-                        w.Close();
-                        Popup("饭盒带好了", $"背包里的饭盒会在饭点或饿了时{Ui.Emphasize("自动吃")}。\n放进{Ui.Emphasize("冰箱")}可{Ui.Emphasize("暂停保质期倒计时")}。");
-                    }
-                    else w.Rebuild();
-                }, 18, Ui.ButtonBg, pan.CookedBowls > 0);
-                packAll.name = "OpeningMealPackAll"; Ui.Size(packAll, 170);
-                Line(w.Content, "饭盒放进背包后，饭点或饿了会自动吃。", 17, Ui.Good);
-                Line(w.Content, $"每盒 {Backpack.LunchboxKg:0.##} 千克。锅里的饭取完才能再焖。", 15, Ui.Dim);
-                if (S.CanOpenFridge && !S.OpeningMealTutorialPending)
-                    Ui.Size(Ui.Button(w.Content, "把做好的饭全部放入冰箱", () => { S.ChillCookedFood(pan.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonBg), -1, 38);
-                BindOpeningMealCooker(w);
-                return;
-            }
-
-            // 空锅：选米、选配菜、开始焖
-            Line(w.Content, "自动取用背包和家中后仓的食材。", 16, Ui.Dim);
-
-            if (_cookKg > rice) _cookKg = rice;
-            if (_cookKg < Pantry.MinCookRiceKg && rice >= Pantry.MinCookRiceKg) _cookKg = Pantry.MinCookRiceKg;
-            Line(w.Content, "往锅里加多少米：", 17);
-            RectTransform jrow = Ui.Row(w.Content, 44);
-            jrow.name = "OpeningMealRice";
+            string Stats() => $"饱腹 {S.Player.Hunger:0}  健康 {S.Player.Health:0}   可用大米：{S.HomeCookingRiceKg:0.##} 千克   背包里的饭盒：{S.Backpack.Lunchboxes} 盒";
+            var stats = Line(w.Content, Stats(), 17);
+            Line(w.Content, "米量", 17);
+            var riceRow = Ui.Row(w.Content, 44);
+            riceRow.name = "OpeningMealRice";
             foreach (double amount in new[] { 0.25, 0.5, 1, 1.5, 2.5 })
             {
-                double a = amount;
-                Ui.Size(Ui.Button(jrow, a + " 千克", () =>
+                bool selected = cookedBowls == 0 && Math.Abs(chosenKg - amount) < 1e-6;
+                Ui.Size(Ui.Button(riceRow, $"{amount} 千克", () =>
                 {
-                    _cookKg = a;
+                    _cookKg = amount;
                     if (S.OpeningMealTutorialPending) _openingMealCookStage = 1;
                     w.Rebuild();
-                }, 17, Ui.SelectedButton(System.Math.Abs(_cookKg - a) < 1e-6), rice >= a), 90);
+                }, 17, Ui.SelectedButton(selected), controlsEnabled && rice >= amount), 90);
             }
 
-            var ingredient = Ingredients.GetRiceCookerRecipe(_cookIngredient);
-            _cookIngredient = ingredient?.Id;
-            int need = Pantry.IngredientUnitsForRice(_cookKg);
-            Line(w.Content, "选择做法", 17);
-            RectTransform irow = Ui.Row(w.Content, 44);
-            irow.name = "OpeningMealRecipe";
-            Ui.Size(Ui.Button(irow, "白饭", () =>
+            Line(w.Content, "做法", 17);
+            var recipeRow = Ui.Row(w.Content, 44);
+            recipeRow.name = "OpeningMealRecipe";
+            void RecipeOption(IngredientDef recipe)
             {
-                _cookIngredient = null;
-                if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
-                w.Rebuild();
-            }, 17, Ui.SelectedButton(_cookIngredient == null)), -1, 44, 1);
-
-            foreach (IngredientDef recipe in Ingredients.RiceCookerRecipes)
-            {
-                int have = S.HomeCookingIngredientCount(recipe.Id);
-                Ui.Size(Ui.Button(irow, recipe.DishName, () =>
+                string id = recipe?.Id;
+                bool enough = recipe == null || canConfigure && S.HomeCookingIngredientCount(id) >= need;
+                Ui.Size(Ui.Button(recipeRow, recipe?.DishName ?? "白饭", () =>
                 {
-                    _cookIngredient = recipe.Id;
+                    _cookIngredient = id;
                     if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
                     w.Rebuild();
-                }, 17, Ui.SelectedButton(_cookIngredient == recipe.Id), have >= need), -1, 44, 1);
+                }, 17, Ui.SelectedButton(ingredient?.Id == id), controlsEnabled && enough), 0, 44, 1);
             }
 
-            var fishOptions = FishingCatalog.Fish.Select(f => (fish: f, count: S.HomeCookingIngredientCount(f.Id)))
-                .Where(option => option.count > 0).ToArray();
-            int fishIndex = Array.FindIndex(fishOptions, option => option.fish.Id == _cookFish);
-            var fish = fishIndex < 0 ? null : fishOptions[fishIndex].fish;
-            _cookFish = fish?.Id;
-            bool enoughFish = fish == null || fishOptions[fishIndex].count >= need;
-            if (!S.OpeningMealTutorialPending || fishOptions.Length > 0)
+            RecipeOption(null);
+            foreach (IngredientDef recipe in Ingredients.RiceCookerRecipes) RecipeOption(recipe);
+
+            var fishRow = Ui.Row(w.Content, 40, 8);
+            if (addedFish != null) ItemPortrait(fishRow, "ing:" + addedFish.Id, 34);
+            string fishLabel = addedFish != null ? $"本锅用 {addedFish.Name} 1 条"
+                : canConfigure && fishOptions.Length == 0 ? "暂无鱼可加" : "未加鱼";
+            Ui.Size(Ui.Label(fishRow, fishLabel, 16, color: addedFish == null ? Ui.Dim : CookFishInk), 0, 40, 1);
+            bool canAddFish = controlsEnabled && fishOptions.Length > 0;
+            var fishButton = Ui.Size(Ui.Button(fishRow, showFishPicker ? "收起选鱼" : "加鱼", () =>
             {
-                var fishRow = Ui.Row(w.Content, 36, 8);
-                Ui.Size(Ui.Label(fishRow, "加鱼", 17), 72, 36);
-                if (fishOptions.Length == 0)
-                    Ui.Size(Ui.Label(fishRow, "背包和家中后仓暂无鱼", 16, color: Ui.Dim), -1, 36, 1);
-                else
-                    Ui.Size(Ui.Choice(fishRow, fishOptions.Select(option => $"{option.fish.Name} · {option.fish.Rarity} · {option.count} 条").Prepend("不加鱼"),
-                        fishIndex + 1, index => { _cookFish = index == 0 ? null : fishOptions[index - 1].fish.Id; w.Rebuild(); }), -1, 36, 1)
-                        .name = "CookFishChoice";
-            }
-            if (fish != null)
-                Line(w.Content, $"本锅用 {fish.Name} {need} 条" + (enoughFish ? "" : " · 库存不足，可少放米或换鱼"),
-                    16, enoughFish ? Ui.Dim : Ui.Warn);
-            string meal = Pantry.MealId(_cookIngredient, _cookFish);
-            string effects = GameSession.MealEffects(meal);
-            if (fish != null)
-            {
-                double hunger = Pantry.BaseBowlHunger + (ingredient?.HungerBonus ?? 0) + fish.MealHungerBonus;
-                double health = (ingredient?.HealthBonus ?? 0) + fish.MealHealthBonus;
-                effects = $"饱腹 +{hunger:0.#} · 健康 +{health:0.##} · " + effects;
-            }
-            Line(w.Content, $"{GameSession.MealName(meal)} · {effects}（每份）", 16, Ui.Accent);
-            int available = ingredient == null ? 0 : S.HomeCookingIngredientCount(ingredient.Id);
-            bool enoughIngredient = ingredient == null || available >= need;
-            if (ingredient != null)
-                Line(w.Content, $"本锅用 {ingredient.Name} {need * ingredient.WeightKg:0.##} 千克 · 库存 {available * ingredient.WeightKg:0.##} 千克"
-                    + (enoughIngredient ? "" : " · 可少放米或换做法"), 16, enoughIngredient ? Ui.Dim : Ui.Warn);
-            bool enoughRice = rice >= Pantry.MinCookRiceKg;
-            if (!enoughRice) Line(w.Content, "可用大米不足 0.25 千克。", 16, Ui.Warn);
-            int bowls = Mathf.RoundToInt((float)(_cookKg * Pantry.BowlsPerKg));
-            var start = Ui.Button(w.Content, $"开始焖饭：{_cookKg:0.##} 千克，约 {bowls} 碗，{Pantry.CookMinutes} 分钟后好", () =>
-            {
-                if (S.CookRice(_cookKg, _cookIngredient, _cookFish))
-                {
-                    _cookFish = null;
-                    Toast($"开始焖饭，{Pantry.CookMinutes} 分钟后好。");
-                }
+                _cookFishPickerOpen = !showFishPicker;
                 w.Rebuild();
-            }, 19, Ui.ButtonHot, enoughRice && enoughIngredient && enoughFish);
-            Ui.Size(start, -1, 48);
-            start.name = "OpeningMealStart";
+            }, 16, canAddFish ? CookFishFill : Ui.ButtonBg, canAddFish), 104, 36);
+            fishButton.name = "CookFishPickerToggle";
+            if (canAddFish)
+            {
+                Ui.UseCaptionInk(fishButton, CookFishInk);
+                fishButton.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+                Ui.FlatBorder(fishButton.image, Color.Lerp(CookFishFill, CookFishInk, showFishPicker ? .75f : .48f));
+            }
 
-            if (!S.OpeningMealTutorialPending) Line(w.Content, "点了就开始焖，焖的时候锅里不能动，人可以先去忙别的。", 15, Ui.Dim);
+            int bowls = cookedBowls > 0 ? cookedBowls : batch?.Count ?? Mathf.RoundToInt((float)(chosenKg * Pantry.BowlsPerKg));
+            var preview = Ui.Size(Ui.Panel(w.Content, "CookerMealPreview", Ui.PanelBg2), -1, 124);
+            var details = Ui.Rect(preview.transform, "CookerMealDetails").Anchor(0, 0, 1, 1, 10, 6, 166, 6);
+            Ui.VList(details, 3, 0).childAlignment = TextAnchor.MiddleLeft;
+            string name = batch?.Name ?? GameSession.MealName(mealId);
+            Line(details, $"{name} · {(cookedBowls > 0 ? "剩 " : "约 ")}{bowls} 碗", 19, Ui.Accent).fontStyle = FontStyle.Bold;
+            double hunger = batch?.Hunger ?? Pantry.BaseBowlHunger + (ingredient?.HungerBonus ?? 0) + (addedFish?.MealHungerBonus ?? 0);
+            double health = batch?.Health ?? (ingredient?.HealthBonus ?? 0) + (addedFish?.MealHealthBonus ?? 0);
+            Ui.Label(details, $"每碗 · 饱腹 +{hunger:0.#}" + (health > 0 ? $" · 健康 +{health:0.##}" : "")
+                + " · " + GameSession.MealEffects(mealId), 16);
+            if (cookedBowls == 0 && GameSession.FishMealWorkEffect(addedFish?.Id) is string workEffect)
+                Ui.Label(details, $"首次吃这锅 · {workEffect}", 16, color: Ui.Good);
+            if (cookedBowls > 0)
+                Ui.Label(details, $"保质期 · {FoodExpiryBadge.Countdown(batch.ExpireDay, S.Clock.Now.TotalMinutes)}", 15, color: Ui.Dim);
+            else if (canConfigure && !enoughRice)
+                Ui.Label(details, "可用大米不足 0.25 千克。", 16, color: Ui.Warn);
+            else if (canConfigure && ingredient != null)
+                Ui.Label(details, $"本锅用 {ingredient.Name} {need * ingredient.WeightKg:0.##} 千克 · 库存 {available * ingredient.WeightKg:0.##} 千克",
+                    15, color: enoughIngredient ? Ui.Dim : Ui.Warn);
+
+            var display = BuildCookerDisplay(preview.transform);
+            var actions = Ui.Row(w.Content, 48, 6);
+            if (job != null)
+            {
+                int readyMinuteOfDay = (int)(job.ReadyMinute % GameTimestamp.MinutesPerDay);
+                Ui.Size(Ui.Button(actions, $"预计 {Ui.Hm(readyMinuteOfDay)} 煮好", null, 18,
+                    Ui.PanelBg2, interactable: false), 0, 48, 1);
+                long shownMinute = -1;
+                w.RefreshContent = () =>
+                {
+                    if (pantry.Cooking != job)
+                    {
+                        w.RequestRebuild();
+                        return;
+                    }
+                    long remaining = pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes);
+                    if (remaining == shownMinute) return;
+                    shownMinute = remaining;
+                    stats.text = Stats();
+                    display.text = $"<size=26><b>{remaining}</b></size> 分钟";
+                };
+                w.RefreshContent();
+            }
+            else if (cookedBowls > 0)
+            {
+                display.text = "饭好了";
+                BuildCookerTakeActions(w, actions, pantry);
+            }
+            else
+            {
+                display.text = "待机";
+                var start = Ui.Button(actions, $"开始焖饭 · {Pantry.CookMinutes} 分钟", () =>
+                {
+                    if (S.CookRice(_cookKg, _cookIngredient, _cookFish))
+                    {
+                        _cookFish = null;
+                        _cookFishPickerOpen = false;
+                    }
+                    w.Rebuild();
+                }, 19, Ui.ButtonHot, controlsEnabled && enoughRice && enoughIngredient);
+                Ui.Size(start, 0, 48, 1).name = "OpeningMealStart";
+            }
+
+            if (showFishPicker)
+            {
+                BuildCookFishPicker(w, fishOptions, addedFish, sideBySide);
+                w.RefreshContent = () =>
+                {
+                    if (pantry.PotBusy || sideBySide != CookFishPickerFitsBeside(w)) w.RequestRebuild();
+                };
+            }
             BindOpeningMealCooker(w);
+        }
+
+        private static Text BuildCookerDisplay(Transform preview)
+        {
+            var cooker = Ui.Rect(preview, "CookerIllustration").Anchor(1, .5f, 1, .5f, -152, -51, 12, -51);
+            Part("Handle", Ui.ChromeEdge, 39, 79, 62, 23, .55f);
+            Part("HandleOpening", Ui.PanelBg2, 44, 77, 52, 20, .55f);
+            Part("Body", new Color32(228, 213, 179, 255), 0, 0, 140, 76, .56f);
+            Part("Lid", new Color32(233, 221, 191, 255), 0, 71, 140, 16, .7f);
+            Part("LidSeam", new Color32(151, 136, 107, 255), 2, 70, 136, 2);
+            Part("Switch", new Color32(136, 128, 106, 255), 57, 8, 26, 6);
+            var screen = Part("Display", Ui.Chrome, 11, 20, 118, 40);
+            var label = Ui.Label(screen, "", 14, TextAnchor.MiddleCenter, Ui.ChromeGold);
+            label.name = "CookerCountdown";
+            label.rectTransform.Fill();
+            return label;
+
+            RectTransform Part(string name, Color color, float x, float y, float width, float height, float cornerScale = 1)
+            {
+                var image = Ui.Panel(cooker, name, color);
+                Ui.Round(image);
+                image.pixelsPerUnitMultiplier = cornerScale;
+                image.raycastTarget = false;
+                return image.rectTransform.Anchor(0, 0, 0, 0, x, y, -(x + width), -(y + height));
+            }
+        }
+
+        private void BuildCookerTakeActions(Window w, Transform actions, Pantry pantry)
+        {
+            actions.name = "OpeningMealTake";
+            Ui.Size(Ui.Button(actions, "现在吃一碗", () =>
+            {
+                S.EatBowlAtHome();
+                w.Rebuild();
+            }, 18, Ui.ButtonHot), 0, 48, 1).name = "OpeningMealEat";
+
+            Ui.Size(Ui.Button(actions, "装 1 盒进背包", () =>
+            {
+                S.PackLunch(1);
+                w.Rebuild();
+            }, 17), 0, 48, 1);
+
+            Ui.Size(Ui.Button(actions, "全部装进背包", () =>
+            {
+                bool tutorial = S.OpeningMealTutorialPending;
+                if (!S.PackLunch(pantry.CookedBowls)) return;
+                if (tutorial && !S.OpeningMealTutorialPending)
+                {
+                    w.Close();
+                    Popup("饭盒带好了", $"背包里的饭盒会在饭点或饿了时{Ui.Emphasize("自动吃")}。\n放进{Ui.Emphasize("冰箱")}可{Ui.Emphasize("暂停保质期倒计时")}。");
+                }
+                else w.Rebuild();
+            }, 17), 0, 48, 1).name = "OpeningMealPackAll";
+
+            if (S.CanOpenFridge && !S.OpeningMealTutorialPending)
+                Ui.Size(Ui.Button(actions, "存入冰箱", () =>
+                {
+                    S.ChillCookedFood(pantry.CookedBowls);
+                    w.Rebuild();
+                }, 17), 0, 48, 1);
+        }
+
+        private void BuildCookFishPicker(Window w, (FishDefinition fish, int count)[] options,
+            FishDefinition selected, bool sideBySide)
+        {
+            const int padding = 8, gap = 6, cellSize = 80;
+            int columns = sideBySide ? 4 : 8;
+            int slots = Mathf.Max(16, options.Length);
+            int rows = (slots + columns - 1) / columns;
+            float height = padding * 2 + (rows + 2) * gap + rows * cellSize + 32 + 27 + 36;
+
+            RectTransform parent = w.Content;
+            if (!sideBySide)
+            {
+                var scrim = Ui.Panel(parent, "FishPickerBackdrop", Ui.WorldShade);
+                scrim.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                parent = scrim.rectTransform.Fill();
+            }
+            var panel = Ui.FlatPanel(parent, "CookFishInventory", Ui.PanelBg, Ui.FlatWellEdge).rectTransform;
+            panel.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            if (sideBySide)
+                panel.Anchor(1, 1, 1, 1, CookFishPickerGap, 38 - height, -(CookFishPickerGap + CookFishPickerSideWidth), -38);
+            else
+                panel.Anchor(0, .5f, 1, .5f, 22, -height * .5f, 22, -height * .5f);
+
+            Ui.VList(panel, gap, padding);
+            var header = Ui.Row(panel, 32);
+            Ui.Size(Ui.Label(header, "选鱼", 19), 0, 32, 1);
+            Ui.Size(Ui.Button(header, "关闭", () => { _cookFishPickerOpen = false; w.Rebuild(); }, 15), 64, 32);
+            Line(panel, "背包和家中后仓 · 每锅用 1 条", 15, Ui.Dim);
+
+            for (int first = 0; first < slots; first += columns)
+            {
+                var row = Ui.Row(panel, cellSize, gap);
+                for (int i = first; i < first + columns; i++)
+                {
+                    if (i >= options.Length)
+                    {
+                        var empty = Ui.Size(Ui.FlatPanel(row, "Empty", Ui.FlatBand, Ui.FlatWellEdge), cellSize, cellSize);
+                        empty.raycastTarget = false;
+                        continue;
+                    }
+                    var (fish, count) = options[i];
+                    bool active = selected == fish;
+                    var slot = Ui.Size(Ui.Button(row, fish.Name, () => { _cookFish = fish.Id; w.Rebuild(); }, 14,
+                        Ui.SelectedButton(active)), cellSize, cellSize);
+                    slot.name = "CookFishSlot_" + fish.Id;
+                    Ui.FlatBorder(slot.image, active ? Ui.Accent : Ui.FlatWellEdge, active ? 2 : 1);
+                    var label = slot.GetComponentInChildren<Text>();
+                    label.rectTransform.Anchor(0, 0, 1, .25f, 2, 2, 2, 0);
+                    FillItemPortrait(slot.transform, "ing:" + fish.Id).Anchor(.17f, .25f, .83f, .98f);
+                    var badge = Ui.FlatPanel(slot.transform, "BagQuantity", Ui.PanelBg, Ui.FlatWellEdge);
+                    badge.raycastTarget = false;
+                    badge.rectTransform.Anchor(1, 1, 1, 1, -42, -21, 2, 2);
+                    Ui.Label(badge.transform, $"×{count}", 13, TextAnchor.MiddleCenter, Ui.Accent).rectTransform.Fill(1);
+                    slot.Tip(GameSession.FishMealWorkEffect(fish.Id) is string bonus ? $"{fish.Name} · 首次吃这锅 {bonus}" : fish.Name);
+                }
+            }
+
+            var footer = Ui.Row(panel, 36);
+            string picked = selected == null ? "未选鱼" : selected.Name + (FishingCatalog.RequiresCatch(selected.Id) ? " · 钓获" : "");
+            Ui.Size(Ui.Label(footer, picked, 16, color: Ui.Dim), 0, 36, 1);
+            Ui.Size(Ui.Button(footer, "不加鱼", () => { _cookFish = null; w.Rebuild(); }, 15,
+                interactable: selected != null), 84, 36);
         }
 
         // ---------- “我的” ----------
@@ -1548,6 +1725,7 @@ namespace PCShopSell.Game.UI
         private string _homeDockResidence;
         private KeyValuePair<string, int>[] _homeDockStored = Array.Empty<KeyValuePair<string, int>>();
         private bool HomeDockOpen => _homeDock != null && _homeDock.gameObject.activeSelf;
+        private bool EditingResidence => _ctrl.Placing && !_ctrl.PlacingShop;
         private bool HomeDockAvailable => S.CanDecorateCurrentResidence && !MainMenuOpen && !S.IsGameOver
             && !S.IsWorking && !OpeningMealRestricted && !ExpoHudOpen && !_ctrl.PlacingShop;
 
@@ -1556,7 +1734,6 @@ namespace PCShopSell.Game.UI
             _homeDockToggle = Ui.Button(parent, "收起住处面板 ▴", () =>
             {
                 _homeDockCollapsed = HomeDockOpen;
-                if (_homeDockCollapsed && _ctrl.Placing && !_ctrl.PlacingShop) _ctrl.EndPlacement();
                 RefreshHomeDockVisibility();
             }, 17);
             _homeDockToggle.name = "HomeDockToggle";
@@ -1575,7 +1752,7 @@ namespace PCShopSell.Game.UI
                 _homeDockCollapsed = false;
                 force = true;
             }
-            bool visible = HomeDockAvailable;
+            bool visible = HomeDockAvailable && !_ctrl.Placing;
             if (_homeDockToggle.gameObject.activeSelf != visible) _homeDockToggle.gameObject.SetActive(visible);
             bool showDock = visible && !_homeDockCollapsed;
             if (showDock && _homeDock == null) BuildHomeDock();
@@ -1620,22 +1797,45 @@ namespace PCShopSell.Game.UI
             var scroll = _homeDockContent.parent.parent.GetComponent<ScrollRect>();
             float previousScroll = scroll.verticalNormalizedPosition;
             Ui.Clear(_homeDockContent);
-            Line(_homeDockContent, "装修", 21, Ui.Accent);
+            Ui.Size(Ui.Button(_homeDockContent, "开始装修", () => StartPlacement(false), 17, Ui.ButtonHot), -1, 38)
+                .name = "HomeDockBeginPlacement";
+            BuildHomeFurnitureList(_homeDockContent, stored, editing: false);
+            scroll.StopMovement();
+            scroll.verticalNormalizedPosition = previousScroll;
+        }
 
+        private RectTransform _homePlacementPanel, _homePlacementContent;
+        private Text _homePlacementTitle;
+
+        private void BuildHomePlacementPanel()
+        {
+            _homePlacementPanel = Ui.Panel(_dockCanvas.transform, "HomePlacementPanel", Ui.PanelBg).rectTransform;
+            var header = Ui.Panel(_homePlacementPanel, "HomePlacementHeader", Ui.PanelBg2).rectTransform
+                .Anchor(0, 1, 1, 1, 0, -76, 0, 0);
+            Ui.Label(header, "<b>住宅装修</b>", 24).rectTransform.Anchor(0, 1, 1, 1, 13, -40, 13, 7);
+            _homePlacementTitle = Ui.Label(header, "", 17, color: Ui.Dim);
+            _homePlacementTitle.rectTransform.Anchor(0, 1, 1, 1, 13, -67, 13, 37);
+            _homePlacementContent = Ui.Scroll(_homePlacementPanel);
+            ((RectTransform)_homePlacementContent.parent.parent).Anchor(0, 0, 1, 1, 5, 57, 5, 78);
+            _homePlacementFinish = Ui.Button(_homePlacementPanel, "完成装修", _ctrl.FinishHomePlacement, 17, Ui.ButtonHot);
+            _homePlacementFinish.name = "HomeDockFinishPlacement";
+            ((RectTransform)_homePlacementFinish.transform).Anchor(0, 0, 1, 0, 10, 8, 10, -48);
+        }
+
+        private void RefreshHomePlacementPanel()
+        {
+            _homePlacementTitle.text = S.CurrentPlace.Name;
+            var scroll = _homePlacementContent.parent.parent.GetComponent<ScrollRect>();
+            float previousScroll = scroll.verticalNormalizedPosition;
+            Ui.Clear(_homePlacementContent);
             _homePlacementStatus = null;
-            _homePlacementConfirm = _homePlacementFinish = null;
-            bool editing = _ctrl.Placing && !_ctrl.PlacingShop;
-            if (!editing)
+            _homePlacementConfirm = null;
+            if (_ctrl.PlaceId != null)
             {
-                Ui.Size(Ui.Button(_homeDockContent, "开始装修", () => StartPlacement(false), 17, Ui.ButtonHot), -1, 38)
-                    .name = "HomeDockBeginPlacement";
-            }
-            else if (_ctrl.PlaceId != null)
-            {
-                Line(_homeDockContent, (_ctrl.PlaceHoldsPlaced ? "移动 · " : "摆放 · ") + FurnitureLabel(_ctrl.PlaceId, 1), 18, Ui.Accent);
-                _homePlacementStatus = Line(_homeDockContent, "", 16, Ui.Dim);
+                Line(_homePlacementContent, (_ctrl.PlaceHoldsPlaced ? "移动 · " : "摆放 · ") + FurnitureLabel(_ctrl.PlaceId, 1), 18, Ui.Accent);
+                _homePlacementStatus = Line(_homePlacementContent, "", 16, Ui.Dim);
                 Ui.Size(_homePlacementStatus, -1, 40);
-                var actions = Ui.Row(_homeDockContent, 36, 4);
+                var actions = Ui.Row(_homePlacementContent, 36, 4);
                 Ui.Size(Ui.Button(actions, "旋转（R）", _ctrl.RotateGhost, 15), 86, 36);
                 _homePlacementConfirm = Ui.Size(Ui.Button(actions, _ctrl.PlaceHoldsPlaced ? "确认移动" : "确认摆放",
                     _ctrl.ConfirmHomeFurniturePlacement, 16, Ui.ButtonBg), 0, 36, 1);
@@ -1644,38 +1844,40 @@ namespace PCShopSell.Game.UI
             }
             else
             {
-                Para(_homeDockContent, "点击房间里的家具可移动，选中后按 X 收纳。", 15, Ui.Dim);
+                Para(_homePlacementContent, "点击房间里的家具可移动，选中后按 X 收纳。", 15, Ui.Dim);
             }
 
-            Line(_homeDockContent, $"可摆放家具  ·  {stored.Sum(entry => entry.Value)} 件", 17, Ui.Dim);
+            var history = Ui.Row(_homePlacementContent, 36, 5);
+            Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 14, Ui.ButtonBg, S.CanUndoLayout), 0, 36, 1);
+            Ui.Size(Ui.Button(history, "重做 Ctrl+Y", () => _ctrl.UndoPlacement(true), 14, Ui.ButtonBg, S.CanRedoLayout), 0, 36, 1);
+            BuildHomeFurnitureList(_homePlacementContent, S.FurnitureToPlaceList(false)
+                .Where(entry => entry.Value > 0 && FurnitureCatalog.Get(entry.Key) != null).ToArray(), editing: true);
+            _homePlacementFinish.GetComponentInChildren<Text>().text = _ctrl.PlaceId == null ? "完成装修"
+                : _ctrl.PlaceHoldsPlaced ? "移动并完成" : "摆放并完成";
+            UpdateHomePlacementStatus();
+            scroll.StopMovement();
+            scroll.verticalNormalizedPosition = _ctrl.PlaceId != null ? 1 : previousScroll;
+        }
+
+        private void BuildHomeFurnitureList(RectTransform parent, KeyValuePair<string, int>[] stored, bool editing)
+        {
+            Line(parent, $"可摆放家具  ·  {stored.Sum(entry => entry.Value)} 件", 17, Ui.Dim);
             foreach (var entry in stored)
             {
                 string id = entry.Key;
-                var row = HomeDockFurnitureRow(id, FurnitureLabel(id, entry.Value), _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced);
+                var row = HomeDockFurnitureRow(parent, id, FurnitureLabel(id, entry.Value), editing && _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced);
                 Ui.Size(Ui.Button(row, "摆放", () =>
                 {
-                    if (_ctrl.Placing && !_ctrl.PlacingShop) _ctrl.SelectStock(id);
+                    if (editing) _ctrl.SelectStock(id);
                     else StartPlacement(false, id);
                 }, 16, Ui.ButtonBg), 74, 34).name = "HomeDockPlace_" + id;
             }
-            if (stored.Length == 0) Line(_homeDockContent, "暂无可摆放家具", 15, Ui.Dim);
-            if (editing)
-            {
-                var history = Ui.Row(_homeDockContent, 36, 5);
-                Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 14, Ui.ButtonBg, S.CanUndoLayout), 0, 36, 1);
-                Ui.Size(Ui.Button(history, "重做 Ctrl+Y", () => _ctrl.UndoPlacement(true), 14, Ui.ButtonBg, S.CanRedoLayout), 0, 36, 1);
-                string finish = _ctrl.PlaceId == null ? "完成装修" : _ctrl.PlaceHoldsPlaced ? "移动并完成" : "摆放并完成";
-                _homePlacementFinish = Ui.Size(Ui.Button(_homeDockContent, finish, _ctrl.FinishHomePlacement, 17, Ui.ButtonHot), -1, 38);
-                _homePlacementFinish.name = "HomeDockFinishPlacement";
-                UpdateHomePlacementStatus();
-            }
-            scroll.StopMovement();
-            scroll.verticalNormalizedPosition = editing && _ctrl.PlaceId != null ? 1 : previousScroll;
+            if (stored.Length == 0) Line(parent, "暂无可摆放家具", 15, Ui.Dim);
         }
 
-        private RectTransform HomeDockFurnitureRow(string id, string label, bool selected)
+        private RectTransform HomeDockFurnitureRow(RectTransform parent, string id, string label, bool selected)
         {
-            var row = Ui.Row(_homeDockContent, 40, 5);
+            var row = Ui.Row(parent, 40, 5);
             var background = row.gameObject.AddComponent<Image>();
             background.color = selected ? Ui.ButtonBg : Ui.PanelBg2;
             background.raycastTarget = false;
@@ -1689,7 +1891,7 @@ namespace PCShopSell.Game.UI
 
         private void UpdateHomePlacementStatus()
         {
-            if (!HomeDockOpen || _homePlacementFinish == null) return;
+            if (!EditingResidence || _homePlacementFinish == null) return;
             bool pending = _ctrl.PlaceId != null;
             bool picked = _ctrl.HasHomePlacementTarget;
             string issue = pending ? S.FurnitureEditBlocker(false) ?? _ctrl.PlaceError : null;
@@ -1701,89 +1903,96 @@ namespace PCShopSell.Game.UI
             _homePlacementConfirm.interactable = canConfirm;
         }
 
-        private RectTransform _placePanel;
+        private RectTransform _placePanel, _shopPlacementContent;
         private Text _placeStatus;
 
         public void ShowPlacementPanel()
         {
-            if (!_ctrl.PlacingShop)
+            RefreshHomeDockVisibility();
+            RefreshShopDockVisibility();
+            if (EditingResidence)
             {
-                _homeDockCollapsed = false;
-                RefreshHomeDockVisibility(force: true);
+                if (_homePlacementPanel == null) BuildHomePlacementPanel();
+                _homePlacementPanel.Anchor(1, 0, 1, 1, -HomeDockWidth, 70, 10, 80 + HudFunctionOffset);
+                _homePlacementPanel.gameObject.SetActive(true);
+                RefreshHomePlacementPanel();
                 return;
             }
             if (_placePanel == null)
             {
-                Image bg = Ui.Panel(_hudCanvas.transform, "PlacePanel", Ui.PanelBg);
-                _placePanel = bg.rectTransform;
-                _placePanel.Anchor(1, 0, 1, 1, -380, 70, 10, 74);
-                Ui.VList(_placePanel, 8, 12);
+                _placePanel = Ui.Panel(_dockCanvas.transform, "PlacePanel", Ui.PanelBg).rectTransform;
+                _shopPlacementContent = Ui.Scroll(_placePanel);
+                ((RectTransform)_shopPlacementContent.parent.parent).Anchor(0, 0, 1, 1, 10, 57, 6, 8);
+                var finish = Ui.Button(_placePanel, "完成装修", _ctrl.EndPlacement, 17, Ui.ButtonHot);
+                ((RectTransform)finish.transform).Anchor(0, 0, 1, 0, 10, 8, 10, -48);
             }
+            _placePanel.Anchor(1, 0, 1, 1, -380, 70, 10, 80 + HudFunctionOffset);
             _placePanel.gameObject.SetActive(true);
-            CloseDock();
             RefreshPlacementPanel();
         }
 
         public void HidePlacementPanel()
         {
             if (_placePanel != null) _placePanel.gameObject.SetActive(false);
-            if (_ctrl.InInterior && S != null&&!_dockCollapsed) OpenDock();
-            if (S != null) RefreshHomeDockVisibility(force: true);
+            if (_homePlacementPanel != null) _homePlacementPanel.gameObject.SetActive(false);
+            if (S == null) return;
+            RefreshShopDockVisibility();
+            RefreshHomeDockVisibility();
         }
 
         public void RefreshPlacementPanel()
         {
-            if (_ctrl.Placing && !_ctrl.PlacingShop) { RefreshHomeDock(force: true); return; }
-            if (_placePanel == null || !_placePanel.gameObject.activeSelf) return;
-            Ui.Clear(_placePanel);
-            bool shop = _ctrl.PlacingShop;
-            Text title = Ui.Label(_placePanel, shop ? "装修店面（今天歇业）" : "摆放家具", 22, TextAnchor.MiddleLeft, Ui.Accent);
+            if (EditingResidence) { RefreshHomePlacementPanel(); return; }
+            if (!_ctrl.PlacingShop || _placePanel == null || !_placePanel.gameObject.activeSelf) return;
+            var content = _shopPlacementContent;
+            var scroll = content.parent.parent.GetComponent<ScrollRect>();
+            float previousScroll = scroll.verticalNormalizedPosition;
+            Ui.Clear(content);
+            Text title = Ui.Label(content, "店铺装修（今天歇业）", 22, TextAnchor.MiddleLeft, Ui.Accent);
             Ui.Size(title, -1, 34);
-            Text mode = Ui.Label(_placePanel, "俯视图 · 格线 1 米 · 吸附 0.25 米", 15, TextAnchor.MiddleLeft, Ui.Dim);
+            Text mode = Ui.Label(content, "俯视图 · 格线 1 米 · 吸附 0.25 米", 15, TextAnchor.MiddleLeft, Ui.Dim);
             Ui.Size(mode, -1, 24);
-            Text help = Ui.Label(_placePanel, "左键放置或挪动 · R 旋转 · Esc 放回\nX 收纳 · 滚轮缩放 · Q/E 转视角 · V 复位", 15, TextAnchor.UpperLeft, Ui.Dim);
+            Text help = Ui.Label(content, "左键放置或挪动 · R 旋转 · Esc 放回\nX 收纳 · 滚轮缩放 · Q/E 转视角 · V 复位", 15, TextAnchor.UpperLeft, Ui.Dim);
             Ui.Size(help, -1, 44);
-            _placeStatus = Ui.Label(_placePanel, "", 16, TextAnchor.UpperLeft);
+            _placeStatus = Ui.Label(content, "", 16, TextAnchor.UpperLeft);
             Ui.Size(_placeStatus, -1, 56);
 
-            Line(_placePanel, shop ? "待摆放的家具（店里后仓、临时存放里的）：" : "待摆放的家具（后仓、临时存放里的）：", 17);
-            if (shop)
-            {
-                string limit = S.CurrentShop.RetailKind == "restaurant"
-                    ? $"餐桌 {GameSession.RestaurantTablesPlaced(S.CurrentShop)} / {GameSession.RestaurantTableLimit(S.PlayerShop.Size)}"
-                    : $"货架 {S.PlacedFixtures(FixtureKind.Shelf)} / {S.ShopShelfLimit}";
-                Line(_placePanel, limit, 17, Ui.Accent);
-            }
+            Line(content, "待摆放的家具（店铺后仓与临时存放）", 17);
+            string limit = S.CurrentShop.RetailKind == "restaurant"
+                ? $"餐桌 {GameSession.RestaurantTablesPlaced(S.CurrentShop)} / {GameSession.RestaurantTableLimit(S.PlayerShop.Size)}"
+                : $"货架 {S.PlacedFixtures(FixtureKind.Shelf)} / {S.ShopShelfLimit}";
+            Line(content, limit, 17, Ui.Accent);
             bool any = false;
-            foreach (var kv in S.FurnitureToPlaceList(shop))
+            foreach (var kv in S.FurnitureToPlaceList(true))
             {
                 FurnitureDef def = FurnitureCatalog.Get(kv.Key);
                 if (def == null) continue;
                 any = true;
                 string id = def.Id;
-                var button = Ui.Size(Ui.Button(_placePanel, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17,
+                var button = Ui.Size(Ui.Button(content, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17,
                     Ui.SelectedButton(_ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced)), -1, 40);
                 ItemButtonPortrait(button, "furn:" + id, 32);
             }
-            if (!any) Ui.Size(Ui.Label(_placePanel, "空的。去家具城买，或者网购。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
+            if (!any) Ui.Size(Ui.Label(content, "暂无可摆放家具", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 
             if (_ctrl.PlaceId != null)
             {
-                Ui.Size(Ui.Button(_placePanel, "旋转（R）", _ctrl.RotateGhost, 17), -1, 40);
-                if (_ctrl.PlaceHoldsPlaced) Ui.Size(Ui.Button(_placePanel, "收进后仓（X）", _ctrl.StoreSelected, 17, Ui.Warn), -1, 40);
+                Ui.Size(Ui.Button(content, "旋转（R）", _ctrl.RotateGhost, 17), -1, 40);
+                if (_ctrl.PlaceHoldsPlaced) Ui.Size(Ui.Button(content, "收进后仓（X）", _ctrl.StoreSelected, 17, Ui.Warn), -1, 40);
             }
-            var history = Ui.Row(_placePanel, 36);
-            Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 15, Ui.ButtonBg, S.CanUndoLayout), 165);
-            Ui.Size(Ui.Button(history, "重做 Ctrl+Y", () => _ctrl.UndoPlacement(true), 15, Ui.ButtonBg, S.CanRedoLayout), 165);
-            Ui.Size(Ui.Button(_placePanel, "完成", _ctrl.EndPlacement, 19, Ui.ButtonHot), -1, 46);
+            var history = Ui.Row(content, 36);
+            Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 15, Ui.ButtonBg, S.CanUndoLayout), 0, 36, 1);
+            Ui.Size(Ui.Button(history, "重做 Ctrl+Y", () => _ctrl.UndoPlacement(true), 15, Ui.ButtonBg, S.CanRedoLayout), 0, 36, 1);
+            scroll.StopMovement();
+            scroll.verticalNormalizedPosition = previousScroll;
         }
 
         private void UpdatePlacementStatus()
         {
             UpdateHomePlacementStatus();
             if (_placePanel == null || !_placePanel.gameObject.activeSelf || _placeStatus == null) return;
-            if (!_ctrl.Placing) return;
-            if (_ctrl.PlaceId == null) _placeStatus.text = "选一件背包里的家具，或者点屋里的家具拿起来挪。";
+            if (!_ctrl.PlacingShop) return;
+            if (_ctrl.PlaceId == null) _placeStatus.text = "选择待摆放的家具，或点击店里的家具移动。";
             else if (_ctrl.PlaceError == null) _placeStatus.text = "<color=#386047>这里可以放，点左键。</color>";
             else _placeStatus.text = "<color=#9C4634>" + _ctrl.PlaceError + "</color>";
         }

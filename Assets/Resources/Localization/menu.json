@@ -49,6 +49,18 @@
   "en": "Loading the neighborhood"
 },
 {
+  "key": "opening_cinematic_loading",
+  "zh": "正在加载开场影片…",
+  "ja": "オープニング映像を読み込み中…",
+  "en": "Loading the opening cinematic…"
+},
+{
+  "key": "opening_cinematic_skip",
+  "zh": "跳过开场　Esc",
+  "ja": "オープニングをスキップ　Esc",
+  "en": "Skip intro   Esc"
+},
+{
   "key": "loading_ground",
   "zh": "准备地图与地形…",
   "ja": "地図と地形を準備中…",

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
@@ -18,8 +19,51 @@ namespace PCShopSell.Game.UI
                 || S.OpeningAgencyGuidePending || OpeningMealRestricted || _ctrl.Placing || _ctrl.PetFocusActive
                 || S.Trip != null || S.PendingEvent != null)
                 return;
+            S.FilterPendingMarketPriceAlerts();
             if (S.MarketPriceAlerts.Count > 0) OpenMarketPriceAlert();
             else if (S.EconomicReportPending && S.EconomicReportAutomatic) OpenEconomicReport();
+        }
+
+        private void OpenMarketPriceSubscriptions()
+        {
+            OpenWindow("订阅物价信息", 1060, 540, w =>
+            {
+                string threshold = GameSession.MarketPriceAlertThreshold.ToString("P0");
+                Line(w.Content, $"勾选品类后，单日涨跌超过 {threshold} 时弹出提醒。", 17, Ui.Dim);
+                int partsEnd = PartCatalog.Categories.Length;
+                int propertyStart = GameSession.PropertyPriceGroupStart;
+                int modelStart = GameSession.PriceGroups.Length;
+                var upper = Ui.Row(w.Content, 210, 10);
+                var lower = Ui.Row(w.Content, 134, 10);
+                BuildGroup(upper, "电脑配件", 210, 0, partsEnd);
+                BuildGroup(upper, "商品与生活", 210, partsEnd, propertyStart);
+                BuildGroup(lower, "房产与租金", 134, propertyStart, modelStart);
+                BuildGroup(lower, "模型系列", 134, modelStart, GameSession.MarketPriceCategories.Count);
+                if (!S.ModelPriceAlertsAvailable)
+                    Line(w.Content, "模型系列的订阅将在模型店完成装修后生效。", 16, Ui.Dim);
+
+                void BuildGroup(Transform parent, string title, float height, int start, int end)
+                {
+                    var group = ReportPanel(parent, "PriceSubscriptionGroup", height);
+                    Line(group, title, 18, Ui.Accent);
+                    for (int i = start; i < end; i += 2)
+                    {
+                        var row = Ui.Row(group, 34, 6);
+                        for (int j = i; j < Math.Min(i + 2, end); j++)
+                        {
+                            var category = GameSession.MarketPriceCategories[j];
+                            string name = j >= modelStart ? ModelProducts.SeriesName(category.Id) : category.Name;
+                            bool selected = S.IsMarketPriceSubscribed(category.Id);
+                            Ui.Size(Ui.Button(row, (selected ? "✓  " : "□  ") + name, () =>
+                            {
+                                S.SetMarketPriceSubscription(category.Id, !selected);
+                                w.Rebuild();
+                            }, 16, Ui.SelectedButton(selected)), 0, 34, 1).name = "MarketSubscribe_" + category.Id;
+                        }
+                        if (i + 1 == end) Ui.Size(Ui.Rect(row, "PriceSubscriptionSpacer"), 0, 34, 1);
+                    }
+                }
+            }, scrollContent: false);
         }
 
         private void OpenMarketPriceAlert()
@@ -27,7 +71,7 @@ namespace PCShopSell.Game.UI
             var moves = S.MarketPriceAlerts;
             var day = new GameDate(S.MarketPriceAlertDay);
             var news = IndustryCycles.CommodityEventOn(day.TotalDays, S.Market.CommoditySeed);
-            bool showNews = news.IsVolatile(day.TotalDays);
+            bool showNews = news.IsVolatile(day.TotalDays) && moves.Any(move => move.CategoryId == news.Key);
             S.DismissMarketPriceAlert();
             OpenWindow("物价异动", 640, Mathf.Min(680, 228 + moves.Count * 34 + (showNews ? 52 : 0)), w =>
             {
@@ -36,8 +80,7 @@ namespace PCShopSell.Game.UI
                 foreach (var move in moves)
                 {
                     var row = Ui.Row(w.Content, 34, 10);
-                    int seriesIndex = Array.FindIndex(ModelProducts.SeriesIds,
-                        series => GameSession.ModelPriceReportName(series) == move.Name);
+                    int seriesIndex = Array.IndexOf(ModelProducts.SeriesIds, move.CategoryId);
                     if (seriesIndex >= 0)
                         Ui.Size(Ui.Button(row, move.Name + "  ›", () =>
                         {
@@ -52,6 +95,7 @@ namespace PCShopSell.Game.UI
                 }
                 var actions = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Button(actions, "知道了", w.Close, 17), -1, 42, 1);
+                Ui.Size(Ui.Button(actions, "订阅物价信息", () => { w.Close(); OpenMarketPriceSubscriptions(); }, 16), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "查看物价", () => { w.Close(); OpenMarketPanel(); }, 17, Ui.ButtonHot), -1, 42, 1);
             });
         }

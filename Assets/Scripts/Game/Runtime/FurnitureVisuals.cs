@@ -20,6 +20,10 @@ namespace PCShopSell.Game.Runtime
         private static readonly Color Metal = new Color(0.22f, 0.22f, 0.25f);
         internal const float StoolSeatHeight = .4f;
         internal const float SofaSeatHeight = .45f;
+        internal const float DiningSeatHeight = .41f;
+        internal static readonly Vector3 DiningSeatPosition = new Vector3(0, 0, -.28f);
+        private static readonly Vector3 DiningPlatePosition = new Vector3(0, .778f, .115f);
+        internal static readonly Vector3 DiningMealPosition = DiningPlatePosition + Vector3.up * .038f;
 
         public static GameObject Build(Transform parent, FurnitureDef def, bool collider, string shelfKind = null)
         {
@@ -73,7 +77,7 @@ namespace PCShopSell.Game.Runtime
                 case "rug": Rug(root, w, d); break;
                 case "plant": Plant(root, 0.4f, 0.9f, c); break;
                 case "shop_plant": Plant(root, 0.5f, 1.3f, c); break;
-                case FurnitureCatalog.HomeWorkbench:
+                case FurnitureCatalog.HomeWorkbench: HomeWorkbench(root, w, d, c); break;
                 case "desk": Desk(root, w, d, c); break;
                 case "sofa": Sofa(root, w, d, c, new Color(0.55f, 0.4f, 0.3f)); break;
                 case "shop_sofa": Sofa(root, w, d, c, new Color(0.25f, 0.4f, 0.6f)); break;
@@ -90,6 +94,11 @@ namespace PCShopSell.Game.Runtime
         private static void SpecialFurniture(Transform root,FurnitureDef def,bool collider)
         {
             float w=(float)def.Width,d=(float)def.Depth;
+            if (def.Id == "restaurant_table")
+            {
+                RestaurantDiningSet(root, w, d, collider);
+                return;
+            }
             Desk(root,w,d,collider);
             if(def.Id=="restaurant_stove")
             {
@@ -97,11 +106,6 @@ namespace PCShopSell.Game.Runtime
                 Prims.Shape(PrimitiveType.Cylinder,root,"Wok",new Vector3(0,.94f,0),new Vector3(.5f,.07f,.5f),Mats.Lit(Metal));
                 Prims.Box(root,"WokHandle",new Vector3(.34f,.96f,0),new Vector3(.32f,.04f,.06f),Mats.Lit(ArtDirection.Wood));
                 Prims.Shape(PrimitiveType.Sphere,root,"FoodInWok",new Vector3(0,1.02f,0),new Vector3(.38f,.08f,.38f),Mats.Lit(new Color(.85f,.67f,.25f)));
-            }
-            else if(def.Id=="restaurant_table")
-            {
-                Prims.Box(root,"DiningChair",new Vector3(0,.25f,-d*.6f),new Vector3(.38f,.5f,.35f),Mats.Lit(ArtDirection.Wood),collider);
-                Prims.Shape(PrimitiveType.Cylinder,root,"DiningPlate",new Vector3(0,.88f,0),new Vector3(.3f,.015f,.3f),Mats.Lit(Color.white));
             }
             else if(def.Id==FurnitureCatalog.LegacyRestaurantPrep)
             {
@@ -132,6 +136,31 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(root,"ToolRack",new Vector3(0,1.07f,d*.35f),new Vector3(w*.8f,.35f,.06f),Mats.Lit(ArtDirection.Wood));
                 for(int i=-1;i<=1;i++)Prims.Box(root,"HandTool",new Vector3(i*w*.22f,1.1f,d*.3f),new Vector3(.045f,.24f,.045f),Mats.Lit(Metal));
                 Prims.Box(root,"PartsTray",new Vector3(w*.28f,.92f,-d*.12f),new Vector3(.25f,.07f,.2f),Mats.Lit(ArtDirection.Brass));
+            }
+        }
+
+        private static void RestaurantDiningSet(Transform root, float width, float depth, bool collider)
+        {
+            // Keep the table, chair and the gap inside the original placement footprint.
+            const float tableDepth = .46f;
+            var table = new GameObject("DiningTable").transform;
+            table.SetParent(root, false);
+            table.localPosition = new Vector3(0, 0, (depth - tableDepth) * .5f);
+            Desk(table, width, tableDepth, collider, withLaptop: false);
+            Prims.Shape(PrimitiveType.Cylinder, root, "DiningPlate", DiningPlatePosition,
+                new Vector3(.26f, .013f, .26f), Mats.Lit(Color.white));
+
+            var chair = new GameObject("DiningChair").transform;
+            chair.SetParent(root, false);
+            chair.localPosition = DiningSeatPosition;
+            var wood = Mats.Lit(ArtDirection.Wood);
+            var frame = Mats.Lit(Metal);
+            Prims.Box(chair, "Seat", new Vector3(0, DiningSeatHeight - .025f, 0), new Vector3(.36f, .05f, .29f), wood, collider);
+            Prims.Box(chair, "Backrest", new Vector3(0, .665f, -.12f), new Vector3(.36f, .16f, .05f), wood, collider);
+            foreach (float x in new[] { -.15f, .15f })
+            {
+                Prims.Box(chair, "FrontLeg", new Vector3(x, .19f, .11f), new Vector3(.045f, .38f, .045f), frame);
+                Prims.Box(chair, "BackPost", new Vector3(x, .35f, -.12f), new Vector3(.045f, .7f, .045f), frame);
             }
         }
 
@@ -332,11 +361,74 @@ namespace PCShopSell.Game.Runtime
             Prims.Shape(PrimitiveType.Sphere, r, "LeavesB", new Vector3(size * 0.15f, height * 0.85f, 0), new Vector3(size * 0.7f, height * 0.4f, size * 0.7f), Mats.Lit(new Color(0.3f, 0.62f, 0.32f), 0.1f));
         }
 
-        private static void Desk(Transform r, float w, float d, bool c)
+        private static void HomeWorkbench(Transform root, float width, float depth, bool collider)
+        {
+            var chassis = Mats.Lit(new Color(.12f, .16f, .20f), .46f, .3f);
+            var aluminum = Mats.Lit(new Color(.43f, .52f, .59f), .52f, .38f);
+            var inset = Mats.Lit(new Color(.055f, .08f, .11f), .27f);
+            var cyan = Mats.Glow(new Color(.05f, .45f, .54f), new Color(.12f, .95f, 1.2f), nightOnly: false);
+            var amber = Mats.Glow(new Color(.75f, .42f, .12f), new Color(1f, .55f, .14f), nightOnly: false);
+
+            Prims.Box(root, "ConsoleTop", new Vector3(0, .84f, 0), new Vector3(width, .10f, depth), chassis, collider);
+            Prims.Box(root, "ConsoleTrim", new Vector3(0, .781f, 0), new Vector3(width - .035f, .048f, depth - .02f), aluminum);
+            Prims.Box(root, "FrontStatusStrip", new Vector3(0, .893f, -depth / 2 + .026f), new Vector3(width - .18f, .012f, .028f), cyan);
+            Prims.Box(root, "RearEquipmentRail", new Vector3(0, .94f, depth * .30f), new Vector3(width - .12f, .11f, .22f), chassis);
+            Prims.Box(root, "RearStatusStrip", new Vector3(0, .996f, depth * .39f), new Vector3(width * .76f, .012f, .026f), cyan);
+
+            float cabinetX = width * .36f;
+            Prims.Box(root, "EquipmentCabinet", new Vector3(cabinetX, .43f, .035f), new Vector3(.40f, .72f, depth * .74f), chassis, collider);
+            Prims.Box(root, "EquipmentFace", new Vector3(cabinetX, .44f, -.25f), new Vector3(.32f, .57f, .035f), inset);
+            for (int slot = 0; slot < 4; slot++)
+                Prims.Box(root, "Vent", new Vector3(cabinetX, .25f + slot * .062f, -.27f), new Vector3(.24f, .023f, .01f), aluminum);
+            Prims.Box(root, "CabinetPower", new Vector3(cabinetX + .09f, .64f, -.272f), new Vector3(.054f, .027f, .013f), amber);
+            Prims.Box(root, "ConsoleSupport", new Vector3(-cabinetX, .43f, .035f), new Vector3(.14f, .73f, depth * .64f), aluminum, collider);
+            foreach (float x in new[] { -cabinetX, cabinetX })
+                Prims.Box(root, "ConsoleFoot", new Vector3(x, .047f, 0), new Vector3(.42f, .094f, depth * .88f), chassis);
+
+            BuildWorkbenchDisplay(root, new Vector3(0, 1.26f, .20f), .86f, .48f, 0, chassis, cyan, collider);
+            BuildWorkbenchDisplay(root, new Vector3(-width * .335f, 1.19f, .15f), .45f, .36f, -15, chassis, cyan, collider);
+            BuildWorkbenchDisplay(root, new Vector3(width * .335f, 1.19f, .15f), .45f, .36f, 15, chassis, amber, collider);
+
+            Prims.Box(root, "KeyboardDeck", new Vector3(-.11f, .911f, -.16f), new Vector3(.56f, .042f, .24f), inset);
+            for (int row = 0; row < 3; row++)
+                Prims.Box(root, "KeyboardRow", new Vector3(-.11f, .934f, -.23f + row * .062f), new Vector3(.44f, .009f, .028f), aluminum);
+            Prims.Box(root, "Touchpad", new Vector3(.39f, .908f, -.17f), new Vector3(.26f, .027f, .23f), aluminum);
+            Prims.Box(root, "TouchpadSurface", new Vector3(.39f, .923f, -.17f), new Vector3(.21f, .008f, .18f), inset);
+            Prims.Box(root, "ControlKey", new Vector3(.73f, .907f, -.17f), new Vector3(.095f, .033f, .07f), cyan);
+        }
+
+        private static void BuildWorkbenchDisplay(Transform root, Vector3 center, float width, float height, float yaw,
+            Material chassis, Material accent, bool collider)
+        {
+            var display = new GameObject("Display").transform;
+            display.SetParent(root, false);
+            display.localPosition = center;
+            display.localRotation = Quaternion.Euler(12, yaw, 0);
+            float mountHeight = center.y - .98f;
+            Prims.Box(root, "DisplayMount", new Vector3(center.x, .98f + mountHeight / 2, center.z),
+                new Vector3(.10f, mountHeight, .09f), chassis);
+            Prims.Box(display, "DisplayHousing", Vector3.zero, new Vector3(width, height, .075f), chassis, collider);
+            Prims.Box(display, "RearIndicator", new Vector3(0, height * .25f, .039f), new Vector3(width * .52f, .019f, .009f), accent);
+            var screen = Mats.Unlit(new Color(.036f, .13f, .19f));
+            var grid = Mats.Unlit(new Color(.12f, .30f, .38f));
+            Prims.Box(display, "Screen", new Vector3(0, .006f, -.042f), new Vector3(width - .055f, height - .055f, .01f), screen);
+            Prims.Box(display, "ScreenHeader", new Vector3(0, height * .31f, -.05f), new Vector3(width * .76f, .025f, .006f), accent);
+            for (int row = 0; row < 3; row++)
+                Prims.Box(display, "ChartGrid", new Vector3(0, (row - 1) * height * .17f, -.05f), new Vector3(width * .76f, .012f, .006f), grid);
+            for (int column = 0; column < 5; column++)
+            {
+                float barHeight = height * (.16f + ((column * 3 + 1) % 5) * .065f);
+                Prims.Box(display, "ChartBar", new Vector3((column - 2) * width * .13f, -.22f * height + barHeight / 2, -.055f),
+                    new Vector3(width * .075f, barHeight, .007f), accent);
+            }
+        }
+
+        private static void Desk(Transform r, float w, float d, bool c, bool withLaptop = true)
         {
             Prims.Box(r, "Top", new Vector3(0, 0.74f, 0), new Vector3(w, 0.05f, d), Mats.Lit(new Color(0.6f, 0.5f, 0.38f), 0.15f), c);
             foreach (Vector2 p in new[] { new Vector2(-w / 2 + 0.05f, -d / 2 + 0.05f), new Vector2(w / 2 - 0.05f, -d / 2 + 0.05f), new Vector2(-w / 2 + 0.05f, d / 2 - 0.05f), new Vector2(w / 2 - 0.05f, d / 2 - 0.05f) })
                 Prims.Box(r, "Leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.05f, 0.72f, 0.05f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f, 0.5f));
+            if (!withLaptop) return;
             Prims.Box(r, "Laptop", new Vector3(0, 0.78f, 0.05f), new Vector3(0.34f, 0.02f, 0.24f), Mats.Lit(new Color(0.2f, 0.2f, 0.23f), 0.4f, 0.4f));
             Prims.Box(r, "Screen", new Vector3(0, 0.92f, 0.17f), new Vector3(0.34f, 0.24f, 0.015f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.3f, 0.8f, 1.5f), false));
         }

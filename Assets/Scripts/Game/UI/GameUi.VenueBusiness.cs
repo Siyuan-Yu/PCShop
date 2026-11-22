@@ -18,6 +18,7 @@ namespace PCShopSell.Game.UI
                 var state=S.VenueOperation(place.Id);
                 Line(w.Content,"专用场地 · "+S.VenueBusinessName(place)+" · "+(S.VenueOpen(place)?"营业中":state.Accepting?"等待营业时间或值守到岗":"暂停接客"),22,Ui.Accent);
                 Line(w.Content,"今日顾客 "+state.Customers+" 人 · 收入 "+Money.FromCents(state.RevenueCents)+" · 累计收入 "+Money.FromCents(state.TotalRevenueCents),20,Ui.Good);
+                BuildShopStanding(w.Content, shop.Sim);
                 Line(w.Content,"场地占用（含预约） "+state.CustomersHere.Length+" / "+S.VenueCapacity(place)+" 人 · 周租 "+shop.Lease.Rent+" · 维护 ¥"+S.VenueMaintenanceYuan(place)+"/天",18);
                 var hours=Ui.Row(w.Content,42,8);
                 Ui.Size(Ui.Label(hours,"营业时间",18),100);
@@ -40,8 +41,8 @@ namespace PCShopSell.Game.UI
                 }
                 if(S.StaffCommitted(shop)<GameSession.StaffLimit(shop.Place.Size))
                 {
-                    Line(w.Content, S.Candidates.Count == 0 ? $"下一批应聘者 {S.NextCandidateArrivalText} 到店"
-                        : $"值守招聘 · 今日剩 {S.Candidates.Count} 位应聘者", 17, Ui.Accent);
+                    Line(w.Content, S.Candidates.Count == 0 ? "值守招聘" : $"值守招聘 · 今日剩 {S.Candidates.Count} 位应聘者", 17, Ui.Accent);
+                    BuildRecruitmentNotice(w.Content, w.Rebuild);
                     foreach(var candidate in S.Candidates.Select((person,index)=>new{person,index}).ToArray())
                     {
                         var c=candidate;

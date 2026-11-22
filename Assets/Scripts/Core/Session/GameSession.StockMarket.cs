@@ -220,6 +220,28 @@ namespace PCShopSell.Core.Session
             _ => -.012
         };
 
+        private static (string Headline, string Detail, string Rumor) SoftwareServicesAnnouncement(StockCompanyChange change) => change switch
+        {
+            StockCompanyChange.NewLocations => ("增设实施交付中心",
+                "新中心将承接更多企业软件上线项目，前期招聘和场地投入压低近期利润率。",
+                "在筹建新的实施交付中心，已经开始招聘实施工程师"),
+            StockCompanyChange.HigherCosts => ("云资源和运维成本上涨",
+                "云资源合同续约价格上调，工程师值班支出也有所增加，近期利润率承压。",
+                "的新一轮云资源报价变高了，运维团队也在重算值班预算"),
+            StockCompanyChange.ChannelOrders => ("签下企业软件合同",
+                "公司签下企业管理系统的部署和运维合同，预计增加项目收入，款项将按里程碑验收确认。",
+                "和几家企业谈到部署日期了，据说软件和运维合同很快能签下来"),
+            StockCompanyChange.Returns => ("核心项目验收延期",
+                "一批新系统未能按期通过客户验收，收入确认推迟，返工增加了交付成本。",
+                "有几个系统在客户验收时被退回整改，项目组正重排上线时间"),
+            StockCompanyChange.Efficiency => ("交付流程标准化",
+                "通用部署和测试工具已在项目中使用，重复实施工时减少，近期利润率改善。",
+                "已在几个项目试用自动部署工具，原先要重复做的上线工作少了许多"),
+            _ => ("裁撤低毛利定制项目",
+                "公司停止承接部分长期亏损的定制项目并缩减相关岗位，短期营收规模收缩，经常性支出减少。",
+                "正在缩减定制业务，有项目组接到调整人员安排的通知")
+        };
+
         private void PublishStockCompanyChange(CityEquityState e, CityEquityDefinition d, long minute, StockCompanyChange change)
         {
             string headline,detail;
@@ -238,6 +260,8 @@ namespace PCShopSell.Core.Session
                 default:e.BusinessScale=Math.Max(.4,e.BusinessScale*.97);e.OperatingMargin=Math.Min(.2,e.OperatingMargin+.008);
                     headline="收缩低效业务";detail="公司缩减部分低效业务，营收规模减少，同时降低了运营负担。";break;
             }
+            if (d.Industry == CityInvestments.SoftwareServicesIndustry)
+                (headline, detail, _) = SoftwareServicesAnnouncement(change);
             e.LastReason=headline+"；"+detail;
             AddStockNews(e.Id,minute,d.Name+"："+headline,detail+" 市场预期和短期交易情绪也会影响价格。");
         }

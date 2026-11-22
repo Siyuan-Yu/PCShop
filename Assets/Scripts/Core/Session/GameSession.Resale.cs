@@ -20,6 +20,27 @@ namespace PCShopSell.Core.Session
         public static double UsedWeight(UsedItem item) => OldMarketHuntCatalog.Spot(item.MarketSpotId)?.Weight
             ?? UsedWeights[Math.Clamp(item.Product, 0, UsedWeights.Length - 1)];
         public bool UsedReserved(OwnedShop shop,int id)=>shop.Sim.Queue.Any(c=>c.ResaleId==id);
+
+        public static long UsedPriceAtMultiplier(UsedItem item, double multiplier) =>
+            Math.Clamp((long)Math.Round(UsedValue(item) * multiplier), 1, UsedListingPriceLimit(item));
+
+        public UsedItem[] UsedUniformPriceTargets()
+        {
+            var shop = CurrentShop;
+            if (!SpecialPlayer(shop) || shop.RetailKind != "secondhand") return Array.Empty<UsedItem>();
+            var displayed = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(offer => offer.Id).ToHashSet();
+            return SpecialBusiness(shop.Place.Id).Used.Where(item => displayed.Contains(item.Id)
+                && item.RepairWorkRemaining <= 0).ToArray();
+        }
+
+        public int ApplyUsedUniformPricing(double multiplier)
+        {
+            if (double.IsNaN(multiplier) || multiplier < ShopSettings.MinMarkup || multiplier > ShopSettings.MaxMarkup) return 0;
+            var items = UsedUniformPriceTargets();
+            foreach (var item in items) item.Price = UsedPriceAtMultiplier(item, multiplier);
+            return items.Length;
+        }
+
         private IEnumerable<ResaleOffer> UsedOffers(OwnedShop shop)=>shop.RetailKind!="secondhand"?Enumerable.Empty<ResaleOffer>():
             SpecialBusiness(shop.Place.Id).Used.Where(i=>i.Owned&&i.Inspected&&i.Listed&&!i.Sold&&!UsedReserved(shop,i.Id))
                 .Select(item => new ResaleOffer
@@ -36,14 +57,21 @@ namespace PCShopSell.Core.Session
             long priceLimit = UsedListingPriceLimit(item);
             if (price < 1 || price > priceLimit) return $"请将标价设在 ¥1 到 ¥{priceLimit:N0} 之间。";
             if (UsedReserved(shop, item.Id)) return "这件商品已被顾客拿去结账，暂时不能改价或下架。";
+            string shelfBlocker = UsedShelfListingBlocker(shop, item);
+            if (shelfBlocker != null) return shelfBlocker;
+            item.Price = price;
+            if (!item.Listed) item.ListedAt = Clock.Now.TotalMinutes;
+            item.Listed = true;
+            return null;
+        }
+
+        private string UsedShelfListingBlocker(OwnedShop shop, UsedItem item)
+        {
             var fill = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand"));
             if (fill.CapacityKg <= 0)
                 return "请先摆放货架，并将品类设为“二手转售品”。\n\n在店内走到货架旁按 F，选择“选择摆什么”或“换品类”，再从“零售商品”中选“二手转售品”。设置好后，回到收购鉴定台确认上架。";
             if (!item.Listed && (fill.Total >= fill.CapacityItems || fill.UsedKg + UsedWeight(item) > fill.CapacityKg + 1e-9))
                 return "二手转售品货架已满，或剩余承重不足。请增加货架或等货架腾出空位。";
-            item.Price = price;
-            if (!item.Listed) item.ListedAt = Clock.Now.TotalMinutes;
-            item.Listed = true;
             return null;
         }
         public bool UnlistUsedItem(int id)

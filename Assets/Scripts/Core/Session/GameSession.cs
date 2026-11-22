@@ -143,7 +143,7 @@ namespace PCShopSell.Core.Session
             }
             else
             {
-                Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + 2 });
+                Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + Pantry.CookedShelfDays });
             }
             ApplyCargoLimit();
 
@@ -267,7 +267,7 @@ namespace PCShopSell.Core.Session
             {
                 PlayerShop.PlayerPresent = true;
                 ExpireCandidates();
-                RefreshDailyCandidates();
+                RefreshRecruitmentCandidates();
             }
             else if (place.Kind == PlaceKind.Wholesaler)
             {
@@ -502,7 +502,7 @@ namespace PCShopSell.Core.Session
             TickEnergyExhaustion();
             if (!_pendingFaint) UpdatePlayerWork(to);
             ExpireCandidates();
-            RefreshDailyCandidates();
+            RefreshRecruitmentCandidates();
             if (dailyEventDue) RollDailyEvent(to.Date, activityAtEventTime);
             CheckAppointments(to);
             DeliverOnlineOrders(to);
@@ -543,7 +543,8 @@ namespace PCShopSell.Core.Session
             TickPropertyMarket();
             Market.OnNewDay(today);
             var commodityNews = IndustryCycles.CommodityEventOn(today.TotalDays, Market.CommoditySeed);
-            if (commodityNews.IsActive(today.TotalDays) && commodityNews.StartDay == today.TotalDays)
+            if (commodityNews.IsActive(today.TotalDays) && commodityNews.StartDay == today.TotalDays
+                && CanReceiveMarketPriceAlert(commodityNews.Key))
                 Notice?.Invoke($"行业新闻 · {commodityNews.Name} · {commodityNews.Headline}。");
             RecordPriceDay(announceMoves: true);
             if (Market.News.Count > 0)

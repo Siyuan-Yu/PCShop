@@ -92,15 +92,16 @@ namespace PCShopSell.Tests
                     RectTransform Area(string name) => ui.Canvases.SelectMany(c => c.GetComponentsInChildren<RectTransform>()).Single(r => r.name == name);
                     Assert.Greater(Area("DialogueSpeech").rect.width, 3 * Area("DialogueIdentity").rect.width);
                     float readingHeight = Area("DialogueReadingPanel").rect.height;
-                    void AssertFixedDialogueLayout()
+                    void AssertFixedDialogueLayout(bool canEnd = true)
                     {
                         Canvas.ForceUpdateCanvases();
-                        var end = (RectTransform)Find("结束对话").transform;
-                        var panel = (RectTransform)end.GetComponentInParent<WindowFit>().transform;
-                        var bottomRight = panel.InverseTransformPoint(end.TransformPoint(new Vector3(end.rect.xMax, end.rect.yMin)));
+                        var panel = (RectTransform)Area("DialogueReadingPanel").GetComponentInParent<WindowFit>().transform;
                         Assert.That(panel.rect.width, Is.EqualTo(930f).Within(.1f));
                         Assert.That(panel.rect.height, Is.EqualTo(520f).Within(.1f));
                         Assert.That(Area("DialogueReadingPanel").rect.height, Is.EqualTo(readingHeight).Within(.1f));
+                        if (!canEnd) { Assert.False(Has("结束对话")); return; }
+                        var end = (RectTransform)Find("结束对话").transform;
+                        var bottomRight = panel.InverseTransformPoint(end.TransformPoint(new Vector3(end.rect.xMax, end.rect.yMin)));
                         Assert.That(panel.rect.xMax - bottomRight.x, Is.EqualTo(16f).Within(.1f));
                         Assert.That(bottomRight.y - panel.rect.yMin, Is.EqualTo(16f).Within(.1f));
                         Assert.That(end.rect.width, Is.EqualTo(146f).Within(.1f));
@@ -150,7 +151,7 @@ namespace PCShopSell.Tests
                     Assert.That(optionWidths.Max() - optionWidths.Min(), Is.LessThan(.1f));
                     AssertFixedDialogueLayout();
                     Find("谈谈分手").onClick.Invoke();
-                    AssertFixedDialogueLayout();
+                    AssertFixedDialogueLayout(canEnd: false);
                     Find("确认分手").onClick.Invoke();
                     Assert.IsFalse(s.IsPlayerPartner("momo"));
                     Assert.IsFalse(Has("聊聊心事"));
@@ -166,10 +167,11 @@ namespace PCShopSell.Tests
                     Find("继续交谈").onClick.Invoke();
                     var farewellWindow = Find("继续").GetComponentInParent<WindowFit>();
                     Assert.NotNull(farewellWindow);
-                    AssertFixedDialogueLayout();
+                    AssertFixedDialogueLayout(canEnd: false);
                     Find("继续").onClick.Invoke();
                     Assert.NotNull(Find("记下线索"));
                     Assert.AreSame(farewellWindow,Find("记下线索").GetComponentInParent<WindowFit>());
+                    Assert.False(Has("结束对话"), "The final page uses the story's own exit button");
                     Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text.Contains(GameSession.CommunityLeadHint(0))));
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="返回上一级"));
                     Find("记下线索").onClick.Invoke();

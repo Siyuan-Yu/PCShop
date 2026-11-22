@@ -73,12 +73,17 @@ namespace PCShopSell.Core.Session
         public string EmployeePaySummary(Employee e)
         {
             var schedule = e.Schedule ?? new EmployeeSchedule();
-            int start=schedule.PendingAt>=0?schedule.PendingStart:e.ShiftStart, end=schedule.PendingAt>=0?schedule.PendingEnd:e.ShiftEnd;
-            int duration=ShiftMinutes(start,end);
-            var current=_employeePayroll.LastOrDefault(p=>p.EmployeeId==e.Id);
-            return $"{start/60:00}:{start%60:00}—{(end<start?"次日":"")}{end/60:00}:{end%60:00} · 共{duration/60.0:0.##}小时\n标准10小时 · 加班{Math.Max(0,duration-600)/60.0:0.##}小时 · 基础日薪{e.DailyWage} · 基础时薪{Money.FromCents(e.DailyWage.Cents/10)}\n预计加班{EstimateShiftPay(e,start,end)-e.DailyWage} · 合计{EstimateShiftPay(e,start,end)}" +
-                (schedule.PendingAt>=0?"\n新日常排班从下一班生效，当前班次保留。":"") +
-                (current==null?"":$"\n最近工作日：实际{current.Minutes}分钟 · 应付合计{Money.FromCents(current.DailyCents+current.OvertimeCents)}\n基础工资{Money.FromCents(current.DailyCents)}（{(current.BasePaid?"已付":"待付")}）；加班{Money.FromCents(current.OvertimeCents)}，已付{Money.FromCents(current.Shops.Sum(x=>x.PaidOvertimeCents))}");
+            int start = schedule.PendingAt >= 0 ? schedule.PendingStart : e.ShiftStart;
+            int end = schedule.PendingAt >= 0 ? schedule.PendingEnd : e.ShiftEnd;
+            int duration = ShiftMinutes(start, end);
+            int overtime = Math.Max(0, duration - 600);
+            var total = EstimateShiftPay(e, start, end);
+            var current = _employeePayroll.LastOrDefault(p => p.EmployeeId == e.Id);
+            string hours = $"{duration / 60.0:0.##} 小时" + (overtime > 0 ? $"（含加班 {overtime / 60.0:0.##} 小时）" : "");
+            string pay = $"预计工资 {total}" + (overtime > 0 ? $"（含加班费 {total - e.DailyWage}）" : "");
+            return $"{start / 60:00}:{start % 60:00}—{(end < start ? "次日" : "")}{end / 60:00}:{end % 60:00} · {hours} · {pay}"
+                + (schedule.PendingAt >= 0 ? "\n新日常排班从下一班生效，当前班次保留。" : "")
+                + (current == null ? "" : $"\n工资记录 · 基础工资 {Money.FromCents(current.DailyCents)}（{(current.BasePaid ? "已付" : "待付")}） · 加班费 {Money.FromCents(current.OvertimeCents)}，已付 {Money.FromCents(current.Shops.Sum(x => x.PaidOvertimeCents))}");
         }
         private void PrepareEmployeeShift(Employee e,long at)
         {

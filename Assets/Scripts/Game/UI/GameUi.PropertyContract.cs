@@ -25,7 +25,10 @@ namespace PCShopSell.Game.UI
             bool submitted = false;
             _propertyContract = OpenWindow(title, 760, height, contract =>
             {
-                Transform content = contract.Content;
+                var sheet = Ui.PaperPanel(contract.Content, "ContractPaper", lifted: true);
+                var content = sheet.rectTransform;
+                Ui.VList(content, 6, 18);
+                Ui.Trim(content, "ContractPaperEdge", Ui.FlatWellEdge, 2);
                 var heading = Ui.Label(content, title, 32, TextAnchor.MiddleCenter);
                 heading.fontStyle = FontStyle.Bold;
                 Ui.Size(heading, -1, 42);
@@ -46,18 +49,18 @@ namespace PCShopSell.Game.UI
                 Line(fees, purchase ? "购买费用" : "首次应付", 18, Ui.Accent);
                 buildFees(fees);
 
-                var total = Ui.FlatPanel(content, "ContractTotal", Ui.FlatRow, Ui.FlatHotEdge);
-                Ui.VList(total.rectTransform, 3, 10);
-                var amounts = Ui.Row(total.transform, 70, 10);
+                Ui.Size(Ui.Panel(content, "PaymentRule", Ui.FlatWellEdge), -1, 1).raycastTarget = false;
+                var amounts = Ui.Row(content, 55, 10);
                 var payable = Ui.Size(Ui.Rect(amounts, "ContractPayment"), 0, -1, 1);
                 Ui.VList(payable, 0, 0);
                 Line(payable, due.IsNegative ? "本次净退回" : "本次实付", 17, Ui.TextColor);
-                Line(payable, due.Abs().ToString(), 26, Ui.TextColor);
+                Line(payable, due.Abs().ToString(), 26, Ui.Good).fontStyle = FontStyle.Bold;
                 string balanceLabel = due.IsPositive ? "付款后余额" : "结算后余额";
                 var balance = Ui.Label(amounts, $"{balanceLabel}  {S.Ledger.Balance - due}", 18,
                     TextAnchor.LowerRight, Ui.TextColor);
                 balance.fontStyle = FontStyle.Bold;
                 Ui.Size(balance, 240, -1);
+                Ui.Size(Ui.Panel(content, "TermsRule", Ui.FlatWellEdge), -1, 1).raycastTarget = false;
 
                 Para(content, terms, 17);
                 if (blocker != null) Para(content, blocker, 16, Ui.Warn);
@@ -76,8 +79,8 @@ namespace PCShopSell.Game.UI
                 stamp.fontStyle = FontStyle.Bold;
                 stamp.gameObject.SetActive(false);
 
-                var actions = Ui.Row(content, 44, 10);
-                var back = Ui.Size(Ui.Button(actions, "再看看", contract.Close, 18), -1, 44, 1);
+                var actions = Ui.Row(contract.Content, 44, 10);
+                var back = Ui.Size(Ui.Button(actions, "再看看", contract.Close, 18), 176, 44);
                 Button confirm = null;
                 confirm = Ui.Size(Ui.Button(actions, due.IsPositive ? "确认签约并付款" : "确认签约并结算", () =>
                 {

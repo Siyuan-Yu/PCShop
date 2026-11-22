@@ -47,13 +47,14 @@ namespace PCShopSell.EditorTools
             Check(trip.Items.Length == 3 && trip.Items.Select(x => x.SourceId).Distinct().Count() == 3, "员工一趟采购三个货源的三种商品");
             s.AdvanceClock((int)(Math.Max(trip.ReturnAt, trip.DeliveryAt) - s.Clock.Now.TotalMinutes + 1));
             Check(!s.EmployeePurchaseTrips.Any(t => t.EmployeeId == buyer.Person.Id), "整趟人和货都回来后完成，不重复扣款或入库");
+            Check(s.PostRecruitmentNotice(), "可以再贴一轮招聘告示");
             s.Clock.Restore(s.Clock.Today, 23 * 60 + 59); s.AdvanceClock(2);
             s.Clock.Restore(s.Clock.Today, 8 * 60 + 59); s.AdvanceClock(2);
             Check(s.EmployeePurchaseTrips.Any(t => t.EmployeeId == buyer.Person.Id && t.Items.Length == 3), "次日自动再次执行整份清单，不是只能进一次货");
             _game.Ui.CloseAllWindows();
             _game.Ui.OpenDock(); _game.Ui.DebugSelectTab(5);
-            Check(ActiveButtons().Count(b => ButtonText(b) == "聘用并安排工作") == GameSession.DailyCandidateCount,
-                "第二天自动显示四位应聘者");
+            Check(ActiveButtons().Count(b => ButtonText(b) == "聘用并安排工作") == GameSession.CandidatesPerNotice,
+                "贴告示后次日显示四位应聘者");
             Check(ActiveButtons().Any(b => ButtonText(b) == "离开店铺"), "离店按钮只显示离开店铺");
             Shot("vs1_procurement_05_recruit_again");
         }

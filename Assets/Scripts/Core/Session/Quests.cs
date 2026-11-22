@@ -77,6 +77,7 @@ namespace PCShopSell.Core.Session
                 Id = "mall", Title = "购齐开店设施", Target = QuestTarget.Mall,
                 Short = $"去{K("宜居家具城")}买收银台和货架",
                 Hint = "备齐该店型所需的开店设施。",
+                QuietTransition = true,
                 Done = s => s.HasShop && s.MissingOpeningFurniture().Length == 0,
                 RewardFor=s=>s.OpeningRewardText("mall"),
                 Grant = s => s.GrantOpeningReward("mall"),
@@ -311,8 +312,15 @@ namespace PCShopSell.Core.Session
             {
                 if(q.Id=="shelf") q.Short="把货架设成基础宠物用品，陈列首批商品";
                 if(q.Id=="stock") q.Short="到暖爪宠物用品批发市场补货";
+                if(q.Id=="sale" && s.OpeningPetIntakeLessonAvailable)
+                    q.Short="先在柜台接待送养的主人，再完成第一笔商品结账。";
             }
             if(q.Id=="sale"&&s.RetailKind=="restaurant"){q.Short="接待一桌客人，完成备菜、烹饪与上菜";q.Hint=GameSession.RestaurantOpeningServiceHint;}
+            if (s.RetailKind == "secondhand" && (q.Id == "stock" || q.Id == "sale"))
+            {
+                if (q.Id == "stock") q.Short = "用收购鉴定台准备第一批旧物";
+                q.Hint = "在柜台打开收购鉴定台。向卖家出价收购，检查状态并定价上架。等买家拿货排队后，点「结账」。";
+            }
             return q;
         }
     }
@@ -350,7 +358,7 @@ namespace PCShopSell.Core.Session
         public bool MealDeliveryTutorialPaused => HasSmartphone && !MealDeliveryEnabled
             && Flags.Contains(MealDeliveryGuidePending) && CanPauseForTutorial;
         public bool RequiredTutorialPaused => MealDeliveryTutorialPaused || ScooterTutorialPaused || BankTutorialPaused
-            || OpeningRenovationStep != OpeningRenovationLesson.None || OpeningShelfTutorialPaused
+            || OpeningMallTutorialPaused || OpeningRenovationStep != OpeningRenovationLesson.None || OpeningShelfTutorialPaused
             || OpeningCounterTutorialPaused || OpeningStaffStep != OpeningStaffLesson.None;
 
         public const string OpeningMealLeaveBlock = "先做饭，吃一碗，再把剩下的饭全部装进背包，才能出门。";

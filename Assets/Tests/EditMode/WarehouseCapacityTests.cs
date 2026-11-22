@@ -31,7 +31,7 @@ namespace PCShopSell.Tests
             list.Clear();var person=new Employee{Id=id,Name=id,DailyWageYuan=100,CandidateLeavesAt=s.Clock.Now.TotalMinutes+3000};
             list.Add(person);return person;
         }
-        [TestCase(ShopSize.Small,8,4)]
+        [TestCase(ShopSize.Small,6,4)]
         [TestCase(ShopSize.Medium,12,6)]
         [TestCase(ShopSize.Large,20,10)]
         public void SizeControlsShelvesAndRealEmployeeCountInsteadOfWarehouse(ShopSize size,int shelves,int staff)

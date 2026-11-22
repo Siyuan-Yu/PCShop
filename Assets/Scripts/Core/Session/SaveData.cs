@@ -50,6 +50,7 @@ namespace PCShopSell.Core.Session
 
         public PlayerWorkContract playerWork;
         public int weightUnitsVersion;
+        public int foodShelfLifeVersion;
         public double hunger, energy, health, sleepDebt;
         public long[] sleepSpans;
         public bool hasDietStats;
@@ -94,7 +95,8 @@ namespace PCShopSell.Core.Session
         public bool hasEmployee;
         public bool everHired;
         public SaveEmployee[] candidates;
-        public int dailyCandidateDay;
+        public int dailyCandidateDay; // 旧版存档用来识别已到店的首批应聘者。
+        public long recruitmentArrivalAt; // 0 表示旧版存档，-1 表示没有待到店的批次。
         public long openingStaffWaitUntil;
 
         public bool monthGoalEvaluated;
@@ -113,7 +115,7 @@ namespace PCShopSell.Core.Session
         /// <summary>手机里装的 app（旧存档没有这个字段，视为全装了）。</summary>
         public string[] apps;
         public string[] flags;
-        public int phoneQuestEarliestDay, scooterQuestEarliestDay;
+        public int phoneQuestEarliestDay, scooterQuestEarliestDay, bankQuestEarliestDay;
         public int[] scheduledDays;
         public long[] scheduledCents;
         public string[] scheduledMemos;
@@ -517,5 +519,6 @@ namespace PCShopSell.Core.Session
         public int expireDay;
         public bool chilled;
         public int chilledDays;
+        public string fishPotRewardId;
     }
 }

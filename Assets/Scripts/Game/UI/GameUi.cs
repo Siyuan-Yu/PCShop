@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
@@ -122,7 +124,7 @@ namespace PCShopSell.Game.UI
         private readonly Canvas _toastCanvas;
         private readonly Canvas _invitationCanvas;
         private readonly List<Window> _windows = new List<Window>();
-        private readonly List<(GameObject go, float until)> _toasts = new List<(GameObject, float)>();
+        private readonly List<(Text label, string message, RectTransform illustration, float until)> _toasts = new();
         private readonly Dictionary<string, (RectTransform rt, Text text, Button button, Outline textEdge)> _labels =
             new Dictionary<string, (RectTransform, Text, Button, Outline)>();
         private readonly List<(RectTransform rt, Text text, Button button)> _queueLabels = new List<(RectTransform, Text, Button)>();
@@ -837,11 +839,17 @@ namespace PCShopSell.Game.UI
 
         // ---------- 飘字 ----------
 
+        private const int ToastMaxCards = 3;
+        private const int ToastPaddingX = 14, ToastPaddingY = 10;
+        private const float ToastSpacing = 4, ToastIllustrationHeight = 150;
+        private static readonly Regex ToastMarkup = new Regex(@"</?(?:b|i|size|color)(?:=[^<>]+)?>");
+
         private void BuildToasts()
         {
             _toastList = Ui.Rect(_toastCanvas.transform, "Toasts").Anchor(0, 1, 0, 1, 16, -684, -476, 284);
+            _toastList.gameObject.AddComponent<RectMask2D>();
             var v = _toastList.gameObject.AddComponent<VerticalLayoutGroup>();
-            v.spacing = 4;
+            v.spacing = ToastSpacing;
             v.childControlHeight = true;
             v.childControlWidth = true;
             v.childForceExpandHeight = false;
@@ -863,11 +871,90 @@ namespace PCShopSell.Game.UI
                 top=Mathf.Max(top,canvas.rect.yMax-cardBottom+12);
             }
             float width=Mathf.Max(160,Mathf.Min(460,canvas.rect.width-32));
-            float height=Mathf.Max(60,Mathf.Min(400,canvas.rect.height-top-124));
+            float height=Mathf.Clamp(canvas.rect.height-top-124,0,400);
             var bottomLeft=new Vector2(16,-top-height);
             var topRight=new Vector2(16+width,-top);
+            var previousSize = _toastList.rect.size;
             if((_toastList.offsetMin-bottomLeft).sqrMagnitude>.01f)_toastList.offsetMin=bottomLeft;
             if((_toastList.offsetMax-topRight).sqrMagnitude>.01f)_toastList.offsetMax=topRight;
+            if ((_toastList.rect.size - previousSize).sqrMagnitude > .01f) LayoutToastCards();
+        }
+
+        private void LayoutToastCards()
+        {
+            if (_toasts.Count == 0) return;
+            float width = _toastList.rect.width - 2 * ToastPaddingX;
+            float remaining = _toastList.rect.height;
+            var firstLabel = _toasts[0].label;
+            var firstSettings = firstLabel.GetGenerationSettings(new Vector2(width, 0));
+            float minimumCardHeight = ToastTextHeight(firstLabel, "…", firstSettings) + 2 * ToastPaddingY;
+            // Give recent messages priority, with space for a preview of each older card that can fit.
+            for (int i = _toasts.Count - 1; i >= 0; i--)
+            {
+                var toast = _toasts[i];
+                var card = (RectTransform)toast.label.transform.parent;
+                if (remaining < minimumCardHeight)
+                {
+                    card.gameObject.SetActive(false);
+                    continue;
+                }
+
+                float minimumWithSpacing = minimumCardHeight + ToastSpacing;
+                int olderCards = Mathf.Min(i, Mathf.FloorToInt((remaining - minimumCardHeight) / minimumWithSpacing));
+                float cardBudget = remaining - olderCards * minimumWithSpacing;
+                float artHeight = 0;
+                if (toast.illustration != null)
+                {
+                    artHeight = Mathf.Min(ToastIllustrationHeight, cardBudget - minimumCardHeight);
+                    if (artHeight < 60) artHeight = 0;
+                    toast.illustration.gameObject.SetActive(artHeight > 0);
+                    if (artHeight > 0) Ui.Size(toast.illustration, -1, artHeight);
+                }
+
+                float textHeight = FitToastText(toast.label, toast.message, width, cardBudget - artHeight - 2 * ToastPaddingY);
+                float cardHeight = textHeight + artHeight + 2 * ToastPaddingY;
+                Ui.Size(toast.label, -1, textHeight);
+                Ui.Size(card, -1, cardHeight);
+                card.gameObject.SetActive(true);
+                remaining -= cardHeight + ToastSpacing;
+            }
+        }
+
+        private static float ToastTextHeight(Text label, string text, TextGenerationSettings settings) =>
+            Mathf.Ceil(label.cachedTextGeneratorForLayout.GetPreferredHeight(text, settings) / label.pixelsPerUnit) + 1;
+
+        private static float FitToastText(Text label, string message, float width, float maxHeight)
+        {
+            var settings = label.GetGenerationSettings(new Vector2(width, 0));
+            float Measure(string value) => ToastTextHeight(label, value, settings);
+
+            float height = Measure(message);
+            if (height <= maxHeight)
+            {
+                label.text = message;
+                return height;
+            }
+
+            string plain = ToastMarkup.Replace(message, "");
+            var characters = StringInfo.ParseCombiningCharacters(plain);
+            string preview = "…";
+            height = Measure(preview);
+            int low = 0, high = characters.Length - 1;
+            while (low <= high)
+            {
+                int mid = low + (high - low) / 2;
+                string candidate = plain.Substring(0, characters[mid]).TrimEnd() + "…";
+                float candidateHeight = Measure(candidate);
+                if (candidateHeight <= maxHeight)
+                {
+                    preview = candidate;
+                    height = candidateHeight;
+                    low = mid + 1;
+                }
+                else high = mid - 1;
+            }
+            label.text = preview;
+            return height;
         }
 
         private readonly List<string> _noticeHistory = new List<string>();
@@ -879,20 +966,28 @@ namespace PCShopSell.Game.UI
         public void OpenNoticeHistory()
         {
             _unreadNotices = 0;
-            OpenWindow("通知记录（本次会话）", 850, 700, w =>
+            OpenWindow("通知记录", 850, 700, w =>
             {
-                var list = Ui.Scroll(w.Content, 590);
-                for (int i = _noticeHistory.Count - 1; i >= 0; i--) Para(list, _noticeHistory[i], 16);
-                if (_noticeHistory.Count == 0) Line(list, "还没有通知。", 18, Ui.Dim);
+                for (int i = _noticeHistory.Count - 1; i >= 0; i--)
+                {
+                    var entry = Ui.FlatPanel(w.Content, "NoticeEntry").rectTransform;
+                    Ui.VList(entry, 0, 9);
+                    Para(entry, _noticeHistory[i], 16);
+                }
+                if (_noticeHistory.Count == 0) Line(w.Content, "还没有通知。", 18, Ui.Dim);
             });
         }
         public void Toast(string message, EventCgFrame cg = null)
         {
+            if (string.IsNullOrWhiteSpace(message)) return;
             _upcomingScheduleDirty = true;
             for (int i = 0; i < _toasts.Count; i++)
             {
-                var live = _toasts[i].go != null ? _toasts[i].go.GetComponentInChildren<Text>() : null;
-                if (live != null && live.text == message) { _toasts[i] = (_toasts[i].go, _uiTime + 5f); return; }
+                var live = _toasts[i];
+                if (live.message != message) continue;
+                live.until = _uiTime + 5f;
+                _toasts[i] = live;
+                return;
             }
             if (_lastToast == message && _uiTime - _lastToastAt < 8) return;
             _lastToast = message; _lastToastAt = _uiTime;
@@ -902,42 +997,39 @@ namespace PCShopSell.Game.UI
             if (_noticeHistory.Count > 150) _noticeHistory.RemoveAt(0);
             Image bg = Ui.Panel(_toastList, "Toast", Ui.PanelBg);
             var fit = bg.gameObject.AddComponent<VerticalLayoutGroup>();
-            fit.padding = new RectOffset(14, 14, 10, 10);
+            fit.padding = new RectOffset(ToastPaddingX, ToastPaddingX, ToastPaddingY, ToastPaddingY);
             fit.childControlHeight = true;
             fit.childControlWidth = true;
             fit.childForceExpandHeight = false;
-            Text t = Ui.Label(bg.transform, message, 18);
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            Text label = Ui.Label(bg.transform, "", 18);
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            RectTransform illustration = null;
             if (cg != null)
             {
-                // Place the extra height between notifications without interrupting store operations.
-                foreach (var toast in _toasts.Where(toast => toast.go != null
-                    && toast.go.transform.Find("EventIllustration") != null).ToArray())
-                {
-                    Kill.It(toast.go);
-                    _toasts.Remove(toast);
-                }
-                BuildEventCg(bg.transform, cg, 150);
+                for (int i = _toasts.Count - 1; i >= 0; i--)
+                    if (_toasts[i].illustration != null) RemoveToastAt(i);
+                illustration = BuildEventCg(bg.transform, cg, ToastIllustrationHeight);
             }
-            _toasts.Add((bg.gameObject, _uiTime + 5f));
+            _toasts.Add((label, message, illustration, _uiTime + 5f));
+            if (_toasts.Count > ToastMaxCards) RemoveToastAt(0);
+            LayoutToastCards();
             RevealAppearance(bg.transform, .18f, .25f);
-            if (_toasts.Count > 3)
-            {
-                Kill.It(_toasts[0].go);
-                _toasts.RemoveAt(0);
-            }
+        }
+
+        private void RemoveToastAt(int index)
+        {
+            var card = _toasts[index].label.transform.parent.gameObject;
+            card.SetActive(false);
+            Kill.It(card);
+            _toasts.RemoveAt(index);
         }
 
         private void UpdateToasts()
         {
+            int previousCount = _toasts.Count;
             for (int i = _toasts.Count - 1; i >= 0; i--)
-            {
-                if (_uiTime > _toasts[i].until)
-                {
-                    Kill.It(_toasts[i].go);
-                    _toasts.RemoveAt(i);
-                }
-            }
+                if (_uiTime > _toasts[i].until) RemoveToastAt(i);
+            if (_toasts.Count != previousCount) LayoutToastCards();
         }
 
         // ---------- 窗口 ----------
@@ -961,7 +1053,7 @@ namespace PCShopSell.Game.UI
             RectTransform prt = w.Root;
             if (!fullScreen)
             {
-                prt = Ui.Panel(dim.transform, "Panel", Ui.PanelBg).rectTransform;
+                prt = Ui.FlatPanel(dim.transform, "Panel", Ui.FlatWindow).rectTransform;
                 prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
                 prt.sizeDelta = new Vector2(width, height);
                 w.Fitter = prt.gameObject.AddComponent<WindowFit>();

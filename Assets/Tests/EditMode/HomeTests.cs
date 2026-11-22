@@ -645,8 +645,9 @@ namespace PCShopSell.Tests
             Assert.AreEqual(1, s.Pantry.CookedBowls);
 
             s.Player.Hunger = 100;
-            WaitDays(s, s.Clock.Today.TotalDays + 2);
-            Assert.AreEqual(0, s.Pantry.CookedBowls, "没冰箱，隔夜的饭坏了");
+            s.Clock.Restore(new GameDate(s.Pantry.Cooked.Single().ExpireDay), 23 * 60 + 59);
+            s.AdvanceClock(1);
+            Assert.AreEqual(0, s.Pantry.CookedBowls, "过了保质期，熟饭变质");
             Assert.AreEqual(0, s.Backpack.Lunchboxes);
         }
 
@@ -697,11 +698,11 @@ namespace PCShopSell.Tests
             s.Backpack.Food.AddIngredient("veg", 2);
             s.HomeBox.Food.AddIngredient(fish.Id, 1);
             double rice = s.HomeCookingRiceKg;
-            Assert.False(s.CookRice(1, "veg", fish.Id));
+            Assert.False(s.CookRice(1.5, "veg", fish.Id), "配菜不足时不扣米或鱼");
             Assert.AreEqual(rice, s.HomeCookingRiceKg);
             Assert.AreEqual(2, s.HomeCookingIngredientCount("veg"));
             Assert.AreEqual(1, s.HomeCookingIngredientCount(fish.Id));
-            Assert.True(s.CookRice(.5, "veg", fish.Id));
+            Assert.True(s.CookRice(1, "veg", fish.Id), "一锅米饭只用一条鱼");
             Assert.Zero(s.HomeCookingIngredientCount(fish.Id));
             using var loaded = GameSession.Load(s.City, UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave())));
             loaded.EventsEnabled = false;
@@ -711,13 +712,18 @@ namespace PCShopSell.Tests
             Assert.AreEqual(28 + fish.MealHungerBonus, batch.Hunger);
             Assert.AreEqual(.4 + fish.MealHealthBonus, batch.Health);
             loaded.Player.Hunger = loaded.Player.Health = loaded.Player.Nutrition = loaded.Player.Mood = 30;
+            loaded.Player.Charm = 30;
             Assert.True(loaded.EatBowlAtHome());
             Assert.AreEqual(30 + fish.MealNutritionBonus, loaded.Player.Nutrition);
             Assert.AreEqual(30 + fish.MealMoodBonus, loaded.Player.Mood);
+            Assert.AreEqual(31, loaded.Player.Charm);
             Assert.True(loaded.PackLunch(1));
-            Assert.True(loaded.EatLunchboxNow(batch.Id));
-            Assert.AreEqual(30 + 2 * fish.MealNutritionBonus, loaded.Player.Nutrition);
-            Assert.AreEqual(30 + 2 * fish.MealMoodBonus, loaded.Player.Mood);
+            using var restored = GameSession.Load(loaded.City, UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(loaded.CreateSave())));
+            restored.EventsEnabled = false;
+            Assert.True(restored.EatLunchboxNow(batch.Id));
+            Assert.AreEqual(30 + 2 * fish.MealNutritionBonus, restored.Player.Nutrition);
+            Assert.AreEqual(30 + 2 * fish.MealMoodBonus, restored.Player.Mood);
+            Assert.AreEqual(31, restored.Player.Charm, "同一锅饭的分装饭盒读档后也不会再次加属性");
             Assert.Greater(fish.MealNutritionBonus, FishingCatalog.Get("fish_crucian").MealNutritionBonus);
         }
 

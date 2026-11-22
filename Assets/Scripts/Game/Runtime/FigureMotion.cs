@@ -10,8 +10,10 @@ namespace PCShopSell.Game.Runtime
     {
         private const float WalkCycleDistance = .88f;
         private const float WalkSupportFraction = .60f;
+        private const float ChopstickReach = .18f;
+        private static readonly Vector3 ChopstickGrip = new Vector3(0, -.033f, 0);
         private static readonly List<FigureMotion> Active = new List<FigureMotion>();
-        private Transform _visual;
+        private Transform _visual, _head;
         private readonly Transform[] _hips = new Transform[2], _knees = new Transform[2], _feet = new Transform[2], _arms = new Transform[2], _hands = new Transform[2];
         private readonly Transform[] _elbows = new Transform[2];
         private Vector3 _previousPosition;
@@ -20,6 +22,10 @@ namespace PCShopSell.Game.Runtime
         private bool _seated;
         private Transform _scooter;
         private float _furnitureSeatHeight, _furnitureSeatBlend;
+        private (float progress, float surface, Vector3 braceHand, Vector3 standing, int braceArm)? _bedWakePose;
+        private Vector3? _diningFoodPosition;
+        private float _diningPhase;
+        private GameObject _diningChopsticks;
         private Vector3 _reachTarget;
         private float _reachWeight, _reachCrouch;
         private float _kickFollowThrough;
@@ -57,6 +63,44 @@ namespace PCShopSell.Game.Runtime
             ApplyPose();
         }
 
+        internal static float WakeEase(float progress, float start, float end) =>
+            Mathf.SmoothStep(0, 1, Mathf.InverseLerp(start, end, progress));
+
+        internal void SetBedWakePose(float progress, float surface, Vector3 braceHand, Vector3 standing, int braceArm)
+        {
+            _bedWakePose = (progress, surface, braceHand, standing, braceArm);
+            ApplyPose();
+        }
+
+        internal void ClearBedWakePose()
+        {
+            if (!_bedWakePose.HasValue) return;
+            _hands[_bedWakePose.Value.braceArm].localRotation = Quaternion.identity;
+            _bedWakePose = null;
+            _head.localRotation = Quaternion.identity;
+            ApplyPose();
+        }
+
+        internal void SetDiningSeatPose(float height, Vector3? foodPosition, int guestId)
+        {
+            if (_furnitureSeatHeight == height && _furnitureSeatBlend == 1f && _diningFoodPosition == foodPosition) return;
+            _diningFoodPosition = foodPosition;
+            _diningPhase = Mathf.Repeat(guestId * .618034f, 1f);
+            if (foodPosition.HasValue && _diningChopsticks == null)
+            {
+                _diningChopsticks = new GameObject("DiningChopsticks");
+                _diningChopsticks.transform.SetParent(_hands[1], false);
+                _diningChopsticks.transform.localPosition = ChopstickGrip;
+                var wood = Mats.Lit(ArtDirection.Wood);
+                foreach (float x in new[] { -.011f, .011f })
+                    Prims.Box(_diningChopsticks.transform, "Chopstick", new Vector3(x, 0, ChopstickReach * .5f),
+                        new Vector3(.009f, .009f, ChopstickReach), wood);
+            }
+            if (_diningChopsticks != null) _diningChopsticks.SetActive(foodPosition.HasValue);
+            if (!foodPosition.HasValue) _hands[1].localRotation = Quaternion.identity;
+            SetFurnitureSeatPose(height, 1f);
+        }
+
         internal void SetScooterPose(Transform scooter)
         {
             if (ReferenceEquals(_scooter, scooter)) return;
@@ -77,6 +121,7 @@ namespace PCShopSell.Game.Runtime
         {
             _visual = visual;
             Torso = torso;
+            _head = torso.Find("Head");
             _scale = scale;
             Appearance = appearance;
             for (int i = 0; i < 2; i++)
@@ -197,7 +242,7 @@ namespace PCShopSell.Game.Runtime
 
         private void ApplyPose()
         {
-            bool working = _scooter == null && !_seated && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
+            bool working = !_bedWakePose.HasValue && _scooter == null && !_seated && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
             const float hipHeight = PlayerCharacterModel.HipHeight;
             const float segment = PlayerCharacterModel.LegSegment;
             const float ankle = PlayerCharacterModel.AnkleHeight;
@@ -206,6 +251,12 @@ namespace PCShopSell.Game.Runtime
             if (_scooter != null)
             {
                 ApplyScooterPose();
+                return;
+            }
+            if (_bedWakePose.HasValue)
+            {
+                var (progress, surface, braceHand, standing, braceArm) = _bedWakePose.Value;
+                ApplyBedWakePose(progress, surface, braceHand, standing, braceArm);
                 return;
             }
             if (_furnitureSeatBlend > 0)
@@ -421,6 +472,84 @@ namespace PCShopSell.Game.Runtime
                 _arms[i].localRotation = Quaternion.Euler(-28f * blend, 0, (i == 0 ? -1 : 1) * (1.5f + 4f * blend));
                 SetElbow(i, 6f + 19f * blend);
             }
+            if (_diningFoodPosition is Vector3 food) ApplyDiningMealPose(food);
+        }
+
+        private void ApplyBedWakePose(float progress, float surface, Vector3 braceHand, Vector3 standing, int braceArm)
+        {
+            const float hipHeight = PlayerCharacterModel.HipHeight;
+            const float ankleHeight = PlayerCharacterModel.AnkleHeight;
+            float sitUp = WakeEase(progress, .08f, .52f);
+            float tuckKnees = WakeEase(progress, .05f, .31f) * (1 - WakeEase(progress, .40f, .60f));
+            float support = WakeEase(progress, .04f, .20f) * (1 - WakeEase(progress, .41f, .59f));
+            float leanForward = WakeEase(progress, .57f, .78f) * (1 - WakeEase(progress, .80f, .98f));
+            float rise = WakeEase(progress, .75f, 1f);
+            float settle = WakeEase(progress, .96f, 1f);
+            float seatedHeight = Mathf.Max(.15f * _scale, surface + .025f * _scale);
+            float heightOnBed = Mathf.Lerp(surface + .10f * _scale, seatedHeight, sitUp) - .026f * _scale * leanForward;
+            float pelvisHeight = Mathf.Lerp(heightOnBed, hipHeight * _scale, rise);
+            _visual.localPosition = Vector3.up * (pelvisHeight - hipHeight * _scale);
+
+            float braceSide = braceArm == 0 ? -1f : 1f;
+            Vector3 pelvis = Vector3.up * hipHeight;
+            Torso.localRotation = Quaternion.Euler(Mathf.Lerp(-86f, 4f, sitUp) * (1 - rise) + 29f * leanForward,
+                -7f * braceSide * support, -10f * braceSide * support);
+            Torso.localPosition = pelvis - Torso.localRotation * pelvis;
+            _head.localRotation = Quaternion.Euler(19f * Mathf.Sin(sitUp * Mathf.PI) + 11f * leanForward,
+                -7f * braceSide * Mathf.Sin(sitUp * Mathf.PI), 0);
+
+            // Keep the floor contact in world space while the pelvis comes forward over the feet.
+            Vector3 planted = _visual.InverseTransformPoint(standing) + Vector3.up * ankleHeight;
+            for (int i = 0; i < 2; i++)
+            {
+                bool bracing = i == braceArm;
+                float swing = bracing ? WakeEase(progress, .46f, .73f) : WakeEase(progress, .37f, .66f);
+                float tuck = tuckKnees * (bracing ? .72f : 1f);
+                float thigh = -90f - 37f * tuck;
+                float shin = thigh + 6f + 70f * tuck;
+                Vector3 onBed = _hips[i].localPosition + Quaternion.Euler(thigh, 0, 0) * _knees[i].localPosition
+                    + Quaternion.Euler(shin, 0, 0) * _feet[i].localPosition;
+                Vector3 onFloor = planted + Vector3.right * _hips[i].localPosition.x;
+                Vector3 ankle = Vector3.Lerp(onBed, onFloor, swing) + Vector3.up * (.13f * Mathf.Sin(swing * Mathf.PI));
+                AimLimb(_hips[i], _knees[i], _feet[i], ankle, Vector3.forward + Vector3.up * (1 - swing));
+                _hips[i].localRotation = Quaternion.Slerp(_hips[i].localRotation, Quaternion.identity, settle);
+                _knees[i].localRotation = Quaternion.Slerp(_knees[i].localRotation, Quaternion.identity, settle);
+                _feet[i].localRotation = Quaternion.Inverse(_hips[i].localRotation * _knees[i].localRotation)
+                    * Quaternion.Euler(Mathf.Lerp(-69f, 0, swing), 0, 0);
+
+                float side = i == 0 ? -1f : 1f;
+                _arms[i].localRotation = Quaternion.Euler((-6f - (bracing ? 6f : 24f) * sitUp) * (1 - rise),
+                    0, side * Mathf.Lerp(10f, 1.5f, rise));
+                SetElbow(i, Mathf.Lerp(12f + 15f * sitUp, 6f, rise));
+                _hands[i].localRotation = Quaternion.identity;
+                if (bracing && support > 0)
+                {
+                    Quaternion shoulder = _arms[i].localRotation;
+                    Quaternion elbow = _elbows[i].localRotation;
+                    AimLimb(_arms[i], _elbows[i], _hands[i], Torso.InverseTransformPoint(braceHand), new Vector3(side, 0, -.45f));
+                    _arms[i].localRotation = Quaternion.Slerp(shoulder, _arms[i].localRotation, support);
+                    _elbows[i].localRotation = Quaternion.Slerp(elbow, _elbows[i].localRotation, support);
+                    Quaternion palm = Quaternion.Inverse(Torso.localRotation * _arms[i].localRotation * _elbows[i].localRotation)
+                        * Quaternion.Euler(84, side * 16, 0);
+                    _hands[i].localRotation = Quaternion.Slerp(Quaternion.identity, palm, support);
+                }
+            }
+        }
+
+        private void ApplyDiningMealPose(Vector3 foodPosition)
+        {
+            float cycle = Mathf.Repeat(_idleTime / 2.25f + _diningPhase, 1f);
+            float raise = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.16f, .47f, cycle));
+            float lower = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.61f, .97f, cycle));
+            float bite = raise - lower;
+            Vector3 food = Torso.InverseTransformPoint(transform.TransformPoint(foodPosition)) + Vector3.up * .025f;
+            Vector3 mouth = new Vector3(.02f, 1.37f, .145f);
+            Vector3 tips = Vector3.Lerp(food, mouth, bite);
+            Vector3 direction = Vector3.Slerp(new Vector3(-.26f, -.7f, .68f), new Vector3(-.52f, .48f, -.7f), bite).normalized;
+            Quaternion grip = Quaternion.LookRotation(direction);
+            AimLimb(_arms[1], _elbows[1], _hands[1], tips - grip * ChopstickGrip - direction * ChopstickReach,
+                new Vector3(.65f, -1f, 0));
+            _hands[1].localRotation = Quaternion.Inverse(_arms[1].localRotation * _elbows[1].localRotation) * grip;
         }
 
         private void ApplyWorkPose()

@@ -1,11 +1,74 @@
 ﻿using System;
 using System.Linq;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 
 namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
+        private const int FoodShelfLifeVersion = 1;
+
+        private static void MigrateFoodShelfLife(SaveData data)
+        {
+            if (data.foodShelfLifeVersion >= FoodShelfLifeVersion) return;
+
+            static int Extend(int day) => day < 0 ? day : day + FoodBatch.ShelfLifeExtensionDays;
+            static void Batches(SaveBatch[] batches)
+            {
+                foreach (var batch in batches ?? Array.Empty<SaveBatch>())
+                    if (batch != null) batch.expireDay = Extend(batch.expireDay);
+            }
+            static void Lots(GoodsLot[] lots)
+            {
+                foreach (var lot in lots ?? Array.Empty<GoodsLot>())
+                    if (lot != null && Gifts.Get(lot.Id)?.ShelfDays > 0) lot.ExpireDay = Extend(lot.ExpireDay);
+            }
+
+            var home = data.home;
+            if (home != null)
+            {
+                Batches(home.cooked);
+                Batches(home.packed);
+                Batches(home.packLunch);
+                Batches(home.boxLunch);
+                foreach (var storage in new[] { home.homeFridge, home.mainShopFridge, home.shopLocker, home.homeTemp, home.shopTemp })
+                    Batches(storage?.lunch);
+                foreach (var residence in home.residentialFreight ?? Array.Empty<SaveResidentialFreight>())
+                {
+                    Batches(residence?.storage?.lunch);
+                    Batches(residence?.fridge?.lunch);
+                }
+                foreach (var courier in home.couriers ?? Array.Empty<SaveCourier>())
+                {
+                    int count = Math.Min(courier?.kinds?.Length ?? 0, courier?.expireDays?.Length ?? 0);
+                    for (int i = 0; i < count; i++)
+                    {
+                        var kind = (CourierItemKind)courier.kinds[i];
+                        string id = i < (courier.ids?.Length ?? 0) ? courier.ids[i] : null;
+                        if (kind == CourierItemKind.PackedFood || (kind == CourierItemKind.Goods && Gifts.Get(id)?.ShelfDays > 0))
+                            courier.expireDays[i] = Extend(courier.expireDays[i]);
+                    }
+                }
+            }
+
+            Lots(data.shopGoodsLots);
+            foreach (var shop in data.extraShops ?? Array.Empty<SaveShop>())
+            {
+                Lots(shop?.goodsLots);
+                Batches(shop?.locker?.lunch);
+                Batches(shop?.temp?.lunch);
+                Batches(shop?.fridge?.lunch);
+            }
+            foreach (var trip in data.employeeTrips ?? Array.Empty<EmployeePurchaseTrip>())
+                if (trip is { Delivered: false })
+                    foreach (var item in trip.Items ?? Array.Empty<PurchaseLine>())
+                        if (item?.Kind == PurchaseGoodsKind.Gift && Gifts.Get(item.PartId)?.ShelfDays > 0)
+                            item.ExpireDay = Extend(item.ExpireDay);
+
+            data.foodShelfLifeVersion = FoodShelfLifeVersion;
+        }
+
         public static double FridgeCapacityOf(System.Collections.Generic.IEnumerable<PlacedFurniture> layout) =>
             layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d?.Role == FurnitureRole.Fridge).Sum(d => d.FridgeCapacityKg);
         public double FridgeLimitKg(bool shop) => FridgeCapacityOf(LayoutOf(shop));
@@ -51,6 +114,36 @@ namespace PCShopSell.Core.Session
             return (FastFoodCatalog.Packed(baseId)?.Mood ?? 0) + (fish?.MealMoodBonus ?? 0);
         }
         public static string MealEffects(string id) => "营养 " + SignedDiet(MealNutrition(id)) + " · 心情 " + SignedDiet(MealMood(id));
+
+        private static (WorkAptitude aptitude, string label) FishMealWorkBonus(string fishId) => fishId switch
+        {
+            "fish_bass" or "fish_mandarin" or "fish_bighead_carp" => (WorkAptitude.Intelligence, "智力"),
+            "fish_culter" or "fish_loach" or "fish_yellow_catfish" or "fish_swamp_eel" => (WorkAptitude.Dexterity, "动手能力"),
+            "fish_catfish" or "fish_grass_carp" or "fish_black_carp" or "fish_snakehead" => (WorkAptitude.Stamina, "体能"),
+            _ => (WorkAptitude.Charm, "魅力"),
+        };
+
+        public static string FishMealWorkEffect(string fishId) => FishingCatalog.RequiresCatch(fishId)
+            ? FishMealWorkBonus(fishId).label + " +1" : null;
+
+        private void ApplyFishPotReward(FoodBatch batch)
+        {
+            if (string.IsNullOrEmpty(batch.FishPotRewardId)) return;
+            MealBaseId(batch.Id, out var fish);
+            if (!FishingCatalog.RequiresCatch(fish?.Id) || !Flags.Add("food:fish-pot:" + batch.FishPotRewardId)) return;
+
+            var (aptitude, label) = FishMealWorkBonus(fish.Id);
+            switch (aptitude)
+            {
+                case WorkAptitude.Intelligence when Player.Intelligence < 100: Player.Intelligence++; break;
+                case WorkAptitude.Dexterity when Player.Skill < 100: Player.Skill++; break;
+                case WorkAptitude.Stamina when Player.Stamina < 100: Player.Stamina++; break;
+                case WorkAptitude.Charm when Player.Charm < 100: Player.Charm++; break;
+                default: return;
+            }
+            Say($"吃了这锅{batch.Name}，{label} +1。");
+        }
+
         private void ApplyDiet(double nutrition, double mood)
         {
             Player.Nutrition = Math.Max(0, Math.Min(100, Player.Nutrition + nutrition));

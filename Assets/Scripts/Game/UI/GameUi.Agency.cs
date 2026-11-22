@@ -444,7 +444,8 @@ namespace PCShopSell.Game.UI
                     signed = S.SignLeaseThenChooseKind(placeId, newShop);
                     if (!signed) return false;
                     if (S.PendingLease != null) Toast($"已提前签约，{S.ShopHandoverText(S.PendingLease.StartDay)}，期间房租照常计算。");
-                    else Toast(dedicatedVenue ? "接手完成，请到场馆设置营业与值守。" : "签约完成，可以自行到新店装修了。");
+                    else if (dedicatedVenue) Toast("接手完成，请到场馆设置营业与值守。");
+                    else if (newShop) Toast("签约完成，可以自行到新店装修了。");
                     return true;
                 }, () =>
                 {

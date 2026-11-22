@@ -5,6 +5,7 @@ using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
@@ -162,61 +163,64 @@ namespace PCShopSell.Game.UI
             if (row.Role != EmployeeRole.Buyer) return;
             Line(card, e.PurchasePlan.Daily ? "采购频率：" + e.PurchasePlan.FrequencyText
                 + " · " + S.EmployeePurchaseNextText(e.Id) : "定期采购：未启用或已暂停", 15, Ui.Dim);
-            Para(card, S.EmployeePurchaseStorageText(e.Id), 15, Ui.Accent);
             if (!string.IsNullOrEmpty(e.LastPurchaseNote)) Para(card, e.LastPurchaseNote, 15, Ui.Dim);
         }
 
         private static RectTransform BuildWorkAttributeRow(Transform parent, (int Intelligence, int Charm, int Dexterity, int Stamina) ratings)
         {
             var attributes = Ui.Row(parent, 48, 6);
-            void Attribute(string label, int score)
-            {
-                var card = Ui.Size(Ui.FlatPanel(attributes, label, Ui.FlatBand), 0, -1, 1);
-                Ui.Label(card.transform, label, 14, TextAnchor.MiddleCenter, Ui.Dim)
-                    .rectTransform.Anchor(0, .55f, 1, 1);
-                var value = Ui.Label(card.transform, score.ToString(), 20, TextAnchor.MiddleCenter, Ui.Accent);
-                value.fontStyle = FontStyle.Bold;
-                value.rectTransform.Anchor(0, 0, 1, .58f);
-            }
-            Attribute("智力", ratings.Intelligence);
-            Attribute("魅力", ratings.Charm);
-            Attribute("动手能力", ratings.Dexterity);
-            Attribute("体能", ratings.Stamina);
+            WorkAttribute(attributes, "智力", ratings.Intelligence);
+            WorkAttribute(attributes, "魅力", ratings.Charm);
+            WorkAttribute(attributes, "动手能力", ratings.Dexterity);
+            WorkAttribute(attributes, "体能", ratings.Stamina);
             return attributes;
+        }
+
+        private static void WorkAttribute(Transform parent, string label, int score)
+        {
+            var card = Ui.Size(Ui.FlatPanel(parent, label, Ui.FlatBand), 0, -1, 1);
+            Ui.Label(card.transform, label, 14, TextAnchor.MiddleCenter, Ui.Dim)
+                .rectTransform.Anchor(0, .54f, 1, 1);
+            var value = Ui.Label(card.transform, score.ToString(), 22, TextAnchor.MiddleCenter);
+            value.fontStyle = FontStyle.Bold;
+            value.rectTransform.Anchor(0, 0, 1, .58f);
         }
 
         public void OpenEmployeeWork(string employeeId, Window parent = null)
         {
             var row = S.FindEmployee(employeeId);
             if (row == null) return;
-            EmployeeRole role = row.Role == EmployeeRole.Unassigned ? EmployeeRole.Cashier : row.Role;
+            EmployeeRole role = row.Role;
             string destination = (row.Shop ?? S.CurrentShop)?.Place.Id;
-            OpenWindow("安排工作 · " + row.Person.Name, 1040, 680, w =>
+            int destinationRows = Mathf.Clamp((S.MyShops.Count + 1) / 2, 1, 4);
+            RectTransform footer = null;
+            OpenWindow("安排工作 · " + row.Person.Name, 1040, 630 + (destinationRows - 1) * 52, w =>
             {
-                BuildEmployeeWorkHeader(w.Content, row.Person);
+                var work = BuildEmployeeWorkColumns(w.Content, row.Person, 407 + (destinationRows - 1) * 52);
                 var shop = S.ShopAt(destination);
-                BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); },
+                Line(work, "岗位", 18);
+                BuildEmployeeRoleChoices(work, role, choice => { role = choice; w.Rebuild(); },
                     venue: S.IsDedicatedVenue(shop?.Place));
-                BuildEmployeeRolePreview(w.Content, row.Person, role, shop);
-                BuildEmployeeDestinationChoices(w.Content, role, destination, target => { destination = target; w.Rebuild(); });
+                BuildEmployeeRolePreview(work, row.Person, role, shop);
+                BuildEmployeeDestinationChoices(work, role, destination, target => { destination = target; w.Rebuild(); });
                 bool tomorrow = role != EmployeeRole.Unassigned && row.Shop != null && row.Shop.Place.Id != destination;
                 string blocker = S.EmployeeAssignmentBlocker(employeeId, destination, role);
-                if (blocker == null) Para(w.Content, role == EmployeeRole.Unassigned ? "暂不分配工作，仍按原日薪发工资；以后可重新安排。"
-                    : tomorrow ? $"跨店安排明天生效。今天仍在{S.ShopTitle(row.Shop)}做{GameSession.RoleName(row.Role)}，明天到新店做{GameSession.RoleName(role)}。"
-                    : "本次是首次安排或同店换岗，确认后今天起按新岗位工作。", 18, Ui.Accent);
-                if (blocker != null) Para(w.Content, blocker, 16, Ui.Warn);
+                string status = blocker ?? (role == EmployeeRole.Unassigned ? "待安排期间照常发薪。"
+                    : tomorrow ? $"今天仍在{S.ShopTitle(row.Shop)}做{GameSession.RoleName(row.Role)}，明天到新店做{GameSession.RoleName(role)}。"
+                    : "确认后今天生效。");
+                var actions = EmployeeWorkFooter(w, ref footer, "AssignmentFooter", status, blocker == null ? Ui.Dim : Ui.Warn);
                 var occupant = S.EmployeeInPosition(destination, role);
                 if (blocker!=null&&occupant != null && occupant.Person.Id != employeeId && S.EmployeeAssignmentBlocker(employeeId, destination, role, true) == null)
-                    Ui.Size(Ui.Button(w.Content, "替换安排…", () => ConfirmAction("替换工作安排",
+                    Ui.Size(Ui.Button(actions, "替换安排…", () => ConfirmAction("替换工作安排",
                         occupant.Person.Name + "立即设为待安排，保留工资；" + row.Person.Name + (tomorrow ? "明天到岗。" : "今天到岗。"), "确认替换", () =>
                         {
                             if (S.ReplaceEmployeeWork(employeeId, destination, role)) { w.Close(); parent?.Rebuild(); RebuildDock(); }
-                        }), 18, Ui.Warn), -1, 42);
+                        }), 18, Ui.Warn), 160, 48);
                 string label = role == EmployeeRole.Unassigned ? "确认设为待安排" : tomorrow ? "确认明天到新店做" + GameSession.RoleName(role) : "确认今天起做" + GameSession.RoleName(role);
-                Ui.Size(Ui.Button(w.Content, label, () =>
+                Ui.Size(Ui.Button(actions, label, () =>
                 {
                     if (S.ArrangeEmployeeWork(employeeId, destination, role)) { w.Close(); parent?.Rebuild(); RebuildDock(); }
-                }, 19, Ui.ButtonHot, blocker == null), -1, 48);
+                }, 19, Ui.ButtonHot, blocker == null), 0, 48, 1);
             });
         }
 
@@ -296,7 +300,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(left, 0, -1, 1).GetComponent<LayoutElement>().minWidth = 0;
 
                 // ---- 右：采购了什么 + 怎么跑 ----
-                var right = Ui.FlatPanel(split, "BuyerSide", Ui.FlatBand, Ui.FlatHotEdge).rectTransform;
+                var right = Ui.FlatPanel(split, "BuyerSide", Ui.FlatBand, Ui.Clipboard).rectTransform;
                 Ui.VList(right, 6, 12);
                 var rightSize = Ui.Size(right, 540, -1, 0).GetComponent<LayoutElement>(); rightSize.minWidth = 540; rightSize.flexibleWidth = 0;
 
@@ -306,8 +310,7 @@ namespace PCShopSell.Game.UI
                 {
                     string example = worker.Shop.RetailKind == "restaurant" ? "例如从农贸市场选大米和配菜。"
                         : "选和本店货架品类相同的商品。";
-                    Para(left, "先选货源，再用商品旁的数量控件加入清单。" + example
-                        + "右侧选采购频率和交通，核对货款、车费和运费，最后保存。步行或打车时，货物由货车送回店。", 15, guided ? Ui.Accent : Ui.Dim);
+                    Para(left, "选货源和数量，把商品加入采购清单。" + example, 15, guided ? Ui.Accent : Ui.Dim);
                 }
                 if (threshold)
                 {
@@ -448,7 +451,7 @@ namespace PCShopSell.Game.UI
 
                 // ---- 右侧内容 ----
                 var head = Ui.Row(right, 34, 8);
-                Ui.Size(Ui.Label(head, "<b>采购了什么</b>", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, 32, 1);
+                Ui.Size(Ui.Label(head, "<b>采购清单</b>", 20, TextAnchor.MiddleLeft), -1, 32, 1);
                 if (!threshold) Ui.Size(Ui.Button(head, "清空", () => { selected.Clear(); Sync(); w.Rebuild(); }, 14), 64, 30);
                 if (guided) Line(right, "教学 · 固定清单", 17, Ui.Accent);
                 else
@@ -459,7 +462,11 @@ namespace PCShopSell.Game.UI
                 }
 
                 var chosenList = GoodsList(right, 140);
-                ((RectTransform)chosenList.parent.parent).name = "PurchaseSelected";
+                var listFrame = (RectTransform)chosenList.parent.parent;
+                listFrame.name = "PurchaseSelected";
+                var paper = listFrame.GetComponent<Image>();
+                paper.color = Ui.PaperStock;
+                Ui.ApplyPaper(paper, lifted: true);
                 if (threshold)
                 {
                     var preview = quote.Preview;
@@ -479,26 +486,61 @@ namespace PCShopSell.Game.UI
                 {
                     var chosen = draft.Items;
                     if (chosen.Length == 0) Para(chosenList, "还没选商品。在左边商品目录加数量，会集中显示在这里。", 16, Ui.Dim);
-                    foreach (var choice in chosen)
+                    var rows = new RectTransform[chosen.Length];
+                    var scroll = chosenList.parent.parent.GetComponent<ScrollRect>();
+                    Image insertLine = null;
+                    if (chosen.Length > 1)
                     {
-                        var picked = choice;
+                        insertLine = Ui.Panel(chosenList, "PurchasePriorityInsertLine", Ui.Good);
+                        insertLine.raycastTarget = false;
+                        insertLine.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                        insertLine.gameObject.SetActive(false);
+                    }
+                    for (int i = 0; i < chosen.Length; i++)
+                    {
+                        var choice = chosen[i];
                         var offer = S.EmployeePurchaseOffer(choice, catalog: catalog);
                         string key = GameSession.PurchaseKey(choice);
                         string count = choice.BuyMaximum ? "按日买满" : "×" + choice.Count;
-                        var row = Ui.Row(chosenList, 50, 4);
+                        var row = rows[i] = Ui.Row(chosenList, 50, 4);
                         row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                        Ui.Trim(row, "PurchaseRowRule", Ui.FlatCardEdge, 0);
+                        if (insertLine != null)
+                        {
+                            var grip = Ui.Size(Ui.Panel(row, "PurchasePriorityGrip", Color.clear), 27, 36);
+                            for (int dot = 0; dot < 6; dot++)
+                            {
+                                float x = -4 + dot % 2 * 6;
+                                float y = -7 + dot / 2 * 6;
+                                var mark = Ui.Panel(grip.transform, "GripDot", Ui.Dim);
+                                mark.raycastTarget = false;
+                                mark.rectTransform.Anchor(.5f, .5f, .5f, .5f, x, y, -x - 2, -y - 2);
+                            }
+                            grip.Tip("拖动调整采购优先级");
+                            grip.gameObject.AddComponent<PurchasePriorityDrag>().Bind(scroll, rows, i, insertLine, slot =>
+                            {
+                                int from = order.IndexOf(key);
+                                int to = slot == chosen.Length ? order.Count : order.IndexOf(GameSession.PurchaseKey(chosen[slot]));
+                                if (from < 0 || to < 0) return;
+                                if (to > from) to--;
+                                if (to == from) return;
+                                order.RemoveAt(from);
+                                order.Insert(to, key);
+                                Sync();
+                                w.Rebuild();
+                            });
+                        }
                         ItemPortrait(row, offer?.Id ?? choice.PartId, 42);
                         var label = Ui.Label(row, GameSession.PurchaseItemName(choice) + " <color=#80551F>" + count + "</color>\n<size=13><color=#655E52>" + (offer?.SupplierName ?? choice.SourceId ?? "自动选货源") + "</color></size>", 16, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
                         Ui.Size(Ui.Label(row, offer == null ? "不可用" : (GameSession.EmployeePurchasePrice(worker.Person, offer) * choice.Count).ToString(), 15, TextAnchor.MiddleRight, offer == null ? Ui.Warn : Ui.Good), 84, 46);
-                        int priority = order.IndexOf(key);
-                        void Move(int offset) { int index = order.IndexOf(key); var other = order[index + offset]; order[index + offset] = key; order[index] = other; Sync(); w.Rebuild(); }
-                        Ui.Size(Ui.Button(row, "↑", () => Move(-1), 16, Ui.ButtonBg, priority > 0), 30, 34);
-                        Ui.Size(Ui.Button(row, "↓", () => Move(1), 16, Ui.ButtonBg, priority < order.Count - 1), 30, 34);
                         Ui.Size(Ui.Button(row, "移出", () => { selected.Remove(key); Sync(); w.Rebuild(); }, 14), 50, 34);
                     }
-                    if (chosen.Length > 1) Ui.Size(Ui.Label(right, "越靠上越优先买；钱或额度不够时，后面的会被跳过。", 13, TextAnchor.MiddleLeft, Ui.Dim), -1, 20);
+                    if (insertLine != null)
+                    {
+                        insertLine.transform.SetAsLastSibling();
+                    }
                 }
 
                 string schedule = savedPlan.Daily ? $"已生效 · {savedPlan.FrequencyText} · {S.EmployeePurchaseNextText(employeeId)}" : "尚未启用定期采购";
@@ -578,6 +620,108 @@ namespace PCShopSell.Game.UI
             }, closable: !guided, scrollContent: false);
         }
 
+    }
+
+    internal sealed class PurchasePriorityDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    {
+        private ScrollRect _scroll;
+        private RectTransform[] _rows;
+        private CanvasGroup _source;
+        private Image _insertLine;
+        private Action<int> _moveToSlot;
+        private int _rowIndex, _pointerId, _slot = -1;
+        private Vector2 _pointer;
+        private Camera _camera;
+        private bool _dragging;
+
+        public void Bind(ScrollRect scroll, RectTransform[] rows, int index, Image insertLine, Action<int> moveToSlot)
+        {
+            _scroll = scroll;
+            _rows = rows;
+            _rowIndex = index;
+            _source = rows[index].gameObject.AddComponent<CanvasGroup>();
+            _insertLine = insertLine;
+            _moveToSlot = moveToSlot;
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (eventData.button != PointerEventData.InputButton.Left || _insertLine.gameObject.activeSelf) return;
+            _dragging = true;
+            _pointerId = eventData.pointerId;
+            _camera = eventData.pressEventCamera;
+            _source.alpha = .55f;
+            _scroll.StopMovement();
+            _insertLine.gameObject.SetActive(true);
+            OnDrag(eventData);
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!_dragging || _pointerId != eventData.pointerId) return;
+            _pointer = eventData.position;
+            UpdateSlot();
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (!_dragging || _pointerId != eventData.pointerId) return;
+            OnDrag(eventData);
+            int slot = _slot;
+            ClearDrag();
+            if (slot >= 0) _moveToSlot(slot);
+        }
+
+        private void Update()
+        {
+            if (!_dragging || !InsideViewport(out var point)) return;
+            var bounds = _scroll.viewport.rect;
+            float range = _scroll.content.rect.height - bounds.height;
+            if (range <= 0) return;
+            float edge = Mathf.Min(36, bounds.height * .25f);
+            float speed = Mathf.InverseLerp(bounds.yMax - edge, bounds.yMax, point.y)
+                - Mathf.InverseLerp(bounds.yMin + edge, bounds.yMin, point.y);
+            if (speed == 0) return;
+            _scroll.verticalNormalizedPosition = Mathf.Clamp01(_scroll.verticalNormalizedPosition
+                + speed * 440 * Time.unscaledDeltaTime / range);
+            UpdateSlot();
+        }
+
+        private bool InsideViewport(out Vector2 point) =>
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_scroll.viewport, _pointer, _camera, out point)
+            && _scroll.viewport.rect.Contains(point);
+
+        private void UpdateSlot()
+        {
+            var list = _scroll.content;
+            _slot = -1;
+            _insertLine.enabled = false;
+            if (!InsideViewport(out _) ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(list, _pointer, _camera, out var point)) return;
+
+            int slot = 0;
+            while (slot < _rows.Length && point.y < _rows[slot].localPosition.y) slot++;
+            if (slot == _rowIndex || slot == _rowIndex + 1) return;
+
+            bool atEnd = slot == _rows.Length;
+            var row = _rows[atEnd ? slot - 1 : slot];
+            float edge = atEnd ? row.rect.yMin - 2 : row.rect.yMax + 2;
+            float y = row.localPosition.y + edge - list.rect.yMin;
+            _insertLine.rectTransform.Anchor(0, 0, 1, 0, 8, y - 2, 8, -y - 2);
+            _insertLine.enabled = true;
+            _slot = slot;
+        }
+
+        private void OnDisable() => ClearDrag();
+
+        private void ClearDrag()
+        {
+            if (!_dragging) return;
+            _dragging = false;
+            _slot = -1;
+            if (_source != null) _source.alpha = 1f;
+            if (_insertLine != null) _insertLine.gameObject.SetActive(false);
+        }
     }
 
     internal sealed class PurchaseListViewport : MonoBehaviour

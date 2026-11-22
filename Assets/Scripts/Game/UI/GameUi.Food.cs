@@ -131,94 +131,146 @@ namespace PCShopSell.Game.UI
             bool restaurant = shop && S.RetailKind == "restaurant";
             if (!restaurant && !S.CanOpenFridge) { Toast("这里还没有摆冰箱。家具城有售，可摆在家或自己的店里。"); return; }
             string placeId = S.CurrentPlace.Id;
+            string selection = null;
+            FoodStorageSource chosenSource = FoodStorageSource.Backpack;
             OpenWindow((restaurant ? "管理食材 · " : "冰箱 · ") + (shop ? S.ShopTitle(S.CurrentShop) : "家里"), 1500, 880, w =>
             {
                 if (S.CurrentPlace?.Id != placeId || (!restaurant && !S.CanOpenFridge)) { w.Close(); return; }
                 bool warehouse = S.HasWarehouseHere;
-                Para(w.Content, restaurant
-                    ? "厨房只从冰箱取料，大米也需要放进去。送货时冰箱装不下的食材会留在门店后仓。"
-                    : "成品在冰箱里暂停保质期，取出后继续计时。", 16, Ui.Dim);
+                if (restaurant) Line(w.Content, "厨房从冰箱取用食材", 16, Ui.Dim);
                 if (_ctrl.InHome && S.Pantry.CookedBowls > 0)
-                    Ui.Size(Ui.Button(w.Content, "把锅里的饭全部放入冰箱", () => { S.ChillCookedFood(S.Pantry.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
-                var columns = Ui.Row(w.Content, 700, 14);
+                    Ui.Size(Ui.Button(w.Content, "把锅里的饭全部放入冰箱", () =>
+                    {
+                        if (S.ChillCookedFood(S.Pantry.CookedBowls)) RefreshFoodStorageViews(w);
+                    }, 17, Ui.ButtonHot), -1, 38);
+                var columns = Ui.Row(w.Content, 420, 14);
+                columns.GetComponent<LayoutElement>().flexibleHeight = 1;
+                BagStack picked = null;
+                AddColumn("背包", $"{S.CarriedKg:0.##} / {S.CarryLimitKg:0.##} 千克", S.Backpack, FoodStorageSource.Backpack);
+                if (warehouse)
+                    AddColumn(shop ? "本店后仓" : "后仓", "容量不限", S.WarehouseBagHere, FoodStorageSource.Warehouse);
                 var fridge = FoodStorageColumn(columns, "冰箱", S.CanOpenFridge
                     ? FridgeLoadText(S.CurrentFridge.WeightKg, S.CurrentFridgeLimitKg) : "尚未摆放");
                 if (S.CanOpenFridge)
-                    BuildFridgeFoodRows(w, fridge, S.CurrentFridge, FoodStorageSource.Fridge, warehouse);
-                else
-                    Para(fridge, "可先从农贸市场进货，摆好冰箱后再把后仓食材移进去。", 16, Ui.Dim);
-                if (warehouse)
+                    DrawGrid(fridge, S.CurrentFridge, FoodStorageSource.Fridge);
+
+                var footer = Ui.Row(w.Content, 46, 9);
+                Ui.Trim(footer, "FoodStorageFooterRule", Ui.FlatCardEdge, 0, top: true);
+                if (picked != null) BuildFoodStorageActions(w, footer, picked, chosenSource, warehouse);
+                else Ui.Size(Ui.Label(footer, "选择食材查看取放操作", 16, color: Ui.Dim), 0, 46, 1);
+
+                void AddColumn(string title, string value, Backpack bag, FoodStorageSource source)
                 {
-                    var storage = FoodStorageColumn(columns, "后仓", "食材可移入冰箱或取到背包");
-                    BuildFridgeFoodRows(w, storage, S.WarehouseBagHere, FoodStorageSource.Warehouse, true);
+                    DrawGrid(FoodStorageColumn(columns, title, value), bag, source);
                 }
-                var backpack = FoodStorageColumn(columns, "背包", "随身携带的食材与食物");
-                BuildFridgeFoodRows(w, backpack, S.Backpack, FoodStorageSource.Backpack, warehouse);
+
+                void DrawGrid(Transform panel, Backpack bag, FoodStorageSource source)
+                {
+                    var items = CollectStacks(bag, new Stock(0)).Where(s => S.FridgeAcceptsFood(s.Key)).ToArray();
+                    if (chosenSource == source) picked = items.FirstOrDefault(item => item.Key == selection);
+                    BuildFoodStorageGrid(panel, items, source == FoodStorageSource.Fridge,
+                        chosenSource == source ? selection : null, key =>
+                        {
+                            selection = key;
+                            chosenSource = source;
+                            w.Rebuild();
+                        });
+                }
             }, scrollContent: false);
+        }
+
+        private void RefreshFoodStorageViews(Window fridgeWindow)
+        {
+            fridgeWindow.Rebuild();
+            _backpackWin?.Rebuild();
+            RebuildDock();
         }
 
         private enum FoodStorageSource { Fridge, Warehouse, Backpack }
 
         private static RectTransform FoodStorageColumn(Transform parent, string title, string subtitle)
         {
-            var panel = Ui.Panel(parent, "FoodStorageColumn_" + title, Ui.PanelBg2);
-            panel.raycastTarget = false;
-            Ui.Size(panel, 0, -1, 1);
-            Ui.VList(panel.rectTransform, 8, 12);
-            Line(panel.transform, title, 23, Ui.Accent);
-            Line(panel.transform, subtitle, 15, Ui.Dim);
-            return Ui.Scroll(panel.transform, 600);
+            var panel = StorageWell(parent, "FoodStorageColumn_" + title);
+            var header = Ui.Row(panel, 34, 8);
+            Ui.Size(Line(header, title, 20), 0, 34, 1);
+            Ui.Size(Ui.Label(header, subtitle, 15, TextAnchor.MiddleRight, Ui.Dim), 170, 34);
+            Ui.Trim(header, "FoodStorageSectionRule", Ui.FlatCardEdge, 0);
+            var list = Ui.Scroll(panel);
+            var size = Ui.Size(list.parent.parent).GetComponent<LayoutElement>();
+            size.minHeight = 100;
+            size.flexibleHeight = 1;
+            return list;
         }
 
-        private void BuildFridgeFoodRows(Window w, Transform content, Backpack bag, FoodStorageSource source, bool warehouse)
+        private void BuildFoodStorageGrid(Transform content, BagStack[] food, bool inFridge, string selected, Action<string> pick)
         {
-            var food = CollectStacks(bag, new Stock(0)).Where(s => S.FridgeAcceptsFood(s.Key)).ToArray();
-            if (food.Length == 0) { Para(content, "这里没有食材或食物。", 16, Ui.Dim); return; }
-            foreach (var item in food)
+            const int columns = 3;
+            if (food.Length == 0) { Line(content, "暂无食材或食物", 16, Ui.Dim); return; }
+            for (int i = 0; i < food.Length; i += columns)
             {
-                var card = Ui.Panel(content, $"FoodStorage_{source}_{item.Key}", Ui.PanelBg);
-                card.raycastTarget = false;
-                Ui.Size(card, -1, 108);
-                Ui.VList(card.rectTransform, 8, 8);
-                var row = Ui.Row(card.transform, 44, 8);
-                ItemPortrait(row, item.Key, 42);
-                bool inFridge = source == FoodStorageSource.Fridge;
-                bool inWarehouse = source == FoodStorageSource.Warehouse;
-                bool rice = item.Key == "rice";
-                string unit = rice ? " 千克" : " 份";
-                string expiry = "";
-                if (item.Key.StartsWith("lunch:"))
-                    expiry = " · " + (inFridge ? "永久保存" : FoodExpiryBadge.Countdown(item.Batches.Min(b => b.ExpireDay), S.Clock.Now.TotalMinutes));
-                Ui.Size(Ui.Label(row, $"{item.Name}{(rice ? "" : " ×" + item.Count)}\n<size=14>{item.Kg:0.##} 千克{expiry}</size>", 17), -1, -1, 1);
-                var actions = Ui.Row(card.transform, 36, 6);
-                void Transfer(int count)
+                var row = Ui.Row(content, 104, 6);
+                for (int index = i; index < i + columns; index++)
                 {
-                    if (inWarehouse) S.MoveFridgeWarehouseFood(item.Key, count, true);
-                    else S.MoveFridgeFood(item.Key, count, !inFridge);
-                    w.Rebuild();
-                    RebuildDock();
-                }
-                if (S.CanOpenFridge)
-                {
-                    Ui.Size(Ui.Button(actions, (inFridge ? "取出 1" : "存入 1") + unit, () => Transfer(1), 15), 0, 36, 1);
-                    Ui.Size(Ui.Button(actions, inFridge ? "全部取到背包" : "全部存入冰箱", () => Transfer(item.Count), 15, Ui.ButtonHot), 0, 36, 1);
-                }
-                if (inWarehouse)
-                    Ui.Size(Ui.Button(actions, "取 1" + unit + "到背包", () =>
+                    if (index >= food.Length)
                     {
-                        S.TakeFromBox(item.Key);
-                        w.Rebuild();
-                        RebuildDock();
-                    }, 15), 0, 36, 1);
-                if (warehouse && !inWarehouse)
-                    Ui.Size(Ui.Button(actions, "全部放后仓", () =>
+                        Ui.Size(Ui.Rect(row, "EmptyFoodColumn"), 0, -1, 1);
+                        continue;
+                    }
+                    var item = food[index];
+                    bool active = item.Key == selected;
+                    var button = Ui.Size(Ui.Button(row, ShortName(item.Name), () => pick(item.Key), 16,
+                        active ? Ui.FlatRow : Ui.FlatWell), 0, -1, 1);
+                    button.name = "FoodStorageItem_" + item.Key;
+                    Ui.FlatBorder(button.image, active ? Ui.SelectionEdge : Ui.FlatWellEdge);
+                    button.GetComponentInChildren<Text>().rectTransform.Anchor(0, 0, 1, 0, 2, 8, 2, -33);
+                    RectTransform slot = button.image.rectTransform;
+                    FillItemPortrait(slot, item.Portrait ?? item.Key).Anchor(.5f, 0, .5f, 0, -25, 34, -25, -84);
+                    string count = item.Key == "rice" ? $"{item.Kg:0.##} 千克" : $"×{item.Count}";
+                    Ui.Label(slot, count, 14, TextAnchor.MiddleRight, Ui.Dim).rectTransform.Anchor(0, 1, 1, 1, 5, -23, 6, 3);
+                    string hint = $"{item.Name} · {item.Kg:0.##} 千克";
+                    if (item.Batches?.Length > 0)
                     {
-                        if (inFridge) S.MoveFridgeWarehouseFood(item.Key, item.Count, false);
-                        else S.StoreInBox(item.Key, item.Count);
-                        w.Rebuild();
-                        RebuildDock();
-                    }, 15), 0, 36, 1);
+                        int expiry = item.Batches.Min(b => b.ExpireDay);
+                        hint += "\n" + (inFridge ? "冷藏期间暂停保质期" : FoodExpiryBadge.Countdown(expiry, S.Clock.Now.TotalMinutes));
+                    }
+                    button.Tip(hint);
+                }
             }
+        }
+
+        private void BuildFoodStorageActions(Window w, Transform row, BagStack item, FoodStorageSource source, bool warehouse)
+        {
+            bool inFridge = source == FoodStorageSource.Fridge;
+            bool inWarehouse = source == FoodStorageSource.Warehouse;
+            string location = inFridge ? "冰箱" : inWarehouse ? "后仓" : "背包";
+            string unit = item.Key == "rice" ? " 千克" : " 份";
+            ItemPortrait(row, item.Portrait ?? item.Key, 38);
+            Ui.Size(Ui.Label(row, $"<b>{item.Name}</b> · {item.Kg:0.##} 千克\n<size=14>{location}</size>", 17), 0, 42, 1);
+            void Transfer(int count)
+            {
+                bool moved = inWarehouse
+                    ? S.MoveFridgeWarehouseFood(item.Key, count, true)
+                    : S.MoveFridgeFood(item.Key, count, !inFridge);
+                if (moved) RefreshFoodStorageViews(w);
+            }
+            if (S.CanOpenFridge)
+            {
+                Ui.Size(Ui.Button(row, inFridge ? "取出 1" + unit : "存 1" + unit + "到冰箱", () => Transfer(1), 16), 178, 38);
+                Ui.Size(Ui.Button(row, inFridge ? "全部取到背包" : "全部存入冰箱", () => Transfer(item.Count), 16, Ui.ButtonHot), 158, 38);
+            }
+            if (inWarehouse)
+                Ui.Size(Ui.Button(row, "取 1" + unit + "到背包", () =>
+                {
+                    if (S.TakeFromBox(item.Key)) RefreshFoodStorageViews(w);
+                }, 16), 178, 38);
+            if (warehouse && !inWarehouse)
+                Ui.Size(Ui.Button(row, "全部放后仓", () =>
+                {
+                    bool moved = inFridge
+                        ? S.MoveFridgeWarehouseFood(item.Key, item.Count, false)
+                        : S.StoreInBox(item.Key, item.Count);
+                    if (moved) RefreshFoodStorageViews(w);
+                }, 16), 148, 38);
         }
     }
 }

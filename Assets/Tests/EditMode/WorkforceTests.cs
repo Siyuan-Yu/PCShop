@@ -415,6 +415,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
+                GameSessionTests.PostFirstRecruitmentNotice(s);
                 s.Clock.Restore(new GameDate(1), 8 * 60 + 59);
                 s.AdvanceClock(2);
                 Assert.Greater(s.Candidates.Count, 0);

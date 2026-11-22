@@ -38,7 +38,7 @@ namespace PCShopSell.Tests
             }
         }
         [Test] public void CrossingZeroMidAdvanceDoesNotCountEarlierTime()
-        {using(var s=Make()){s.Player.Energy=.55;s.AdvanceClock(7);Assert.That(s.EnergyAwakeMinutesLeft,Is.InRange(239,240));}}
+        {using(var s=Make()){s.Player.Energy=.55;s.AdvanceClock(11);Assert.That(s.EnergyAwakeMinutesLeft,Is.InRange(239,240));}}
         [Test] public void SaveLoadPreservesCountdownAndWarnings()
         {
             using(var s=Make())

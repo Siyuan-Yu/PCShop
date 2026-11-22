@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
@@ -11,7 +12,7 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
-    public enum OpeningStaffLesson { None, StaffTab, Roles, Hire, Purchase }
+    public enum OpeningStaffLesson { None, StaffTab, Roles, PostRecruitment, Hire, Purchase }
     public enum OpeningRenovationLesson { None, Travel, RenovationTab, StartPlacement }
 
     public sealed partial class GameSession
@@ -138,6 +139,28 @@ namespace PCShopSell.Core.Session
         internal const string RestaurantDrinkShelfHint =
             "走到货架旁按 F，或在「库存」选择货架。点「选择摆什么」或「换品类」，从「零售商品」里选「饮料」。堂食顾客可以加购陈列的饮料。";
 
+        private const string OpeningMallTravelSeen = "tutorial:opening-mall-travel";
+        private bool _openingMallTutorialFocused;
+        public Place OpeningFurnitureMall => City.Places.FirstOrDefault(place => place.Business == MallBusiness);
+
+        public bool OpeningMallTravelPending => !QuestCompleted("mall") && !QuestCompleted("sale")
+            && !Flags.Contains(OpeningMallTravelSeen) && CanPauseForTutorial && !InLayoutHistoryPlace
+            && CityIntent == null && !AtMall && LeaveBlocker == null && ExpansionStorefront(1) != null
+            && QuestStageReady(Quests.Get("mall")) && OpeningFurnitureMall is Place mall
+            && (Vehicle != VehicleKind.Taxi || CityDestinationTravelBlocker(mall, out _, out _) == null);
+
+        private bool OpeningMallTutorialPaused => _openingMallTutorialFocused && OpeningMallTravelPending;
+
+        public void FocusOpeningMallTutorial(bool focused) => _openingMallTutorialFocused = focused;
+
+        public void StartOpeningMallTravel()
+        {
+            if (!OpeningMallTravelPending) return;
+            var mall = OpeningFurnitureMall;
+            if (BeginCityTravel(mall.Id) && (CityIntent?.TargetPlaceId == mall.Id || AtMall))
+                Flags.Add(OpeningMallTravelSeen);
+        }
+
         private const string OpeningRenovationTravelSeen = "tutorial:opening-renovation-travel";
         private const string OpeningRenovationTabSeen = "tutorial:opening-renovation-tab";
         private const string OpeningRenovationStarted = "tutorial:opening-renovation-started";
@@ -221,22 +244,72 @@ namespace PCShopSell.Core.Session
                 && PlayerShop.Stock.GoodsCount(id) > 0)) ?? categories.FirstOrDefault();
         }
 
-        private const string OpeningCounterTabSeen = "tutorial:opening-counter-tab";
+        private const string OpeningCounterTabSeen = "tutorial:opening-counter-tab-confirmed";
+        private const string OpeningPetIntakeSeen = "tutorial:opening-pet-intake-completed";
+        private const string OpeningUsedDeskDone = "tutorial:opening-used-desk-done";
+        private const string OpeningUsedPurchasePrefix = "tutorial:opening-used-purchase:";
         private bool _openingCounterTutorialFocused;
 
-        public bool OpeningCounterLessonAvailable => !QuestCompleted("sale") && CanPauseForTutorial
-            && InPlayerShop && !IsRenovating && !InLayoutHistoryPlace && CityIntent == null
-            && CurrentShop == ExpansionStorefront(1) && QuestStageReady(Quests.Get("sale"));
+        private bool AtTutorialCounter => CanPauseForTutorial
+            && InPlayerShop && !IsRenovating && !InLayoutHistoryPlace && CityIntent == null;
+        private bool AtOpeningCounter => AtTutorialCounter && CurrentShop == ExpansionStorefront(1);
 
-        public bool OpeningCounterTutorialPaused => _openingCounterTutorialFocused && OpeningCounterLessonAvailable;
+        public bool OpeningCounterLessonAvailable => !QuestCompleted("sale") && AtOpeningCounter && QuestStageReady(Quests.Get("sale"));
+        public bool OpeningPetIntakeLessonAvailable
+        {
+            get
+            {
+                if (!AtTutorialCounter || Flags.Contains(OpeningPetIntakeSeen)) return false;
+                var shop = CurrentShop;
+                var boarding = PetBoarding(shop);
+                return boarding?.Offer != null && boarding.Stays.Length == 0 && string.IsNullOrEmpty(boarding.LastPickup)
+                    && PetAcceptBlocker(shop) == null;
+            }
+        }
+
+        private bool OpeningUsedDeskLessonAvailable => RetailKind == "secondhand" && !QuestCompleted("hire")
+            && !Flags.Contains(OpeningUsedDeskDone) && AtOpeningCounter && QuestStageReady(Quests.Get("stock"));
+
+        public bool OpeningCounterTutorialPaused => _openingCounterTutorialFocused
+            && (OpeningCounterLessonAvailable || OpeningUsedDeskLessonAvailable || OpeningPetIntakeLessonAvailable);
         public bool OpeningCounterTabVisited => Flags.Contains(OpeningCounterTabSeen);
 
         public void FocusOpeningCounterTutorial(bool focused) => _openingCounterTutorialFocused = focused;
 
         public void VisitOpeningCounterTab()
         {
-            if (OpeningCounterLessonAvailable) Flags.Add(OpeningCounterTabSeen);
+            if (OpeningCounterTutorialPaused) Flags.Add(OpeningCounterTabSeen);
         }
+
+        public UsedItem OpeningUsedDeskLessonItem()
+        {
+            var shop = CurrentShop;
+            if (!OpeningUsedDeskLessonAvailable || !SpecialPlayer(shop)
+                || !_specialBusinesses.TryGetValue(shop.Place.Id, out var state)) return null;
+
+            string storePrefix = OpeningUsedPurchasePrefix + shop.Place.Id + ":";
+            string purchase = Flags.FirstOrDefault(flag => flag.StartsWith(storePrefix, StringComparison.Ordinal));
+            if (purchase != null && int.TryParse(purchase.Substring(storePrefix.Length), out int id))
+            {
+                var bought = state.Used.FirstOrDefault(item => item.Id == id && item.Owned);
+                if (bought != null)
+                    return !bought.Sold && !bought.Listed && bought.RepairWorkRemaining == 0
+                        && (!bought.Inspected || UsedShelfListingBlocker(shop, bought) == null) ? bought : null;
+            }
+            if (!CanServeSpecialShop(shop, Clock.Now, true) || UsedStockCount(state) >= UsedStockLimit(shop)) return null;
+            long now = Clock.Now.TotalMinutes;
+            return state.Used.FirstOrDefault(item => item.WaitingForPurchase && item.ExpiresAt > now
+                && Ledger.CanAfford(Money.FromYuan(item.Asking)) && UsedShelfListingBlocker(shop, item) == null);
+        }
+
+        public void RecordOpeningUsedDeskPurchase(int id)
+        {
+            string prefix = OpeningUsedPurchasePrefix + CurrentShop.Place.Id + ":";
+            Flags.RemoveWhere(flag => flag.StartsWith(prefix, StringComparison.Ordinal));
+            Flags.Add(prefix + id);
+        }
+
+        public void CompleteOpeningUsedDeskLesson() => Flags.Add(OpeningUsedDeskDone);
 
         public (DiningOrder order, RestaurantJob job) OpeningRestaurantCounterAction()
         {
@@ -286,6 +359,8 @@ namespace PCShopSell.Core.Session
             { EmployeeRole.Cashier, EmployeeRole.Buyer });
         private static readonly IReadOnlyList<EmployeeRole> DiningOpeningRoles = Array.AsReadOnly(new[]
             { EmployeeRole.Waiter, EmployeeRole.Chef, EmployeeRole.Buyer });
+        private static readonly IReadOnlyList<EmployeeRole> PetShopOpeningRoles = Array.AsReadOnly(new[]
+            { EmployeeRole.Cashier, EmployeeRole.Buyer, EmployeeRole.PetKeeper });
         private static readonly IReadOnlyList<EmployeeRole> ResaleOpeningRoles = Array.AsReadOnly(new[]
             { EmployeeRole.Appraiser, EmployeeRole.Cashier });
         private static readonly IReadOnlyList<EmployeeRole> VenueOpeningRoles = Array.AsReadOnly(new[]
@@ -307,8 +382,12 @@ namespace PCShopSell.Core.Session
 
         private const string StaffTabSeen = "tutorial:opening-staff-tab";
         private const string StaffRolesSeen = "tutorial:opening-staff-roles";
-        private const string OpeningStaffWaitHome = "tutorial:opening-staff-wait-home";
+        private const string OpeningStaffRested = "tutorial:opening-staff-rested";
         private long _openingStaffWaitUntil;
+
+        private bool FirstRecruitmentNotScheduled => _openingStaffWaitUntil == 0 && !EverHired
+            && !QuestCompleted("hire") && MyShopCount == 1
+            && FirstStaffingShop is OwnedShop shop && !IsDedicatedVenue(shop.Place);
 
         public OpeningStaffLesson OpeningStaffStep
         {
@@ -320,9 +399,11 @@ namespace PCShopSell.Core.Session
                     || !QuestStageReady(Quests.Get("hire"))) return OpeningStaffLesson.None;
                 if (!Flags.Contains(StaffTabSeen)) return OpeningStaffLesson.StaffTab;
                 if (!Flags.Contains(StaffRolesSeen)) return OpeningStaffLesson.Roles;
+                if (FirstRecruitmentNotScheduled && CanGuideOpeningStaffWait(CurrentShop)) return OpeningStaffLesson.PostRecruitment;
                 if (OpeningStaffWaitTarget(CurrentShop) != null) return OpeningStaffLesson.None;
-                if (NextOpeningStaffRole(CurrentShop) is EmployeeRole role)
-                    return Candidates.Any(candidate => RecruitAssignmentBlocker(candidate.Id, CurrentShop.Place.Id, role) == null)
+                var missing = MissingOpeningStaffRoles(CurrentShop).ToArray();
+                if (missing.Length > 0)
+                    return Candidates.Any(candidate => missing.Any(role => RecruitAssignmentBlocker(candidate.Id, CurrentShop.Place.Id, role) == null))
                         ? OpeningStaffLesson.Hire : OpeningStaffLesson.None;
                 return OpeningStaffRoles(CurrentShop).Contains(EmployeeRole.Buyer) && !OpeningBuyerPlanReady(CurrentShop)
                     ? OpeningStaffLesson.Purchase : OpeningStaffLesson.None;
@@ -337,33 +418,31 @@ namespace PCShopSell.Core.Session
         public bool FinishOpeningStaffRoles() => OpeningStaffStep == OpeningStaffLesson.Roles && Flags.Add(StaffRolesSeen);
 
         private bool CanGuideOpeningStaffWait(OwnedShop shop) => shop != null && shop == FirstStaffingShop
-            && !QuestCompleted("hire") && !IsDedicatedVenue(shop.Place) && Candidates.Count == 0
+            && !QuestCompleted("hire") && !IsDedicatedVenue(shop.Place) && !Candidates.Any(CandidateAvailable)
             && NextOpeningStaffRole(shop) != null && !EmployeesForShop(shop).Any(row => row.Role == EmployeeRole.Unassigned && row.Shop == null);
 
-        private void RefreshOpeningStaffWait()
+        private void RecordOpeningStaffRest()
         {
-            if (!Flags.Contains(StaffRolesSeen) || !QuestCompleted("sale")
-                || (_openingStaffWaitUntil > 0 && Clock.Now.TotalMinutes >= _openingStaffWaitUntil)) return;
-            var shop = FirstStaffingShop;
-            if (!CanGuideOpeningStaffWait(shop)) return;
-            if (_openingStaffWaitUntil == 0)
-            {
-                int arrivalDay = Clock.Today.TotalDays + (Clock.MinuteOfDay < CandidateMinute ? 0 : 1);
-                _openingStaffWaitUntil = GameTimestamp.From(new GameDate(arrivalDay), CandidateMinute).TotalMinutes;
-            }
-            if (!shop.Sim.InHours(Clock.Now) || CurrentPlace == Home) Flags.Add(OpeningStaffWaitHome);
-        }
-
-        private void RecordOpeningStaffPracticeSale(OwnedShop shop)
-        {
-            if (OpeningStaffWaitTarget(shop) == QuestTarget.Counter && Flags.Add(OpeningStaffWaitHome))
-                Say("已独立完成一单，可以回家休息，等下一批应聘者到店。");
+            if (OpeningStaffWaitTarget(FirstStaffingShop) == QuestTarget.Bed)
+                Flags.Add(OpeningStaffRested);
         }
 
         private QuestTarget? OpeningStaffWaitTarget(OwnedShop shop)
         {
             if (_openingStaffWaitUntil <= Clock.Now.TotalMinutes || !CanGuideOpeningStaffWait(shop)) return null;
-            return Flags.Contains(OpeningStaffWaitHome) || !shop.Sim.InHours(Clock.Now) ? QuestTarget.Bed : QuestTarget.Counter;
+            long arrivalDayStart = _openingStaffWaitUntil - CandidateMinute;
+            bool overnightShift = shop.Sim.CloseMinute < shop.Sim.OpenMinute && Clock.MinuteOfDay < shop.Sim.CloseMinute;
+            bool firstShift = Clock.Now.TotalMinutes < arrivalDayStart || overnightShift;
+            if ((firstShift && shop.Sim.InHours(Clock.Now)) || ShopFinishingService(shop)) return QuestTarget.Counter;
+            if (Flags.Contains(OpeningStaffRested) || _sleepHistory.Any(span => span[1] >= arrivalDayStart))
+                return QuestTarget.Staff;
+            return shop.Sim.AllDay ? QuestTarget.Counter : QuestTarget.Bed;
+        }
+
+        private string OpeningStaffCounterInstruction(OwnedShop shop)
+        {
+            if (!shop.Sim.InHours(Clock.Now)) return "招待完店内的顾客，打烊后再回家。";
+            return shop.Sim.AllDay ? "继续在店里营业。" : $"继续营业到 {Hm(shop.Sim.CloseMinute)} 打烊。";
         }
 
         public IReadOnlyList<EmployeeRole> OpeningStaffRoles(OwnedShop shop) => IsDedicatedVenue(shop.Place)
@@ -371,6 +450,7 @@ namespace PCShopSell.Core.Session
             {
                 "restaurant" => DiningOpeningRoles,
                 "secondhand" => ResaleOpeningRoles,
+                PetShopCatalog.ShopKind => PetShopOpeningRoles,
                 _ => RetailOpeningRoles
             };
 
@@ -383,6 +463,8 @@ namespace PCShopSell.Core.Session
             EmployeeRole.Chef => "按订单备料、下锅和出锅",
             EmployeeRole.Buyer => shop.RetailKind == "restaurant" ? "采购大米和配菜，给厨房补货" : "按清单或库存目标补货",
             EmployeeRole.Appraiser => "向卖家收购、鉴定并上架旧物",
+            EmployeeRole.PetKeeper => "给寄养宠物喂食、换水、清理和陪玩",
+            EmployeeRole.Repairer => "在修复台处理有瑕疵或损坏的旧物",
             _ => IsDedicatedVenue(shop.Place) ? "接待顾客并维持营业" : "为排队顾客结账"
         };
 
@@ -391,8 +473,6 @@ namespace PCShopSell.Core.Session
             "computer" => "接整机订单时安排装机员，摆好装机台、展示桌，再开启自动装机。",
             "models" => "做改色委托时摆好喷漆台，安排喷漆师接手。",
             "clothing" => "需要导购时可加一名销售员，帮助提高成交率。",
-            "secondhand" => "开展旧物修复时可安排修复师。按收购流程经营时，货源由收购师负责。",
-            PetShopCatalog.ShopKind => "开宠物寄养后可安排饲养员，负责喂食和清理。",
             _ => null
         };
 
@@ -400,12 +480,11 @@ namespace PCShopSell.Core.Session
             buyer.PurchasePlan is { Daily: true } plan && (plan.InventoryThreshold
                 ? HasEmployeeRestockTarget(shop, buyer.Id) : plan.Items?.Length > 0));
 
-        public EmployeeRole? NextOpeningStaffRole(OwnedShop shop)
-        {
-            foreach (var role in OpeningStaffRoles(shop))
-                if (!ShopStaff(shop, role).Any()) return role;
-            return null;
-        }
+        public IEnumerable<EmployeeRole> MissingOpeningStaffRoles(OwnedShop shop) =>
+            OpeningStaffRoles(shop).Where(role => !ShopStaff(shop, role).Any());
+
+        public EmployeeRole? NextOpeningStaffRole(OwnedShop shop) =>
+            MissingOpeningStaffRoles(shop).Select(role => (EmployeeRole?)role).FirstOrDefault();
 
         private static string OpeningStaffSelfFlag(OwnedShop shop) => $"tutorial:staff-self:{shop.Place.Id}:{shop.RetailKind}";
 
@@ -416,17 +495,33 @@ namespace PCShopSell.Core.Session
         public string OpeningStaffNextStep(OwnedShop shop)
         {
             if (OpeningStaffWaitTarget(shop) is QuestTarget waiting)
-                return waiting == QuestTarget.Bed ? $"回家休息，{NextCandidateArrivalText}再到店招聘。"
-                    : shop.RetailKind == "restaurant" ? "自己再接待一桌，收款后就能回家。" : "在柜台再完成一次结账，然后回家休息。";
+                return waiting switch
+                {
+                    QuestTarget.Bed => $"回家休息，{NextCandidateArrivalText}再到店招聘。",
+                    QuestTarget.Staff => CurrentPlace == shop.Place ? $"等应聘者 {NextCandidateArrivalText} 到店。"
+                        : $"前往店铺，应聘者 {NextCandidateArrivalText} 到店。",
+                    _ => OpeningStaffCounterInstruction(shop)
+                };
+            if (FirstRecruitmentNotScheduled && CanGuideOpeningStaffWait(shop))
+            {
+                if (!QuestCompleted("sale")) return "完成首单后可贴招聘告示。";
+                return Flags.Contains(StaffRolesSeen) ? "在员工页点「贴招聘告示」，安排首批应聘者明天到店。"
+                    : "在员工页查看本店岗位。";
+            }
             if (NextOpeningStaffRole(shop) is EmployeeRole role)
             {
                 string name = OpeningStaffRoleName(shop, role);
                 if (StaffCapacityBlocker(shop) != null)
                     return $"在「管理岗位与排班」里调整员工分工，安排一名{name}。";
-                if (Candidates.Any(CandidateAvailable)) return $"选一位应聘者，聘用为{name}。";
+                if (Candidates.Any(CandidateAvailable))
+                {
+                    string choices = string.Join("、", MissingOpeningStaffRoles(shop).Select(missing => OpeningStaffRoleName(shop, missing)));
+                    return choices == name ? $"选一位应聘者，聘用为{name}。" : $"选一位应聘者，安排{choices}中的一个岗位。";
+                }
                 if (EmployeesForShop(shop).Any(row => row.Role == EmployeeRole.Unassigned && row.Shop == null))
                     return $"在「管理岗位与排班」里把待安排员工设为{name}。";
-                return $"{NextCandidateArrivalText} 到员工页，聘用{name}。";
+                return RecruitmentNoticePosted ? $"应聘者 {NextCandidateArrivalText} 到店后，聘用{name}。"
+                    : $"在员工页贴招聘告示，招聘{name}。";
             }
             return OpeningStaffRoles(shop).Contains(EmployeeRole.Buyer) && !OpeningBuyerPlanReady(shop)
                 ? "点进货员旁的「安排进货」，保存采购计划。" : null;
@@ -441,21 +536,24 @@ namespace PCShopSell.Core.Session
         internal QuestDef OpeningStaffGuide(QuestDef source, OwnedShop shop)
         {
             var guide = source.Copy();
-            guide.Target = OpeningStaffWaitTarget(shop) ?? QuestTarget.Staff;
+            var waiting = OpeningStaffWaitTarget(shop);
+            guide.Target = waiting ?? QuestTarget.Staff;
             guide.GuideDestination = guide.Target == QuestTarget.Bed ? null : shop.Place;
             guide.Short = OpeningStaffNextStep(shop) ?? "查看员工分工";
-            if (guide.Target != QuestTarget.Staff)
+            if (waiting.HasValue)
             {
-                guide.Hint = guide.Target == QuestTarget.Counter
-                    ? $"等应聘者期间先自己营业。做成一单或到了关店时间就可以回家，下一批应聘者 {NextCandidateArrivalText} 到店。"
-                    : $"回家休息，下一批应聘者 {NextCandidateArrivalText} 到店，18:00 离开。";
+                guide.Hint = waiting.Value switch
+                {
+                    QuestTarget.Counter => $"{guide.Short} 应聘者 {NextCandidateArrivalText} 到店。",
+                    QuestTarget.Bed => $"回家休息，下一批应聘者 {NextCandidateArrivalText} 到店，18:00 离开。",
+                    _ => $"可以先到店。应聘者 {NextCandidateArrivalText} 到店后，在「员工」页选择要聘用的人。"
+                };
                 return guide;
             }
             var roles = OpeningStaffRoles(shop);
             var duties = roles.Select(role => $"{OpeningStaffRoleName(shop, role)}：{OpeningStaffRoleDuty(shop, role)}。");
             guide.Hint = string.Join("\n", duties) + "\n" + RecruitmentHoursText
-                + (roles.Contains(EmployeeRole.Buyer) ? "\n" + OpeningStaffPurchaseHint(shop) : "")
-                + "\n可以从员工页选择剩余工作自己做。";
+                + (roles.Contains(EmployeeRole.Buyer) ? "\n" + OpeningStaffPurchaseHint(shop) : "");
             guide.Progress = _ => $"岗位已安排 {roles.Count(role => ShopStaff(shop, role).Any())}/{roles.Count}"
                 + (roles.Contains(EmployeeRole.Buyer) ? (OpeningBuyerPlanReady(shop) ? " · 已安排采购" : " · 待安排采购") : "");
             return guide;

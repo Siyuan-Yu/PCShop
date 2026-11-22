@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
-    /// <summary>暖米色窗口、墨绿灰常驻栏，以及共享的控件颜色和形状。</summary>
+    /// <summary>街坊小店的米灰窗口、深色常驻栏与共用材质。</summary>
     public static partial class Ui
     {
         public static Color FlatWindow => PanelBg;
@@ -15,25 +15,32 @@ namespace PCShopSell.Game.UI
         public static Color FlatInk => TextColor;
         public static Color FlatUp => Good;
         public static Color FlatDown => Warn;
-        public static readonly Color FlatCardEdge = Tone("DED3BE");
-        public static readonly Color FlatButtonEdge = Tone("D5C8AE");
-        public static readonly Color FlatHotEdge = Tone("B4884A");
-        public static readonly Color FlatWell = Tone("FFF9EC");
-        public static readonly Color FlatWellEdge = Tone("D3C4A8");
-        public static readonly Color FlatBand = Tone("EFE7D7");
-        public static readonly Color FlatRow = Tone("EED5A6");
+        public static readonly Color FlatCardEdge = Tone("C9C2B4");
+        public static readonly Color FlatButtonEdge = Tone("C5BDAD");
+        public static readonly Color FlatHotEdge = Tone("A98D60");
+        public static readonly Color FlatWell = Tone("F4F0E7");
+        public static readonly Color FlatWellEdge = Tone("BEB6A7");
+        public static readonly Color FlatBand = Tone("E7E3D9");
+        public static readonly Color FlatRow = Tone("DCE2D7");
+        public static readonly Color SelectionEdge = Tone("879887");
+        internal static readonly Color PaperStock = Tone("FCF8EE");
+        internal static readonly Color NoteStock = Tone("F9F3E2");
+        internal static readonly Color Clipboard = Tone("8B8D7D");
+        internal static readonly Color WoodBoard = Tone("B7AA97");
+        internal static readonly Color WoodBack = Tone("DDD3C4");
+        internal static readonly Color ShelfChannel = Tone("858479");
         public static readonly Color Chrome = Tone("292F2C");
         public static readonly Color ChromeWell = Tone("1D2421");
         public static readonly Color ChromeButton = Tone("3A4339");
         public static readonly Color ChromeEdge = Tone("575B4B");
-        public static readonly Color ChromeInk = Tone("FFF4DE");
-        public static readonly Color ChromeDim = Tone("CDC5B1");
-        public static readonly Color ChromeGold = Tone("F2CE82");
+        public static readonly Color ChromeInk = Tone("F4EFE2");
+        public static readonly Color ChromeDim = Tone("CDC9BA");
+        public static readonly Color ChromeGold = Tone("DFC18C");
         public static readonly Color ChromeGood = Tone("B7D3A8");
         public static readonly Color ChromeWarn = Tone("F3AA93");
         public static readonly Color SuccessSurface = Tone("E3ECDE");
-        public static readonly Color PendingSurface = Tone("F3E4C6");
-        public static readonly Color InfoInk = Tone("42667A");
+        public static readonly Color PendingSurface = Tone("EEE3CA");
+        public static readonly Color InfoInk = Tone("416575");
         public static readonly Color InfoSurface = Tone("E3EBE9");
         public static readonly Color WorldShade = Tone("1A251C87");
 
@@ -78,7 +85,7 @@ namespace PCShopSell.Game.UI
             if (!dark) return color;
             if (color == ButtonBg || color == PanelBg2) return ChromeButton;
             if (color == FlatWell) return ChromeWell;
-            if (color == FlatRow) return Tone("514832");
+            if (color == FlatRow) return Tone("4C594B");
             return color;
         }
 
@@ -108,7 +115,8 @@ namespace PCShopSell.Game.UI
         private static Color SurfaceEdge(Color color, string name)
         {
             if (color.a <= .01f) return Color.clear;
-            if (color == ButtonHot || color == FlatRow) return FlatHotEdge;
+            if (color == ButtonHot) return FlatHotEdge;
+            if (color == FlatRow) return SelectionEdge;
             if (color == WarningSurface || color == Warn) return Tone("C98569");
             if (Dark(color)) return ChromeEdge;
             if (name == "Choice" || name == "Input" || color == FlatWell) return FlatWellEdge;
@@ -132,6 +140,86 @@ namespace PCShopSell.Game.UI
             Round(image);
             FlatBorder(image, edge ?? FlatCardEdge);
             return image;
+        }
+
+        private static Sprite _paperSurface, _receiptSurface, _woodSurface;
+
+        internal static Image PaperPanel(Transform parent, string name, Color? fill = null, bool lifted = false, bool torn = false)
+        {
+            var image = Panel(parent, name, fill ?? PaperStock);
+            ApplyPaper(image, lifted, torn);
+            return image;
+        }
+
+        internal static void ApplyPaper(Image image, bool lifted = false, bool torn = false)
+        {
+            if (torn)
+            {
+                if (_receiptSurface == null) _receiptSurface = CreateSurfaceTexture(false, true);
+                image.sprite = _receiptSurface;
+            }
+            else
+            {
+                if (_paperSurface == null) _paperSurface = CreateSurfaceTexture(false);
+                image.sprite = _paperSurface;
+            }
+            image.type = Image.Type.Simple;
+            FlatBorder(image, FlatWellEdge, .65f);
+            if (!lifted) return;
+            var shadow = image.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = Tone("37302636");
+            shadow.effectDistance = new Vector2(1, -3);
+        }
+
+        internal static Image WoodPanel(Transform parent, string name, Color fill)
+        {
+            var image = Panel(parent, name, fill);
+            if (_woodSurface == null) _woodSurface = CreateSurfaceTexture(true);
+            image.sprite = _woodSurface;
+            image.type = Image.Type.Simple;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        internal static void Trim(RectTransform parent, string name, Color color, float inset, bool top = false)
+        {
+            float edge = top ? 1 : 0;
+            var trim = Panel(parent, name, color);
+            trim.raycastTarget = false;
+            trim.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            trim.rectTransform.Anchor(0, edge, 1, edge, 0,
+                top ? -inset - 1 : inset, 0, top ? inset : -inset - 1);
+        }
+
+        private static Sprite CreateSurfaceTexture(bool wood, bool torn = false)
+        {
+            int width = wood ? 256 : 192;
+            int height = wood ? 96 : 192;
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = wood ? "Neighborhood pale wood" : torn ? "Neighborhood receipt" : "Neighborhood paper",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+            var pixels = new Color32[width * height];
+            var random = new System.Random(wood ? 582 : 147);
+            for (int y = 0; y < height; y++)
+            {
+                int grain = wood ? random.Next(-8, 6) : 0;
+                for (int x = 0; x < width; x++)
+                {
+                    float line = wood ? Mathf.Sin(y * 1.31f + Mathf.Sin(x * .026f + y * .19f) * .8f) * 4 : 0;
+                    byte tone = (byte)Mathf.Clamp(248 + grain + Mathf.RoundToInt(line) + random.Next(-3, 4), 0, 255);
+                    byte alpha = torn && y < 2 * Mathf.Abs(x % 8 - 4) ? (byte)0 : (byte)255;
+                    pixels[y * width + x] = new Color32(tone, tone, tone, alpha);
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply(false, true);
+            var sprite = Sprite.Create(tex, new Rect(0, 0, width, height), Vector2.one * .5f, 100, 0, SpriteMeshType.FullRect);
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            return sprite;
         }
 
         internal static void UseCaptionInk(Button button, Color ink)
@@ -188,14 +276,14 @@ namespace PCShopSell.Game.UI
                 image.color = face;
                 if (fill == ButtonHot || fill == Accent || fill == FlatRow || fill == Warn)
                 {
-                    var edge = _darkParent && fill == FlatRow ? FlatHotEdge : SurfaceEdge(face, "Button");
+                    var edge = _darkParent && fill == FlatRow ? ChromeGood : SurfaceEdge(face, "Button");
                     FlatBorder(image, edge);
                     _edge = GetComponent<Outline>();
                     _edge.enabled = true;
                 }
                 else if (_edge != null) _edge.enabled = false;
                 Color under = face.a < .58f && _darkParent ? Chrome : face;
-                Color ink = fill == Warn ? Warn : fill == FlatRow ? Accent : TextColor;
+                Color ink = fill == Warn ? Warn : fill == FlatRow ? Good : TextColor;
                 _enabledInk = _fixedInk ?? ReadableInk(ink, under);
                 _disabledInk = ReadableInk(Dim, under);
                 UpdateInk();

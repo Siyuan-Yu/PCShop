@@ -151,6 +151,14 @@ namespace PCShopSell.Core.Session
             foreach (string f in d.flags ?? Array.Empty<string>()) Flags.Add(f);
             _phoneQuestEarliestDay = d.phoneQuestEarliestDay;
             _scooterQuestEarliestDay = d.scooterQuestEarliestDay;
+            _bankQuestEarliestDay = d.bankQuestEarliestDay;
+            if (_bankQuestEarliestDay == 0 && QuestCompleted("scooter") && !QuestCompleted("bank_securities")
+                && !Flags.Contains("tutorial:issued:bank_securities"))
+            {
+                var scooters = MotorCatalog.All.Where(model => model.Kind == VehicleKind.EBike).Select(model => model.Name).ToHashSet();
+                _bankQuestEarliestDay = Ledger.Entries.Where(entry => entry.Category == "购车" && scooters.Contains(entry.Memo))
+                    .Select(entry => entry.Date.TotalDays + 1).DefaultIfEmpty(0).Min();
+            }
 
             _scheduledCredits.Clear();
             int n = Math.Min(d.scheduledDays?.Length ?? 0, Math.Min(d.scheduledCents?.Length ?? 0, d.scheduledMemos?.Length ?? 0));
@@ -172,6 +180,7 @@ namespace PCShopSell.Core.Session
             d.flags = Flags.ToArray();
             d.phoneQuestEarliestDay = _phoneQuestEarliestDay;
             d.scooterQuestEarliestDay = _scooterQuestEarliestDay;
+            d.bankQuestEarliestDay = _bankQuestEarliestDay;
             d.scheduledDays = _scheduledCredits.Select(c => c.day).ToArray();
             d.scheduledCents = _scheduledCredits.Select(c => c.cents).ToArray();
             d.scheduledMemos = _scheduledCredits.Select(c => c.memo).ToArray();

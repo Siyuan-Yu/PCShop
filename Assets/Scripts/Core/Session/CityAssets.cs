@@ -63,6 +63,7 @@ namespace PCShopSell.Core.Session
 
     public static class CityInvestments
     {
+        public const string SoftwareServicesIndustry = "软件与信息技术服务";
         public static readonly CityEquityDefinition[] All = {
             new CityEquityDefinition("city_chip","城芯算力","算力设备制造与销售，受硬件价格和渠道订单影响。",6800,"硬件",1800000,.08,.024,20000),
             new CityEquityDefinition("city_life","晴川生活","社区连锁零售，消费需求与运营成本共同影响盈利。",4200,"零售",1200000,.07,.014,28000),
@@ -74,6 +75,8 @@ namespace PCShopSell.Core.Session
             new CityEquityDefinition("city_motor","青禾汽车","生产与销售家用汽车，产品订单与维修成本影响业绩。",8800,"汽车",3200000,.05,.025,10000),
             new CityEquityDefinition("city_logistics","丰运物流","承接城市配送与批发运输，运输需求带动营收。",3200,"物流",2000000,.06,.013,24000),
             new CityEquityDefinition("city_pet","暖爪宠物","宠物用品供应与连锁零售，受居民消费及新品需求影响。",2400,"宠物",850000,.10,.018,22000),
+            new CityEquityDefinition("life_company", "云帆技术服务公司", "主营企业管理软件、系统实施和运维，签约、交付验收与云资源成本影响业绩。",
+                4600, SoftwareServicesIndustry, 950000, .11, .02, 17000),
         };
         public static CityEquityDefinition Get(string id) => Array.Find(All, x => x.Id == id);
         public static Money Fee(Money gross, bool hardware = false) => Money.FromCents(Math.Max(1,

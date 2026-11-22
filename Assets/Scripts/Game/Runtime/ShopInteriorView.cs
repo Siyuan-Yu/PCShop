@@ -690,7 +690,11 @@ namespace PCShopSell.Game.Runtime
         {
             if (!on) Hook(null);
             _root.gameObject.SetActive(on);
-            if (!on && _wasOn) ClearUsedSellerFigures();
+            if (!on && _wasOn)
+            {
+                ClearUsedSellerFigures();
+                ClearSpecialBusinessVisuals();
+            }
             if (on && !_wasOn)
             {
                 _owner.transform.localPosition = new Vector3(_doorX, 0, 0.9f);
@@ -1144,7 +1148,7 @@ namespace PCShopSell.Game.Runtime
                 var usedDesk = session.CurrentShop.RetailKind == "secondhand" ? _usedBuyDesk : null;
                 var repairBenches = session.CurrentShop.Layout.Where(p=>p.Id=="used_repairbench").ToArray();
                 var paintBenches = session.CurrentShop.Layout.Where(p => p.Id == FurnitureCatalog.ModelPaintBench).ToArray();
-                int repairerIndex = 0, painterIndex = 0;
+                int repairerIndex = 0, painterIndex = 0, buyerIndex = 0;
                 if (usedDesk != null) occupied.AddRange(_usedSellerStands);
                 foreach (var employee in staff.OrderBy(e => e.Role == EmployeeRole.Cashier ? 0
                     : usedDesk != null && e.Role == EmployeeRole.Appraiser ? 1 : 2))
@@ -1159,6 +1163,7 @@ namespace PCShopSell.Game.Runtime
                         _staffFigures.Add(employee.Person.Id, figure);
                     }
                     bool atUsedDesk = employee.Role == EmployeeRole.Appraiser && usedDesk != null;
+                    bool buyer = employee.Role == EmployeeRole.Buyer;
                     var repairBench = employee.Role == EmployeeRole.Repairer && repairBenches.Length > 0
                         ? repairBenches[repairerIndex++ % repairBenches.Length]
                         : employee.Role == EmployeeRole.ModelPainter && paintBenches.Length > 0
@@ -1168,9 +1173,9 @@ namespace PCShopSell.Game.Runtime
                         : employee.Role == EmployeeRole.Cashier ? _clerkStand
                         : employee.Role == EmployeeRole.Assembler ? _assemblerStand
                         : employee.Role == EmployeeRole.PetKeeper && PetHousePresent ? new Vector3(_petArea.center.x,0,_petArea.yMin-.42f)
-                        : employee.Role == EmployeeRole.Buyer||employee.Role==EmployeeRole.Chef||employee.Role==EmployeeRole.Waiter ? new Vector3(_doorX, 0, .9f) : _salesStand;
-                    Vector3 stand = FindStaffStand(preferred, occupied);
-                    occupied.Add(stand);
+                        : employee.Role is EmployeeRole.Chef or EmployeeRole.Waiter ? new Vector3(_doorX, 0, .9f) : _salesStand;
+                    Vector3 stand = buyer ? BuyerStandOutside(buyerIndex++) : FindStaffStand(preferred, occupied);
+                    if (!buyer) occupied.Add(stand);
                     figure.transform.localPosition = stand;
                     Vector3 facing = employee.Role == EmployeeRole.Cashier ? _counterRot * Vector3.back
                         : employee.Role == EmployeeRole.Assembler && _hasBench ? _benchWorkPoint - stand : Vector3.back;
@@ -1180,7 +1185,7 @@ namespace PCShopSell.Game.Runtime
                 }
             }
             bool restaurant = session.CurrentShop.RetailKind == "restaurant";
-            var actors = staff.Select(employee => (Employee: employee, Worker: restaurant
+            var actors = staff.Select(employee => (Employee: employee, Worker: restaurant && employee.Role != EmployeeRole.Buyer
                 ? session.RestaurantActor(session.CurrentShop.Place.Id, employee.Person.Id) : null));
             List<Vector3> restaurantStands = null;
             if (restaurant)
@@ -1214,8 +1219,17 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
+        private Vector3 BuyerStandOutside(int index)
+        {
+            // Additional buyers line up along the wider left frontage.
+            const float doorClearance = 1.65f, spacing = .95f;
+            float x = index == 0 ? _doorX + doorClearance : _doorX - doorClearance - (index - 1) * spacing;
+            return new Vector3(x, 0, -.42f);
+        }
+
         private Vector3 FindStaffStand(Vector3 preferred, IReadOnlyList<Vector3> occupied) =>
-            TryFindIndoorStand(preferred, occupied, .24f, out var stand) ? stand : ClampIndoorNpc(Origin + preferred) - Origin;
+            TryFindIndoorStand(preferred, occupied, .24f, out var stand)
+                ? stand : ClampIndoorNpc(Origin + preferred) - Origin;
 
         private bool TryFindIndoorStand(Vector3 preferred, IReadOnlyList<Vector3> occupied, float clearance,
             out Vector3 best, float searchRadius = float.PositiveInfinity)
@@ -1226,7 +1240,8 @@ namespace PCShopSell.Game.Runtime
                 for (float z = Mathf.Max(BodyRadius, preferred.z - searchRadius); z <= Mathf.Min(Depth - BodyRadius, preferred.z + searchRadius); z += .2f)
                 {
                     var point = new Vector3(x, 0, z);
-                    if (_decor.Blockers.Any(r => Grow(r, clearance).Contains(new Vector2(x, z)))
+                    var floor = new Vector2(x, z);
+                    if (_decor.Blockers.Any(r => Grow(r, clearance).Contains(floor))
                         || occupied.Any(p => (p - point).sqrMagnitude < .81f)) continue;
                     float score = (point - preferred).sqrMagnitude;
                     if (score >= bestScore) continue;
@@ -1915,6 +1930,7 @@ namespace PCShopSell.Game.Runtime
         {
             CancelCheckoutWalk();
             ClearUsedSellerFigures();
+            ClearSpecialBusinessVisuals();
             foreach (var v in _visitors.Values) Kill.It(v.Go);
             foreach (var v in _leaving) Kill.It(v.Go);
             _visitors.Clear();

@@ -15,10 +15,12 @@ namespace PCShopSell.Game
         private string _placeId;
         private int _placeIndex = -1;
         private int _placeRot;
+        private bool _placeWallManuallySelected;
         private GameObject _ghost;
         private PlacementOutline _ghostOutline;
         private bool _ghostValid;
         private PlacedFurniture _ghostAt;
+        private Vector3 _ghostPointerLocal;
 
         /// <summary>正在摆放家具。</summary>
         public bool Placing { get; private set; }
@@ -111,7 +113,16 @@ namespace PCShopSell.Game
             if (!Placing || _placeId == null) return;
             FurnitureDef def = FurnitureCatalog.Get(_placeId);
             _placeRot = def.Slot == FurnitureSlot.Wall ? (_placeRot == 0 ? 1 : 0) : (_placeRot + 1) & 3;
-            if (HasHomePlacementTarget) UpdatePlacementGhost(def, _homePlacementPoint.Value);
+            _placeWallManuallySelected = def.Slot == FurnitureSlot.Wall;
+            if (!PointerOverPlacementUi && TryFloorPoint(out Vector3 local))
+            {
+                _homePlacementPoint = null;
+                UpdatePlacementGhost(def, local);
+            }
+            else if (_ghostAt != null)
+            {
+                UpdatePlacementGhost(def, _ghostPointerLocal);
+            }
         }
 
         public void CancelPlacementSelection()
@@ -183,6 +194,7 @@ namespace PCShopSell.Game
             if (_placeIndex >= 0 && Placing) PlaceVisuals?.ShowAll();
             _placeId = null;
             _placeIndex = -1;
+            _placeWallManuallySelected = false;
             _homePlacementPoint = null;
             PlaceError = null;
         }
@@ -202,6 +214,8 @@ namespace PCShopSell.Game
 
         /// <summary>手里这件当前摆放的位置（没拿东西或鼠标不在房间里则为空）。</summary>
         public PlacedFurniture EditGhostAt => _ghostAt;
+        public bool EditGhostFollowsMouse => _ghostAt != null && !HasHomePlacementTarget
+            && !DebugCursorLocal.HasValue && !PointerOverPlacementUi;
 
         /// <summary>编辑模式下的房间（不在摆放中为空）和它在世界里的原点。</summary>
         public RoomSpec EditRoom => Placing ? PlaceRoom : null;
@@ -248,6 +262,7 @@ namespace PCShopSell.Game
         }
 
         private float PlacementPanelWidth => _placeShop ? 390f : GameUi.HomeDockWidth + 10;
+        private bool PointerOverPlacementUi => !DebugCursorLocal.HasValue && GameUi.PointerOverUi;
 
         /// <summary>鼠标指到地面上的哪一点（房间局部坐标）。</summary>
         private bool TryFloorPoint(out Vector3 local)
@@ -281,7 +296,7 @@ namespace PCShopSell.Game
             RoomSpec room = PlaceRoom;
             EditHover = false;
             Vector3 local = default;
-            bool have = (DebugCursorLocal.HasValue || !GameUi.PointerOverUi) && TryFloorPoint(out local);
+            bool have = !PointerOverPlacementUi && TryFloorPoint(out local);
             if (have && local.x > -0.3f && local.x < room.Width + 0.3f && local.z > -0.3f && local.z < room.Depth + 0.3f)
             {
                 EditHover = true;
@@ -292,18 +307,20 @@ namespace PCShopSell.Game
             }
 
             RectD? foot = null;
+            int? rotation = null;
             bool valid = true;
             if (_placeId != null && _ghost != null && _ghost.activeSelf && _ghostAt != null)
             {
                 FurnitureDef def = FurnitureCatalog.Get(_placeId);
                 foot = EditRect(room, def, _ghostAt);
+                if (def.Slot != FurnitureSlot.Wall) rotation = _ghostAt.Rot;
                 valid = PlaceError == null;
                 EditCursor = def.Slot == FurnitureSlot.Wall
                     ? (_ghostAt.Rot == 1 ? new Vector2((float)room.Width, (float)_ghostAt.Z) : new Vector2((float)_ghostAt.X, (float)room.Depth))
                     : new Vector2((float)_ghostAt.X, (float)_ghostAt.Z);
                 EditHover = true;
             }
-            _overlay?.Update(EditHover ? EditCursor : (Vector2?)null, foot, valid, _rig.Size);
+            _overlay?.Update(EditHover ? EditCursor : (Vector2?)null, foot, rotation, valid, _rig.Size);
         }
 
         /// <summary>每帧：摆放模式下处理键盘和鼠标。</summary>
@@ -354,10 +371,10 @@ namespace PCShopSell.Game
                 return;
             }
 
-            bool over = GameUi.PointerOverUi && !DebugCursorLocal.HasValue;
-            bool clicked = !over && Input.GetMouseButtonDown(0);
+            if (PointerOverPlacementUi) return;
+            bool clicked = Input.GetMouseButtonDown(0);
             if (HasHomePlacementTarget && !clicked) return;
-            if (!over && TryPointerOnRoom(def, out Vector3 local))
+            if (TryPointerOnRoom(def, out Vector3 local))
             {
                 UpdatePlacementGhost(def, local);
                 if (!clicked) return;
@@ -381,6 +398,7 @@ namespace PCShopSell.Game
 
         private void UpdatePlacementGhost(FurnitureDef def, Vector3 local)
         {
+            _ghostPointerLocal = local;
             _ghostAt = RoomPlanner.Snap(PlaceRoom, def, local.x, local.z, _placeRot);
             FurnitureVisuals.Place(_ghost, def, _ghostAt, PlaceRoom);
             _ghost.SetActive(true);
@@ -407,6 +425,7 @@ namespace PCShopSell.Game
             if (!ok) return false;
             if (keep)
             {
+                _ghost.SetActive(false);
                 _ghostAt = null;
             }
             else
@@ -523,7 +542,7 @@ namespace PCShopSell.Game
         private bool TryPointerOnRoom(FurnitureDef def, out Vector3 local)
         {
             if (!TryFloorPoint(out local)) return false;
-            if (def.Slot == FurnitureSlot.Wall)
+            if (def.Slot == FurnitureSlot.Wall && !_placeWallManuallySelected)
             {
                 // 俯视图里直接按鼠标在地面上的位置：离后墙近就挂后墙，离右墙近就挂右墙
                 RoomSpec room = PlaceRoom;

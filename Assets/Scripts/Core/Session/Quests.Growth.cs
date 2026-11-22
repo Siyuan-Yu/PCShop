@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Shop;
+using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Session
 {
@@ -96,7 +97,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private const string QuestCompletionNoticePrefix = "tutorial:completion-pending:";
-        private int _phoneQuestEarliestDay, _scooterQuestEarliestDay;
+        private int _phoneQuestEarliestDay, _scooterQuestEarliestDay, _bankQuestEarliestDay;
 
         private static class QuestCompletionNotices
         {
@@ -127,6 +128,7 @@ namespace PCShopSell.Core.Session
             if ((quest.Id == "sale" || quest.Id == "hire") && QuestCompleted("sale") && QuestCompleted("hire"))
                 _phoneQuestEarliestDay = Clock.Today.TotalDays + 1;
             if (quest.Id == "phone") _scooterQuestEarliestDay = Clock.Today.TotalDays + 1;
+            if (quest.Id == "scooter") _bankQuestEarliestDay = Clock.Today.TotalDays + 1;
             if (quest.Id == "sale") Flags.Add(OpeningSaleCompletionFlag);
             else if (Flags.Contains("tutorial:issued:" + quest.Id) && (quest.Chapter == 0 || RetailKind == "computer")
                 && !(quest.Id == "community_goal" && FirstChapterTrialCompleted))
@@ -158,7 +160,6 @@ namespace PCShopSell.Core.Session
                         Say($"任务完成「{q.Title}」，奖励：{q.RewardText(this)}。");
                     }
                 }
-            RefreshOpeningStaffWait();
         }
         public void VisitQuestTarget(QuestTarget target)
         {
@@ -178,6 +179,9 @@ namespace PCShopSell.Core.Session
             RefreshQuestProgress();
             return true;
         }
+        private bool OpeningQuestTimeReached(int earliestDay) =>
+            earliestDay <= 0 || Clock.Now >= GameTimestamp.From(new GameDate(earliestDay), 8 * 60);
+
         private bool QuestStageReady(QuestDef q)
         {
             if (IsGameOver) return false;
@@ -191,9 +195,10 @@ namespace PCShopSell.Core.Session
                 if (Flags.Contains("tutorial:issued:" + q.Id)) return true;
                 return q.Id switch
                 {
-                    "phone" => Clock.Today.TotalDays >= _phoneQuestEarliestDay && Ledger.CanAfford(2 * PhonePrice),
-                    "scooter" => Clock.Today.TotalDays >= Math.Max(_phoneQuestEarliestDay, _scooterQuestEarliestDay)
+                    "phone" => OpeningQuestTimeReached(_phoneQuestEarliestDay) && Ledger.CanAfford(2 * PhonePrice),
+                    "scooter" => OpeningQuestTimeReached(Math.Max(_phoneQuestEarliestDay, _scooterQuestEarliestDay))
                         && Ledger.CanAfford(2 * Money.FromYuan(MotorCatalog.Legacy(VehicleKind.EBike).Price)),
+                    "bank_securities" => OpeningQuestTimeReached(_bankQuestEarliestDay),
                     "second_shop" => SecondStorefrontQuestReady(),
                     _ => true
                 };

@@ -307,12 +307,20 @@ namespace PCShopSell.Tests
             rig.ClickCaption("聊生活");
             string firstLine = Reply().text;
             Assert.IsNotEmpty(firstLine);
-            rig.ClickCaption("平时喜欢做些什么？");
+            Assert.False(rig.Components<Button>().Any(b => b.name == "DialogueEnd"));
+            var question = rig.Components<Button>().Single(b => b.GetComponentInChildren<Text>()?.text == "最近有哪件事让你开心？");
+            Canvas.ForceUpdateCanvases();
+            Assert.That(((RectTransform)question.transform).rect.size, Is.EqualTo(new Vector2(140f, 40f)));
+            Assert.False(question.GetComponentInChildren<Text>().resizeTextForBestFit);
+            question.onClick.Invoke();
             Assert.AreNotEqual(firstLine, Reply().text);
+            Assert.AreEqual("回到步道", rig.Button("DialogueEnd").GetComponentInChildren<Text>().text);
             rig.ClickCaption("回到步道");
             Assert.False(rig.Components<Text>().Any(t => t.name == "DialogueReplyText"));
             rig.ClickCaption("分享经历");
             StringAssert.Contains(rig.S.CityPerson(personId).Stories[0], Reply().text);
+            Assert.False(rig.Components<Button>().Any(b => b.name == "DialogueEnd"));
+            rig.ClickCaption("后来呢？");
             rig.ClickCaption("回到步道");
             Assert.AreEqual(walk.Id, rig.S.RunningCityActivity.Id);
             Assert.AreEqual(before, rig.S.Clock.Now.TotalMinutes);
@@ -1353,11 +1361,13 @@ namespace PCShopSell.Tests
             var fish = FishingCatalog.Get("fish_mandarin");
             r.S.Backpack.Food.AddIngredient(fish.Id, 1);
             r.Ui.OpenCookerWindow();
-            var choice = r.Components<Dropdown>().Single(d => d.name == "CookFishChoice");
-            StringAssert.Contains("鳜鱼", choice.options[1].text);
-            choice.value = 1;
+            r.Button("CookFishPickerToggle").onClick.Invoke();
+            var choice = r.Button("CookFishSlot_" + fish.Id);
+            StringAssert.Contains("鳜鱼", choice.GetComponentInChildren<Text>().text);
+            choice.onClick.Invoke();
             StringAssert.Contains("白米饭 + 鳜鱼", r.Text);
             StringAssert.Contains("本锅用 鳜鱼 1 条", r.Text);
+            StringAssert.Contains("首次吃这锅 · 智力 +1", r.Text);
             Assert.AreEqual(1, r.S.Backpack.Food.IngredientCount(fish.Id));
             r.Ui.CloseAllWindows();
 

@@ -22,6 +22,7 @@ namespace PCShopSell.Game.UI
         private Window _questPopup;
         private bool _questHidden;
         private QuestDef _pendingNext;
+        private const string OpeningMallTravelLabel = "前往家具城";
 
         /// <summary>任务完成 / 换任务时强制弹窗（冒烟测试脚本会关掉，免得挡住脚本流程）。</summary>
         public bool QuestPopups = true;
@@ -44,8 +45,9 @@ namespace PCShopSell.Game.UI
 
         private void BuildQuestTracker(Transform root)
         {
-            _questPanel = Ui.Panel(root, "QuestTracker", Ui.PanelBg);
+            _questPanel = Ui.PaperPanel(root, "QuestTracker", Ui.NoteStock, lifted: true);
             _questPanel.rectTransform.Anchor(0, 1, 0, 1, 16, -332, -420, 82);
+            Ui.Trim(_questPanel.rectTransform, "TaskPaperEdge", Ui.FlatWellEdge, 1);
             var rail = Ui.Panel(_questPanel.transform, "TaskRail", Ui.FlatHotEdge);
             rail.rectTransform.Anchor(0, 0, 0, 1, 1, 8, -4, 8);
             rail.raycastTarget = false;
@@ -78,7 +80,6 @@ namespace PCShopSell.Game.UI
             {
                 _questHidden = true;
                 UpdateQuestTracker();
-                Toast($"任务条收起来了，点顶栏“任务”（或按 {HotkeyLabel(QuestHotkey)}）随时再打开。");
             }, 20);
             ((RectTransform)close.transform).Anchor(1, 1, 1, 1, -38, -36, 6, 6);
             close.Tip("收起任务条（顶栏“任务”按钮可重新打开）");
@@ -170,8 +171,9 @@ namespace PCShopSell.Game.UI
                 _pendingNext = null;
             }
 
+            bool showMallTravel = q?.Id == "mall" && S.OpeningMallTravelPending;
             bool showRenovationTravel = S.OpeningRenovationStep == OpeningRenovationLesson.Travel;
-            if (!showRenovationTravel && !S.FirstChapterTrialCompleted && S.IsOwnedVenue(S.CurrentPlace))
+            if (!showMallTravel && !showRenovationTravel && !S.FirstChapterTrialCompleted && S.IsOwnedVenue(S.CurrentPlace))
             {
                 _questPanel.gameObject.SetActive(!_questHidden && !S.IsGameOver && !_ctrl.Placing);
                 SetQuestCard("场馆经营", S.VenueBusinessName(S.CurrentPlace), "设置价格和营业时间，安排值守后开启接客。",
@@ -181,11 +183,14 @@ namespace PCShopSell.Game.UI
             var district = S.CurrentDistrictNode;
             string invitation = S.DistrictInvitationStatus;
             bool visible = (q != null || district != null || invitation != null || S.FirstChapterTrialCompleted)
-                && (!_questHidden || showRenovationTravel) && !S.IsGameOver && !_ctrl.Placing;
+                && (!_questHidden || showMallTravel || showRenovationTravel) && !S.IsGameOver && !_ctrl.Placing;
             _questPanel.gameObject.SetActive(visible);
             if (!visible) return;
             if (S.FirstChapterTrialCompleted)
                 SetQuestCard("试玩完成", "城郊经营目标已达成", "可以继续在城郊经营。", progress: "5 家店 · 100 万元自有现金 · 无贷款");
+            else if (showMallTravel)
+                SetQuestCard("当前任务", q.Title, "去宜居家具城买齐开店设施。", GuideLocation(q.Target, q.GuideDestination),
+                    actionLabel: OpeningMallTravelLabel, action: S.StartOpeningMallTravel);
             else if (showRenovationTravel)
                 SetQuestCard("当前任务", q.Title, "家具已买齐，先前往自己的店铺。", "到店后打开「装修」。",
                     actionLabel: "前往店铺", action: S.StartOpeningRenovationTravel);
@@ -214,8 +219,8 @@ namespace PCShopSell.Game.UI
             if (completion.HasValue) _questProgressFill.Anchor(0, 0, Mathf.Clamp01(completion.Value), 1);
             float textTop = completion.HasValue ? 116 : showProgress ? 99 : 77;
             _questText.rectTransform.offsetMax = new Vector2(-16, -textTop);
-            _questText.text = "<b><color=#386047>下一步</color></b>　" + QuestPaperInk(next)
-                + (string.IsNullOrEmpty(status) ? "" : "\n<size=15><color=#655E52>" + status + "</color></size>");
+            _questText.text = QuestPaperInk(next)
+                + (string.IsNullOrEmpty(status) ? "" : $"\n<size=15><color=#{ColorUtility.ToHtmlStringRGB(Ui.Dim)}>{status}</color></size>");
             _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + HudFunctionOffset + textTop + 118));
             _questAction = action;
             _questActionText.text = actionLabel ?? "";
@@ -356,7 +361,7 @@ namespace PCShopSell.Game.UI
                     return ("回家睡觉", _ctrl.GoHomeToSleep);
                 case QuestTarget.Agency:
                 case QuestTarget.Ventures: return QuestPlaceAction("前往中介", destination ?? (S.City.HasPlace("agency") ? S.City.GetPlace("agency") : null));
-                case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
+                case QuestTarget.Mall: return QuestPlaceAction(OpeningMallTravelLabel, S.OpeningFurnitureMall);
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
                 case QuestTarget.BankSecurities:
                     if (S.AtBank) return ("打开银行柜台", () => OpenBank(S.CurrentPlace));
@@ -548,7 +553,8 @@ namespace PCShopSell.Game.UI
 
         private static RectTransform QuestDetailCard(Transform parent, string name, float widthWeight)
         {
-            var card = Ui.Panel(parent, name, Ui.PanelBg2);
+            var card = name == "QuestObjective" ? Ui.PaperPanel(parent, name, Ui.NoteStock, lifted: true)
+                : Ui.FlatPanel(parent, name, Ui.FlatBand);
             card.raycastTarget = false;
             Ui.Size(card, 0, -1, widthWeight);
             var rect = card.rectTransform;

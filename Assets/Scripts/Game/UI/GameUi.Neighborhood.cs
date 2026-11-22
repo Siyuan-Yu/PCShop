@@ -42,9 +42,9 @@ namespace PCShopSell.Game.UI
                     if (!S.AskLostChild()) { Toast("请先到孩子身边。"); return; }
                     string place = S.City.GetPlace(child.CluePlace).Name;
                     w.Rebuild();
-                    OpenDialogue("lost_child", "走散的孩子", "", "", null, start: ctx => ctx.Show(
+                    OpenDialogue("lost_child", "走散的孩子", "", "", null, start: ctx => ctx.Finish(
                         $"我刚才跟家人走散了。我们说过，要是找不到对方，就去{place}附近等。你能陪我过去吗？",
-                        ReturnToActivity(ctx, "记下线索")));
+                        "记下线索"));
                 });
                 if(child.Asked&&child.Helper==null)
                 {

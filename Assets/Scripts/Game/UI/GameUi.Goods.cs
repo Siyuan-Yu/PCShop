@@ -24,18 +24,19 @@ namespace PCShopSell.Game.UI
 
             int columns = products.Length <= 6 ? 3 : 4;
             int pageSize = columns * 3;
-            const int slotHeight = 198, railHeight = 2, gap = 6, padding = 10;
+            const int slotHeight = 198, railHeight = 10, gap = 5, padding = 10;
             int pages = (products.Length + pageSize - 1) / pageSize;
             page = Mathf.Clamp(page, 0, pages - 1);
-            int boards = (Mathf.Min(pageSize, products.Length) + columns - 1) / columns;
+            int boards = (Mathf.Min(pageSize, products.Length - page * pageSize) + columns - 1) / columns;
             int today = S.Clock.Today.TotalDays;
             bool hasYesterday = S.PriceDays.Any(day => day.Day == today - 1);
-            var frame = Ui.FlatPanel(w.Content, "GoodsShelf", Ui.FlatBand);
+            var frame = Ui.FlatPanel(w.Content, "GoodsShelf", Ui.WoodBoard);
             Ui.Size(frame, -1, padding * 2 + boards * (slotHeight + railHeight) + (boards * 2 - 1) * gap);
             Ui.VList(frame.rectTransform, gap, padding);
             for(int board=0;board<boards;board++)
             {
                 var row = Ui.Row(frame.transform, slotHeight, 8);
+                ShelfBacking(row);
                 for(int column = 0; column < columns; column++)
                 {
                     int index = page * pageSize + board * columns + column;
@@ -52,7 +53,7 @@ namespace PCShopSell.Game.UI
                         : (double?)null;
                     BuildGoodsShelfSlot(w, slot.rectTransform, product, fill, change);
                 }
-                Ui.Size(Ui.Panel(frame.transform, "ShelfRail", ShelfRailColor), -1, railHeight);
+                ShelfBoard(frame.transform, railHeight);
             }
             BuildCompactPageControls(w.Content, page, pages, changePage);
         }

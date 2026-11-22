@@ -90,6 +90,7 @@ namespace PCShopSell.Core.Session
                 LocationFactor = LocationFactorOf(shop.Place),
                 CompetitionFactorOf = () => ShopCompetitionFactor(shop.Place),
                 StreetTrafficFactorOf = () => StreetTrafficMultiplier(shop.Place.StreetId)*NeighborhoodShopTraffic(shop.Place.Id),
+                OwnerOnSiteOf = () => shop.Rented && CurrentPlace == shop.Place && !IsGameOver,
                 EmployeeOnDuty = t => ShopStaff(shop,EmployeeRole.Cashier).Concat(ShopStaff(shop,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t)&&CityEmployeeAvailable(e,shop)),
                 EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/EmployeeCheckoutCycleMinutes(e)),
             };

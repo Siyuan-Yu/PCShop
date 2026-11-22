@@ -93,8 +93,13 @@ namespace PCShopSell.Core.Session
         private static string AlternateMarketLead(MarketLead signal, bool up)
         {
             if (signal.Stock)
+            {
+                if (signal.Industry == CityInvestments.SoftwareServicesIndustry)
+                    return up ? "有客户在追加软件许可，已经问到部署档期了"
+                        : "有客户把系统验收往后推了，据说这季能确认的收入要重算";
                 return up ? "有人说这家公司在谈一笔额外的渠道单，交货时间都在问了"
                     : "有人说几个大客户把订单往后推，公司正在重算这季的收入";
+            }
             if (signal.Industry == "地产")
                 return up ? "有几户房东在试探着提挂牌价，等下一轮一起改"
                     : "挂了很久的几套终于肯松口，好像打算一起把挂牌价放低";
@@ -210,28 +215,34 @@ namespace PCShopSell.Core.Session
                     if (change.HasValue) break;
                 }
                 if (change is StockCompanyChange scheduled)
-                    yield return new MarketLead(company.Industry, subject, StockRumorSource(company.Name, scheduled),
+                    yield return new MarketLead(company.Industry, subject, StockRumorSource(company, scheduled),
                         StockAnnouncementShock(scheduled), 4, "接下来几个交易日", stock: true);
                 else
                 {
                     double pressure = StockFundamentalDrift(equity, company, (int)(nextQuotes[0] / 1440));
                     if (Math.Abs(pressure) < .003) continue;
-                    string source = pressure > 0 ? $"有人按{company.Name}的渠道生意重算了一遍，觉得后面能赚的钱可能比现在的股价反映的多"
+                    string source = pressure > 0 ? $"有人按{company.Name}的经营情况重算了一遍，觉得后面能赚的钱可能比现在的股价反映的多"
                         : $"有人在重新算{company.Name}的经营账，说现在的股价对后续利润估得有点乐观";
                     yield return new MarketLead(company.Industry, subject, source, pressure, 1, "接下来几个交易日", stock: true);
                 }
             }
         }
 
-        private static string StockRumorSource(string company, StockCompanyChange change) => change switch
+        private static string StockRumorSource(CityEquityDefinition company, StockCompanyChange change)
         {
-            StockCompanyChange.NewLocations => $"有人接到{company}的新门店物料单，连招人和开张的时间都在对",
-            StockCompanyChange.HigherCosts => $"给{company}供货的人说，新一轮采购报价已经报上去了，人工预算也在往上调",
-            StockCompanyChange.ChannelOrders => $"跟{company}合作的渠道商正在腾仓位，据说有一批新订单等着确认",
-            StockCompanyChange.Returns => $"{company}的售后点临时加派了人手，经销商说恐怕有一批货要退回来处理",
-            StockCompanyChange.Efficiency => $"给{company}供货的人说，新排班和到货流程已经试过一轮，积压和损耗少了些",
-            _ => $"有人收到{company}缩减几个业务点的通知，原先计划的后续订单也先撤了"
-        };
+            string name = company.Name;
+            if (company.Industry == CityInvestments.SoftwareServicesIndustry)
+                return name + SoftwareServicesAnnouncement(change).Rumor;
+            return change switch
+            {
+                StockCompanyChange.NewLocations => $"有人接到{name}的新门店物料单，连招人和开张的时间都在对",
+                StockCompanyChange.HigherCosts => $"给{name}供货的人说，新一轮采购报价已经报上去了，人工预算也在往上调",
+                StockCompanyChange.ChannelOrders => $"跟{name}合作的渠道商正在腾仓位，据说有一批新订单等着确认",
+                StockCompanyChange.Returns => $"{name}的售后点临时加派了人手，经销商说恐怕有一批货要退回来处理",
+                StockCompanyChange.Efficiency => $"给{name}供货的人说，新排班和到货流程已经试过一轮，积压和损耗少了些",
+                _ => $"有人收到{name}缩减几个业务点的通知，原先计划的后续订单也先撤了"
+            };
+        }
 
         private static string ConversationMarketIndustry(Place workplace, string shopKind, string role, bool tipster)
         {
@@ -241,6 +252,7 @@ namespace PCShopSell.Core.Session
                 "pet" => "宠物", "restaurant" or "food" or "produce" => "餐饮", "flowers" or "secondhand" => "零售", _ => null
             };
             if (shopIndustry != null) return shopIndustry;
+            if (CityInvestments.Get(workplace?.Id) is CityEquityDefinition listedCompany) return listedCompany.Industry;
             if (tipster || workplace?.Kind == PlaceKind.Wholesaler) return "硬件";
             if (workplace?.Kind == PlaceKind.Agency) return "地产";
             if (workplace?.Kind is PlaceKind.Dealer or PlaceKind.Garage) return "汽车";

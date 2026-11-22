@@ -15,7 +15,7 @@ namespace PCShopSell.Core.Home
         public const string WandFixture = "pet_wand_fixture", BallFixture = "pet_ball_fixture";
 
         private static GiftDef Product(string id, string name, string description, long price, double weight, string business) =>
-            new GiftDef(id, name, description, price, weight, business, retailPriceFactor: 1.5, wholesalePriceFactor: 1.5);
+            new GiftDef(id, name, description, price, weight, business, retailPriceFactor: 1.8, wholesalePriceFactor: 1.5);
 
         public static readonly IReadOnlyList<GiftDef> Products = new[]
         {

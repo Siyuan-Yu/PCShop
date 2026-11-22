@@ -9,7 +9,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public const double WarehouseCapacity = double.MaxValue;
-        public static int ShelfLimit(ShopSize size)=>size==ShopSize.Large?20:size==ShopSize.Medium?12:8;
+        public static int ShelfLimit(ShopSize size) => size == ShopSize.Large ? 20 : size == ShopSize.Medium ? 12 : 6;
         public static int RestaurantTableLimit(ShopSize size) => size == ShopSize.Large ? 20 : size == ShopSize.Medium ? 14 : 8;
         public static int RestaurantTablesPlaced(OwnedShop shop) => Furnished(shop, "restaurant_table");
         public static int StaffLimit(ShopSize size)=>size==ShopSize.Large?10:size==ShopSize.Medium?6:4;

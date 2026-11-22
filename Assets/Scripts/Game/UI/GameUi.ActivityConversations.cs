@@ -129,11 +129,16 @@ namespace PCShopSell.Game.UI
                 var person = speakers[index];
                 ctx.SpeakerId = person.Id;
                 var replies = new List<TalkOpt>();
+                var nextSpeaker = index + 1 < speakers.Length && topic.Topic != null
+                    ? new TalkOpt { Label = $"听{speakers[index + 1].Name}说说", Act = () => ShowTopic(ctx, index + 1) }
+                    : null;
                 if (topic.Reply != null)
-                    replies.Add(new TalkOpt { Label = topic.Reply, Act = () => ctx.Show(topic.Answer, ReturnToActivity(ctx, returnLabel)) });
-                if (index + 1 < speakers.Length && topic.Topic != null)
-                    replies.Add(new TalkOpt { Label = $"听{speakers[index + 1].Name}说说", Act = () => ShowTopic(ctx, index + 1) });
-                replies.Add(ReturnToActivity(ctx, returnLabel));
+                    replies.Add(new TalkOpt { Label = topic.Reply, Act = () =>
+                    {
+                        if (nextSpeaker != null) ctx.Show(topic.Answer, nextSpeaker);
+                        else ctx.Finish(topic.Answer, returnLabel);
+                    } });
+                if (nextSpeaker != null) replies.Add(nextSpeaker);
 
                 string personal = topic.Topic switch
                 {
@@ -146,21 +151,19 @@ namespace PCShopSell.Game.UI
                 if (line.Length == 0) line = "难得有空在一起待会儿。你最近还好吗？";
                 if (index == 0 && !string.IsNullOrWhiteSpace(detail))
                     line += "\n\n<size=16><color=#655E52>" + detail + "</color></size>";
-                ctx.Show(line, replies.ToArray());
+                if (replies.Count > 0) ctx.Show(line, replies.ToArray());
+                else ctx.Finish(line, returnLabel);
 
                 string Greet() { session.GreetPerson(person.Id); return null; }
             }
         }
-
-        private static TalkOpt ReturnToActivity(TalkCtx ctx, string label) =>
-            new TalkOpt { Label = label, Hot = true, Act = () => ctx.W.Close() };
 
         private void OpenActivityReply(string personId, string line, string returnLabel = "继续活动", Action onClosed = null)
         {
             if (string.IsNullOrWhiteSpace(line)) return;
             var person = S.CityPerson(personId);
             OpenDialogue(personId ?? "", person?.Name ?? "同行者", person == null ? "" : S.CityPersonRole(person.Id), "", null,
-                onClosed: onClosed, start: ctx => ctx.Show(line, ReturnToActivity(ctx, returnLabel)));
+                onClosed: onClosed, start: ctx => ctx.Finish(line, returnLabel));
         }
     }
 }

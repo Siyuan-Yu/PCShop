@@ -59,6 +59,7 @@ namespace PCShopSell.Core.Home
     public sealed class FoodBatch
     {
         public const int NoExpiry = -1;
+        internal const int ShelfLifeExtensionDays = 2;
 
         public string Id;
         public string Name;
@@ -68,13 +69,15 @@ namespace PCShopSell.Core.Home
         public int ExpireDay;
         public bool Chilled;
         public int ChilledDays;
+        public string FishPotRewardId;
 
         public static double WeightOf(string id) => FastFoodCatalog.Packed(id)?.WeightKg ?? Backpack.LunchboxKg;
 
         public static long ExpiryMinute(int day) => ((long)day + 1) * 1440;
         public long MinutesLeft(long now) => ExpireDay == NoExpiry ? long.MaxValue : Math.Max(0, ExpiryMinute(ExpireDay) - now);
 
-        public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay, Chilled = Chilled, ChilledDays = ChilledDays };
+        public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay,
+            Chilled = Chilled, ChilledDays = ChilledDays, FishPotRewardId = FishPotRewardId };
     }
 
     /// <summary>电饭锅里正在焖的一锅：到点才好，好了才能取。</summary>
@@ -93,6 +96,7 @@ namespace PCShopSell.Core.Home
         public const double BaseBowlHunger = 22;
         public const int CookMinutes = 40;
         public const int EatMinutes = 10;
+        internal const int CookedShelfDays = 2 + FoodBatch.ShelfLifeExtensionDays;
         public static readonly Money RicePricePerKg = Money.FromYuan(6);
 
         public double RiceKg = StartRiceKg;
@@ -141,7 +145,7 @@ namespace PCShopSell.Core.Home
             { error = $"{ing.Name}不够（要 {need * ing.WeightKg:0.##} 千克）。"; return false; }
             var fish = FishingCatalog.Get(fishId);
             if (fishId != null && fish == null) { error = "请选择一种鱼。"; return false; }
-            int fishNeeded = fish == null ? 0 : IngredientUnitsForRice(kg);
+            int fishNeeded = fish == null ? 0 : 1;
             if (fishNeeded > 0 && supplies.Sum(source => source.IngredientCount(fishId)) < fishNeeded)
             { error = $"{fish.Name}不够（需要 {fishNeeded} 条）。"; return false; }
 
@@ -166,6 +170,7 @@ namespace PCShopSell.Core.Home
                     Hunger = BaseBowlHunger + (ing?.HungerBonus ?? 0) + (fish?.MealHungerBonus ?? 0),
                     Health = (ing?.HealthBonus ?? 0) + (fish?.MealHealthBonus ?? 0),
                     Count = bowls,
+                    FishPotRewardId = FishingCatalog.RequiresCatch(fishId) ? Guid.NewGuid().ToString("N") : null,
                 },
             };
             return true;
@@ -174,12 +179,12 @@ namespace PCShopSell.Core.Home
         /// <summary>还要焖多少分钟（没在焖返回 0）。</summary>
         public long CookMinutesLeft(long nowMinute) => Cooking == null ? 0 : Math.Max(0, Cooking.ReadyMinute - nowMinute);
 
-        /// <summary>到点了就把这一锅放进“做好的饭”，返回这一批；还没好返回 null。做好的饭可保存至第三天。</summary>
+        /// <summary>到点了把这一锅放进“做好的饭”，并从出锅当天计算到期日。</summary>
         public FoodBatch FinishCook(long nowMinute)
         {
             if (Cooking == null || nowMinute < Cooking.ReadyMinute) return null;
             FoodBatch b = Cooking.Batch;
-            b.ExpireDay = (int)(Cooking.ReadyMinute / (24 * 60)) + 2;
+            b.ExpireDay = (int)(Cooking.ReadyMinute / (24 * 60)) + CookedShelfDays;
             Cooked.Add(b);
             Cooking = null;
             return b;

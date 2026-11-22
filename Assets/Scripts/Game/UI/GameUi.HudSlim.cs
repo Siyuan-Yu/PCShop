@@ -163,6 +163,8 @@ namespace PCShopSell.Game.UI
                 }
             foreach (var dock in new[] { _dock, _homeDock })
                 if (dock != null) dock.offsetMax = new Vector2(dock.offsetMax.x, -120 - shift);
+            foreach (var panel in new[] { _placePanel, _homePlacementPanel })
+                if (panel != null) panel.offsetMax = new Vector2(panel.offsetMax.x, -80 - shift);
             if (_storageWarning != null)
             {
                 var rect = (RectTransform)_storageWarning.transform;

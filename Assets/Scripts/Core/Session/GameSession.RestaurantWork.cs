@@ -237,7 +237,7 @@ namespace PCShopSell.Core.Session
                 state.Orders.Remove(order);
                 return true;
             }
-            return ClearRestaurantOrder(shop, state, order, new GameTimestamp(minute), worker.ActorId == RestaurantPlayer);
+            return ClearRestaurantOrder(shop, state, order, new GameTimestamp(minute));
         }
 
         private Money RestaurantServiceTip(OwnedShop shop, SpecialBusinessState state, DiningOrder order, GameTimestamp now)

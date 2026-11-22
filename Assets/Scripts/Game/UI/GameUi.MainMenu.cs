@@ -12,8 +12,6 @@ namespace PCShopSell.Game.UI
         private bool _canResumeMainMenu;
         private Texture2D _mainMenuCover;
         private const float MenuLeft = .054f;
-        private static readonly Color MenuButtonFill = new Color32(38, 54, 70, 255);
-        private static readonly Color MenuButtonEdge = new Color32(117, 128, 138, 255);
         public bool MainMenuOpen => _mainMenu != null && !_mainMenu.Closed;
         private static string L(string key) => MenuLocalization.Get(key);
 
@@ -113,7 +111,7 @@ namespace PCShopSell.Game.UI
                 fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
             }
 
-            var coverTitle = Ui.Label(w.Content, L("game_title"), 132, TextAnchor.MiddleLeft, new Color(1f, .94f, .80f));
+            var coverTitle = Ui.Label(w.Content, L("game_title"), 132, TextAnchor.MiddleLeft, Ui.ChromeInk);
             coverTitle.fontStyle = FontStyle.Bold;
             coverTitle.resizeTextForBestFit = true;
             coverTitle.resizeTextMinSize = 30;
@@ -122,7 +120,7 @@ namespace PCShopSell.Game.UI
             var shadow = coverTitle.gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(.02f, .03f, .07f, .88f);
             shadow.effectDistance = new Vector2(3, -4);
-            var subtitle = Ui.Label(w.Content, L("tagline"), 27, TextAnchor.MiddleLeft, new Color(1f, .86f, .69f));
+            var subtitle = Ui.Label(w.Content, L("tagline"), 27, TextAnchor.MiddleLeft, Ui.ChromeGold);
             subtitle.resizeTextForBestFit = true;
             subtitle.resizeTextMinSize = 16;
             subtitle.resizeTextMaxSize = 27;
@@ -156,9 +154,9 @@ namespace PCShopSell.Game.UI
             bool emphasized = false, bool interactable = true, bool compact = false)
         {
             int size = compact ? 23 : 31;
-            Color fill = emphasized ? Ui.ButtonHot : MenuButtonFill;
+            Color fill = emphasized ? Ui.ButtonHot : Ui.ChromeButton;
             var button = Ui.Button(parent, L(key), click, size, fill, interactable);
-            Ui.FlatBorder(button.image, emphasized ? Ui.FlatHotEdge : MenuButtonEdge);
+            Ui.FlatBorder(button.image, emphasized ? Ui.FlatHotEdge : Ui.ChromeEdge);
             var caption = button.GetComponentInChildren<Text>();
             caption.alignment = compact ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
             caption.resizeTextForBestFit = true;

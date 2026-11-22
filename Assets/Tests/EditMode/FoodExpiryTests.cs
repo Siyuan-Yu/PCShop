@@ -7,11 +7,11 @@ namespace PCShopSell.Tests
     public class FoodExpiryTests
     {
         [Test]
-        public void PurchasedFoodAndDrink_GetOneExtraDay_AndRetailUsesSameDeadline()
+        public void PurchasedFoodAndDrink_HaveExtendedShelfLife_AndRetailUsesSameDeadline()
         {
             foreach (var meal in FastFoodCatalog.All)
             {
-                Assert.AreEqual(meal.Drink ? 8 : 2, meal.ShelfDays);
+                Assert.AreEqual(meal.Drink ? 10 : 4, meal.ShelfDays);
                 Assert.AreEqual(meal.ShelfDays, Gifts.Get("fast:" + meal.Id).ShelfDays);
             }
         }
@@ -28,9 +28,9 @@ namespace PCShopSell.Tests
             const long cookAt = 20 * 1440;
             Assert.True(pantry.StartCook(0.25, id, cookAt, out var error), error);
             var meal = pantry.FinishCook(cookAt + Pantry.CookMinutes);
-            Assert.AreEqual(22, meal.ExpireDay);
-            Assert.IsEmpty(pantry.Spoil(22));
-            Assert.IsNotEmpty(pantry.Spoil(23));
+            Assert.AreEqual(24, meal.ExpireDay);
+            Assert.IsEmpty(pantry.Spoil(24));
+            Assert.IsNotEmpty(pantry.Spoil(25));
             Assert.AreEqual(0, pantry.CookedBowls);
             Assert.AreEqual(1, pantry.IngredientCount(id));
         }

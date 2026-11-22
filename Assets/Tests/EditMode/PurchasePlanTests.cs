@@ -486,22 +486,31 @@ namespace PCShopSell.Tests
             plan.IntervalDays = 3; Assert.AreEqual(2, plan.Copy().NextPurchaseDay);
         }
         [Test]
-        public void DailyRecruitment_RefreshesFourCandidatesAndKeepsRemainingCandidatesOnReload()
+        public void RecruitmentNotice_BringsFourCandidatesOnceAndPersistsAcrossReload()
         {
             using (var s = GameSessionTests.Make(50000, 9 * 60))
             {
                 s.EventsEnabled = false;
                 GameSessionTests.Teleport(s, "pc");
-                s.Clock.Restore(new GameDate(1), 8 * 60 + 59); s.AdvanceClock(2);
-                var originals = s.Candidates.Select(x => x.Id).ToArray();
-                Assert.AreEqual(4, originals.Length);
-                Assert.IsTrue(s.Hire(0));
-                using var loaded = GameSession.Load(s.City, s.CreateSave());
+                GameSessionTests.PostFirstRecruitmentNotice(s);
+                Assert.False(s.PostRecruitmentNotice(), "已贴时不能重复安排");
+                Assert.Zero(s.Candidates.Count);
+                using var posted = GameSession.Load(s.City, s.CreateSave());
+                posted.Clock.Restore(new GameDate(1), 8 * 60 + 59);
+                Assert.Zero(posted.Candidates.Count);
+                posted.AdvanceClock(1);
+                var originals = posted.Candidates.Select(x => x.Id).ToArray();
+                Assert.AreEqual(GameSession.CandidatesPerNotice, originals.Length);
+                Assert.IsTrue(posted.Hire(0));
+                using var loaded = GameSession.Load(s.City, posted.CreateSave());
                 CollectionAssert.AreEqual(originals.Skip(1), loaded.Candidates.Select(x => x.Id));
                 loaded.Clock.Restore(new GameDate(1), 17 * 60 + 59); loaded.AdvanceClock(1);
                 Assert.Zero(loaded.Candidates.Count);
                 loaded.Clock.Restore(new GameDate(2), 8 * 60 + 59); loaded.AdvanceClock(2);
-                Assert.AreEqual(4, loaded.Candidates.Count);
+                Assert.Zero(loaded.Candidates.Count, "没有贴告示时，次日不再自动来人");
+                Assert.True(loaded.PostRecruitmentNotice());
+                loaded.Clock.Restore(new GameDate(3), 8 * 60 + 59); loaded.AdvanceClock(1);
+                Assert.AreEqual(GameSession.CandidatesPerNotice, loaded.Candidates.Count);
                 Assert.False(loaded.Candidates.Any(x => originals.Contains(x.Id)));
             }
         }

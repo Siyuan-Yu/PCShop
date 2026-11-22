@@ -480,6 +480,7 @@ namespace PCShopSell.Core.Session
             FoodBatch b = Pantry.TakeBowl(Pantry.Cooked);
             if (b == null) return Fail("没有做好的饭。");
             ApplyDiet(MealNutrition(b.Id), MealMood(b.Id));
+            ApplyFishPotReward(b);
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             if (OpeningMealTutorialPending)
@@ -527,6 +528,7 @@ namespace PCShopSell.Core.Session
                 FoodBatch b = Pantry.TakeBowl(list);
                 if (b == null) break;
                 gain += b.Hunger;
+                ApplyFishPotReward(b);
                 var fast = FastFoodCatalog.Packed(b.Id);
                 if (fast == null) { nutrition += MealNutrition(b.Id); mealMood += MealMood(b.Id); bowls++; }
                 else { fastNutrition += fast.Nutrition; mood += fast.Mood; }
@@ -673,6 +675,7 @@ namespace PCShopSell.Core.Session
             FoodBatch b = Pantry.TakeBowl(Backpack.Food.Packed, foodId);
             if (b == null) return Fail("背包里没有这种即食食物。");
             ApplyDiet(MealNutrition(b.Id), MealMood(b.Id));
+            ApplyFishPotReward(b);
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             ApplyCargoLimit();
@@ -759,13 +762,14 @@ namespace PCShopSell.Core.Session
                 }).ToList();
 
         private static SaveBatch[] ToSave(IEnumerable<FoodBatch> l) =>
-            l.Select(b => new SaveBatch { id = b.Id, name = b.Name, hunger = b.Hunger, health = b.Health, count = b.Count, expireDay = b.ExpireDay, chilled = b.Chilled, chilledDays = b.ChilledDays }).ToArray();
+            l.Select(b => new SaveBatch { id = b.Id, name = b.Name, hunger = b.Hunger, health = b.Health, count = b.Count,
+                expireDay = b.ExpireDay, chilled = b.Chilled, chilledDays = b.ChilledDays, fishPotRewardId = b.FishPotRewardId }).ToArray();
 
         private static FoodBatch FromSaveBatch(SaveBatch b)
         {
             // Preserve historical deadlines as saved; loading must never extend shelf life.
             return new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health,
-                Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled, ChilledDays = b.chilledDays };
+                Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled, ChilledDays = b.chilledDays, FishPotRewardId = b.fishPotRewardId };
         }
 
         private static void FromSave(SaveBatch[] a, List<FoodBatch> into, bool rawIngredients = false, bool append = false)

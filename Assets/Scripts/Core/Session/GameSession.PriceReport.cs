@@ -21,6 +21,7 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class MarketPriceMove
     {
+        public string CategoryId;
         public string Name;
         public double Change;
     }
@@ -34,14 +35,26 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
-        public static readonly string[] PriceGroups = PartCatalog.Categories.Select(PartCatalog.CategoryName)
-            .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅周租", "商铺售价", "商铺周租" }).ToArray();
+        private static readonly (string Id, string Name)[] StandardPriceCategories = PartCatalog.Categories
+            .Select(category => (category.ToString(), PartCatalog.CategoryName(category)))
+            .Concat(new[]
+            {
+                (FarmBusiness, "米与食材"), (Gifts.TobaccoBusiness, "烟酒饮料与礼品"), ("furniture", "家具与货架"),
+                (FastFoodBusiness, "快餐"), ("vehicles", "载具"), ("smartphone", "智能手机"), (ClothingProducts.Business, "服装"),
+                ("home-price", "住宅售价"), ("home-rent", "住宅周租"), ("shop-price", "商铺售价"), ("shop-rent", "商铺周租")
+            }).ToArray();
+        public static readonly string[] PriceGroups = StandardPriceCategories.Select(category => category.Name).ToArray();
+        public static readonly IReadOnlyList<(string Id, string Name)> MarketPriceCategories = StandardPriceCategories
+            .Concat(ModelProducts.SeriesIds.Select(series => (series, ModelPriceReportName(series)))).ToArray();
         public static int PropertyPriceGroupStart => PriceGroups.Length - 4;
         public static string ModelPriceReportName(string series) => ModelProducts.SeriesName(series) + "（模型行情）";
         private readonly List<PriceDay> _priceDays = new List<PriceDay>();
         public const double MarketPriceAlertThreshold = .05;
         public int MarketPriceAlertDay { get; private set; }
         public IReadOnlyList<MarketPriceMove> MarketPriceAlerts { get; private set; } = Array.Empty<MarketPriceMove>();
+        public bool ModelPriceAlertsAvailable => _shops.Any(shop => shop.Rented && shop.RetailKind == "models" && !shop.Sim.NotFitted);
+        private const string PriceSubscribed = "price-alert:subscribed:";
+        private const string PriceMuted = "price-alert:muted:";
         private const string EconomicReportDisabled = "economy-report:disabled";
         public IReadOnlyList<PriceDay> PriceDays => _priceDays;
         // A live quote is separate from the daily historical snapshot.
@@ -66,6 +79,29 @@ namespace PCShopSell.Core.Session
             EconomicReportPending = false;
         }
         public void DismissEconomicReport() => EconomicReportPending = false;
+
+        public bool IsMarketPriceSubscribed(string id) => ModelProducts.SeriesIds.Contains(id)
+            ? !Flags.Contains(PriceMuted + id)
+            : Flags.Contains(PriceSubscribed + id);
+
+        public void SetMarketPriceSubscription(string id, bool enabled)
+        {
+            if (!MarketPriceCategories.Any(category => category.Id == id)) return;
+            bool enabledByDefault = ModelProducts.SeriesIds.Contains(id);
+            string flag = (enabledByDefault ? PriceMuted : PriceSubscribed) + id;
+            if (enabled == enabledByDefault) Flags.Remove(flag);
+            else Flags.Add(flag);
+            if (!enabled) FilterPendingMarketPriceAlerts();
+        }
+
+        private bool CanReceiveMarketPriceAlert(string id) => IsMarketPriceSubscribed(id)
+            && (!ModelProducts.SeriesIds.Contains(id) || ModelPriceAlertsAvailable);
+
+        public void FilterPendingMarketPriceAlerts()
+        {
+            if (MarketPriceAlerts.Count == 0) return;
+            MarketPriceAlerts = MarketPriceAlerts.Where(move => CanReceiveMarketPriceAlert(move.CategoryId)).ToArray();
+        }
 
         private List<double> CurrentMarketPrices(int day)
         {
@@ -112,19 +148,19 @@ namespace PCShopSell.Core.Session
         private void RecordMarketPriceMoves(int day, double[] previous, List<double> current, int previousSchema = 1)
         {
             var moves = new List<MarketPriceMove>();
-            void Compare(string name, double before, double after)
+            void Compare(string id, string name, double before, double after)
             {
-                if (before <= 0) return;
+                if (before <= 0 || !CanReceiveMarketPriceAlert(id)) return;
                 double change = after / before - 1;
                 if (Math.Abs(change) > MarketPriceAlertThreshold + 1e-9)
-                    moves.Add(new MarketPriceMove { Name = name, Change = change });
+                    moves.Add(new MarketPriceMove { CategoryId = id, Name = name, Change = change });
             }
-            for (int i = 0; i < PriceGroups.Length; i++)
-                if (i != 7 || previousSchema >= 1) Compare(PriceGroups[i], previous[i], current[i]);
+            for (int i = 0; i < StandardPriceCategories.Length; i++)
+                if (i != 7 || previousSchema >= 1) Compare(StandardPriceCategories[i].Id, StandardPriceCategories[i].Name, previous[i], current[i]);
 
             // Wholesale and retail prices share the model series multiplier.
             foreach (string series in ModelProducts.SeriesIds)
-                Compare(ModelPriceReportName(series),
+                Compare(series, ModelPriceReportName(series),
                     IndustryCycles.ModelFactor(series, day - 1, Market.CommoditySeed),
                     IndustryCycles.ModelFactor(series, day, Market.CommoditySeed));
 
@@ -154,11 +190,12 @@ namespace PCShopSell.Core.Session
             MarketPriceAlertDay = data.marketPriceAlertDay;
             MarketPriceAlerts = (data.marketPriceAlerts ?? Array.Empty<MarketPriceMove>())
                 .Where(move => move != null)
-                .Select(move => new MarketPriceMove
+                .Select(move =>
                 {
-                    Name = move.Name?.Replace("（模型批发）", "（模型行情）"),
-                    Change = move.Change
-                }).ToArray();
+                    string name = move.Name?.Replace("（模型批发）", "（模型行情）");
+                    var category = MarketPriceCategories.FirstOrDefault(item => item.Id == move.CategoryId || item.Name == name);
+                    return new MarketPriceMove { CategoryId = category.Id, Name = category.Name, Change = move.Change };
+                }).Where(move => move.CategoryId != null).ToArray();
             // Keep historical quotes, but compare tomorrow against today's quotes under the new rules.
             if (string.IsNullOrEmpty(data.commodityPriceSeed) && _priceDays.LastOrDefault() is PriceDay latest
                 && latest.Day == Clock.Today.TotalDays)

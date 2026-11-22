@@ -894,8 +894,7 @@ namespace PCShopSell.Game.UI
                 ctx.Continue(intro, () =>
                 {
                     session.TakeCommunityActivityClue(activity.Id);
-                    ctx.Show(GameSession.CommunityLeadHint(lead),
-                        new TalkOpt { Label = "记下线索", Hot = true, Act = ctx.W.Close });
+                    ctx.Finish(GameSession.CommunityLeadHint(lead), "记下线索");
                 });
             }
 

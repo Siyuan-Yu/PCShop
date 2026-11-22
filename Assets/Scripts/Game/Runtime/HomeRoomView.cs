@@ -60,6 +60,7 @@ namespace PCShopSell.Game.Runtime
             public string Label;
             public Rect Area;
             public float Height;
+            public float SleepSurface;
             public PlacedFurniture Furniture;
         }
 
@@ -81,6 +82,15 @@ namespace PCShopSell.Game.Runtime
         private Vector3 _standPos, _seatPos;
         private Quaternion _standRotation, _seatRotation;
         private PlacedFurniture _nearbySeat;
+        private WakeUp _wakeUp;
+
+        private sealed class WakeUp
+        {
+            public Vector3 Lying, Seated, Standing, BraceHand;
+            public Quaternion BedFacing, ExitFacing;
+            public float Surface;
+            public int BraceArm;
+        }
 
         /// <summary>老板脚边最近的、够得着的互动点 ID；没有则为空。</summary>
         public string NearbyId { get; private set; }
@@ -214,22 +224,26 @@ namespace PCShopSell.Game.Runtime
             if (!_furniture.Sync(layout, Room) && !force) return;
             CancelBedWalk();
             StandUp();
+            FinishWakeUp();
             _spots.Clear();
             bool hasBed = false;
-            foreach (PlacedFurniture p in layout)
+            foreach (var entry in _furniture.Entries)
             {
-                FurnitureDef def = FurnitureCatalog.Get(p.Id);
-                string id = def == null ? null : RoleId(def.Role);
+                var p = entry.Placed;
+                var def = entry.Def;
+                string id = RoleId(def.Role);
                 if (id == null) continue;
                 if (secondary && id != Bed && id != Storage && id != Fridge) continue;
                 if (def.Role == FurnitureRole.Bed) hasBed = true;
                 RectD f = RoomPlanner.Footprint(Room, def, p);
                 string label = def.Role==FurnitureRole.Climate?"风扇/空调：模式与设温":def.Role == FurnitureRole.Fridge ? "冰箱：存取食物" : def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
+                Transform mattress = id == Bed ? entry.Go.transform.Find("Mattress") : null;
                 _spots.Add(new Spot
                 {
                     Id = id,
                     Label = label,
-                    Furniture = def.Role == FurnitureRole.Seat ? p : null,
+                    Furniture = id == Seat || id == Bed ? p : null,
+                    SleepSurface = mattress != null ? mattress.localPosition.y + mattress.localScale.y * .5f : 0f,
                     Area = new Rect((float)f.MinX, (float)f.MinZ, (float)(f.MaxX - f.MinX), (float)(f.MaxZ - f.MinZ)),
                     Height = def.Role == FurnitureRole.Bed ? 1.1f : def.Role == FurnitureRole.Wardrobe ? 2.2f : def.Role == FurnitureRole.Seat || def.Role == FurnitureRole.Broken || def.Role == FurnitureRole.Storage ? 1.0f : 1.5f,
                 });
@@ -242,6 +256,94 @@ namespace PCShopSell.Game.Runtime
         // ---------- 走动 ----------
 
         public bool IsSitting => _sitting;
+
+        internal bool TryBeginWakeUp()
+        {
+            if (_wakeUp != null || !_root.gameObject.activeInHierarchy) return false;
+            CancelBedWalk();
+            StandUp();
+            Vector3 current = _owner.transform.localPosition;
+            var at = new Vector2(current.x, current.z);
+            Spot bed = default;
+            float nearest = float.PositiveInfinity;
+            foreach (var spot in _spots)
+            {
+                if (spot.Id != Bed) continue;
+                float distance = DistToRect(at, spot.Area);
+                if (distance >= nearest) continue;
+                nearest = distance;
+                bed = spot;
+            }
+            if (bed.Id == null) return false;
+            if (bed.Furniture == null)
+            {
+                foreach (Rect obstacle in _furniture.Blockers)
+                    if (obstacle.Overlaps(bed.Area)) return false;
+            }
+
+            var def = FurnitureCatalog.Get(bed.Furniture?.Id);
+            var rotation = Quaternion.Euler(0, 90f * (bed.Furniture?.Rot ?? 0), 0);
+            Vector3 foot = rotation * Vector3.right;
+            Vector3 side = rotation * Vector3.forward;
+            Vector3 center = new Vector3(bed.Area.center.x, 0, bed.Area.center.y);
+            float halfWidth = def != null ? (float)def.Width * .5f : bed.Area.width * .5f;
+            float halfDepth = def != null ? (float)def.Depth * .5f : bed.Area.height * .5f;
+            // The bed models place the pillow .4 m from the headboard, along local -X.
+            Vector3 lying = bed.Furniture == null ? center : center + foot * (1.04f - halfWidth);
+            var firstSide = Vector3.Dot(current - center, side) < 0 ? -side : side;
+            foreach (Vector3 exit in new[] { firstSide, -firstSide, foot })
+            {
+                bool atFoot = exit == foot;
+                Vector3 basePoint = atFoot ? center : lying;
+                float extent = atFoot ? halfWidth : halfDepth;
+                Vector3 floor = basePoint + exit * (extent + .29f);
+                if (Blocked(floor) || !CanStand(floor, floor)) continue;
+
+                Vector3 sleepPosition = def?.Id == "bed_good" ? lying + (atFoot ? firstSide : exit) * (halfDepth * .4f) : lying;
+                Vector3 bedRight = Vector3.Cross(Vector3.up, foot);
+                int braceArm = Vector3.Dot(atFoot ? firstSide : exit, bedRight) > 0 ? 0 : 1;
+                _wakeUp = new WakeUp
+                {
+                    Lying = sleepPosition,
+                    Seated = basePoint + exit * (extent - .09f),
+                    Standing = floor,
+                    BraceHand = sleepPosition - foot * .18f + bedRight * (braceArm == 0 ? -.19f : .19f)
+                        + Vector3.up * (bed.SleepSurface + .035f),
+                    BraceArm = braceArm,
+                    Surface = bed.SleepSurface,
+                    BedFacing = Quaternion.LookRotation(foot),
+                    ExitFacing = Quaternion.LookRotation(exit)
+                };
+                _owner.GetComponent<FigureMotion>().LocomotionEnabled = false;
+                SetWakeUpProgress(0);
+                return true;
+            }
+            return false;
+        }
+
+        internal void SetWakeUpProgress(float progress)
+        {
+            if (_wakeUp == null) return;
+            var wake = _wakeUp;
+            float turn = FigureMotion.WakeEase(progress, .29f, .65f);
+            float slideToEdge = FigureMotion.WakeEase(progress, .27f, .67f);
+            float shiftWeight = FigureMotion.WakeEase(progress, .68f, .97f);
+            Transform actor = _owner.transform;
+            actor.localPosition = Vector3.Lerp(Vector3.Lerp(wake.Lying, wake.Seated, slideToEdge), wake.Standing, shiftWeight);
+            actor.localRotation = Quaternion.Slerp(wake.BedFacing, wake.ExitFacing, turn);
+            var motion = _owner.GetComponent<FigureMotion>();
+            if (progress >= 1f) motion.ClearBedWakePose();
+            else motion.SetBedWakePose(progress, wake.Surface, actor.parent.TransformPoint(wake.BraceHand),
+                actor.parent.TransformPoint(wake.Standing), wake.BraceArm);
+        }
+
+        internal void FinishWakeUp()
+        {
+            if (_wakeUp == null) return;
+            SetWakeUpProgress(1);
+            _wakeUp = null;
+            _owner.GetComponent<FigureMotion>().LocomotionEnabled = true;
+        }
 
         /// <summary>坐下或起身，起身后回到原来的站位。</summary>
         public void ToggleSit()
@@ -310,6 +412,7 @@ namespace PCShopSell.Game.Runtime
         {
             CancelBedWalk();
             StandUp();
+            FinishWakeUp();
             _owner.GetComponent<FigureMotion>().LocomotionEnabled = true;
             _owner.GetComponent<FigureMotion>().ResetMotion();
             _owner.transform.localScale = Vector3.one;
@@ -319,6 +422,7 @@ namespace PCShopSell.Game.Runtime
 
         public void SetActive(bool on)
         {
+            if (!on && _wasOn) FinishWakeUp();
             _root.gameObject.SetActive(on);
             if (on && !_wasOn) ResetOwner();
             _wasOn = on;
@@ -328,6 +432,7 @@ namespace PCShopSell.Game.Runtime
         private const float OwnerWalkSpeed = 2.6f;
         public void MoveOwner(Vector3 worldDir, float realDt)
         {
+            if (_wakeUp != null) return;
             Vector3 d = new Vector3(worldDir.x, 0, worldDir.z);
             if (d.sqrMagnitude < 1e-4f) return;
             StandUp();
@@ -529,7 +634,7 @@ namespace PCShopSell.Game.Runtime
                     bestDist = dd;
                     best = sp.Id;
                     label = sp.Label;
-                    _nearbySeat = sp.Furniture;
+                _nearbySeat = sp.Id == Seat ? sp.Furniture : null;
                     world = Origin + new Vector3(sp.Area.center.x, sp.Height, sp.Area.center.y);
                 }
             }
@@ -620,6 +725,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Destroy()
         {
+            FinishWakeUp();
             _root.gameObject.SetActive(false);
             Kill.It(_windowMat);
             Kill.It(_root.gameObject);

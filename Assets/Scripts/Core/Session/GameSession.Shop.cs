@@ -50,7 +50,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public const int CandidateMinute = 9 * 60;
-        public const int DailyCandidateCount = 4;
+        public const int CandidatesPerNotice = 4;
         public const int DutyStartMinute = 9 * 60;
         public const int DutyEndMinute = 21 * 60;
 
@@ -83,11 +83,24 @@ namespace PCShopSell.Core.Session
         public bool EverHired { get; private set; }
         public IReadOnlyList<Employee> Candidates => _candidates;
 
-        private int _lastCandidateDay = -1;
+        private long _recruitmentArrivalAt;
 
         public const int CandidateLeaveMinute = 18 * 60;
-        public string RecruitmentHoursText => $"每天 {Hm(CandidateMinute)} 来 {DailyCandidateCount} 位应聘者，{Hm(CandidateLeaveMinute)} 离开。";
-        public string NextCandidateArrivalText => $"{(Clock.MinuteOfDay < CandidateMinute && _lastCandidateDay < Clock.Today.TotalDays ? "今天" : "明天")} {Hm(CandidateMinute)}";
+        public string RecruitmentHoursText => $"贴告示后，{CandidatesPerNotice} 位应聘者次日 {Hm(CandidateMinute)} 到店，{Hm(CandidateLeaveMinute)} 离开。";
+        public bool RecruitmentNoticePosted => _recruitmentArrivalAt > 0;
+        public string NextCandidateArrivalText => RecruitmentNoticePosted
+            ? $"{DescribeDay(new GameTimestamp(_recruitmentArrivalAt).Date.TotalDays)} {Hm(CandidateMinute)}" : null;
+        public bool CanPostRecruitmentNotice => InPlayerShop && !IsGameOver && !RecruitmentNoticePosted
+            && (!FirstRecruitmentNotScheduled || OpeningStaffStep == OpeningStaffLesson.PostRecruitment);
+
+        public bool PostRecruitmentNotice()
+        {
+            if (!CanPostRecruitmentNotice) return false;
+            _recruitmentArrivalAt = GameTimestamp.From(Clock.Today.AddDays(1), CandidateMinute).TotalMinutes;
+            if (FirstRecruitmentNotScheduled) _openingStaffWaitUntil = _recruitmentArrivalAt;
+            return true;
+        }
+
         public bool CandidateAvailable(Employee person) => person != null && _candidates.Contains(person)
             && person.CandidateLeavesAt > Clock.Now.TotalMinutes;
         public string CandidateWaitText(Employee person)
@@ -95,12 +108,12 @@ namespace PCShopSell.Core.Session
             long left = Math.Max(0, person.CandidateLeavesAt - Clock.Now.TotalMinutes);
             return $"{DescribeDay((int)(person.CandidateLeavesAt / 1440))} {Hm((int)(person.CandidateLeavesAt % 1440))} 离开 · 还等 {left / 60} 小时 {left % 60} 分钟";
         }
-        private void ExpireCandidates()
+        private void ExpireCandidates(bool clearAll = false)
         {
             for (int i = _candidates.Count - 1; i >= 0; i--)
             {
                 var person = _candidates[i];
-                if (person.CandidateLeavesAt > Clock.Now.TotalMinutes) continue;
+                if (!clearAll && person.CandidateLeavesAt > Clock.Now.TotalMinutes) continue;
                 _candidates.RemoveAt(i);
                 if (!_cityEmployeeAliases.TryGetValue(person.Id, out string id) || Flags.Contains(MetFlag(id))) continue;
                 if (CityLifeCatalog.Person(id) == null)
@@ -120,7 +133,6 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return false;
             int minutes = PlayerShop.Checkout(customerId);
             if (minutes < 0) return false;
-            RecordOpeningStaffPracticeSale(CurrentShop);
             AdvanceClock(minutes + (Player.Tired ? 1 : 0));
             return true;
         }
@@ -274,18 +286,18 @@ namespace PCShopSell.Core.Session
             return (false, "无在岗收银员，装机员代收银，离开后继续营业");
         }
 
-        private void RefreshDailyCandidates()
+        private void RefreshRecruitmentCandidates()
         {
-            int day = Clock.Today.TotalDays;
-            if (day <= _lastCandidateDay || Clock.MinuteOfDay < CandidateMinute || Clock.MinuteOfDay >= CandidateLeaveMinute
-                || IsGameOver || MyShopCount == 0) return;
-            _lastCandidateDay = day;
-            while (_candidates.Count < DailyCandidateCount)
+            if (!RecruitmentNoticePosted || Clock.Now.TotalMinutes < _recruitmentArrivalAt) return;
+            long leaveAt = _recruitmentArrivalAt + CandidateLeaveMinute - CandidateMinute;
+            _recruitmentArrivalAt = 0;
+            if (Clock.Now.TotalMinutes >= leaveAt || IsGameOver || MyShopCount == 0) return;
+            for (int i = 0; i < CandidatesPerNotice; i++)
             {
                 bool fast = Random.Chance(0.5);
                 var e = new Employee
                 {
-                    CandidateLeavesAt = (long)day * GameTimestamp.MinutesPerDay + CandidateLeaveMinute,
+                    CandidateLeavesAt = leaveAt,
                     Name = Surnames[Random.Next(0, Surnames.Length)] + GivenNames[Random.Next(0, GivenNames.Length)],
                     CheckoutMinutes = fast ? 2 : 4,
                     Charm = Random.Next(20, 91),

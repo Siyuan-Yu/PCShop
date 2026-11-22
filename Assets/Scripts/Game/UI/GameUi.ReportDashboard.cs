@@ -29,7 +29,7 @@ namespace PCShopSell.Game.UI
             => Ui.Size(Ui.Label(parent, text, size, color: color), -1, height);
         private static RectTransform ReportPanel(Transform parent, string name, float height, float flex = 1)
         {
-            var panel = Ui.Size(Ui.Panel(parent, name, Ui.PanelBg2), 0, height, flex).rectTransform;
+            var panel = Ui.Size(Ui.FlatPanel(parent, name, Ui.FlatBand), 0, height, flex).rectTransform;
             Ui.VList(panel, 5, 12);
             return panel;
         }
@@ -61,17 +61,19 @@ namespace PCShopSell.Game.UI
             var body = Ui.Row(parent, 460, 10);
             var left = ReportPanel(body, "CashOverview", 460, 1.65f);
             var right = ReportPanel(body, "CashDetails", 460);
-            ReportText(left, "每日收支  ·  点击柱状图查看当天", 18, Ui.Accent, 28);
+            ReportText(left, "每日收支", 18, Ui.Accent, 28);
             ReportText(left, "<color=#" + ColorUtility.ToHtmlStringRGB(Ui.Good) + ">● 收入</color>                         <color=#"
                 + ColorUtility.ToHtmlStringRGB(Ui.Warn) + ">● 支出</color>   / 元", 14, Ui.Dim, 20);
             var chart = Ui.Size(Ui.Rect(left, "EconomicCashTrend"), -1, 160).gameObject.AddComponent<AssetTrendGraphic>();
+            chart.Tip("点击柱状图查看当天");
             chart.DaySelected = selectDay;
             chart.Initialize(cash.IncomeDays, cash.ExpenseDays, from.TotalDays, false, true);
             var heading = Ui.Row(left, 32);
             Ui.Size(Ui.Label(heading, "门店收支", 18, color: Ui.Accent), 0, 32, 1);
             Ui.Size(Ui.Button(heading, "总账分类明细", () => OpenEconomicCashSources(cash, from, to), 15), 132, 30);
             var headers = Ui.Row(left, 30, 4);
-            Ui.Size(Ui.Label(headers, "门店 · 点击查看明细", 15, color: Ui.Dim), 0, 30, 1);
+            Ui.Trim(headers, "ReportHeadingRule", Ui.FlatWellEdge, 0);
+            Ui.Size(Ui.Label(headers, "门店", 15, color: Ui.Dim), 0, 30, 1);
             foreach (var name in new[] { "收入", "总支出", "现金差额" }) ReportCell(headers, name, 108, Ui.Dim);
             var reports = S.AssetStoreReports(from, to);
             Transform list = left;
@@ -79,6 +81,7 @@ namespace PCShopSell.Game.UI
             foreach (var report in reports.OrderByDescending(r => r.IncomeCents + r.ExpenseCents))
             {
                 var row = Ui.Row(list, 32, 4);
+                Ui.Trim(row, "ReportRowRule", Ui.FlatCardEdge, 0);
                 Ui.Size(Ui.Button(row, report.Name, () => OpenAssetSources(new[] { report }, from, to), 15), 0, 32, 1);
                 ReportCell(row, ReportMoney(report.IncomeCents), 108, Ui.Good);
                 ReportCell(row, ReportMoney(report.ExpenseCents), 108, Ui.Warn);

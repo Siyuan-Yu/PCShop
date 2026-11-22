@@ -10,18 +10,92 @@ namespace PCShopSell.Game.UI
     internal sealed class OpeningGuideInputBlock : Image
     {
         public Button PassThrough { get; set; }
+        public IReadOnlyList<Button> PassThroughButtons { get; set; }
         public RectTransform PassThroughArea { get; set; }
         public RectTransform PassThroughViewport { get; set; }
 
         public override bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
         {
             if (PassThrough == null) return base.IsRaycastLocationValid(screenPoint, eventCamera);
-            var rect = PassThroughArea != null ? PassThroughArea : PassThrough.image.rectTransform;
             var canvas = PassThrough.image.canvas;
             var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            if (PassThroughButtons != null)
+            {
+                foreach (var button in PassThroughButtons)
+                {
+                    if (button == null || !button.IsInteractable() || !button.gameObject.activeInHierarchy) continue;
+                    var buttonRect = (RectTransform)button.transform;
+                    if (RectTransformUtility.RectangleContainsScreenPoint(buttonRect, screenPoint, camera)
+                        && (PassThroughViewport == null || !buttonRect.IsChildOf(PassThroughViewport)
+                            || RectTransformUtility.RectangleContainsScreenPoint(PassThroughViewport, screenPoint, camera)))
+                        return false;
+                }
+                return true;
+            }
+            var rect = PassThroughArea != null ? PassThroughArea : PassThrough.image.rectTransform;
             return !RectTransformUtility.RectangleContainsScreenPoint(rect, screenPoint, camera)
                 || (PassThroughViewport != null
                     && !RectTransformUtility.RectangleContainsScreenPoint(PassThroughViewport, screenPoint, camera));
+        }
+    }
+
+    internal sealed class RecruitmentGuideSpotlight : MaskableGraphic
+    {
+        internal readonly List<Rect> Holes = new List<Rect>();
+        private readonly List<float> _cuts = new List<float>();
+        private Color _edgeColor;
+
+        internal void Refresh(Color edgeColor)
+        {
+            _edgeColor = edgeColor;
+            Holes.Sort((a, b) => a.xMin.CompareTo(b.xMin));
+            SetVerticesDirty();
+        }
+
+        protected override void OnPopulateMesh(VertexHelper mesh)
+        {
+            mesh.Clear();
+            var surface = rectTransform.rect;
+            _cuts.Clear();
+            _cuts.Add(0);
+            _cuts.Add(surface.height);
+            foreach (var hole in Holes)
+            {
+                _cuts.Add(hole.yMin);
+                _cuts.Add(hole.yMax);
+            }
+            _cuts.Sort();
+            for (int i = 1; i < _cuts.Count; i++)
+            {
+                float bottom = _cuts[i - 1], top = _cuts[i], x = 0;
+                foreach (var hole in Holes)
+                {
+                    if (hole.yMin >= top || hole.yMax <= bottom) continue;
+                    Quad(x, bottom, hole.xMin, top, color);
+                    x = Mathf.Max(x, hole.xMax);
+                }
+                Quad(x, bottom, surface.width, top, color);
+            }
+            const float edge = 3;
+            foreach (var hole in Holes)
+            {
+                Quad(hole.xMin, hole.yMax, hole.xMax, hole.yMax + edge, _edgeColor);
+                Quad(hole.xMin, hole.yMin - edge, hole.xMax, hole.yMin, _edgeColor);
+                Quad(hole.xMin - edge, hole.yMin - edge, hole.xMin, hole.yMax + edge, _edgeColor);
+                Quad(hole.xMax, hole.yMin - edge, hole.xMax + edge, hole.yMax + edge, _edgeColor);
+            }
+
+            void Quad(float left, float bottom, float right, float top, Color tint)
+            {
+                if (right <= left || top <= bottom) return;
+                int start = mesh.currentVertCount;
+                mesh.AddVert(new Vector3(left + surface.xMin, bottom + surface.yMin), tint, Vector2.zero);
+                mesh.AddVert(new Vector3(left + surface.xMin, top + surface.yMin), tint, Vector2.zero);
+                mesh.AddVert(new Vector3(right + surface.xMin, top + surface.yMin), tint, Vector2.zero);
+                mesh.AddVert(new Vector3(right + surface.xMin, bottom + surface.yMin), tint, Vector2.zero);
+                mesh.AddTriangle(start, start + 1, start + 2);
+                mesh.AddTriangle(start, start + 2, start + 3);
+            }
         }
     }
 
@@ -107,11 +181,10 @@ namespace PCShopSell.Game.UI
                 _questAction?.Invoke();
             else RemindOpeningMeal();
         }
-        private RectTransform _guideRoot, _guideHole, _guideArrow, _guideCard;
+        private RectTransform _guideRoot, _guideHole, _guideArrow, _guideCard, _openingHungerIllustration;
         private readonly Image[] _guideDim = new Image[4];
         private readonly Image[] _guideFrame = new Image[4];
         private Text _guideTitle, _guideBody, _guideFoot;
-        private readonly Image[] _guideDots = new Image[3];
 
         private static readonly Color GuideDimColor = new Color(.10f, .15f, .11f, .78f);
         private static readonly Vector2 GuideHoleSize = new Vector2(260, 230);
@@ -165,21 +238,21 @@ namespace PCShopSell.Game.UI
             _guideCard.anchoredPosition = new Vector2(0, 150);
             Ui.FlatBorder(card, Ui.FlatHotEdge, 2);
 
-            for (int i = 0; i < 3; i++)
-            {
-                _guideDots[i] = Ui.Panel(_guideCard, "GuideDot" + i, Ui.FlatWellEdge);
-                _guideDots[i].raycastTarget = false;
-                _guideDots[i].rectTransform.Anchor(0, 1, 0, 1, 22 + i * 26, -34, -(22 + i * 26 + 18), 16);
-            }
             _guideTitle = Ui.Label(_guideCard, "", 24, TextAnchor.MiddleLeft, Ui.Accent);
             _guideTitle.fontStyle = FontStyle.Bold; _guideTitle.raycastTarget = false;
-            _guideTitle.rectTransform.Anchor(0, 1, 1, 1, 100, -44, 20, 12);
+            _guideTitle.rectTransform.Anchor(0, 1, 1, 1, 22, -48, 20, 12);
             _guideBody = Ui.Label(_guideCard, "", 20, TextAnchor.UpperLeft);
             _guideBody.raycastTarget = false;
             _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, 44, 22, 56);
             _guideFoot = Ui.Label(_guideCard, "", 17, TextAnchor.MiddleLeft, Ui.Warn);
             _guideFoot.raycastTarget = false;
             _guideFoot.rectTransform.Anchor(0, 0, 1, 0, 22, 10, 22, -38);
+            if (Resources.Load<Texture2D>("EventCg/opening_hunger") is Texture2D hungerArt)
+            {
+                _openingHungerIllustration = Ui.Rect(_guideCard, "OpeningHungerIllustration");
+                EventCgImage(_openingHungerIllustration, "RiceCooker", hungerArt);
+                _openingHungerIllustration.gameObject.SetActive(false);
+            }
             _openingMealIntroNext = Ui.Button(_guideCard, "先找点吃的", () =>
             {
                 S.Flags.Add(OpeningMealIntroPending ? OpeningMealIntroSeen : OpeningHungerSeen);
@@ -209,12 +282,13 @@ namespace PCShopSell.Game.UI
         private (int id, RestaurantJob job)? _openingCounterPendingAction, _openingCounterRejectedAction;
         private Window _openingStaffLessonWindow;
         private Button _openingStaffDockControl, _openingStaffLessonDone, _openingStaffFirstApplicant;
-        private Button _openingStaffPurchaseButton;
+        private Button _openingStaffRecruitmentNotice, _openingStaffPurchaseButton;
         private RectTransform _openingStaffCandidates;
         private RectTransform _firstUseGuideRoot, _firstUseGuideCard;
         private Text _firstUseGuideText, _firstUseGuideArrow;
         private readonly Image[] _firstUseGuideFrame = new Image[4];
         private readonly Image[] _firstUseGuideDim = new Image[4];
+        private RecruitmentGuideSpotlight _recruitmentSpotlight;
         private OpeningGuideInputBlock _firstUseInputBlock;
         private Button _requiredGuideTarget;
         private Navigation _requiredGuideNavigation;
@@ -238,8 +312,13 @@ namespace PCShopSell.Game.UI
             RectTransform targetArea = null;
             string text = null;
             Window top = AnyModalOpen ? _windows[_windows.Count - 1] : null;
+            bool recruiting = top != null && top == _openingRecruitWindow;
             bool showLesson = false;
             bool counterLesson = false;
+            bool mallTravelLesson = false;
+            bool petIntakeLesson = canShow && top == null && _ctrl.InInterior && !_ctrl.CheckoutPending
+                && !_ctrl.OpeningPetIntakeInstructionFollowed && S.OpeningPetIntakeLessonAvailable
+                && S.OpeningStaffStep == OpeningStaffLesson.None;
             if (meal)
             {
                 if (top != null && top == _mealDeliveryTutorialWindow) target = _mealDeliveryGuideButton;
@@ -279,6 +358,20 @@ namespace PCShopSell.Game.UI
                     }
                 }
             }
+            else if (canShow && top == null && !PropertyContractOpen && _propertyContractPopups.Count == 0
+                && _scheduledPropertyPopups.Count == 0 && S.OpeningMallTravelPending)
+            {
+                bool focusChanged = !ReferenceEquals(_questActionButton, _requiredGuideTarget);
+                if (focusChanged || !_questPanel.gameObject.activeSelf || _questSeen != "mall")
+                    UpdateQuestTracker();
+                if (_questPanel.gameObject.activeSelf && _questSeen == "mall" && _questActionText.text == OpeningMallTravelLabel)
+                {
+                    if (focusChanged) Canvas.ForceUpdateCanvases();
+                    target = _questActionButton;
+                    text = "点「前往家具城」\n去买齐开店设施";
+                    mallTravelLesson = true;
+                }
+            }
             else if (canShow && S.OpeningRenovationStep is var renovation && renovation != OpeningRenovationLesson.None)
             {
                 (target, text) = OpeningRenovationGuideTarget(renovation, top);
@@ -287,9 +380,16 @@ namespace PCShopSell.Game.UI
             {
                 (target, text) = OpeningShelfGuideTarget(top);
             }
-            else if (canShow && top == null && _ctrl.InInterior && S.OpeningCounterLessonAvailable)
+            else if (canShow && _ctrl.InInterior && (top == null || top == _openingUsedDeskWindow)
+                && S.OpeningUsedDeskLessonItem() is UsedItem usedItem && !_ctrl.CheckoutPending)
             {
-                (target, text) = OpeningCounterGuideTarget();
+                (target, text) = OpeningUsedDeskGuideTarget(usedItem, top);
+                showLesson = top != null;
+                counterLesson = true;
+            }
+            else if (canShow && top == null && _ctrl.InInterior && (petIntakeLesson || S.OpeningCounterLessonAvailable))
+            {
+                (target, text) = OpeningCounterGuideTarget(petIntakeLesson);
                 counterLesson = true;
             }
             else if (canShow && S.OpeningStaffStep is OpeningStaffLesson staffing && staffing != OpeningStaffLesson.None)
@@ -312,6 +412,11 @@ namespace PCShopSell.Game.UI
                             targetArea = _openingStaffCandidates;
                             text = "选一位应聘者\n点「聘用并安排工作」";
                         }
+                        else if (staffing == OpeningStaffLesson.PostRecruitment)
+                        {
+                            target = _openingStaffRecruitmentNotice;
+                            text = "在员工页点「贴招聘告示」\n首批应聘者明天 09:00 到店";
+                        }
                         else
                         {
                             bool purchase = staffing == OpeningStaffLesson.Purchase;
@@ -328,13 +433,23 @@ namespace PCShopSell.Game.UI
                 {
                     target = _openingStaffLessonDone;
                     showLesson = true;
-                    text = "看完本店分工后，点高亮按钮";
+                    text = "看完本店分工后，点「已了解分工」";
+                }
+                else if (recruiting && staffing == OpeningStaffLesson.Hire)
+                {
+                    target = _openingRecruitTarget;
+                    targetArea = _openingRecruitRoleArea;
+                    showLesson = true;
+                    text = _openingRecruitInstruction;
+                    if (!ReferenceEquals(target, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
                 }
             }
             bool show = canShow && target != null && target.IsInteractable() && target.gameObject.activeInHierarchy
                 && (top == null || target.transform.IsChildOf(top.Root));
+            S.FocusOpeningMallTutorial(show && mallTravelLesson);
             S.FocusOpeningCounterTutorial(show && counterLesson);
-            SetRequiredGuideTarget(show ? target : null, show ? targetArea : null);
+            var allowedButtons = recruiting ? _openingRecruitChoices : null;
+            SetRequiredGuideTarget(show ? target : null, show ? targetArea : null, allowedButtons);
             if (_firstUseGuideRoot != null) _firstUseGuideRoot.gameObject.SetActive(show);
             if (!show || _tutorialCanvas == null) return;
             if (_firstUseGuideRoot == null)
@@ -357,6 +472,10 @@ namespace PCShopSell.Game.UI
                     frame.rectTransform.anchorMin = frame.rectTransform.anchorMax = Vector2.zero;
                     frame.rectTransform.pivot = Vector2.zero;
                 }
+                _recruitmentSpotlight = Ui.Rect(_firstUseGuideRoot, "RecruitmentSpotlight").Fill().gameObject
+                    .AddComponent<RecruitmentGuideSpotlight>();
+                _recruitmentSpotlight.raycastTarget = false;
+                _recruitmentSpotlight.color = GuideDimColor;
                 var card = Ui.FlatPanel(_firstUseGuideRoot, "FirstUseHint", Ui.PanelBg, Ui.FlatHotEdge);
                 card.raycastTarget = false;
                 _firstUseGuideCard = card.rectTransform;
@@ -373,6 +492,7 @@ namespace PCShopSell.Game.UI
             }
             _firstUseGuideRoot.SetAsLastSibling();
             _firstUseInputBlock.PassThrough = target;
+            _firstUseInputBlock.PassThroughButtons = allowedButtons;
             var groupScroll = targetArea != null ? targetArea.GetComponentInParent<ScrollRect>() : null;
             var viewport = groupScroll != null ? groupScroll.viewport : null;
             _firstUseInputBlock.PassThroughArea = targetArea;
@@ -392,14 +512,35 @@ namespace PCShopSell.Game.UI
             }
             var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
             Rect hole = GuideTargetBounds(targetArea != null ? targetArea : (RectTransform)target.transform, size, 5);
+            Rect viewportBounds = default;
             if (viewport != null)
             {
-                var bounds = GuideTargetBounds(viewport, size, 0);
-                hole = Rect.MinMaxRect(Mathf.Max(hole.xMin, bounds.xMin), Mathf.Max(hole.yMin, bounds.yMin),
-                    Mathf.Min(hole.xMax, bounds.xMax), Mathf.Min(hole.yMax, bounds.yMax));
+                viewportBounds = GuideTargetBounds(viewport, size, 0);
+                hole = IntersectGuideBounds(hole, viewportBounds);
+            }
+            Color color = Ui.FlatHotEdge;
+            color.a = .6f + .4f * (.5f + .5f * Mathf.Sin(Time.unscaledTime * 4));
+            _recruitmentSpotlight.gameObject.SetActive(recruiting);
+            foreach (var dim in _firstUseGuideDim) dim.gameObject.SetActive(!recruiting);
+            foreach (var frame in _firstUseGuideFrame) frame.gameObject.SetActive(!recruiting);
+            if (recruiting)
+            {
+                var holes = _recruitmentSpotlight.Holes;
+                holes.Clear();
+                foreach (var choice in allowedButtons)
+                {
+                    var bounds = GuideTargetBounds((RectTransform)choice.transform, size, .75f);
+                    if (viewport != null && choice.transform.IsChildOf(viewport)) bounds = IntersectGuideBounds(bounds, viewportBounds);
+                    if (bounds.width > 0 && bounds.height > 0) holes.Add(bounds);
+                }
+                _recruitmentSpotlight.Refresh(color);
             }
             // Keep the lesson text legible while its confirmation button is highlighted.
-            Rect spotlight = showLesson ? GuideTargetBounds((RectTransform)target.transform.parent, size, 6) : hole;
+            Rect spotlight = showLesson
+                ? GuideTargetBounds(recruiting ? (RectTransform)top.Fitter.transform
+                    : top != null && top == _openingUsedDeskWindow ? (RectTransform)top.Content.parent
+                    : (RectTransform)target.transform.parent, size, 6)
+                : hole;
             GuideRect(_firstUseGuideDim[0].rectTransform, 0, spotlight.yMax, size.x, size.y - spotlight.yMax);
             GuideRect(_firstUseGuideDim[1].rectTransform, 0, 0, size.x, spotlight.yMin);
             GuideRect(_firstUseGuideDim[2].rectTransform, 0, spotlight.yMin, spotlight.xMin, spotlight.height);
@@ -409,19 +550,26 @@ namespace PCShopSell.Game.UI
             GuideRect(_firstUseGuideFrame[1].rectTransform, hole.xMin, hole.yMin - edge, hole.width, edge);
             GuideRect(_firstUseGuideFrame[2].rectTransform, hole.xMin - edge, hole.yMin - edge, edge, hole.height + edge * 2);
             GuideRect(_firstUseGuideFrame[3].rectTransform, hole.xMax, hole.yMin - edge, edge, hole.height + edge * 2);
-            Color color = Ui.FlatHotEdge;
-            color.a = .6f + .4f * (.5f + .5f * Mathf.Sin(Time.unscaledTime * 4));
             foreach (var frame in _firstUseGuideFrame) frame.color = color;
             float width = Mathf.Min(330, size.x - 24);
             float x = Mathf.Clamp(hole.center.x - width * .5f, 12, size.x - width - 12);
             bool above = !showLesson && hole.yMax + 116 < size.y;
             float y = above ? hole.yMax + 28 : hole.yMin - 104;
+            if (recruiting)
+            {
+                above = spotlight.yMax + 116 < size.y;
+                y = above ? spotlight.yMax + 20 : spotlight.yMin - 100;
+            }
             GuideRect(_firstUseGuideCard, x, Mathf.Clamp(y, 12, size.y - 92), width, 80);
             _firstUseGuideText.text = text;
             _firstUseGuideArrow.text = above ? "▼" : "▲";
-            GuideRect(_firstUseGuideArrow.rectTransform, hole.center.x - 16,
-                above ? hole.yMax + 2 : hole.yMin - 28, 32, 26);
+            Rect arrowTarget = recruiting ? GuideTargetBounds((RectTransform)target.transform, size, .75f) : hole;
+            GuideRect(_firstUseGuideArrow.rectTransform, arrowTarget.center.x - 16,
+                above ? arrowTarget.yMax + 2 : arrowTarget.yMin - 28, 32, 26);
         }
+
+        private static Rect IntersectGuideBounds(Rect a, Rect b) => Rect.MinMaxRect(
+            Mathf.Max(a.xMin, b.xMin), Mathf.Max(a.yMin, b.yMin), Mathf.Min(a.xMax, b.xMax), Mathf.Min(a.yMax, b.yMax));
 
         private (Button target, string text) OpeningRenovationGuideTarget(OpeningRenovationLesson step, Window top)
         {
@@ -478,12 +626,12 @@ namespace PCShopSell.Game.UI
             return (_openingShelfCategoryButton, $"点「{label}」\n选择货架上要摆的商品品类");
         }
 
-        private (Button target, string text) OpeningCounterGuideTarget()
+        private (Button target, string text) OpeningCounterGuideTarget(bool petIntake)
         {
             if (_ctrl.CheckoutPending) return (null, null);
             if (DockOpen && (ChoiceDropdown.OpenInside(_dock) || ListScrollbar.PressedInside(_dock))) return (null, null);
             bool restaurant = S.RetailKind == "restaurant";
-            if (!restaurant && _ctrl.OpeningCheckoutInstructionFollowed) return (null, null);
+            if (!restaurant && (!_ctrl.CanRequestCheckout || (!petIntake && _ctrl.OpeningCheckoutInstructionFollowed))) return (null, null);
             var (order, job) = restaurant ? S.OpeningRestaurantCounterAction() : default;
             if (order != null && _openingCounterPendingAction is { } pending)
             {
@@ -492,7 +640,7 @@ namespace PCShopSell.Game.UI
                 _openingCounterPendingAction = null;
             }
             var queue = S.PlayerShop.Queue;
-            if (restaurant ? order == null || _openingCounterRejectedAction == (order.Id, job) : queue.Count == 0)
+            if (!petIntake && (restaurant ? order == null || _openingCounterRejectedAction == (order.Id, job) : queue.Count == 0))
                 return (null, null);
 
             if (!S.OpeningCounterTabVisited)
@@ -500,11 +648,21 @@ namespace PCShopSell.Game.UI
                 if (!DockOpen) OpenDock();
                 var tab = _tabButtons.FirstOrDefault(entry => entry.tab == ShopTab.Counter).b;
                 if (!ReferenceEquals(tab, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
-                return (tab, restaurant ? "客人已经下单\n点「柜台」查看餐桌订单" : "有顾客在排队\n点「柜台」查看待结账顾客");
+                string prompt = petIntake ? "有主人带宠物来寄养\n点「柜台」查看送养订单"
+                    : restaurant ? "客人已经下单\n点「柜台」查看餐桌订单" : "有顾客在排队\n点「柜台」查看待结账顾客";
+                return (tab, prompt);
             }
 
             if (!DockOpen) OpenDock();
             if (_tab != ShopTab.Counter) SelectTab(ShopTab.Counter);
+            if (petIntake)
+            {
+                if (_openingPetIntakeButton == null || !ReferenceEquals(_openingPetIntakeButton, _requiredGuideTarget))
+                    RefreshDock();
+                RevealFirstUseDockControl(_openingPetIntakeButton);
+                return (_openingPetIntakeButton, $"点「{PetIntakeLabel}」\n角色会到收银台办理寄养");
+            }
+
             int key = restaurant ? order.Table : queue[0].Id;
             if (restaurant && (!_openingCounterButtons.TryGetValue(key, out var current) || !ReferenceEquals(current, _requiredGuideTarget)))
                 _refreshOpeningRestaurantTables?.Invoke();
@@ -527,6 +685,30 @@ namespace PCShopSell.Game.UI
             return (action, $"点「{caption}」 · {order.Table + 1}号桌\n{hint}");
         }
 
+        private (Button target, string text) OpeningUsedDeskGuideTarget(UsedItem item, Window top)
+        {
+            if (top != null)
+            {
+                string instruction = !item.Owned ? $"核对卖家要价 ¥{item.Asking:N0}，点「出价收购」"
+                    : !item.Inspected ? "点「检查状态」，查看成色和参考售价"
+                    : "核对参考售价，点「确认售价并上架」";
+                return (_openingUsedDeskAction, instruction);
+            }
+
+            if (DockOpen && (ChoiceDropdown.OpenInside(_dock) || ListScrollbar.PressedInside(_dock))) return (null, null);
+            if (!DockOpen) OpenDock();
+            if (!S.OpeningCounterTabVisited)
+            {
+                var tab = _tabButtons.FirstOrDefault(entry => entry.tab == ShopTab.Counter).b;
+                if (!ReferenceEquals(tab, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
+                return (tab, item.Owned ? "还有旧物待处理\n点「柜台」继续" : "有卖家带旧物来了\n点「柜台」查看收购情况");
+            }
+
+            if (_tab != ShopTab.Counter) SelectTab(ShopTab.Counter);
+            RevealFirstUseDockControl(_openingUsedDeskButton);
+            return (_openingUsedDeskButton, "点「打开收购鉴定台」\n在这里收购、鉴定并上架旧物");
+        }
+
         private void RevealFirstUseDockControl(Button button)
         {
             if (button == null || ReferenceEquals(button, _requiredGuideTarget)) return;
@@ -545,7 +727,7 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private void SetRequiredGuideTarget(Button target, RectTransform area)
+        private void SetRequiredGuideTarget(Button target, RectTransform area, IReadOnlyList<Button> allowedButtons)
         {
             if (!ReferenceEquals(_requiredGuideTarget, target) || !ReferenceEquals(_requiredGuideArea, area))
             {
@@ -563,7 +745,9 @@ namespace PCShopSell.Game.UI
             if (events != null && !events.alreadySelecting && events.currentSelectedGameObject != target.gameObject)
             {
                 var selected = events.currentSelectedGameObject;
-                if (area != null && selected != null && selected.transform.IsChildOf(area)) return;
+                if (selected != null && (allowedButtons != null
+                    ? allowedButtons.Any(button => button.gameObject == selected)
+                    : area != null && selected.transform.IsChildOf(area))) return;
                 events.SetSelectedGameObject(target.gameObject);
             }
         }
@@ -611,18 +795,30 @@ namespace PCShopSell.Game.UI
             _openingMealInputBlock.gameObject.SetActive(!cookerOpen);
             foreach (var dim in _guideDim) dim.raycastTarget = cookerOpen;
             _openingMealIntroNext.gameObject.SetActive(intro);
-            foreach (var dot in _guideDots) dot.gameObject.SetActive(!intro && !cookerOpen);
             _guideArrow.gameObject.SetActive(!intro && !cookerOpen);
             _guideCard.anchorMin = _guideCard.anchorMax = Vector2.zero;
             _guideCard.pivot = Vector2.zero;
-            _guideTitle.rectTransform.Anchor(0, 1, 1, 1, cookerOpen || intro ? 22 : 100, -48, 20, 12);
             _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, intro ? 78 : 66, 22, 62);
-            _guideFoot.gameObject.SetActive(!intro);
+            bool compactCookerGuide = cookerOpen && (step == 0 || step == 2);
+            _guideFoot.gameObject.SetActive(!intro && !movement && !compactCookerGuide);
+            bool showHungerIllustration = intro && hunger && _openingHungerIllustration != null;
+            if (_openingHungerIllustration != null)
+                _openingHungerIllustration.gameObject.SetActive(showHungerIllustration);
             Rect hole = new Rect(); bool hasHole = false;
             (string title, string body) text = OpeningMealGuideText(step);
             if (intro)
             {
-                GuideRect(_guideCard, (size.x - 620) * .5f, (size.y - 340) * .5f, 620, 340);
+                if (showHungerIllustration)
+                {
+                    float width = Mathf.Min(720, size.x - 32);
+                    float textAndControlsHeight = width < 620 ? 292 : 250;
+                    float illustrationHeight = Mathf.Clamp(size.y - 32 - textAndControlsHeight, 0, Mathf.Max(0, width - 44) * 9 / 16);
+                    float height = textAndControlsHeight + illustrationHeight;
+                    GuideRect(_guideCard, (size.x - width) * .5f, (size.y - height) * .5f, width, height);
+                    _openingHungerIllustration.Anchor(0, 1, 1, 1, 22, -56 - illustrationHeight, 22, 56);
+                    _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, 78, 22, 72 + illustrationHeight);
+                }
+                else GuideRect(_guideCard, (size.x - 620) * .5f, (size.y - 340) * .5f, 620, 340);
                 _openingMealFocus = background ? "ArrivalStory" : "HungerStory";
                 _openingMealIntroNext.GetComponentInChildren<Text>().text = background ? "看看房间" : "找点吃的";
                 text = background
@@ -632,18 +828,16 @@ namespace PCShopSell.Game.UI
             else if (movement)
             {
                 _openingMealFocus = "Movement";
-                GuideRect(_guideCard, 30, 180, 440, 250);
-                _guideTitle.rectTransform.Anchor(0, 1, 1, 1, 22, -48, 20, 12);
+                GuideRect(_guideCard, 30, 180, 440, 116);
+                _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, 10, 22, 62);
                 _guideArrow.gameObject.SetActive(false);
-                foreach (var dot in _guideDots) dot.gameObject.SetActive(false);
                 Vector3 sp = _ctrl.Cam.WorldToScreenPoint(_ctrl.HomeRoom.OwnerWorld + Vector3.up * .8f);
                 if (sp.z > 0) { var c = GuidePoint(canvasRt, sp, size); hole = new Rect(c - new Vector2(280, 190), new Vector2(560, 380)); hasHole = true; }
-                text = ("先在房间里走走", $"按 {Ui.Emphasize("W / A / S / D")} 移动，也可以用 {Ui.Emphasize("方向键")}。\n试着离开门边，往房间里走几步。\n人物真正走动后，故事会继续。");
-                _guideFoot.text = "不用点击物品 · 先熟悉移动";
+                text = ("先在房间里走走", $"按 {Ui.Emphasize("W / A / S / D")} 移动，也可以用 {Ui.Emphasize("方向键")}。");
             }
             else if (cookerOpen)
             {
-                string targetName = step == 1 ? "CookerCookingStatus" : step == 2 ? "OpeningMealEat" : step == 3 ? "OpeningMealPackAll" :
+                string targetName = step == 2 ? "OpeningMealEat" : step == 3 ? "OpeningMealPackAll" :
                     _openingMealCookStage == 0 ? "OpeningMealRice" : _openingMealCookStage == 1 ? "OpeningMealRecipe" : "OpeningMealStart";
                 var target = _openingMealCooker.Root.GetComponentsInChildren<RectTransform>().FirstOrDefault(r => r.name == targetName);
                 if (_openingMealFocus != targetName)
@@ -667,21 +861,26 @@ namespace PCShopSell.Game.UI
                     float width = Mathf.Min(400, Mathf.Max(size.x - panelRight - 36, panelLeft - 36));
                     width = Mathf.Max(260, width);
                     float x = size.x - panelRight - 36 >= width ? panelRight + 18 : Mathf.Max(12, panelLeft - width - 18);
-                    GuideRect(_guideCard, x, Mathf.Clamp(hole.center.y - 135, 80, size.y - 320), width, 270);
+                    var settings = _guideBody.GetGenerationSettings(new Vector2(width - 44, 0));
+                    float bodyHeight = _guideBody.cachedTextGeneratorForLayout.GetPreferredHeight(text.body, settings) / _guideBody.pixelsPerUnit;
+                    float height = Mathf.Ceil(bodyHeight) + (compactCookerGuide ? 82 : 128);
+                    if (compactCookerGuide)
+                        _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, 18, 22, 62);
+                    GuideRect(_guideCard, x, Mathf.Clamp(hole.center.y - height * .5f, 80, size.y - height - 50), width, height);
                 }
-                _guideFoot.text = $"只需点击高亮区域 · {Ui.Emphasize("Esc")} 可暂时关闭窗口";
+                if (!compactCookerGuide)
+                    _guideFoot.text = $"只需点击高亮区域 · {Ui.Emphasize("Esc")} 可暂时关闭窗口";
             }
             else
             {
                 _openingMealFocus = "CookerWorld";
                 Vector3 sp = _ctrl.HomeRoom.CookerWorld is Vector3 cooker ? _ctrl.Cam.WorldToScreenPoint(cooker + Vector3.down * .45f) : new Vector3(0, 0, -1);
                 if (sp.z > 0) { Vector2 c = GuidePoint(canvasRt, sp, size); hole = new Rect(c - GuideHoleSize * .5f, GuideHoleSize); hasHole = true; }
-                GuideRect(_guideCard, (size.x - 880) * .5f, 150, 880, string.IsNullOrEmpty(text.body) ? 96 : 220);
-                _guideFoot.text = $"先做饭再做其他事 · {Ui.Emphasize("WASD / 方向键")} 走路，{Ui.Emphasize("F")} 交互；Esc 打开系统菜单。";
+                GuideRect(_guideCard, (size.x - 880) * .5f, 150, 880, string.IsNullOrEmpty(text.body) ? 96 : 154);
+                _guideFoot.text = $"按 {Ui.Emphasize("WASD / 方向键")} 移动，走近后按 {Ui.Emphasize("F")} 打开。";
             }
             DrawGuideSpotlight(size, hasHole ? (Rect?)hole : null);
             _guideTitle.text = text.title; _guideBody.text = text.body;
-            for (int i = 0; i < 3; i++) _guideDots[i].color = i < step ? Ui.FlatUp : i == step ? Ui.FlatHotEdge : Ui.FlatWellEdge;
         }
 
         private bool UpdateOpeningAgencyGuide()
@@ -772,12 +971,11 @@ namespace PCShopSell.Game.UI
 
         private (string title, string body) OpeningMealControlText(int step)
         {
-            if (step == 1) return ("第 4 步 · 等饭焖好", $"饭正在焖，还剩约 {Ui.Emphasize($"{S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟")}。\n随游戏时间自动煮好，也可以关闭窗口等候。");
-            if (step == 2) return ("第 5 步 · 先吃一碗", $"饭煮好了，先照顾好自己。\n点 {Ui.Emphasize("“现在吃一碗”")}，恢复饱腹。\n吃完后，再把剩饭带上。");
-            if (step == 3) return ("第 6 步 · 带上剩饭", $"肚子不饿了，带上剩饭作午饭。\n点 {Ui.Emphasize("“全部装进背包”")}。\n饭点或饿了会自动吃，不用手动操作。");
-            if (_openingMealCookStage == 0) return ("第 1 步 · 选米量", $"点击高亮区域里的米量。\n第一次推荐 {Ui.Emphasize($"{OpeningMealRiceKg:0.##} 千克")}，大约能做 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.BowlsPerKg * OpeningMealRiceKg:0} 碗饭")}。\n大米自动从背包和家中后仓取用，现在选择不会扣食材。");
-            if (_openingMealCookStage == 1) return ("第 2 步 · 选做法", $"点击高亮区域里的做法。\n先学做 {Ui.Emphasize("白饭")} 就可以，不需要额外配菜。\n有食材时也能选择焖饭；灰色选项表示食材不足。");
-            return ("第 3 步 · 开始焖饭", $"确认选好 {Ui.Emphasize($"{_cookKg:0.##} 千克大米")}和做法后，点击高亮的 {Ui.Emphasize("“开始焖饭”")}。\n这时才会消耗所选食材，约 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.CookMinutes} 分钟")}后做好。");
+            if (step == 2) return ("先吃一碗", $"点 {Ui.Emphasize("「现在吃一碗」")}。");
+            if (step == 3) return ("带上剩饭", $"点 {Ui.Emphasize("「全部装进背包」")}。饭点或饿了会自动吃。");
+            if (_openingMealCookStage == 0) return ("选米量", "大米会从背包和家中后仓取用，开焖时扣除。");
+            if (_openingMealCookStage == 1) return ("选做法", $"选 {Ui.Emphasize("白饭")} 就可以，灰色选项表示食材不足。");
+            return ("开始焖饭", $"开焖后约 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.CookMinutes} 分钟")}煮好。");
         }
 
         private Camera TutorialCam => _tutorialCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _tutorialCanvas.worldCamera;
@@ -787,15 +985,11 @@ namespace PCShopSell.Game.UI
             switch (step)
             {
                 case 0:
-                    return ("第 1 步 · 认识电饭锅，选米与做法", "");
-                case 1:
-                    long left = S.Pantry.Cooking != null ? S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes) : 0;
-                    return ("第 2 步 · 等饭焖好",
-                        $"饭正在焖，还要约 {Ui.Emphasize($"{left} 分钟")}，焖好之前锅盖打不开。\n随游戏时间自动煮好，开着或关闭电饭锅窗口都可以等候。");
+                    return ("打开电饭锅", "");
                 case 2:
-                    return ("饭好了 · 先吃一碗",
-                        $"饭好了！打开电饭锅，点 {Ui.Emphasize("“现在吃一碗”")}，消耗一碗并恢复饱腹。\n吃完后还要把剩饭全部装进背包，留作午饭。");
-                default: return ("吃饱了 · 带上剩饭", $"再次打开电饭锅，点击 {Ui.Emphasize("“全部装进背包”")}。\n带上饭盒，之后饭点或饿了会自动吃。装完后就可以出门了。");
+                    return ("饭好了，先吃一碗", $"打开电饭锅，点 {Ui.Emphasize("「现在吃一碗」")}。");
+                default:
+                    return ("带上剩饭", $"打开电饭锅，点 {Ui.Emphasize("「全部装进背包」")}。");
             }
         }
 

@@ -137,11 +137,8 @@ namespace PCShopSell.Game.UI
                     if (!parent.Closed) CloseWindowSilently(parent);
                     session.Time.SetPaused(false);
                 }, start: ctx => ctx.Show("喂，是我。好久没听到你声音了。你最近忙吗？",
-                    new TalkOpt { Label = "最近在忙店里的事", Act = () => ctx.Show("开店总有忙不完的事吧。你想说说的话，我正好有空听。",
-                        ReturnToActivity(ctx, "挂断电话")) },
-                    new TalkOpt { Label = "你最近怎么样？", Act = () => ctx.Show("前几天路过常去的那条街，还想起咱们上次在那儿碰见。等都有空了，再出来坐坐吧。",
-                        ReturnToActivity(ctx, "挂断电话")) },
-                    ReturnToActivity(ctx, "挂断电话")));
+                    new TalkOpt { Label = "最近在忙店里的事", Act = () => ctx.Finish("开店总有忙不完的事吧。你想说说的话，我正好有空听。", "挂断电话") },
+                    new TalkOpt { Label = "你最近怎么样？", Act = () => ctx.Finish("前几天路过常去的那条街，还想起咱们上次在那儿碰见。等都有空了，再出来坐坐吧。", "挂断电话") }));
         }
 
         private void BuildLifeActivityInteraction(Window w, CityActivity activity)

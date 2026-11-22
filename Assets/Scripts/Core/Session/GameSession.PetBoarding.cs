@@ -23,6 +23,7 @@ namespace PCShopSell.Core.Session
         public int LastFedDay = -1, LastWaterDay = -1, LastLitterDay = -1;
         public int LastPlayDay = -1, Happiness = 55, LastPlayBonus;
         public int Weeks, PaidWeeks, Condition = 68;
+        public long FirstWeekAdvanceCents;
         public int LastConditionDay = -1, LastKeeperDay = -1;
         public int WeeklyPrice => Dog ? 2340 : 1820;
     }
@@ -49,9 +50,10 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private const string PetOwnerVisitLabel = "到店办理宠物代养";
-        public const int PetsPerKeeper = 2;
+        public const int PetsPerKeeper = 4;
         public const int PetReputationConditionThreshold = 95;
         public const double PetReputationReward = .2;
+        public const int PetFirstWeekAdvancePercent = 30;
         public static double PetWeeklyReputation(PetStay stay) =>
             stay.Condition > PetReputationConditionThreshold ? PetReputationReward : 0;
         private const int WeekMinutes = GameDate.DaysPerWeek * GameTimestamp.MinutesPerDay;
@@ -167,12 +169,15 @@ namespace PCShopSell.Core.Session
             string reason = PetAcceptBlocker(_focus);
             if (reason != null) return Fail(reason);
             ReceivePet(_focus, PetBoarding(_focus));
+            Flags.Add(OpeningPetIntakeSeen);
             return true;
         }
 
         private void ReceivePet(OwnedShop shop, PetBoardingState state)
         {
             var stay = state.Offer;
+            var advance = PetFirstWeekAdvance(stay);
+            stay.FirstWeekAdvanceCents = advance.Cents;
             stay.NextVisitAt = Clock.Now.AddMinutes(WeekMinutes).TotalMinutes;
             stay.LastConditionDay = Clock.Today.TotalDays;
             foreach (var action in PetCareActions)
@@ -180,7 +185,9 @@ namespace PCShopSell.Core.Session
                     ApplySharedCareBenefit(state,stay,action);
             state.Stays = state.Stays.Append(stay).ToArray();
             state.Offer = null;
-            Say(ShopTitle(shop) + " · " + stay.Name + "入住 " + stay.Weeks + " 周，主人每周来探望结算");
+            Ledger.Credit(Clock.Today, "宠物代养", advance, stay.Name + " · 首周预付款",
+                LedgerAttribution.ForShop(shop.Place.Id, $"pet:{shop.Place.Id}:{stay.Id}:advance", "代养服务"));
+            Say($"{ShopTitle(shop)} · {stay.Name}入住 {stay.Weeks} 周，已收首周预付款 {advance}，一周后结清余款。");
         }
 
         public string PetVisitBlocker(OwnedShop shop, PetStay stay)
@@ -190,8 +197,14 @@ namespace PCShopSell.Core.Session
             return "主人正在安排到店";
         }
 
-        public static Money PetWeeklyPayment(PetStay stay) =>
-            Money.FromYuan((long)Math.Round(stay.WeeklyPrice * (.45 + .85 * Math.Max(0, Math.Min(100,stay.Condition)) / 100.0)));
+        public static Money PetFirstWeekAdvance(PetStay stay) =>
+            Money.FromYuan(stay.WeeklyPrice).Scale(PetFirstWeekAdvancePercent / 100.0);
+
+        public static Money PetWeeklyPayment(PetStay stay)
+        {
+            var total = Money.FromYuan((long)Math.Round(stay.WeeklyPrice * (.45 + .85 * Math.Clamp(stay.Condition, 0, 100) / 100.0)));
+            return stay.PaidWeeks == 0 ? total - Money.FromCents(stay.FirstWeekAdvanceCents) : total;
+        }
 
         public bool SettlePetStay(long id)
         {
@@ -207,19 +220,22 @@ namespace PCShopSell.Core.Session
         private void SettlePet(OwnedShop shop, PetBoardingState state, PetStay stay)
         {
             var amount = PetWeeklyPayment(stay);
+            bool firstWeekBalance = stay.PaidWeeks == 0 && stay.FirstWeekAdvanceCents > 0;
             bool satisfied = stay.Condition >= 80;
             double reputation = PetWeeklyReputation(stay);
             stay.PaidWeeks++;
             bool finished = stay.PaidWeeks >= stay.Weeks;
             if (finished) state.Stays = state.Stays.Where(p => p != stay).ToArray();
             else stay.NextVisitAt = Clock.Now.AddMinutes(WeekMinutes).TotalMinutes;
-            Ledger.Credit(Clock.Today, "宠物代养", amount, stay.Name + " · 第 " + stay.PaidWeeks + " 周",
+            string paymentMemo = firstWeekBalance ? "首周余款" : $"第 {stay.PaidWeeks} 周";
+            Ledger.Credit(Clock.Today, "宠物代养", amount, stay.Name + " · " + paymentMemo,
                 LedgerAttribution.ForShop(shop.Place.Id, "pet:" + shop.Place.Id + ":" + stay.Id + ":" + stay.PaidWeeks, "代养服务"));
             if (reputation > 0) shop.Sim.AdjustPersonalReputation(reputation);
             if (satisfied) AddRelation(stay.OwnerId, 2);
             if (satisfied) shop.Sim.AdjustShopReputation(.6);
             else if (stay.Condition < 50) shop.Sim.AdjustShopReputation(-.6);
-            state.LastPickup = stay.Name + (finished ? " · 主人已接回" : " · 主人已探望，继续代养") + " · 本周实收 " + amount
+            state.LastPickup = stay.Name + (finished ? " · 主人已接回" : " · 主人已探望，继续代养")
+                + (firstWeekBalance ? " · 首周余款实收 " : " · 本周实收 ") + amount
                 + " · 状态 " + stay.Condition + "/100"
                 + (reputation > 0 ? $" · 名望 +{reputation:0.#}" : " · 名望 +0（状态未高于 95%）")
                 + (satisfied ? " · 主人满意，交情 +2" : "");
@@ -468,6 +484,7 @@ namespace PCShopSell.Core.Session
             {
                 Id = pet.Id, RequestedAt = pet.RequestedAt, NextVisitAt = pet.NextVisitAt, OwnerId = pet.OwnerId, Name = pet.Name,
                 Dog = pet.Dog, Coat = pet.Coat, Weeks = pet.Weeks, PaidWeeks = pet.PaidWeeks,
+                FirstWeekAdvanceCents = pet.FirstWeekAdvanceCents,
                 Condition = pet.Condition, LastConditionDay = pet.LastConditionDay, LastKeeperDay = pet.LastKeeperDay,
                 LastPlayDay = pet.LastPlayDay, Happiness = pet.Happiness, LastPlayBonus = pet.LastPlayBonus,
             };

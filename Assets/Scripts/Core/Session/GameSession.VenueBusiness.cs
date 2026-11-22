@@ -147,8 +147,10 @@ namespace PCShopSell.Core.Session
                 if(state.CustomersHere.Length+ownerSeats>=VenueCapacity(shop.Place))continue;
                 double basePrice=VenueCustomerBasePriceCents(shop.Place.Id);
                 double appeal = shop.Place.Id == CityLifeCatalog.PachinkoVenue ? PachinkoCustomerInterest(state) : 1;
-                if(!Random.Chance(Math.Min(.8,.45*appeal*basePrice/state.PriceCents*FootfallOf(shop.Place).DailyPassers/300.0)
-                    * ShopPowerTraffic(shop, Clock.Now)))continue;
+                double interest = .45 * appeal * basePrice / state.PriceCents * FootfallOf(shop.Place).DailyPassers / 300.0;
+                double demand = Math.Clamp(interest + shop.Sim.ReputationPurchaseIntentBonus, 0, .8)
+                    * shop.Sim.StandingArrivalMultiplier * ShopPowerTraffic(shop, Clock.Now);
+                if (!Random.Chance(Math.Min(1, demand))) continue;
                 var people=_cityPeople.Values.Where(p=>p.Route==null&&p.ActivityId==null&&p.VisitId==null&&p.Task!=CityPersonTask.Working
                     &&!Employees.Any(e=>PersonIdOf(e.Person)==p.PersonId)
                     &&!_cityActivities.Any(a=>a.Active&&a.Participants.Any(c=>c.PersonId==p.PersonId))).ToArray();

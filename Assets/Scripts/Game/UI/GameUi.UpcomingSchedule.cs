@@ -62,7 +62,8 @@ namespace PCShopSell.Game.UI
         private void PositionRightHudCards()
         {
             var position = RightHudRestPosition + Vector2.down * HudFunctionOffset;
-            var dock = DockOpen ? _dock : HomeDockOpen ? _homeDock : null;
+            var dock = EditingResidence ? _homePlacementPanel : _ctrl.PlacingShop ? _placePanel
+                : DockOpen ? _dock : HomeDockOpen ? _homeDock : null;
             if (dock != null)
             {
                 position = new Vector2(dock.offsetMin.x - 10, dock.offsetMax.y);

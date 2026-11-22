@@ -4,6 +4,7 @@ using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.Trade;
 using PCShopSell.Core.World;
@@ -69,6 +70,16 @@ namespace PCShopSell.Tests
             s.ArriveAtNode(p.NodeId);
             WaitUntilOpen(s, p);
             s.Enter(p);
+        }
+
+        internal static void PostFirstRecruitmentNotice(GameSession s)
+        {
+            s.Ledger.Credit(s.Clock.Today, ShopSimulation.SalesCategory, Money.FromYuan(100), "测试首单");
+            s.RefreshQuestProgress();
+            s.ConfirmOpeningSaleCompletion();
+            s.VisitOpeningStaffTab();
+            Assert.True(s.FinishOpeningStaffRoles());
+            Assert.True(s.PostRecruitmentNotice());
         }
 
         /// <summary>别人的店打烊了进不去：把钟拨到当天开门的整点（不跑模拟）。</summary>
@@ -404,6 +415,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             Teleport(s, "pc");
+            PostFirstRecruitmentNotice(s);
             s.Leave();
             s.Clock.Restore(new GameDate(1), 8 * 60 + 50);
             s.AdvanceClock(20);

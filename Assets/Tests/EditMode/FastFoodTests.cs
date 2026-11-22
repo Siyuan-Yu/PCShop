@@ -127,6 +127,7 @@ namespace PCShopSell.Tests
             using (var s = Make())
             {
                 s.Backpack.Food.Packed.Clear();
+                int purchaseDay = s.Clock.Today.TotalDays;
                 for (int i = 0; i < 13; i++) Assert.IsTrue(s.BuyFastFood("combo"));
                 var cash = s.Ledger.Balance; Assert.IsFalse(s.BuyFastFood("combo")); Assert.AreEqual(cash, s.Ledger.Balance);
                 Assert.AreEqual(11.7, s.Backpack.WeightKg, 1e-8);
@@ -137,7 +138,7 @@ namespace PCShopSell.Tests
                 {
                     Assert.IsTrue(loaded.MoveFridgeFood("lunch:fast:combo", 1, true));
                     var food = loaded.HomeFridge.Food.Packed.Single(); Assert.AreEqual("汉堡炸鸡套餐（含可乐）", food.Name);
-                    Assert.IsTrue(food.Chilled); Assert.AreEqual(1, food.ExpireDay);
+                    Assert.IsTrue(food.Chilled); Assert.AreEqual(purchaseDay + 4, food.ExpireDay);
                     Assert.IsTrue(loaded.MoveFridgeFood("lunch:fast:combo", 1, false)); Assert.AreEqual(11.7, loaded.Backpack.WeightKg, 1e-8);
                 }
             }
@@ -152,7 +153,9 @@ namespace PCShopSell.Tests
                 Assert.IsTrue(s.Backpack.Food.Packed.Any(b => b.Id == "fast:cola"));
                 Assert.IsFalse(s.Backpack.Food.Packed.Any(b => b.Id == "fast:rice"));
                 Assert.IsTrue(s.BuyFastFood("burger"));
-                s.Backpack.Food.Spoil(s.Clock.Today.TotalDays + 2);
+                s.Backpack.Food.Spoil(s.Clock.Today.TotalDays + 4);
+                Assert.IsTrue(s.Backpack.Food.Packed.Any(b => b.Id == "fast:burger"));
+                s.Backpack.Food.Spoil(s.Clock.Today.TotalDays + 5);
                 Assert.IsFalse(s.Backpack.Food.Packed.Any(b => b.Id == "fast:burger"));
                 Assert.IsTrue(s.Backpack.Food.Packed.Any(b => b.Id == "fast:cola"));
             }

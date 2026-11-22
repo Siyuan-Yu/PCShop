@@ -34,6 +34,7 @@ namespace PCShopSell.Game.UI
                     Ui.Tab(tabs, names[i], () => SwitchTab(target), tab == i).name = "MarketTab_" + i;
                 }
                 Ui.Size(Ui.Rect(tabs, "MarketTabSpacer"), 0, 38, 1);
+                Ui.Size(Ui.Button(tabs, "订阅物价信息", OpenMarketPriceSubscriptions, 16), 144, 34).name = "MarketOpenPriceSubscriptions";
                 Ui.Size(Ui.Button(tabs, "经济简报", OpenEconomicReport, 16), 124, 34).name = "MarketOpenEconomicReport";
                 switch (tab)
                 {

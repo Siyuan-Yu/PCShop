@@ -71,7 +71,7 @@ namespace PCShopSell.Game.UI
             PlaceRuler(_rulerLabels[idx++], origin + new Vector3((float)room.Width + 1.1f, 0, -0.55f), canvasRt, half);
             PlaceRuler(_rulerLabels[idx++], origin + new Vector3(-0.5f, 0, (float)room.Depth + 0.65f), canvasRt, half);
 
-            UpdateCursorReadout(canvasRt, half);
+            UpdateCursorReadout(canvasRt);
         }
 
         /// <summary>画面像素 -> 标注画布上的位置（左下角为原点）。直接按比例换算，不依赖画布这一帧有没有跟上镜头。</summary>
@@ -91,7 +91,7 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>跟着鼠标（或手里这件）的坐标读数。</summary>
-        private void UpdateCursorReadout(RectTransform canvasRt, Vector2 half)
+        private void UpdateCursorReadout(RectTransform canvasRt)
         {
             if (_cursorBox == null)
             {
@@ -123,8 +123,10 @@ namespace PCShopSell.Game.UI
                 string pos = def.Slot == FurnitureSlot.Wall
                     ? (at.Rot == 1 ? $"挂右墙　Z {at.Z:0.00} 米" : $"挂后墙　X {at.X:0.00} 米")
                     : $"中心 X {at.X:0.00}　Z {at.Z:0.00} 米";
-                text = $"<b>{def.Name}</b>\n{pos}\n占地 {w:0.##} × {d:0.##} 米";
-                lines = 3;
+                string rotate = def.Slot == FurnitureSlot.Wall ? "<color=#FFD46A><b>R 换墙</b></color>"
+                    : $"<color=#FFD46A><b>R 旋转</b></color>　朝向 {at.Rot * 90}°";
+                text = $"<b>{def.Name}</b>\n{rotate}\n{pos}\n占地 {w:0.##} × {d:0.##} 米";
+                lines = 4;
             }
             else
             {
@@ -134,13 +136,19 @@ namespace PCShopSell.Game.UI
             _cursorText.text = text;
             _cursorBox.sizeDelta = new Vector2(250, 14 + lines * 22);
             Vector3 world = _ctrl.EditOrigin + new Vector3(c.x, 0.1f, c.y);
-            Vector3 sp = _ctrl.Cam.WorldToScreenPoint(world);
-            _cursorBox.gameObject.SetActive(sp.z > 0);
-            if (sp.z <= 0) return;
+            bool followsMouse = _ctrl.EditGhostFollowsMouse;
+            Vector3 sp = followsMouse ? Input.mousePosition : _ctrl.Cam.WorldToScreenPoint(world);
+            bool visible = followsMouse || sp.z > 0;
+            _cursorBox.gameObject.SetActive(visible);
+            if (!visible) return;
             // 靠近屏幕右边（摆放面板）就翻到左边
             bool flip = sp.x / Mathf.Max(1, _ctrl.Cam.pixelWidth) > 0.62f;
             _cursorBox.pivot = new Vector2(flip ? 1f : 0f, 0f);
-            _cursorBox.anchoredPosition = CanvasPos(sp, canvasRt) + new Vector2(flip ? -22 : 22, 14);
+            Vector2 position = CanvasPos(sp, canvasRt) + new Vector2(flip ? -22 : 22, 14);
+            float width = _cursorBox.sizeDelta.x, height = _cursorBox.sizeDelta.y;
+            position.x = Mathf.Clamp(position.x, flip ? width : 0, canvasRt.rect.width - (flip ? 0 : width));
+            position.y = Mathf.Clamp(position.y, 0, canvasRt.rect.height - height);
+            _cursorBox.anchoredPosition = position;
         }
     }
 }

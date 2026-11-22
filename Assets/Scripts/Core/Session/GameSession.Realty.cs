@@ -143,6 +143,7 @@ namespace PCShopSell.Core.Session
 
             Place place = City.GetPlace(placeId);
             Money deposit = RealEstate.Deposit(l.Rent);
+            Money signingCost = LeaseCost(l, newShop);
             if (IsAdvance(l))
             {
                 PendingRetailKind = newShop || Lease == null ? openingKind : RetailKind;
@@ -150,12 +151,7 @@ namespace PCShopSell.Core.Session
                 PendingLease = new ShopLease { PlaceId = place.Id, Rent = l.Rent, Deposit = deposit, StartDay = l.OpenDay, SignedDay = Clock.Today.TotalDays };
                 PendingIsNewShop = newShop;
                 _listings.Remove(l);
-                Show("提前签约",
-                    $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）签下来了，周租 {l.Rent}，押金 {deposit}。\n" +
-                    $"{ShopHandoverText(l.OpenDay)}，交房后可以入驻。\n" +
-                    "签约已付首周租金，之后交房前也按周日扣租。" +
-                    (newShop ? "\n交房那天就多了一家新店（毛坯，要自己摆收银台和货架），现在的店照常营业。"
-                        : Lease != null ? "\n交房那天自动搬店：退旧铺押金、收搬家费，旧铺之前照常营业。" : "\n在那之前你还是没有店铺。"));
+                ShowShopLeaseSigned(l.Rent, deposit, signingCost, ShopHandoverText(l.OpenDay));
                 return true;
             }
             if (newShop)
@@ -163,7 +159,8 @@ namespace PCShopSell.Core.Session
                 PaySigning(l.Rent, place);
                 OpenNewShop(place, l.Rent, deposit);
                 SetOpeningShopKind(openingKind);
-                ShowNewShop(place, l.Rent, deposit, "开了新店");
+                if (IsDedicatedVenue(place)) ShowVenueHandover(place);
+                else ShowShopLeaseSigned(l.Rent, deposit, signingCost);
                 RefreshQuestProgress();
                 return true;
             }
@@ -173,28 +170,22 @@ namespace PCShopSell.Core.Session
             if (moving) Ledger.ForceDebit(Clock.Today, "搬家", RealEstate.MoveFee, "搬店");
             MoveInto(place, l.Rent, deposit);
             if(!moving)SetOpeningShopKind(openingKind);
-            ShowMovedIn(place, l.Rent, deposit, moving, "签约成功");
+            if (IsDedicatedVenue(place)) ShowVenueHandover(place);
+            else if (moving)
+                Show("搬店完成",
+                    $"{ShopTitle(_focus)}已租下{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}），周租 {l.Rent}，押金 {deposit}。\n" +
+                    "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n" +
+                    "首周租金已付，之后周日扣租。");
+            else ShowShopLeaseSigned(l.Rent, deposit, signingCost);
             RefreshQuestProgress();
             return true;
         }
 
-        private void ShowMovedIn(Place place, Money rent, Money deposit, bool moving, string title)
+        private void ShowShopLeaseSigned(Money rent, Money deposit, Money cost, string handover = null)
         {
-            if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
-            Show(moving ? "搬店完成" : title,
-                $"{ShopTitle(_focus)}已租下{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}），周租 {rent}，押金 {deposit}。\n" +
-                (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n"
-                        : "这是间毛坯铺子，只配一个后仓纸箱；请按经营类型摆好开业所需设施。\n") +
-                "首周租金已付，之后周日扣租。");
-        }
-
-        private void ShowNewShop(Place place, Money rent, Money deposit, string title)
-        {
-            if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
-            Show(title,
-                $"{ShopTitle(_focus)}已租下{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}），周租 {rent}，押金 {deposit}。\n" +
-                "原来的店照常营业，货、员工、设施各管各的。新店是毛坯：按经营类型摆好设施，人不在店里时要雇人看店才开门。\n" +
-                "首周租金已付，之后周日扣租。");
+            string summary = $"本次实付 {cost}（含中介费）\n首周租金 {rent} · 押金 {deposit}";
+            if (handover != null) summary += "\n" + handover;
+            Show("签约成功", summary);
         }
 
         /// <summary>提前签的铺子到了交房日：开新店，或者自动搬进去（搬店：退旧押金、收搬家费）。</summary>

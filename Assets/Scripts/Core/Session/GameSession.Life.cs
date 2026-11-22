@@ -129,9 +129,12 @@ namespace PCShopSell.Core.Session
             Player.Intelligence = Math.Min(100, Player.Intelligence + 1);
         }
 
+        public event Action<long> ResidenceSleepFinished;
+
         private void SleepFor(int minutes)
         {
             if (minutes <= 0) return;
+            var residence = CurrentPlace;
             long start = Clock.Now.TotalMinutes;
             ClearEnergyExhaustion();
             _sleeping = true;
@@ -140,11 +143,15 @@ namespace PCShopSell.Core.Session
             RefreshDistrictNarrative();
             _sleepHistory.Add(new[] { start, Clock.Now.TotalMinutes });
             _sleepHistory.RemoveAll(span => span[1] <= Clock.Now.TotalMinutes - 1440);
+            RecordOpeningStaffRest();
             Player.SleepDebt = Math.Max(0, 8 - SleepHoursLast24);
             if (SleepHoursLast24 >= 8 - 1e-9) Player.Energy = Player.MaxEnergy;
             Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy);
             FinishCityClimateSleep(minutes);
             SynchronizeEnergyExhaustion();
+            long duration = Clock.Now.TotalMinutes - start;
+            if (duration > 0 && !IsGameOver && CurrentPlace == residence && CanSleepAt(residence))
+                ResidenceSleepFinished?.Invoke(duration);
         }
 
         private void UpdateBody(int minutes)
@@ -154,16 +161,16 @@ namespace PCShopSell.Core.Session
             if (_sleeping)
             {
                 p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h * HomeSleepQuality * CitySleepComfortFactor);
-                p.Hunger = Math.Max(0, p.Hunger - 2 * h);
+                p.Hunger = Math.Max(0, p.Hunger - h);
                 p.ChangeStress(-2 * h);
             }
             else
             {
                 var work = ActiveWorkDay;
-                p.SpendEnergy(5.5 * h * (work != null && work.EnergyMultiplier > 0 ? work.EnergyMultiplier : 1));
+                p.SpendEnergy(3.85 * h * (work != null && work.EnergyMultiplier > 0 ? work.EnergyMultiplier : 1));
                 if (work != null) p.ChangeStress(work.StressPerHour * h);
                 else if (p.Tired) p.ChangeStress(.5 * h);
-                p.Hunger = Math.Max(0, p.Hunger - 6 * h);
+                p.Hunger = Math.Max(0, p.Hunger - 3 * h);
             }
 
             if (p.Hunger <= 0) p.Health -= 3 * h;

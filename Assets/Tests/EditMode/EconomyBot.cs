@@ -112,6 +112,7 @@ namespace PCShopSell.Tests
                 _s.AdvanceClock(1);
                 if (_s.PendingEvent != null) ResolveEvent();
                 DrainQueue();
+                if (!_lazy && !_s.EverHired && _s.Candidates.Count > 0) _s.Hire(0);
                 if (_s.Clock.MinuteOfDay % 60 == 0) HandleOrders();
             }
             if (_s.IsGameOver) return;
@@ -150,9 +151,15 @@ namespace PCShopSell.Tests
             // 懒玩家：不招人、不送礼、不扩建，只偶尔补货
             if (!_lazy) Invest(today);
 
-            // 第 3 天起，从当日应聘者中招人。
-            if (!_lazy && today >= 3 && _s.Employee == null && !_s.EverHired && _s.Candidates.Count > 0)
-                _s.Hire(0);
+            // 第 3 天贴告示，次日等应聘者到店再招聘。
+            if (!_lazy && today >= 2 && !_s.EverHired && _s.QuestCompleted("sale")
+                && !_s.RecruitmentNoticePosted && _s.Candidates.Count == 0)
+            {
+                _s.ConfirmOpeningSaleCompletion();
+                _s.VisitOpeningStaffTab();
+                _s.FinishOpeningStaffRoles();
+                _s.PostRecruitmentNotice();
+            }
 
             // 升级：按顺序买第一个买得起（留 ¥1500 周转）的
             foreach (string id in UpgradeOrder)

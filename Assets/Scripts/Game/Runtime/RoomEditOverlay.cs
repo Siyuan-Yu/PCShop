@@ -13,7 +13,7 @@ namespace PCShopSell.Game.Runtime
         private readonly GameObject _root;
         private readonly GameObject _minor;
         private readonly Transform _crossX, _crossZ;
-        private readonly Transform _foot;
+        private readonly Transform _foot, _direction;
         private readonly Renderer _footRenderer;
         private readonly Material _ok, _bad;
         private readonly float _w, _d;
@@ -57,9 +57,19 @@ namespace PCShopSell.Game.Runtime
             Quad(footVertices, footTriangles, .5f - edge, -.5f + edge, .5f, .5f - edge);
             _foot = MeshObject("Footprint", Build(footVertices, footTriangles), _ok).transform;
             _footRenderer = _foot.GetComponent<Renderer>();
+            var directionVertices = new List<Vector3>();
+            var directionTriangles = new List<int>();
+            Quad(directionVertices, directionTriangles, -.055f, -.18f, .055f, 0);
+            directionVertices.Add(new Vector3(-.14f, GridY, -.16f));
+            directionVertices.Add(new Vector3(.14f, GridY, -.16f));
+            directionVertices.Add(new Vector3(0, GridY, -.34f));
+            directionTriangles.AddRange(new[] { 4, 5, 6 });
+            _direction = MeshObject("PlacementDirection", Build(directionVertices, directionTriangles),
+                Overlay(new Color(1f, .77f, .24f, .98f))).transform;
             _crossX.gameObject.SetActive(false);
             _crossZ.gameObject.SetActive(false);
             _foot.gameObject.SetActive(false);
+            _direction.gameObject.SetActive(false);
         }
 
         private static Material Overlay(Color c)
@@ -149,7 +159,7 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <summary>每帧：cursor 是鼠标所在格（房间局部坐标，已吸附），foot 是手里这件的占地框；camSize 太大时不画 0.25 米细线。</summary>
-        public void Update(Vector2? cursor, RectD? foot, bool valid, float camSize)
+        public void Update(Vector2? cursor, RectD? foot, int? rotation, bool valid, float camSize)
         {
             _minor.SetActive(camSize < 7.5f);
             bool show = cursor.HasValue;
@@ -162,12 +172,20 @@ namespace PCShopSell.Game.Runtime
             }
 
             _foot.gameObject.SetActive(foot.HasValue);
+            _direction.gameObject.SetActive(foot.HasValue && rotation.HasValue);
             if (foot.HasValue)
             {
                 RectD r = foot.Value;
                 _foot.localPosition = new Vector3((float)(r.MinX + r.MaxX) / 2, 0.05f, (float)(r.MinZ + r.MaxZ) / 2);
                 _foot.localScale = new Vector3((float)(r.MaxX - r.MinX), 0.01f, (float)(r.MaxZ - r.MinZ));
                 _footRenderer.sharedMaterial = valid ? _ok : _bad;
+                if (rotation is int facing)
+                {
+                    Quaternion turn = Quaternion.Euler(0, 90 * facing, 0);
+                    float edge = (facing & 1) == 0 ? _foot.localScale.z : _foot.localScale.x;
+                    _direction.localPosition = _foot.localPosition + turn * (Vector3.back * (edge * .5f + .035f));
+                    _direction.localRotation = turn;
+                }
             }
         }
 

@@ -72,6 +72,7 @@ namespace PCShopSell.Core.Session
             var d = new SaveData
             {
                 version=2,
+                foodShelfLifeVersion = FoodShelfLifeVersion,
                 rngState = Random.State.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 day = Clock.Today.TotalDays,
                 minute = Clock.MinuteOfDay,
@@ -163,7 +164,7 @@ namespace PCShopSell.Core.Session
                 assembler = Assembler != null ? ToSave(Assembler) : null,
                 everHired = EverHired,
                 candidates = _candidates.Select(ToSave).ToArray(),
-                dailyCandidateDay = _lastCandidateDay + 1,
+                recruitmentArrivalAt = RecruitmentNoticePosted ? _recruitmentArrivalAt : -1,
                 openingStaffWaitUntil = _openingStaffWaitUntil,
 
                 monthGoalEvaluated = MonthGoalEvaluated,
@@ -196,6 +197,7 @@ namespace PCShopSell.Core.Session
         {
             if (d == null) throw new ArgumentNullException(nameof(d));
             MigrateWeightUnits(d);
+            MigrateFoodShelfLife(d);
             ulong rng = ulong.Parse(d.rngState ?? "1", System.Globalization.CultureInfo.InvariantCulture);
             var s = new GameSession(city, rng, Money.Zero, GameTimestamp.From(new GameDate(d.day), d.minute), false, !d.noPhone);
             s.Restore(d, rng);
@@ -308,8 +310,13 @@ namespace PCShopSell.Core.Session
                 if (candidate.CandidateLeavesAt <= 0) candidate.CandidateLeavesAt = (long)Clock.Today.TotalDays * 1440 + CandidateLeaveMinute;
                 _candidates.Add(candidate);
             }
-            _lastCandidateDay = d.dailyCandidateDay - 1;
             _openingStaffWaitUntil = d.openingStaffWaitUntil;
+            bool legacyRecruitment = d.recruitmentArrivalAt == 0;
+            long firstArrivalDay = _openingStaffWaitUntil / GameTimestamp.MinutesPerDay;
+            bool legacyFirstBatchArrived = legacyRecruitment && _openingStaffWaitUntil > 0
+                && firstArrivalDay == Clock.Today.TotalDays && d.dailyCandidateDay == firstArrivalDay + 1;
+            _recruitmentArrivalAt = legacyRecruitment && !legacyFirstBatchArrived
+                ? _openingStaffWaitUntil : Math.Max(0, d.recruitmentArrivalAt);
 
             MonthGoalEvaluated = d.monthGoalEvaluated;
             MonthGoalPassed = d.monthGoalPassed;
@@ -393,8 +400,9 @@ namespace PCShopSell.Core.Session
             RestoreKolStreaming(d);
             RefreshBrandTraffic();
             EnsureFirstShopListings(Clock.Today.TotalDays);
-            ExpireCandidates();
-            RefreshDailyCandidates();
+            ExpireCandidates(clearAll: legacyRecruitment && !legacyFirstBatchArrived);
+            RefreshRecruitmentCandidates();
+            FilterPendingMarketPriceAlerts();
         }
 
         private const string AutoBuildFlag = "employee:auto-build";

@@ -299,6 +299,8 @@ namespace PCShopSell.Game.UI
             public ScrollRect ReplyScroll;
             public string SpeakerId;
             public TalkOpt[] Replies;
+            public bool AwaitingDecision;
+            public string ExitLabel { get; private set; }
             public string Reply
             {
                 get => _reply;
@@ -309,10 +311,16 @@ namespace PCShopSell.Game.UI
                 }
             }
 
-            public void Show(string text, params TalkOpt[] replies)
+            public void Show(string text, params TalkOpt[] replies) =>
+                SetPage(text, replies.Length > 0 ? replies : null, null);
+
+            public void Finish(string text, string exitLabel) => SetPage(text, null, exitLabel);
+
+            private void SetPage(string text, TalkOpt[] replies, string exitLabel)
             {
                 Reply = text;
-                Replies = replies.Length > 0 ? replies : null;
+                Replies = replies;
+                ExitLabel = exitLabel;
                 if (W == null) return;
                 W.ResetScrollOnRebuild = true;
                 W.Rebuild();
@@ -328,8 +336,7 @@ namespace PCShopSell.Game.UI
         {
             var ctx = new TalkCtx { Reply = firstReply };
             start?.Invoke(ctx);
-            var paper = new Color32(242, 230, 205, 255);
-            var ink = new Color32(41, 46, 40, 255);
+            var ink = Ui.TextColor;
             return OpenWindow(name + "　" + role, 930, 520, w =>
             {
                 ctx.W = w;
@@ -343,7 +350,7 @@ namespace PCShopSell.Game.UI
                 string speakerName = speakerId == portraitId ? name : S.CityPerson(speakerId)?.Name ?? speakerId;
                 string speakerRole = speakerId == portraitId ? role : S.CityPersonRole(speakerId);
 
-                var frame = Ui.Panel(w.Content, "DialogueReadingPanel", new Color32(166, 134, 80, 255));
+                var frame = Ui.Panel(w.Content, "DialogueReadingPanel", Ui.FlatWellEdge);
                 frame.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
                 var reading = Ui.Row(frame.transform, -1, 1).Fill(1);
                 var identity = Ui.Panel(reading, "DialogueIdentity", Ui.PanelBg2);
@@ -359,9 +366,10 @@ namespace PCShopSell.Game.UI
                 Ui.Label(identity.transform, "熟悉度 " + S.Relation(speakerId), 16, TextAnchor.MiddleCenter, Ui.Good);
                 if (S.IsPlayerPartner(speakerId)) Ui.Label(identity.transform, "你的伴侣", 16, TextAnchor.MiddleCenter, Ui.Accent);
 
-                var speech = Ui.Panel(reading, "DialogueSpeech", paper);
+                var speech = Ui.Panel(reading, "DialogueSpeech", Ui.FlatWell);
                 Ui.Size(speech, -1, -1, 1);
-                var options = ctx.Replies == null ? makeOptions?.Invoke(ctx) : null;
+                ctx.AwaitingDecision = false;
+                var options = ctx.Replies == null && ctx.ExitLabel == null ? makeOptions?.Invoke(ctx) : null;
                 var mainline = options?.Where(opt => opt.Mainline).ToArray();
                 int mainlineHeight = mainline == null || mainline.Length == 0 ? 0 : mainline.Length <= 2 ? 48 : 102;
                 var replyBody = Ui.Scroll(speech.transform);
@@ -378,7 +386,8 @@ namespace PCShopSell.Game.UI
                 line.lineSpacing = 1.2f;
                 if (mainlineHeight > 0) BuildDialogueMainline(speech.transform, mainline, mainlineHeight);
                 var actions = options == null ? ctx.Replies : options.Where(opt => !opt.Mainline).ToArray();
-                BuildDialogueFooter(w, actions, spreadReplies: ctx.Replies != null);
+                string exitLabel = ctx.Replies != null || ctx.AwaitingDecision ? null : ctx.ExitLabel ?? "结束对话";
+                BuildDialogueFooter(w, actions, exitLabel);
             }, true, true, onClosed, scrollContent: false, showTitleBar: false);
         }
 
@@ -404,27 +413,29 @@ namespace PCShopSell.Game.UI
             for (int i = 0; i < options.Length; i += 2)
             {
                 var row = Ui.Row(actions, 48);
-                BuildTalkOption(row, options[i]);
-                if (i + 1 < options.Length) BuildTalkOption(row, options[i + 1]);
-                else Ui.Size(Ui.Rect(row, "Space"), 0, -1, 1);
+                BuildTalkOption(row, options[i], 280, 48);
+                if (i + 1 < options.Length) BuildTalkOption(row, options[i + 1], 280, 48);
             }
         }
 
-        private static void BuildDialogueFooter(Window w, IReadOnlyList<TalkOpt> options, bool spreadReplies)
+        private static void BuildDialogueFooter(Window w, IReadOnlyList<TalkOpt> options, string exitLabel)
         {
-            const int maxColumns = 5;
+            const int columns = 5;
+            const int optionWidth = 140;
             const int rowHeight = 40;
             const int gap = 6;
             const int endWidth = 146;
             const int visibleRows = 2;
             const int footerHeight = visibleRows * rowHeight + (visibleRows - 1) * gap;
             int count = options?.Count ?? 0;
-            int columns = spreadReplies ? Mathf.Clamp(count, 1, maxColumns) : maxColumns;
             int rows = (count + columns - 1) / columns;
             var footer = Ui.Size(Ui.Rect(w.Content, "DialogueFooter"), -1, footerHeight);
-            var end = Ui.Button(footer, "结束对话", w.Close, 16, Ui.Warn);
-            end.name = "DialogueEnd";
-            ((RectTransform)end.transform).Anchor(1, 0, 1, 0, -endWidth, 0, 0, -rowHeight);
+            if (exitLabel != null)
+            {
+                var end = Ui.Button(footer, exitLabel, w.Close, 16, exitLabel == "结束对话" ? Ui.Warn : Ui.SelectedButton(true));
+                end.name = "DialogueEnd";
+                ((RectTransform)end.transform).Anchor(1, 0, 1, 0, -endWidth, 0, 0, -rowHeight);
+            }
             if (count == 0) return;
 
             RectTransform actions;
@@ -440,7 +451,7 @@ namespace PCShopSell.Game.UI
                 Ui.VList(actions);
             }
             optionsArea.name = "DialogueOptions";
-            optionsArea.Anchor(0, 0, 1, 1, 0, 0, endWidth + gap, rows == 1 ? rowHeight + gap : 0);
+            optionsArea.Anchor(0, 0, 1, 1, 0, 0, exitLabel != null ? endWidth + gap : 0, rows == 1 ? rowHeight + gap : 0);
             var list = actions.GetComponent<VerticalLayoutGroup>();
             list.padding = new RectOffset();
             list.spacing = gap;
@@ -449,35 +460,28 @@ namespace PCShopSell.Game.UI
             {
                 var row = Ui.Row(actions, rowHeight, gap);
                 row.name = "DialogueOptionRow";
-                for (int j = 0; j < columns; j++)
-                {
-                    if (i + j >= count)
-                    {
-                        Ui.Size(Ui.Rect(row, "Empty"), 0, -1, 1);
-                        continue;
-                    }
-                    BuildTalkOption(row, options[i + j]);
-                }
+                for (int j = i; j < Mathf.Min(i + columns, count); j++)
+                    BuildTalkOption(row, options[j], optionWidth, rowHeight);
             }
         }
 
-        private static void BuildTalkOption(Transform row, TalkOpt opt)
+        private static void BuildTalkOption(Transform row, TalkOpt opt, int width, int height)
         {
-            string label = opt.Blocker == null || opt.SeparateBlocker || opt.Blocker.Length > 20
-                ? opt.Label : opt.Label.Split('（')[0] + "\n<size=13>" + opt.Blocker + "</size>";
-            if (opt.Invitation) label = "＋ " + label;
+            string label = opt.Invitation ? "＋ " + opt.Label : opt.Label;
+            if (opt.Blocker != null && !opt.SeparateBlocker && label.Length * 16 <= width - 8 && opt.Blocker.Length * 13 <= width - 8)
+                label += "\n<size=13>" + opt.Blocker + "</size>";
             Color fill = opt.Invitation && !opt.Mainline
                 ? new Color32(184, 224, 216, 255)
                 : Ui.SelectedButton(opt.Mainline || opt.Hot);
-            var button = Ui.Size(Ui.Button(row, label, opt.Act, 16, fill, opt.Blocker == null), 0, -1, 1);
+            var button = Ui.Size(Ui.Button(row, label, opt.Act, 16, fill, opt.Blocker == null), width, height, 0);
             var caption = button.GetComponentInChildren<Text>();
-            caption.rectTransform.Fill(4);
-            caption.resizeTextForBestFit = true;
-            caption.resizeTextMinSize = opt.Mainline ? 14 : 11;
-            caption.resizeTextMaxSize = 16;
+            caption.rectTransform.Fill(3);
+            caption.lineSpacing = .92f;
+            caption.verticalOverflow = VerticalWrapMode.Truncate;
             if (opt.Invitation) caption.fontStyle = FontStyle.Bold;
             if (opt.Id != null) button.name = opt.Id;
-            if (opt.Blocker != null) button.Tip(opt.Blocker);
+            if (opt.Blocker != null) button.Tip(opt.Label + "\n" + opt.Blocker);
+            else if (label.Length * 16 > width - 8) button.Tip(opt.Label);
         }
 
         public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0,bool remote=false)
@@ -509,6 +513,7 @@ namespace PCShopSell.Game.UI
                 void Reply(string text) { ctx.Show(text); parent?.RequestRebuild(); }
                 if (confirmingBreakup)
                 {
+                    ctx.AwaitingDecision = true;
                     options.Add(new TalkOpt { Label = "继续相处", Act = () =>
                     {
                         confirmingBreakup = false;
@@ -560,6 +565,7 @@ namespace PCShopSell.Game.UI
                         }
                 if (creatorChoice)
                 {
+                    ctx.AwaitingDecision = true;
                     foreach (bool support in new[] { true, false })
                     {
                         bool choice = support;
@@ -569,7 +575,7 @@ namespace PCShopSell.Game.UI
                             Act = () => { if (S.ResolveCreatorStory(personId, choice)) { creatorChoice = false; Reply(choice ? "谢谢你愿意先听我说。" : "我会记住你的想法，也想保留自己的选择。"); } }
                         });
                     }
-                    options.Add(new TalkOpt { Label = "返回聊天", Act = () => { creatorChoice = false; ctx.W.ResetScrollOnRebuild = true; ctx.W.Rebuild(); } });
+                    options.Add(new TalkOpt { Label = "我再想想", Act = () => { creatorChoice = false; Reply("好，等你想好了，我们再聊这件事。"); } });
                     return options;
                 }
                 if (discussingPeople)
@@ -662,8 +668,7 @@ namespace PCShopSell.Game.UI
                         ctx.Continue("你搬来之前，我每年都在那里拍全家福。老板知道我爸坐不久，总把椅子先留给他。", () =>
                             Finish("后来人凑不齐，照片也就没再拍了。今天看到他拿着老相机，倒想把家里那几张翻出来看看。")) },
                     new TalkOpt { Label = "现在开了家什么店？", Act = () =>
-                        Finish("还是照相馆。现在是他女儿看店，顺便帮人把老照片扫进手机里。我的那几张，改日也拿过去试试。") },
-                    new TalkOpt { Label = "下次再聊", Act = () => reply("行，你先去忙。") });
+                        Finish("还是照相馆。现在是他女儿看店，顺便帮人把老照片扫进手机里。我的那几张，改日也拿过去试试。") });
                 return;
             }
             if (followUp != null)

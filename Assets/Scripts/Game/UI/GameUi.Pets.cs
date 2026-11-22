@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
@@ -15,6 +16,8 @@ namespace PCShopSell.Game.UI
         private RectTransform _petFocusHud, _petFocusChoices;
         private Text _petFocusTitle, _petFocusCoverage, _petDetailName, _petCondition, _petHappiness, _petCareStatus, _petDetailInfo, _petToyLabel;
         private Button _petPatButton, _petToyButton;
+        private Button _openingPetIntakeButton;
+        private const string PetIntakeLabel = "接单并入住";
         private readonly List<(long id, Button button)> _petFocusButtons = new();
         private readonly Dictionary<PetCareAction,(Text status, Button button)> _sharedPetCare = new();
         private float _nextPetFocusRefresh;
@@ -71,6 +74,18 @@ namespace PCShopSell.Game.UI
             $"结算时状态高于 {GameSession.PetReputationConditionThreshold}% · 名望 +{GameSession.PetReputationReward:0.#}/周"
             + (pet == null ? "" : $" · 按当前状态 +{GameSession.PetWeeklyReputation(pet):0.#}");
 
+        private static string PetPaymentTerms(PetStay pet) =>
+            $"入住先收 {GameSession.PetFirstWeekAdvance(pet)}（首周基础价的 {GameSession.PetFirstWeekAdvancePercent}%），一周后按状态结清首周余款。"
+            + (pet.Weeks > 1 ? "之后每周结算一次。" : "");
+
+        private static string PetSettlementAmountText(PetStay pet, bool showAdvance = false)
+        {
+            var amount = GameSession.PetWeeklyPayment(pet);
+            if (pet.PaidWeeks != 0 || pet.FirstWeekAdvanceCents <= 0) return $"本周待收 {amount}";
+            return (showAdvance ? $"已收预付款 {Money.FromCents(pet.FirstWeekAdvanceCents)} · " : "")
+                + $"首周余款 {amount}";
+        }
+
         public void OpenPetOwnerVisit(long id)
         {
             var shop = S.CurrentShop;
@@ -82,28 +97,109 @@ namespace PCShopSell.Game.UI
             OpenWindow(owner+" · "+(dropOff?"送养":"探望"),670,430,w=>
             {
                 PersonSummary(w.Content, pet.OwnerId, owner, pet.Name + (pet.Dog ? " · 狗" : " · 猫"));
-                string reason = dropOff ? S.PetAcceptBlocker(shop) : S.PetVisitBlocker(shop,pet);
-                string action = dropOff ? "接单并入住" : pet.PaidWeeks+1 >= pet.Weeks ? "结算并接回" : "结算本周代养";
-                Para(w.Content,dropOff ? $"代养 {pet.Weeks} 周 · 基础价 ¥{pet.WeeklyPrice}/周\n每周探望时按宠物状态结算。"
-                    : $"状态 {pet.Condition}/100 · 快乐 {pet.Happiness}/100\n第 {pet.PaidWeeks+1}/{pet.Weeks} 周实收 {GameSession.PetWeeklyPayment(pet)}",18);
+                string reason = PetCounterBlocker(dropOff ? S.PetAcceptBlocker(shop) : S.PetVisitBlocker(shop, pet));
+                string action = dropOff ? PetIntakeLabel : pet.PaidWeeks+1 >= pet.Weeks ? "结算并接回" : "结算本周代养";
+                Para(w.Content, dropOff ? $"代养 {pet.Weeks} 周 · 基础价 ¥{pet.WeeklyPrice}/周\n{PetPaymentTerms(pet)}"
+                    : $"状态 {pet.Condition}/100 · 快乐 {pet.Happiness}/100\n第 {pet.PaidWeeks+1}/{pet.Weeks} 周 · {PetSettlementAmountText(pet, showAdvance: true)}", 18);
                 Line(w.Content, PetReputationText(dropOff ? null : pet), 16, Ui.Good);
                 Ui.Size(Ui.Button(w.Content,reason??action,()=>
                 {
-                    if (!(dropOff ? S.AcceptPetStay() : S.SettlePetStay(id))) return;
                     w.Close();
-                    RebuildDock();
-                },18,Ui.ButtonHot,reason==null),-1,42);
+                    _ctrl.HandlePetCounterOrder(shop, id, dropOff);
+                },18,Ui.ButtonHot,reason == null && !_ctrl.CheckoutPending),-1,42);
             });
         }
 
-        private string PetOrdersSignature()
+        private PetStay ArrivedPetOffer(OwnedShop shop)
         {
-            if (!S.IsPetShop(S.CurrentShop)) return "";
-            var shop = S.CurrentShop;
+            var offer = S.PetBoarding(shop)?.Offer;
+            return offer != null && S.PetOwnerHere(shop, offer) ? offer : null;
+        }
+
+        private IEnumerable<PetStay> ArrivedPetVisits(OwnedShop shop) =>
+            S.PetGuests(shop).Where(pet => S.Clock.Now.TotalMinutes >= pet.NextVisitAt && S.PetOwnerHere(shop, pet));
+
+        private string PetCounterSignature(OwnedShop shop)
+        {
+            var offer = ArrivedPetOffer(shop);
+            string blocker = offer == null ? null : S.PetAcceptBlocker(shop);
+            return $"{S.PetCapacity(shop)}|{S.PetGuests(shop).Count}|{offer?.Id}|{blocker}|"
+                + string.Join(",", ArrivedPetVisits(shop).Select(pet => $"{pet.Id}:{pet.PaidWeeks}:{pet.Condition}"));
+        }
+
+        private string PetOrdersSignature(OwnedShop shop)
+        {
             var state = S.PetBoarding(shop);
-            return "|" + S.PetCapacity(shop) + "|" + state?.Offer?.Id + "|" + S.PetAcceptBlocker(shop) + "|" + state?.LastPickup
+            var offer = ArrivedPetOffer(shop);
+            string blocker = offer == null ? null : S.PetAcceptBlocker(shop);
+            return $"{S.PetCapacity(shop)}|{offer?.Id}|{blocker}|{state?.LastPickup}"
                 + "|" + string.Join(",",S.PetGuests(shop).Select(p => p.Id + ":" + S.PetVisitBlocker(shop,p)
                     + ":" + p.Condition + ":" + p.Happiness + ":" + p.PaidWeeks + ":" + PetCareStatus(shop,p).text));
+        }
+
+        private void BuildPetBoardingCounter(OwnedShop shop)
+        {
+            int capacity = S.PetCapacity(shop);
+            if (capacity == 0)
+            {
+                Para(C, "宠物代养需摆放宠物屋", 15, Ui.Dim);
+                return;
+            }
+
+            var panel = Ui.Panel(C, "PetBoardingCounter", Ui.PanelBg2).rectTransform;
+            Ui.VList(panel, 4, 8);
+            var header = Ui.Row(panel, 34, 8);
+            Ui.Size(Ui.Label(header, $"宠物寄养 · 已入住 {S.PetGuests(shop).Count}/{capacity} 只", 18, color: Ui.Accent), -1, 34, 1);
+            Ui.Size(Ui.Button(header, "查看寄养订单", OpenPetOrders, 16), 124, 34);
+
+            if (ArrivedPetOffer(shop) is PetStay offer)
+            {
+                string species = offer.Dog ? "狗" : "猫";
+                _openingPetIntakeButton = AddPetCounterOrder(panel,
+                    $"{offer.Name} · {species}", $"{offer.Weeks} 周 · ¥{offer.WeeklyPrice}/周",
+                    $"入住预收 {GameSession.PetFirstWeekAdvance(offer)}",
+                    PetIntakeLabel, S.PetAcceptBlocker(shop), () => _ctrl.HandlePetCounterOrder(shop, offer.Id, dropOff: true));
+            }
+
+            foreach (var pet in ArrivedPetVisits(shop))
+            {
+                bool finalVisit = pet.PaidWeeks + 1 >= pet.Weeks;
+                AddPetCounterOrder(panel, $"{(finalVisit ? "接回" : "探望")} · {pet.Name}", $"第 {pet.PaidWeeks + 1}/{pet.Weeks} 周", PetSettlementAmountText(pet),
+                    finalVisit ? "结算并接回" : "结算本周代养", S.PetVisitBlocker(shop, pet),
+                    () => _ctrl.HandlePetCounterOrder(shop, pet.Id, dropOff: false));
+            }
+        }
+
+        private Button AddPetCounterOrder(Transform parent, string title, string detail, string amount,
+            string action, string blocker, System.Action onClick)
+        {
+            var row = Ui.Row(parent, 82, 8);
+            row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+            var receipt = Ui.Size(Ui.PaperPanel(row, "PetCounterReceipt", lifted: true, torn: true), 0, 78, 1);
+            Ui.VList(receipt.rectTransform, 0, 5);
+            Ui.Size(Line(receipt.transform, "主人已到店", 13, Ui.Good), -1, 17);
+            var description = Ui.Size(Line(receipt.transform, title + "  <size=14>" + detail + "</size>", 16), -1, 24);
+            description.fontStyle = FontStyle.Bold;
+            description.resizeTextForBestFit = true;
+            description.resizeTextMinSize = 14;
+            description.resizeTextMaxSize = 16;
+            description.verticalOverflow = VerticalWrapMode.Truncate;
+            description.Tip(title + " · " + detail);
+            Ui.Size(Ui.Panel(receipt.transform, "ReceiptTotalRule", Ui.FlatCardEdge), -1, 1).raycastTarget = false;
+            Ui.Size(Line(receipt.transform, amount, 16, Ui.Good), -1, 23).fontStyle = FontStyle.Bold;
+            return Ui.Size(PetCounterButton(row, action, blocker, onClick, 16), 154, 38);
+        }
+
+        private string PetCounterBlocker(string blocker) => blocker
+            ?? (_ctrl.Interior?.HasCounter == true ? null : "请先摆放收银台");
+
+        private Button PetCounterButton(Transform parent, string label, string blocker, System.Action onClick, int fontSize)
+        {
+            string reason = PetCounterBlocker(blocker);
+            var button = Ui.Button(parent, reason ?? label, onClick, fontSize, Ui.ButtonHot,
+                interactable: reason == null && _ctrl.CanRequestCheckout);
+            if (reason == null) _counterRefresh.Add(() => button.interactable = _ctrl.CanRequestCheckout);
+            return button;
         }
 
         private (string text, bool covered) PetCareStatus(OwnedShop shop, PetStay pet)
@@ -114,6 +210,11 @@ namespace PCShopSell.Game.UI
                 ? ($"照顾人 · {keeper.Name}",true)
                 : ($"没有人照顾（{keeper.Name}未在岗）",false);
         }
+
+        private string PetSettlementCountdown(OwnedShop shop, PetStay pet) =>
+            S.Clock.Now.TotalMinutes < pet.NextVisitAt
+                ? "结算 · " + S.Clock.OrderDeadlineText(pet.NextVisitAt)
+                : S.PetVisitBlocker(shop, pet) ?? "可以结算";
 
         private void BuildPetOrders()
         {
@@ -128,32 +229,32 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(C,"打开装修",() => SelectTab(ShopTab.Renovate),17),-1,40);
                 return;
             }
-            if (state?.Offer is PetStay offer)
+            if (ArrivedPetOffer(shop) is PetStay offer)
             {
                 PersonSummary(C, offer.OwnerId, "送养 · " + offer.Name + (offer.Dog ? " · 狗" : " · 猫"),
                     (S.CityPerson(offer.OwnerId)?.Name ?? "主人") + $" · {offer.Weeks} 周 · 基础价 ¥{offer.WeeklyPrice}/周");
+                Para(C, PetPaymentTerms(offer), 16);
                 Line(C, PetReputationText(), 16, Ui.Good);
-                string blocker = S.PetAcceptBlocker(shop);
-                var accept = Ui.Button(C,blocker ?? "接单并入住",() => { if (S.AcceptPetStay()) RebuildDock(); },18,Ui.ButtonHot);
-                accept.interactable = blocker == null;
-                Ui.Size(accept,-1,40);
+                Ui.Size(PetCounterButton(C, PetIntakeLabel, S.PetAcceptBlocker(shop),
+                    () => _ctrl.HandlePetCounterOrder(shop, offer.Id, dropOff: true), 18), -1, 40);
             }
-            else Line(C,guests.Count >= capacity ? "已满员，交接后继续接新单。" : "暂无送养请求，营业时会有主人来店。",16,Ui.Dim);
+            else Line(C, guests.Count >= capacity ? "寄养已满员" : "暂无送养订单", 16, Ui.Dim);
 
             foreach (var pet in guests)
             {
                 var visit = new GameTimestamp(pet.NextVisitAt);
-                PersonSummary(C, pet.OwnerId, pet.Name + (pet.Dog ? " · 狗" : " · 猫"),
+                var header = PersonSummary(C, pet.OwnerId, pet.Name + (pet.Dog ? " · 狗" : " · 猫"),
                     (S.CityPerson(pet.OwnerId)?.Name ?? "主人") + $" · {pet.PaidWeeks+1}/{pet.Weeks} 周 · {visit.Date.Month}/{visit.Date.Day} {Ui.Hm(visit.MinuteOfDay)} 探望");
-                Line(C,"状态 " + pet.Condition + "/100 · 快乐 "+pet.Happiness+"/100 · 预计收 " + GameSession.PetWeeklyPayment(pet),16);
+                var countdown = Ui.Size(Ui.Label(header, PetSettlementCountdown(shop, pet), 15, TextAnchor.MiddleRight, Ui.Accent), 208, 54);
+                _counterRefresh.Add(() => countdown.text = PetSettlementCountdown(shop, pet));
+                Line(C, $"状态 {pet.Condition}/100 · 快乐 {pet.Happiness}/100 · {PetSettlementAmountText(pet, showAdvance: true)}", 16);
                 Line(C, PetReputationText(pet), 16, Ui.Good);
                 var care = PetCareStatus(shop,pet);
                 Line(C,care.text,16,care.covered ? Ui.Good : PetUnattended);
-                if (S.Clock.Now.TotalMinutes < pet.NextVisitAt) continue;
-                string blocker = S.PetVisitBlocker(shop,pet);
-                if (blocker != null) { Line(C,blocker,16,Ui.Dim); continue; }
+                if (S.PetVisitBlocker(shop, pet) != null) continue;
                 string label = pet.PaidWeeks+1 >= pet.Weeks ? "接回并结算本周" : "接待主人并结算本周";
-                Ui.Size(Ui.Button(C,label,() => { if (S.SettlePetStay(pet.Id)) RebuildDock(); },17,Ui.ButtonHot),-1,38);
+                Ui.Size(PetCounterButton(C, label, null,
+                    () => _ctrl.HandlePetCounterOrder(shop, pet.Id, dropOff: false), 17), -1, 38);
             }
             if (!string.IsNullOrEmpty(state?.LastPickup))
                 Para(C,"最近结算 · " + state.LastPickup,16,Ui.Good);

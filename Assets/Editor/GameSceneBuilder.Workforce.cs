@@ -96,6 +96,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.DebugSelectTab(5);
             Frame(0);
             Shot("vs1_employees_staff_tab");
+            ClickGuideButton("贴招聘告示");
             _game.Ui.CloseAllWindows();
             s.Clock.Restore(s.Clock.Today, 23 * 60 + 59);
             s.AdvanceClock(2);
@@ -103,7 +104,7 @@ namespace PCShopSell.EditorTools
                 "次日同一个员工到新店换成收银岗位");
             s.Clock.Restore(s.Clock.Today, 8 * 60 + 59);
             s.AdvanceClock(2);
-            Check(s.Candidates.Count == GameSession.DailyCandidateCount, "每日有四名应聘者");
+            Check(s.Candidates.Count == GameSession.CandidatesPerNotice, "贴告示后次日有四名应聘者");
             _game.Ui.CloseAllWindows();
             _game.Ui.OpenDock();
             _game.Ui.DebugSelectTab(5);

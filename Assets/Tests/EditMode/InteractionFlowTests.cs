@@ -152,6 +152,7 @@ namespace PCShopSell.Tests
             {
                 s.EventsEnabled = false;
                 GameSessionTests.Teleport(s, s.MainShop.Place.Id);
+                GameSessionTests.PostFirstRecruitmentNotice(s);
                 s.Clock.Restore(s.Clock.Today.AddDays(1), 8 * 60 + 59);
                 s.AdvanceClock(2);
                 var candidate = s.Candidates.First();

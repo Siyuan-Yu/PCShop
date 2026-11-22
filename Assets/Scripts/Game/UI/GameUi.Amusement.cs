@@ -92,14 +92,11 @@ namespace PCShopSell.Game.UI
                 string firstLine = garden ? "你看，赛道岛就在我们脚下。平时从岸边看，可分不清两座桥离得有多远。"
                     : "你看左边。那条贴着湖拐过去的路，就是我们刚才走过来的地方。";
                 OpenDialogue(id, name, session.CityPersonRole(id), "", null, start: ctx => ctx.Show(firstLine,
-                    new TalkOpt { Label = "你最常去哪边？", Act = () => ctx.Show(
-                        session.CityTalk(id, "life") ?? "我喜欢沿湖走到人少的地方，在水边坐一会儿。", Back(ctx)) },
-                    Back(ctx)));
+                    new TalkOpt { Label = "你最常去哪边？", Act = () => ctx.Finish(
+                        session.CityTalk(id, "life") ?? "我喜欢沿湖走到人少的地方，在水边坐一会儿。", "继续看风景") }));
             }, 17, Ui.ButtonHot);
             talk.GetComponent<RectTransform>().Anchor(.74f, .15f, .98f, .85f);
             talk.gameObject.SetActive(false);
-
-            TalkOpt Back(TalkCtx ctx) => new TalkOpt { Label = "继续看风景", Hot = true, Act = () => ctx.W.Close() };
 
             return dt =>
             {
