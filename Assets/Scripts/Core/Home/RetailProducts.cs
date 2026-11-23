@@ -4,6 +4,9 @@ namespace PCShopSell.Core.Home
 {
     public static class RetailProducts
     {
+        public static readonly GiftDef CompanyModel = new GiftDef("model:starlight:company", "自有拼装模型", "公司研发的拼装套件。", 178, .45, null)
+            { ModelSeries = "starlight" };
+        public static readonly GiftDef CompanyApparel = new GiftDef("clothing:company_basic", "自有通勤衫", "公司研发的日常通勤款。", 148, .32, null);
         public static readonly IReadOnlyList<GiftDef> All = Create();
         private static GiftDef[] Create()
         {
@@ -44,7 +47,7 @@ namespace PCShopSell.Core.Home
         {
             if (kind == "computer") return true;
             if(kind=="restaurant"||kind=="secondhand")return false;
-            if (kind == "clothing") return ClothingProducts.IsClothing(id);
+            if (kind == "clothing") return id == RetailProducts.CompanyApparel.Id || ClothingProducts.IsClothing(id);
             if (kind == "models") return ModelProducts.IsModel(id);
             if (kind == PetShopCatalog.ShopKind) return PetShopCatalog.IsProduct(id);
             if (kind == "flowers") return id != null && id.StartsWith("flower_");

@@ -125,7 +125,7 @@ namespace PCShopSell.Game.UI
             Text status = null;
             Button finish = null;
 
-            OpenWindow($"装机：{PartCatalog.TierName(order.Tier)}整机（报价 {order.Price}）", 1460, 800, w =>
+            OpenWindow($"装机：{order.ProductName}（报价 {order.Price}）", 1460, 800, w =>
             {
                 Text tip = Ui.Label(w.Content, "对照右侧订单清单，把指定型号拖到对应位置。先装主板，再装 CPU 和内存。", 18);
                 Ui.Size(tip, -1, 30);

@@ -1137,7 +1137,7 @@ namespace PCShopSell.Game.UI
             {
                 BuildOrder order = o;
                 List<PartDef> missing = S.MissingParts(o);
-                Text head = CounterText(() => $"<b>{PartCatalog.TierName(order.Tier)}整机</b>  报价 <color=#386047>{order.Price}</color>  {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 18);
+                Text head = CounterText(() => $"<b>{order.ProductName}</b>  报价 <color=#386047>{order.Price}</color>  {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 18);
                 Ui.Size(head, -1, 28);
                 foreach (PartDef p in PartCatalog.BuildList(o.Tier))
                 {
@@ -1233,9 +1233,11 @@ namespace PCShopSell.Game.UI
                 var label = card.GetComponentInChildren<Text>();
                 void RefreshEmployeeCard()
                 {
+                    var companyTransfer = S.PendingCompanyPostOf(worker.Id);
+                    bool companyIncoming = companyTransfer?.StoreId == S.CurrentShop.Place.Id;
                     bool incoming = assignment.Shop != S.CurrentShop && worker.TransferShopId == S.CurrentShop.Place.Id;
-                    string role = GameSession.RoleName(incoming ? S.PlannedEmployeeRole(assignment) : assignment.Role);
-                    string state = incoming ? "明日调入 · 当前" + (assignment.Shop == null ? "待安排" : S.ShopTitle(assignment.Shop))
+                    string role = GameSession.RoleName(companyIncoming ? companyTransfer.StoreRole : incoming ? S.PlannedEmployeeRole(assignment) : assignment.Role);
+                    string state = companyIncoming ? "下个班次调入" : incoming ? "明日调入 · 当前" + (assignment.Shop == null ? "待安排" : S.ShopTitle(assignment.Shop))
                         : ShopEmployeeWorkText(assignment);
                     if (needsPlan)
                     {
@@ -1259,7 +1261,7 @@ namespace PCShopSell.Game.UI
                     if (_openingStaffPurchaseButton == null) _openingStaffPurchaseButton = purchase;
                 }
             }
-            Ui.Size(Ui.Button(C,"管理岗位与排班",OpenEmployeesPanel,17),-1,38);
+            Ui.Size(Ui.Button(C,"管理岗位与排班",() => OpenManagementShopEmployees(S.CurrentShop),17),-1,38);
             if (!guidedHire) BuildRecruitment(C);
         }
 

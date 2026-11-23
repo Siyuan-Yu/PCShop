@@ -120,6 +120,7 @@ namespace PCShopSell.Core.Session
         private void SaveBusiness(SaveData d)
         {
             d.brandBusiness=_brands.Copy();
+            d.companies=_companies.Select(x => x.Copy()).ToArray();
             d.brandStories=_brandStories.Select(s=>s.Copy()).ToArray();
             d.hasBusiness=true;
             d.business=new BusinessSave { Debts=_supplierDebts.Select(x=>x.Copy()).ToArray(), Shipments=_directShipments.Select(x=>x.Copy()).ToArray(), Contracts=_contracts.Select(x=>x.Copy()).ToArray(),

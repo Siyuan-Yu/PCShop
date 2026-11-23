@@ -336,6 +336,7 @@ namespace PCShopSell.Core.Session
             RestoreBank(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop, d.hasShopStanding);
             LoadAdditionalStaff(d);
+            RestoreCompanies(d);
             foreach (OwnedShop shop in _shops) ClearUnstaffedAssembly(shop);
             LoadCityAssets(d);
             LoadResidentialLeases(d);

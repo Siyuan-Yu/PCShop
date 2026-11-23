@@ -25,7 +25,7 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class EmployeePayrollDay
     {
-        public string EmployeeId, Name;
+        public string EmployeeId, Name, CompanyId, AssignedShopId;
         public int Workday;
         public long Start, End, DailyCents;
         public int Minutes;
@@ -101,14 +101,16 @@ namespace PCShopSell.Core.Session
             var p=_employeePayroll.FirstOrDefault(x=>x.EmployeeId==e.Id&&x.Workday==day);
             if(p==null)
             {
-                p=new EmployeePayrollDay{EmployeeId=e.Id,Name=e.Name,Workday=day,Start=start,End=end,DailyCents=e.DailyWage.Cents};
+                var assignment = FindEmployee(e.Id);
+                p=new EmployeePayrollDay{EmployeeId=e.Id,Name=e.Name,Workday=day,Start=start,End=end,DailyCents=e.DailyWage.Cents,
+                    CompanyId=CompanyEmployerOf(assignment)?.BrandId,AssignedShopId=assignment?.Shop?.Place.Id};
                 _employeePayroll.Add(p);
             }
             p.End=Math.Max(p.End,end);return p;
         }
         private bool EmployeeActuallyWorking(EmployeeAssignment row)
         {
-            if(row.Shop==null)return false;
+            if(row.Shop==null)return CompanyPostOf(row.Person.Id)!=null&&!BrandExpoPersonReserved(PersonIdOf(row.Person));
             if(EmployeeTrip(row.Person.Id)!=null)return true;
             var p=CityPersonState(PersonIdOf(row.Person));
             var workActivity=_cityActivities.FirstOrDefault(a=>a.Active&&a.Id==p?.ActivityId);
@@ -128,8 +130,9 @@ namespace PCShopSell.Core.Session
                 if(EmployeeActuallyWorking(row)&&p.LastMinute<from)
                 {
                     int minutes=(int)Math.Max(0,Math.Min(to,end)-Math.Max(from,start));
-                    var shop=p.Shops.FirstOrDefault(x=>x.ShopId==row.Shop.Place.Id);
-                    if(shop==null){shop=new EmployeeWorkMinutes{ShopId=row.Shop.Place.Id};p.Shops.Add(shop);}
+                    var shopId = row.Shop?.Place.Id;
+                    var shop=p.Shops.FirstOrDefault(x=>x.ShopId==shopId);
+                    if(shop==null){shop=new EmployeeWorkMinutes{ShopId=shopId};p.Shops.Add(shop);}
                     long priorCost=p.OvertimeCents;
                     int oldOvertime=Math.Max(0,p.Minutes-600);p.Minutes+=minutes;shop.Minutes+=minutes;
                     shop.OvertimeMinutes+=Math.Max(0,p.Minutes-600)-oldOvertime;p.LastMinute=from;
@@ -145,7 +148,9 @@ namespace PCShopSell.Core.Session
         {
             if(p.BasePaid)return;
             if(p.DailyCents>0)Ledger.ForceDebit(Clock.Today,"工资",Money.FromCents(p.DailyCents),p.Name+" 基础工资（工作日"+p.Workday+"）",
-                LedgerAttribution.ForShop(p.End<=Clock.Now.TotalMinutes&&p.Shops.Count==1?p.Shops[0].ShopId:null,"payroll:base:"+p.EmployeeId+":"+p.Workday,"基础工资").Payroll(p.EmployeeId,p.Workday));
+                new LedgerAttribution(LedgerBusinessKind.Operating,
+                    p.End<=Clock.Now.TotalMinutes&&p.Shops.Count==1?p.Shops[0].ShopId:p.AssignedShopId,
+                    activityId:p.CompanyId,sourceEventId:"payroll:base:"+p.EmployeeId+":"+p.Workday,transactionKind:"基础工资").Payroll(p.EmployeeId,p.Workday));
             p.BasePaid=true;
         }
         private void PayPayrollOvertime(EmployeePayrollDay p)
@@ -155,7 +160,8 @@ namespace PCShopSell.Core.Session
                 long target=shop.AccruedOvertimeCents;
                 long delta=target-shop.PaidOvertimeCents;if(delta<=0)continue;
                 Ledger.ForceDebit(Clock.Today,"工资",Money.FromCents(delta),p.Name+" 加班工资（工作日"+p.Workday+"）",
-                    LedgerAttribution.ForShop(shop.ShopId,"payroll:ot:"+p.EmployeeId+":"+p.Workday+":"+shop.ShopId+":"+target,"加班工资").Payroll(p.EmployeeId,p.Workday));
+                    new LedgerAttribution(LedgerBusinessKind.Operating, shop.ShopId, activityId: p.CompanyId,
+                        sourceEventId:"payroll:ot:"+p.EmployeeId+":"+p.Workday+":"+shop.ShopId+":"+target,transactionKind:"加班工资").Payroll(p.EmployeeId,p.Workday));
                 shop.PaidOvertimeCents=target;
             }
         }

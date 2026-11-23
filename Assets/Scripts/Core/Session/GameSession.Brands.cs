@@ -52,12 +52,22 @@ namespace PCShopSell.Core.Session
         }
         public bool FoundBrand(string kind,string name,string position)
         {
-            string why=BrandFoundBlocker(kind);if(why!=null)return Fail(why);
-            name=(name??"").Trim();if(name.Length<2||name.Length>16)return Fail("品牌名需2—16字");
+            var blocker = BrandFoundBlocker(kind);
+            if (blocker != null) return Fail(blocker);
+            return CreateBrandAndCompany(kind, name, position, MyShops.Where(s => s.RetailKind == kind).Select(s => s.Place.Id).ToArray());
+        }
+        private bool CreateBrandAndCompany(string kind, string name, string position, string[] shopIds)
+        {
+            name=(name??"").Trim();if(name.Length<2||name.Length>16||name.Any(char.IsControl))return Fail("公司名需2—16个单行字符");
             if(position!="value"&&position!="quality")return false;
             var b=new BrandRecord {Id="brand:"+kind,Kind=kind,Name=name,Position=position,Founded=BrandDay,
-                ShopIds=MyShops.Where(s=>s.RetailKind==kind).Select(s=>s.Place.Id).ToArray()};
-            _brands.Brands=AppendBrand(_brands.Brands,b);RefreshBrandTraffic();Say(name+"正式成立。可以准备参展，也可以安排已签约的代言人。");return true;
+                ShopIds=shopIds.ToArray()};
+            _brands.Brands=AppendBrand(_brands.Brands,b);
+            EnsureCompany(b, shopIds);
+            RefreshBrandTraffic();
+            RefreshDistrictNarrative();
+            Say(name+"正式成立。可在经营窗口查看公司和安排部门。");
+            return true;
         }
         public bool RenameBrand(string brandId, string name)
         {

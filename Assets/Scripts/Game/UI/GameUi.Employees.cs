@@ -16,7 +16,7 @@ namespace PCShopSell.Game.UI
 
         private Window _managementWindow;
         private GameSession _managementSession;
-        private bool _managementEmployees;
+        private int _managementTab;
         private readonly HashSet<string> _managementExpandedShops = new HashSet<string>();
         private readonly HashSet<string> _managementExpandedEmployees = new HashSet<string>();
 
@@ -24,21 +24,28 @@ namespace PCShopSell.Game.UI
 
         public void OpenStoreManagement()
         {
-            if (_managementWindow == null || _managementWindow.Closed) _managementShops.Select(null);
+            if (_managementWindow == null || _managementWindow.Closed)
+            {
+                _managementShops.CompanyId = null;
+                _managementShops.Select(null);
+            }
             OpenManagementPanel(false);
         }
 
-        private void OpenManagementPanel(bool employees)
+        private void OpenManagementPanel(bool employees) => OpenManagementPanel(employees ? 1 : 0);
+
+        private void OpenManagementPanel(int tab)
         {
             if (_managementSession != S)
             {
                 _managementSession = S;
                 _managementExpandedShops.Clear();
                 _managementExpandedEmployees.Clear();
+                ResetCompanyWorkspace();
                 _managementExpandedShops.Add((S.ShopAt(S.CurrentPlace) ?? S.MyShops.FirstOrDefault())?.Place.Id);
             }
-            bool changed = _managementEmployees != employees;
-            _managementEmployees = employees;
+            bool changed = _managementTab != tab;
+            _managementTab = tab;
             if (_managementWindow != null && !_managementWindow.Closed)
             {
                 _managementWindow.Root.SetAsLastSibling();
@@ -54,13 +61,19 @@ namespace PCShopSell.Game.UI
         private void BuildManagementPanel(Window w)
         {
             var tabs = Ui.Row(w.Content, 42, 8);
-            void Tab(string label, bool employees, string name)
+            void Tab(string label, int tab, string name)
             {
-                Ui.Tab(tabs, label, () => OpenManagementPanel(employees), _managementEmployees == employees).name = name;
+                Ui.Tab(tabs, label, () => OpenManagementPanel(tab), _managementTab == tab).name = name;
             }
-            Tab("店", false, "ManagementShops");
-            Tab("员工", true, "ManagementEmployees");
-            if (!_managementEmployees)
+            Tab("店", 0, "ManagementShops");
+            Tab("员工", 1, "ManagementEmployees");
+            Tab("公司", 2, "ManagementCompanies");
+            if (_managementTab == 2)
+            {
+                BuildCompanyWorkspace(w);
+                return;
+            }
+            if (_managementTab == 0)
             {
                 BuildShopManagementTools(tabs);
                 BuildManagedShops(w.Content, w, _managementShops);
@@ -75,15 +88,15 @@ namespace PCShopSell.Game.UI
 
         private void BuildEmployeesContent(Window w, HashSet<string> expandedShops, HashSet<string> expandedEmployees)
         {
-            var rows = S.Employees;
-            Line(w.Content, $"员工 {rows.Count} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
+            var rows = S.Employees.Where(row => S.CompanyOfEmployee(row.Person.Id) == null).ToArray();
+            Line(w.Content, $"个人经营员工 {rows.Length} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
             Line(w.Content, "同店换岗当天生效，跨店调动次日生效。", 16, Ui.Dim);
             var bar = Ui.Row(w.Content, 40);
             Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
             Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); if(S.IsOwnedVenue(S.CurrentPlace))OpenVenueManagement(S.CurrentPlace);else{OpenDock();SelectTab(ShopTab.Staff);} }, 17, Ui.ButtonBg, S.InPlayerShop), 220);
-            if (rows.Count == 0) Para(w.Content, "还没有员工。到自己的店里打开“员工”页，聘用后选择工作安排。", 20);
+            if (rows.Length == 0) Para(w.Content, "暂无个人经营员工。公司员工在「公司 → 人事管理」查看。", 20);
             var roster = rows.ToLookup(row => row.Shop);
-            foreach (var shop in S.MyShops) BuildGroup(shop);
+            foreach (var shop in S.MyShops.Where(shop => S.CompanyOfShop(shop) == null)) BuildGroup(shop);
             if (roster[null].Any()) BuildGroup(null);
 
             void BuildGroup(OwnedShop shop)

@@ -335,7 +335,7 @@ namespace PCShopSell.Game.UI
             var autoRow = Ui.Row(body, 32, 8); WbAction(autoRow, "切换员工自动装机", () => { S.ToggleAutoBuildAt(shop); w.RequestRebuild(); }, "WorkbenchAutoBuild_" + shop.Place.Id, 170); WbFlex(autoRow);
             foreach (var order in shop.Sim.Orders)
             {
-                WbText(body, $"{PartCatalog.TierName(order.Tier)}整机 · {order.Price} · {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 18);
+                WbText(body, $"{order.ProductName} · {order.Price} · {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 18);
                 WbText(body, order.EmployeeMinutesLeft > 0 ? $"员工装机剩余 {order.EmployeeMinutesLeft} 分钟" :
                     order.PartsReserved ? "配件已备齐 · 等待装机" : "等待配件", 15, WbDim);
                 foreach (var part in PartCatalog.BuildList(order.Tier))

@@ -26,6 +26,7 @@ namespace PCShopSell.Game.UI
             if(p.Kind==PlaceKind.Dealer||p.Id=="motor_scooter_mod"){OpenPlaceWindow(p,BuildMotorDealer,1160,900);return;}
             if(S.VentureAt(p.Id)?.Kind=="cars"){OpenPlaceWindow(p,BuildUsedMotorShop,1160,900);return;}
             if(p.Id=="life_expo"){OpenExpoReception();return;}
+            if (p.Id == GameSession.EnterpriseCenterId) { OpenEnterpriseServiceCenter(p); return; }
             if (p.Business == GameSession.BankBusiness)
             {
                 OpenBank(p, S.AppLoans.Any(loan => !loan.Repaid) ? BankPage.Loans : BankPage.Transfers);
@@ -201,7 +202,7 @@ namespace PCShopSell.Game.UI
         private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true)
         {
             bool isRaceTrack = RaceTracks.Get(p.Id) != null;
-            bool fixedLayout = p.Kind == PlaceKind.Agency || p.Kind == PlaceKind.Garage || isRaceTrack;
+            bool fixedLayout = p.Kind == PlaceKind.Agency || p.Kind == PlaceKind.Garage || isRaceTrack || p.Id == GameSession.EnterpriseCenterId;
             OpenWindow(S.PlaceTitle(p), w, h, win =>
             {
                 if (S.CurrentPlace != p)
@@ -210,7 +211,7 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 int contentBefore = win.Content.childCount;
-                if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness
+                if (p.Id != "life_expo"&&p.Id!=GameSession.EnterpriseCenterId&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness
                     && S.OnsiteActivityAt(p) == null)
                     BuildPlayerWorkEntry(win.Content, p, win);
                 if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && p.Business == Gifts.TobaccoBusiness) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);

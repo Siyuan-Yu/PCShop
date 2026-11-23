@@ -107,10 +107,15 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        public string EmployeeAssignmentBlocker(string id, string destination, EmployeeRole role, bool replace = false)
+        public string EmployeeAssignmentBlocker(string id, string destination, EmployeeRole role, bool replace = false) =>
+            EmployeeWorkAssignmentBlocker(id, destination, role, replace, companyTransfer: false);
+
+        private string EmployeeWorkAssignmentBlocker(string id, string destination, EmployeeRole role, bool replace = false, bool companyTransfer = false)
         {
             var row = FindEmployee(id);
             if (IsGameOver || row == null) return "员工不存在或游戏已结束";
+            if (!companyTransfer && (CompanyPostOf(id) != null || PendingCompanyPostOf(id) != null))
+                return "请从公司管理窗口调整该员工岗位";
             if (!Enum.IsDefined(typeof(EmployeeRole), role)) return "请选择有效岗位";
             if (role == EmployeeRole.Unassigned)
             {
@@ -125,6 +130,7 @@ namespace PCShopSell.Core.Session
             if (dest == row.Shop && role == row.Role) return "已经在这家店做这项工作";
             var occupant = EmployeeAt(dest, role);
             if (replace && occupant != null && _employeeTrips.Any(t => t.EmployeeId == occupant.Id)) return "原员工或货物还在路上，不能替换";
+            if (replace && occupant != null && PendingCompanyPostOf(occupant.Id) != null) return "原员工已有待生效的公司岗位";
             if ((row.Shop == null || row.Shop == dest) && _employeeTrips.Any(t => t.EmployeeId == id))
                 return "本趟进货还没结束，等人和货回店再换岗";
             return null;

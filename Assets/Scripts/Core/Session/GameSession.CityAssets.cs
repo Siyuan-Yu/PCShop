@@ -256,6 +256,7 @@ namespace PCShopSell.Core.Session
             }
             if (d.cityAssetsSchema > 0)
             {
+                foreach (var company in _companies.Where(x => x.ListedDay >= 0)) EnsureCompanyTicker(company);
                 foreach (var saved in d.cityEquities ?? Array.Empty<CityEquityState>())
                 {
                     int i = _cityEquities.FindIndex(e => e.Id == saved.Id); if (i < 0) continue;

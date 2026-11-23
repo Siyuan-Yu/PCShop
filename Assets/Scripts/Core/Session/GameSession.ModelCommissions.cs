@@ -119,7 +119,9 @@ namespace PCShopSell.Core.Session
                     for (int i = 0; i < slots; i++)
                     {
                         var order = queue[i];
-                        double work = Math.Min(order.WorkMinutes - order.Work, ModelPainterSpeed(workers[i]));
+                        double speed = ModelPainterSpeed(workers[i]);
+                        if (CompanyResearchDelivered(shop, CompanyProject.Workflow)) speed /= .9;
+                        double work = Math.Min(order.WorkMinutes - order.Work, speed);
                         order.Work += work;
                         order.QualityWork += work * ModelPainterQuality(workers[i]);
                         if (order.Work < order.WorkMinutes - 1e-8) continue;

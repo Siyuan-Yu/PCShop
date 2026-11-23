@@ -71,6 +71,8 @@ namespace PCShopSell.Core.Session
             PlayerShop.Stock.Capacity = WarehouseCapacity;
             PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier() * ShopDecorTrafficMultiplier * CreatorTrafficMultiplier;
             PlayerShop.Settings.PatienceMinutes = _basePatience + ShopDecorPatience;
+            PlayerShop.Settings.CompanyBuildProduct = _focus.RetailKind == "computer" && CompanyResearchDelivered(_focus, CompanyProject.NewProduct);
+            PlayerShop.Settings.CompanyWorkflow = _focus.RetailKind != "computer" && CompanyResearchDelivered(_focus, CompanyProject.Workflow);
             UpdateShopFit();
         }
 

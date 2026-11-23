@@ -1,6 +1,6 @@
 # PETSHOP · PCShopSell
 
-**品牌、公司、股权与员工设计交接（2026-11-23）** · [完整方案、界面图与待拍板事项](docs/151-company-governance-and-workforce-design-2026-11-23.md)。记录首店员工满意度、公司部门、花园解锁后的双向股权交易，以及控制权和门店交接。当前为设计评审稿。
+**公司经营与企业服务中心（2026-11-23）** · [Unity 实装、门店效果、登记与上市](docs/152-company-departments-and-enterprise-center-2026-11-23.md)。包括统一公司名册、部门任命、宣传与口碑、研发商品、服务中心和自有公司挂牌。[历史治理设计与界面图](docs/151-company-governance-and-workforce-design-2026-11-23.md)
 
 **当前玩法与街坊小店界面（2026-11-23）** · [完整内容索引、本轮改动、定稿预览和交付状态](docs/150-current-gameplay-and-neighborhood-ui-2026-11-23.md)。包括裁员开场 CG、签约和招聘教学、寄养按周结算、鱼餐、小店陈列上限及全局米灰 UI。
 

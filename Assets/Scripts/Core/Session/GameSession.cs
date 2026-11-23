@@ -446,7 +446,7 @@ namespace PCShopSell.Core.Session
         public Money TotalDebt => SupplierDebtTotal + MortgageDebt + AppLoanDebt + ChangeRefundDebt;
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
-        public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
+        public Money NetWorth() => Ledger.Balance + CompanyReserves + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
             + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue + ShortPositionEquity + BankDeposit + EventMoneyAssets - TotalDebt;
 
         public void Dispose()
@@ -467,6 +467,7 @@ namespace PCShopSell.Core.Session
             TickCityAssets();
             TickKolStreams(from.TotalMinutes,to.TotalMinutes);
             TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
+            TickCompanyWork(from, to);
             PreparePetVisits(to.TotalMinutes);
             TickCityPeople(to.TotalMinutes);
             TickPetShopStaff();

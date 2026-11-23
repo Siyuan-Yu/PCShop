@@ -153,6 +153,8 @@ namespace PCShopSell.Core.Shop
         public GameTimestamp PlacedAt { get; }
         public GameTimestamp DueAt { get; }
         public string ContractId;
+        public bool CompanyBuildPackage;
+        public string ProductName => CompanyBuildPackage ? "自有装机套餐" : PartCatalog.TierName(Tier) + "整机";
         public bool PartsReserved;
         internal int ReservedPartMask, BoxedPartMask;
         private static readonly int FullKitMask = PartCatalog.Categories.Aggregate(0, (mask, category) => mask | (1 << (int)category));
@@ -210,6 +212,8 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>进店顾客里想装整机的比例（展示台空着时）。</summary>
         public double BuildOrderChance = 0.06;
+        internal bool CompanyBuildProduct;
+        internal bool CompanyWorkflow;
         public int BuildOrdersStartDay;
 
         /// <summary>展示台上每摆一台整机，想装整机的顾客比例多这么多倍（曝光度）。</summary>
@@ -756,7 +760,7 @@ namespace PCShopSell.Core.Shop
             _orders.Remove(o);
             payment = o.ContractId == null ? o.Price + o.Price.Scale(assemblyPriceBonus) : o.Price;
             string orderScope = _ledger.SalesAccountOfShop?.Invoke(ShopId) ?? ShopId;
-            _ledger.Credit(at.Date, BuildCategory, payment, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + orderScope + ":" + o.Id, "销售"));
+            _ledger.Credit(at.Date, BuildCategory, payment, o.ProductName, LedgerAttribution.ForShop(ShopId, "build:" + orderScope + ":" + o.Id, "销售"));
             TodaySales += payment;
             AdjustShopAwareness(BuildAwarenessGain);
             AdjustPersonalReputation(o.ReputationReward);
@@ -810,7 +814,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>现在进店顾客里想装整机的比例：展示台上的整机越多越高。</summary>
         public bool BuildOrdersUnlocked => !IsGoodsShop && _clock.Today.TotalDays >= Settings.BuildOrdersStartDay;
         public double BuildChance => IsGoodsShop || (!BuildOrdersUnlocked && _display.Count == 0) ? 0
-            : Math.Min(1.0, Settings.BuildOrderChance * (1.0 + Settings.DisplayExposurePerPc * _display.Count));
+            : Math.Min(1.0, Settings.BuildOrderChance * (Settings.CompanyBuildProduct ? 1.25 : 1) * (1.0 + Settings.DisplayExposurePerPc * _display.Count));
 
         /// <summary>装一台整机摆到展示台上：从库存扣一套配件。没空位或缺配件返回 false。</summary>
         public bool AssembleForDisplay(int tier)
@@ -959,7 +963,9 @@ namespace PCShopSell.Core.Shop
                 else if (_queue.Count > 0)
                 {
                     CompleteSale(_queue[0]);
-                    _employeeBusyMinutes = Settings.EmployeeCheckoutMinutes;
+                    _employeeBusyMinutes = Settings.CompanyWorkflow
+                        ? Math.Max(0, Settings.EmployeeCheckoutMinutes - Math.Max(1, Settings.EmployeeCheckoutMinutes / 10))
+                        : Settings.EmployeeCheckoutMinutes;
                 }
             }
         }
@@ -1101,8 +1107,10 @@ namespace PCShopSell.Core.Shop
                 if (!IsGoodsShop && now.Date.TotalDays >= Math.Max(Settings.BuildOrdersStartDay, _nextCustomerBuildOrderDay)
                     && CanTakeBuildOrders(1) && CustomerBuildOrders < CustomerBuildOrderLimit)
                 {
-                    Money price = BuildPrice(c.BuildTier);
-                    var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
+                    bool companyPackage = Settings.CompanyBuildProduct && c.BuildTier == 1;
+                    Money price = BuildPrice(c.BuildTier) + (companyPackage ? Money.FromYuan(55) : Money.Zero);
+                    var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay))
+                        { CompanyBuildPackage = companyPackage };
                     AddBuildOrder(order);
                     _nextCustomerBuildOrderDay = now.Date.TotalDays + Random.Next(1, 3);
                     OrderPlaced?.Invoke(order);

@@ -65,6 +65,7 @@ namespace PCShopSell.Core.Home
         }.Concat(RetailProducts.All).ToArray();
 
         public static GiftDef Get(string id) => All.FirstOrDefault(g => g.Id == id)
+            ?? (id == RetailProducts.CompanyModel.Id ? RetailProducts.CompanyModel : id == RetailProducts.CompanyApparel.Id ? RetailProducts.CompanyApparel : null)
             ?? PCShopSell.Core.Session.OldMarketCatalog.Gifts.FirstOrDefault(g => g.Id == id)
             ?? PCShopSell.Core.Session.LifeEventGoods.Get(id) ?? PCShopSell.Core.Session.NeighborhoodGoods.Get(id);
 

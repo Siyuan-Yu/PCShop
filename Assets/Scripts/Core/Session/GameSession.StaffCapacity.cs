@@ -28,7 +28,8 @@ namespace PCShopSell.Core.Session
         }
         public EmployeeAssignment[] EmployeesForShop(OwnedShop shop)=>shop==null?Array.Empty<EmployeeAssignment>():
             Employees.Where(e=>e.Shop==shop||e.Person.TransferShopId==shop.Place.Id
-                ||e.Shop==null&&_employeeHireShops.TryGetValue(e.Person.Id,out var hired)&&hired==shop.Place.Id).ToArray();
+                ||e.Shop==null&&CompanyPostOf(e.Person.Id)==null&&_employeeHireShops.TryGetValue(e.Person.Id,out var hired)&&hired==shop.Place.Id
+                ||PendingCompanyPostOf(e.Person.Id)?.StoreId==shop.Place.Id).ToArray();
         public string StaffCapacityBlocker(OwnedShop shop,string exceptId=null,bool replace=false,EmployeeRole role=EmployeeRole.Unassigned)
         {
             if(shop==null)return "请选择门店";

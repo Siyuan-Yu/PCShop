@@ -69,14 +69,14 @@ namespace PCShopSell.Core.Inventory
             new ShelfKind("pet_supplies_high", "高档宠物用品", PetShopCatalog.Products.Where(g => PetShopCatalog.Tier(g.Id)==2).Select(g => g.Id).ToArray()),
             new ShelfKind("produce", "米与生鲜", RetailProducts.All.Where(g => g.Id.StartsWith("produce:")).Select(g => g.Id).ToArray()),
             new ShelfKind("meals", "外带食品", RetailProducts.All.Where(g => g.MealId != null).Select(g => g.Id).ToArray()),
-            new ShelfKind("clothing_0", "平价服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 0).Select(g => g.Id).ToArray()),
+            new ShelfKind("clothing_0", "平价服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 0).Select(g => g.Id).Append(RetailProducts.CompanyApparel.Id).ToArray()),
             new ShelfKind("clothing_1", "品质服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 1).Select(g => g.Id).ToArray()),
             new ShelfKind("clothing_2", "精品服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 2).Select(g => g.Id).ToArray()),
             new ShelfKind("clothing_3", "奢侈服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 3).Select(g => g.Id).ToArray()),
             new ShelfKind("model_harbor", "晨湾航行模型", ModelProducts.All.Where(g => g.ModelSeries == "harbor").Select(g => g.Id).ToArray()),
             new ShelfKind("model_rainbot", "雨巷守望手办", ModelProducts.All.Where(g => g.ModelSeries == "rainbot").Select(g => g.Id).ToArray()),
             new ShelfKind("model_garden", "苔园来客模型", ModelProducts.All.Where(g => g.ModelSeries == "garden").Select(g => g.Id).ToArray()),
-            new ShelfKind("model_starlight", "星灯工坊模型", ModelProducts.All.Where(g => g.ModelSeries == "starlight").Select(g => g.Id).ToArray()),
+            new ShelfKind("model_starlight", "星灯工坊模型", ModelProducts.All.Where(g => g.ModelSeries == "starlight").Select(g => g.Id).Append(RetailProducts.CompanyModel.Id).ToArray()),
         };
 
         public static IEnumerable<ShelfKind> PartKinds => All.Where(k => k.IsParts);

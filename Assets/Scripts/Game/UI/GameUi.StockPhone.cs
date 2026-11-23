@@ -12,7 +12,7 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private enum StockPage { Charts, Exchange, News }
-        private static readonly string[] StockIds = CityInvestments.All.Select(d => d.Id).Append("hardware").ToArray();
+        private string[] StockIds => S.CityEquities.Select(d => d.Id).Append("hardware").ToArray();
         private static readonly Color[] StockChartColors =
         {
             new Color32(151,96,31,255), new Color32(42,111,101,255), new Color32(114,78,147,255),
@@ -136,7 +136,7 @@ namespace PCShopSell.Game.UI
             };
         }
 
-        private static string StockTitle(string id) => id == "hardware" ? "硬件景气指数" : CityInvestments.Get(id)?.Name ?? id;
+        private string StockTitle(string id) => id == "hardware" ? "硬件景气指数" : S.StockDefinition(id)?.Name ?? id;
         private static Text StockText(Transform parent, string text, int font = 16, Color? color = null) => Para(parent, text, font, color);
         private static RectTransform StockCard(Transform parent, string title = null)
         {
@@ -489,7 +489,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(heading, _stockCandles ? "切换折线" : "切换K线", () =>
             { _stockCandles = !_stockCandles; w.Rebuild(); }, 15), 110, 32);
 
-            if (CityInvestments.Get(id) is CityEquityDefinition company)
+            if (S.StockDefinition(id) is CityEquityDefinition company)
                 StockText(card, company.Industry + " · " + company.Description, 15, Ui.Dim);
 
             var figures = Ui.Row(card, 34, 8);

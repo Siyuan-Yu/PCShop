@@ -21,6 +21,7 @@ namespace PCShopSell.Core.Home
         }
         public static bool IsInSeason(string productId,long minute)
         {
+            if (productId == RetailProducts.CompanyApparel.Id) return true;
             var outfit=Outfit(productId);
             if(outfit==null)return false;
             string season=CityWeather.Season(minute);

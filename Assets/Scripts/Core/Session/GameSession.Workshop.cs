@@ -50,6 +50,8 @@ namespace PCShopSell.Core.Session
             {
                 // 预订装机优先于兼任收银，普通顾客排队不能持续打断装机。
                 int workMinutes = AssemblyMinutesOf(worker);
+                if (CompanyResearchDelivered(_focus, CompanyProject.Workflow))
+                    workMinutes = Math.Max(1, (int)Math.Ceiling(workMinutes * .9));
                 var order = PlayerShop.Orders.FirstOrDefault(o => !handled.Contains(o.Id) && o.Id != _manualBuildId && o.EmployeeMinutesLeft > 0);
                 if (order == null)
                 {

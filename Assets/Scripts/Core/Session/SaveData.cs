@@ -263,6 +263,7 @@ namespace PCShopSell.Core.Session
     {
         public int id;
         public string contractId;
+        public bool companyBuildPackage;
         public int tier;
         public long priceCents;
         public long placedAt;

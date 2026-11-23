@@ -87,7 +87,7 @@ namespace PCShopSell.Core.Session
         public void ToggleStockWatch(string id)
         {if(id=="hardware")_stockMarket.IndexWatched=!_stockMarket.IndexWatched;else if(StockState(id)!=null)StockState(id).Watched=!StockState(id).Watched;}
         public long StockAvailable(string id) => id=="hardware"?_stockMarket.IndexAvailableUnits:StockState(id)?.AvailableUnits??0;
-        public long StockBorrowAvailable(string id) => Math.Max(0,(CityInvestments.Get(id)?.Liquidity??0)/2-(StockState(id)?.ShortUnits??0));
+        public long StockBorrowAvailable(string id) => ListedCompanyOf(id) != null ? 0 : Math.Max(0,(StockDefinition(id)?.Liquidity??0)/2-(StockState(id)?.ShortUnits??0));
         public long StockPreviousClose(string id)
         {
             // 展示基准跟随最新报价所属的交易日，不能因开市重置限价基准而提前归零。
@@ -120,7 +120,7 @@ namespace PCShopSell.Core.Session
                 return "下一交易日";
             }
         }
-        private string StockName(string id) => id=="hardware"?"硬件景气指数":CityInvestments.Get(id)?.Name??id;
+        private string StockName(string id) => id=="hardware"?"硬件景气指数":StockDefinition(id)?.Name??id;
         private string StockEffect(string id,string action,long minute) => "stock:"+id+":"+action+":"+minute+":"+_cityAssetEffects.Count;
         private static long StockPortion(long total,long quantity,long held) => quantity==held?total:(long)((decimal)total*quantity/held);
         private void InitializeStockMarket(ulong seed)
@@ -135,7 +135,7 @@ namespace PCShopSell.Core.Session
         }
         private void InitializeStockCompany(CityEquityState e)
         {
-            var d=CityInvestments.Get(e.Id);
+            var d=StockDefinition(e.Id);
             e.PreviousCloseCents=e.PreviousCloseCents>0?e.PreviousCloseCents:e.PriceCents;
             if(e.BusinessScale<=0)e.BusinessScale=1;
             if(e.Quotes==null||e.Quotes.Length==0)
@@ -186,7 +186,20 @@ namespace PCShopSell.Core.Session
             _stockMarket.IndexAvailableUnits=40000;
             foreach(var e in _cityEquities)
             {
-                var d=CityInvestments.Get(e.Id);e.PreviousCloseCents=e.PriceCents;e.AvailableUnits=d.Liquidity;
+                var d=StockDefinition(e.Id);e.PreviousCloseCents=e.PriceCents;e.AvailableUnits=d.Liquidity;
+                if (ListedCompanyOf(e.Id) is CompanyRecord company)
+                {
+                    var accounts = CompanyAccounts(company, day - 1, day);
+                    e.YesterdayRevenueCents = accounts.Revenue.Cents;
+                    e.YesterdayProfitCents = accounts.Revenue.Cents - accounts.Costs.Cents;
+                    e.QuarterProfitCents += e.YesterdayProfitCents;
+                    long turnover = Math.Max(accounts.Revenue.Cents, accounts.Costs.Cents);
+                    e.OperatingMargin = turnover > 0 ? e.YesterdayProfitCents / (double)turnover : 0;
+                    e.LastReason = e.YesterdayProfitCents >= 0 ? "所属门店经营净额改善报价" : "所属门店经营成本压低报价";
+                    if (day % 7 == 0) AddStockNews(e.Id, minute, "经营周报：" + d.Name,
+                        $"实际门店营收 {accounts.Revenue}，经营净额 {accounts.Revenue - accounts.Costs}。");
+                    continue;
+                }
                 double baseline=d.RivalKind==null?d.DailyRevenueYuan:BrandRivalMonthlySales(d.RivalKind,day)/30d;
                 double audience=d.RivalKind==null?1:1+Math.Min(.15,(_kol.Rivals.FirstOrDefault(r=>r.Kind==d.RivalKind)?.Influence??0)*.0005);
                 e.YesterdayRevenueCents=(long)Math.Round(baseline*100*e.BusinessScale*StockIndustryFactor(d,day)*audience*_cityEquityRandom.Range(.94,1.06));
@@ -280,15 +293,16 @@ namespace PCShopSell.Core.Session
             double announcementMultiplier = earlyMarket ? EarlyStockAnnouncementMultiplier : LaterStockAnnouncementMultiplier;
             foreach(var e in _cityEquities)
             {
-                var d=CityInvestments.Get(e.Id);
+                var d=StockDefinition(e.Id);
+                bool own = ListedCompanyOf(e.Id) != null;
                 // Gradual mean reversion plus public fundamentals and unpredictable market sentiment.
-                double shock = StockFundamentalDrift(e, d, day);
-                if (ScheduledStockCompanyChange(e.Id, minute) is StockCompanyChange change)
+                double shock = own ? Math.Max(-.03, Math.Min(.03, e.OperatingMargin * .04)) : StockFundamentalDrift(e, d, day);
+                if (!own && ScheduledStockCompanyChange(e.Id, minute) is StockCompanyChange change)
                 {
                     PublishStockCompanyChange(e, d, minute, change);
                     shock += StockAnnouncementShock(change) * announcementMultiplier;
                 }
-                e.OperatingMargin+=(d.Margin-e.OperatingMargin)*.005;
+                if (!own) e.OperatingMargin+=(d.Margin-e.OperatingMargin)*.005;
                 double volatility = d.Volatility * sentimentMultiplier;
                 shock+=_cityEquityRandom.Range(-volatility,volatility);
                 long next = (long)Math.Round(e.PriceCents * (1 + shock));
@@ -318,6 +332,7 @@ namespace PCShopSell.Core.Session
                 }
                 if(day>0&&day%90==0)
                 {
+                    if (ListedCompanyOf(e.Id) != null) { e.QuarterProfitCents = 0; continue; }
                     // One million issued shares, distributing 25% of accumulated operating profit.
                     long dividend=Math.Max(0,Math.Min(e.PriceCents-100,(long)Math.Floor(e.QuarterProfitCents*.25/1000000)));
                     e.LastDividendCents=dividend;e.QuarterProfitCents=0;
@@ -364,6 +379,11 @@ namespace PCShopSell.Core.Session
             if(!StockMarketOpen)return "周末休市，周一至周五全天可交易";
             if(units<=0||units>StockOrderLimit)return "数量须为1—1,000,000的整数";
             if(action!="buy"&&action!="sell"&&action!="short"&&action!="cover")return "未知交易类型";
+            if (ListedCompanyOf(id) != null)
+            {
+                if (action == "short" || action == "cover") return "自有公司股票暂不提供借股";
+                if (action == "buy" && units > CompanyPublicShares - e.Units) return "公众剩余股份不足";
+            }
             if(id=="hardware"&&action=="buy")return "硬件景气指数仅供查看，已有持仓可以卖出";
             if(units>StockAvailable(id))return "本次报价还可成交"+StockAvailable(id)+"股，请减少数量或等待下一次报价";
             if(action=="short"||action=="cover")
@@ -388,6 +408,7 @@ namespace PCShopSell.Core.Session
             if (StockTradeBlocker(id, StockLotSize, action, checkCash:false) != null || !CityInvestmentPrice(id).IsPositive) return 0;
             long limit = Math.Min(StockAvailable(id), StockOrderLimit);
             if (shortMode) limit = Math.Min(limit, StockBorrowAvailable(id));
+            else if (ListedCompanyOf(id) != null) limit = Math.Min(limit, CompanyPublicShares - CityInvestmentUnits(id));
             long upper = limit / StockLotSize;
             long affordable = 0;
             while (affordable < upper)

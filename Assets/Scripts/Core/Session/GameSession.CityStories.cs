@@ -334,7 +334,7 @@ namespace PCShopSell.Core.Session
         {
             if(shop==null)return 1;
             long now=Clock.Now.TotalMinutes;
-            return Math.Max(.5,1+BrandTraffic(shop)+Math.Min(.50,_cityPromotions.Where(c=>c.ShopId==shop.Place.Id&&c.State=="Running"&&c.Start<=now&&now<c.End&&c.SalesCount<c.MaxConversions).Sum(c=>c.MaxTrafficBoost)));
+            return Math.Max(.5,1+BrandTraffic(shop)+CompanyPromotionTraffic(shop)+Math.Min(.50,_cityPromotions.Where(c=>c.ShopId==shop.Place.Id&&c.State=="Running"&&c.Start<=now&&now<c.End&&c.SalesCount<c.MaxConversions).Sum(c=>c.MaxTrafficBoost)));
         }
         private CityPromotion AddCityPromotion(string creator,string shop,string mode,Money fee,int duration,double boost,string activity,string story)
         {

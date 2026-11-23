@@ -15,13 +15,14 @@ namespace PCShopSell.Game.UI
         private sealed class ShopManagementView
         {
             private GameSession _session;
-            public string ShopId, Search = "";
+            public string ShopId, CompanyId, Search = "";
             public bool Procurement, OnlyShort;
 
             public void Bind(GameSession session)
             {
                 if (_session == session) return;
                 _session = session;
+                CompanyId = null;
                 Select(null);
             }
 
@@ -46,7 +47,8 @@ namespace PCShopSell.Game.UI
         private void BuildManagedShops(Transform parent, Window w, ShopManagementView view)
         {
             view.Bind(S);
-            var shops = S.MyShops.Where(shop => shop.Rented).ToArray();
+            var scope = S.Company(view.CompanyId);
+            var shops = (scope == null ? S.MyShops.Where(shop => shop.Rented) : S.CompanyShops(scope)).ToArray();
             var selected = shops.FirstOrDefault(shop => shop.Place.Id == view.ShopId);
             if (selected == null && view.ShopId != null) view.Select(null);
             if (shops.Length == 0)
@@ -61,6 +63,13 @@ namespace PCShopSell.Game.UI
                 selected == null ? 0 : 630, -1, selected == null ? 1 : 0).rectTransform;
             Ui.VList(left, 4, 8);
             var header = Ui.Row(left, 39);
+            if (scope != null)
+                Ui.Size(Ui.Button(header, "全部门店", () =>
+                {
+                    view.CompanyId = null;
+                    view.Select(null);
+                    w.Rebuild();
+                }, 15), 110, 34);
             Ui.Size(Ui.Label(header, "自营门店", 21, color: Ui.Accent), 0, 38, 1).fontStyle = FontStyle.Bold;
             if (selected == null)
                 Ui.Size(Ui.Label(header, $"{shops.Length} 家店 · {shops.Count(shop => S.IsPlaceOpen(shop.Place))} 家营业中", 15, TextAnchor.MiddleRight, Ui.Dim), 205, 35);
@@ -212,6 +221,17 @@ namespace PCShopSell.Game.UI
 
         private void OpenManagementShopEmployees(OwnedShop shop)
         {
+            if (S.CompanyOfShop(shop) is CompanyRecord company)
+            {
+                OpenManagementPanel(2);
+                _workspaceCompany = company.BrandId;
+                _companyPage = 2;
+                _companyManagers = false;
+                _companyUnit = shop.Place.Id;
+                _companyPerson = null;
+                _managementWindow.Rebuild();
+                return;
+            }
             OpenEmployeesPanel();
             if (_managementExpandedShops.Add(shop.Place.Id)) _managementWindow.Rebuild();
         }
@@ -240,6 +260,25 @@ namespace PCShopSell.Game.UI
 
             if (shop.Place.Id == CityLifeCatalog.PachinkoVenue && venue)
                 BuildPachinkoMachineSettings(parent, w, venueState);
+            if (S.CompanyOfShop(shop) is CompanyRecord owner)
+            {
+                Line(parent, $"{S.CompanyName(owner)} · 门店口碑 {sim.ShopReputation:0.#} / 100", 17, Ui.Accent);
+                string managerId = S.CompanyStoreManager(shop);
+                if (managerId != null && S.FindEmployee(managerId) is EmployeeAssignment manager)
+                    Line(parent, $"公司任命店长　{manager.Person.Name}", 16);
+                double traffic = S.CompanyPromotionTraffic(shop);
+                if (traffic > 0) Line(parent, $"宣传客流 +{traffic:P0}", 16, Ui.Good);
+                if (S.CompanyResearchDelivered(shop, CompanyProject.Workflow))
+                    Line(parent, shop.RetailKind == "computer" ? "流程优化 · 员工装机工时 −10%"
+                        : shop.RetailKind == "models" ? "流程优化 · 员工模型制作工时 −10%" : "流程优化 · 员工收银更快", 16, Ui.Good);
+                if (S.CompanyResearchDelivered(shop, CompanyProject.NewProduct) && shop.RetailKind == "computer")
+                    Line(parent, "自有装机套餐 · 顾客可下单", 16, Ui.Good);
+                if (S.CompanyRetailProduct(shop) is { } product)
+                    CompanyButton(parent, $"生产 10 件{product.Name} · {product.WholesalePrice * 10}", () =>
+                    {
+                        if (S.MakeCompanyProduct(shop, 10)) w.Rebuild();
+                    });
+            }
 
             Line(parent, "待处理", 19, Ui.Accent);
             var procurement = S.ShopProcurementSummary(shop);

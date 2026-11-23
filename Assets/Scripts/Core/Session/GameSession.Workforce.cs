@@ -186,6 +186,8 @@ namespace PCShopSell.Core.Session
         public EmployeePurchaseTrip EmployeeTrip(string id) => _employeeTrips.FirstOrDefault(x => x.EmployeeId == id && !x.Returned);
         public string EmployeeStatus(EmployeeAssignment row)
         {
+            var post = CompanyPostOf(row.Person.Id);
+            if (post != null) return post.ManagedStoreId != null ? "公司任命店长" : CompanyDepartmentName(post.Department) + (post.Leader ? "负责人" : "专员");
             if (row.Role == EmployeeRole.Unassigned) return "待安排工作";
             var trip = EmployeeTrip(row.Person.Id);
             if (trip != null) return Clock.Now.TotalMinutes < trip.BoughtAt ? "去批发市场路上" : "返店途中";
@@ -256,9 +258,11 @@ namespace PCShopSell.Core.Session
             var row = FindEmployee(id);
             if (row == null || IsGameOver) return false;
             if (_employeeTrips.Any(t => t.EmployeeId == id)) return Fail("员工或货物还在路上，等本次进货结束再辞退。");
+            ForgetCompanyEmployee(id);
             if (row.Role == EmployeeRole.Unassigned)
             {
                 _idleEmployees.Remove(row.Person);
+                _employeeHireShops.Remove(id);
                 Say(row.Person.Name + "离职了。");
                 return true;
             }

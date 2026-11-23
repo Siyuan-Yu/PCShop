@@ -12,7 +12,6 @@ namespace PCShopSell.Game.UI
     {
         private const int BrandOverviewTab = 0, BrandExpoTab = 1, BrandTenderTab = 2, BrandKolTab = 3;
         private int _brandTab;
-        private bool _brandCreating;
         private string _brandId, _brandShop, _brandProduct;
         private void OpenBrandOverview()
         {
@@ -23,7 +22,6 @@ namespace PCShopSell.Game.UI
         public void OpenBrandBusiness()
         {
             if (!S.BrandManagementUnlocked) return;
-            _brandCreating = false;
             OpenWorkspace("brands","brands","品牌",1160,840,BuildBrandBusiness);
         }
         private void BrandButton(Transform parent,string label,Func<bool> action,Window w,bool enabled=true)
@@ -41,7 +39,6 @@ namespace PCShopSell.Game.UI
                 Ui.Tab(tabs, names[i], () =>
                 {
                     _brandTab = tab;
-                    _brandCreating = false;
                     _expoPage = "overview";
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
@@ -53,7 +50,8 @@ namespace PCShopSell.Game.UI
             if (_brandTab == BrandKolTab) { BuildKolBrandPage(body, w, state.Brands); return; }
             if (state.Brands.Length == 0)
             {
-                Para(body, "请先在品牌总览创建品牌。未创立品牌仍可前往会展中心参观。", 19);
+                Para(body, "请到湖城企业服务中心登记公司。", 19);
+                CompanyCenterLink(body);
                 return;
             }
             if(!state.Brands.Any(b=>b.Id==_brandId))_brandId=state.Brands[0].Id;

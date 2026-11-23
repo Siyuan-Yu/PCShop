@@ -26,13 +26,7 @@ namespace PCShopSell.Game.UI
             var header = Ui.Row(body, 40, 8);
             Ui.Size(Ui.Label(header, "所有品牌 · 共" + state.Brands.Length + "个", 20, color: Ui.Accent), -1, 40, 1);
             var remaining = GameSession.BrandKinds.Where(kind => !state.Brands.Any(b => b.Kind == kind)).ToArray();
-            if (remaining.Length > 0)
-                Ui.Size(Ui.Button(header, _brandCreating ? "收起行业资格" : "＋ 创建品牌", () =>
-                {
-                    _brandCreating = !_brandCreating;
-                    w.Rebuild();
-                }, 17), 160, 36);
-            if (_brandCreating && remaining.Length > 0) BuildBrandIndustryChoices(body, w, remaining);
+            if (remaining.Length > 0) CompanyCenterLink(header);
             if (state.Brands.Length == 0) return;
             Line(body, "统计区间：" + new GameDate(S.BrandStatsFirstDay) + "—" + S.Clock.Today + "（含今天）", 15, Ui.Dim);
             long now = S.Clock.Now.TotalMinutes;
@@ -144,54 +138,6 @@ namespace PCShopSell.Game.UI
                 }
                 if (i + 1 == endorsers.Length) Ui.Size(Ui.Rect(row, "EmptyEndorserCell"), 0, 72, 1);
             }
-        }
-
-        private void BuildBrandIndustryChoices(Transform body, Window overview, string[] industries)
-        {
-            var card = BrandCard(body, "选择要创建的行业");
-            Para(card, "每个行业可创建一个品牌。", 17);
-            foreach (var kind in industries)
-            {
-                string industry = RetailShopTypes.Name(kind);
-                string blocker = S.BrandFoundBlocker(kind);
-                Line(card, industry + (blocker == null ? " · 可创建" : " · 待达标"), 20, blocker == null ? Ui.Good : Ui.Accent);
-                Para(card, S.BrandQualificationText(kind), 17);
-                if (blocker != null) Para(card, blocker, 16, Ui.Warn);
-                Ui.Size(Ui.Button(card, "创建" + industry + "品牌", () => OpenBrandCreation(kind, overview),
-                    17, Ui.ButtonBg, blocker == null), -1, 38).name = "BrandCreate_" + kind;
-            }
-        }
-
-        private void OpenBrandCreation(string kind, Window overview)
-        {
-            string brandName = "";
-            string position = "quality";
-            OpenWindow("创建" + RetailShopTypes.Name(kind) + "品牌", 650, 400, w =>
-            {
-                Line(w.Content, "品牌名称", 19, Ui.Accent);
-                var input = Ui.TextInput(w.Content, brandName, "输入品牌名称（2—16字）", value => brandName = value);
-                Ui.Size(input, -1, 40).name = "BrandCreationName";
-                Line(w.Content, "品牌定位", 19, Ui.Accent);
-                var positions = Ui.Row(w.Content, 42, 8);
-                foreach (string option in new[] { "value", "quality" })
-                {
-                    string label = option == "value" ? "实惠定位" : "品质定位";
-                    Ui.Size(Ui.Button(positions, label, () => { brandName = input.text; position = option; w.Rebuild(); }, 18,
-                        Ui.SelectedButton(position == option)), -1, 42, 1);
-                }
-                string blocker = S.BrandFoundBlocker(kind);
-                if (blocker != null) Para(w.Content, blocker, 17, Ui.Warn);
-                var actions = Ui.Row(w.Content, 44, 8);
-                Ui.Size(Ui.Button(actions, "取消", w.Close, 17), -1, 44, 1);
-                Ui.Size(Ui.Button(actions, "确认创建", () =>
-                {
-                    if (!S.FoundBrand(kind, input.text, position)) return;
-                    _brandCreating = false;
-                    S.RefreshDistrictNarrative();
-                    w.Close();
-                    overview.Rebuild();
-                }, 18, Ui.ButtonHot, blocker == null), -1, 44, 1).name = "BrandConfirmCreation";
-            });
         }
 
         private Text BrandMetric(Transform row, string label, string value)

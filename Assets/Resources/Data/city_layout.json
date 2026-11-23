@@ -10419,6 +10419,26 @@
       "tier": 1
     },
     {
+      "id": "enterprise_service_center",
+      "name": "湖城企业服务中心",
+      "street": "s_services",
+      "node": "lake_gap2_11",
+      "business": "企业服务",
+      "kind": "other",
+      "size": "medium",
+      "explicitEntrance": true,
+      "entranceX": -7.8,
+      "entranceY": 2.1,
+      "width": 17,
+      "depth": 11,
+      "heading": -74.7,
+      "tradable": false,
+      "openMinute": 540,
+      "closeMinute": 1080,
+      "model": "office",
+      "tier": 1
+    },
+    {
       "id": "life_hike",
       "name": "城郊平地散步公园",
       "street": "s_oldhomes",
