@@ -67,7 +67,7 @@ namespace PCShopSell.Tests
         [Test] public void CompensationReversesPointsAndMemberPaymentIsNotASecondReward()
         {
             using var s = Make(); Resolve(s, "shop_loyalty_card", 0); Sale(s, 500000); var cash = s.Ledger.Balance;
-            Resolve(s, "shop_complaint_online", 1); Assert.AreEqual(cash - Money.FromYuan(500), s.Ledger.Balance); Assert.AreEqual(45, s.EventMembers.Single().Points);
+            Resolve(s, "shop_complaint_online", 1); Assert.AreEqual(cash - Money.FromYuan(10000), s.Ledger.Balance, "按实付双倍赔偿：实付 ¥5,000 → ¥10,000"); Assert.AreEqual(0, s.EventMembers.Single().Points, "被赔偿的这单积分整单回收（50 → 0），赔偿金本身不再抵扣别的积分");
         }
         [Test] public void CouponAppliesOnlyToActualStoreProcurementAndCancellationRefundsNet()
         {
@@ -87,6 +87,15 @@ namespace PCShopSell.Tests
             var gross = s.OnlinePrice(Online1788.Shopping, part) * count + Online1788.ShippingFee;
             Assert.IsTrue(s.PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (part, count) }, home));
             Assert.AreEqual(gross.Cents, s.Online.Pending.Single().TotalCents); Assert.IsFalse(s.EventCoupon.Used);
+        }
+        [Test] public void CouponFullyCoveringACheapFirstLineDoesNotThrow()
+        {
+            using var s = Make(); Resolve(s, "money_found_coupon", 0);
+            var cheap = PartCatalog.Get("ram0"); var gpu = PartCatalog.Get("gpu1");
+            Assert.LessOrEqual(s.OnlinePrice(Online1788.Shopping, cheap).Yuan, 500, "夹具前提：第一行商品价不超过券额");
+            int count = (int)Math.Ceiling(5000.0 / s.OnlinePrice(Online1788.Shopping, gpu).Yuan);
+            Assert.DoesNotThrow(() => Assert.IsTrue(s.PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (cheap, 1), (gpu, count) }, false)));
+            Assert.IsTrue(s.EventCoupon.Used);
         }
         [Test] public void CouponExpiresAtFourteenDaysWithoutCreatingCash()
         {
@@ -159,7 +168,7 @@ namespace PCShopSell.Tests
             var normal = s.PlayerShop.PriceOf(PartCatalog.Get("ram0"), true);
             Resolve(s, "shop_flash_sale", 0);
             var arrive = typeof(ShopSimulation).GetMethod("ArriveReferral", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            for (int i = 0; i < 12; i++) arrive.Invoke(s.PlayerShop, new object[] { PartCatalog.Get("ram0"), null, true, 10000000L, false, null });
+            for (int i = 0; i < 12; i++) arrive.Invoke(s.PlayerShop, new object[] { PartCatalog.Get("ram0"), null, true, 10000000L, false, null, false });
             s.AdvanceClock(4);
             Assert.GreaterOrEqual(s.PlayerShop.Queue.Count, 6);
             Assert.AreEqual(5, s.PlayerShop.Queue.Count(c => c.Spend == normal.Scale(.9)));

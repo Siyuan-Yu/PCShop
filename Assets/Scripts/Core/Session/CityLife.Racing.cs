@@ -5,9 +5,9 @@ namespace PCShopSell.Core.Session
     {
         // Existing residents who race as a hobby. The four track contacts host their local meets.
         internal static readonly string[] RacingEnthusiasts = {
-            "racer_0", "racer_1", "racer_2", "racer_3", "life_ming", "gaobo", "hexin", "sujun",
+            "racer_0", "racer_1", "racer_2", "racer_3", "life_ming", "resident_gaobo", "resident_hexin", "resident_sujun",
             "life_ning", "life_qiao", "life_maker", "life_coach", "life_golfer", "life_bartender",
-            "life_singer", "life_clothsupplier", "res_rider", "zengyu", "life_gardener", "life_creator"
+            "life_singer", "life_clothsupplier", "res_rider", "resident_zengyu", "life_gardener", "life_creator"
         };
 
         private static void AddRacingPeople(List<CityPersonDefinition> people)

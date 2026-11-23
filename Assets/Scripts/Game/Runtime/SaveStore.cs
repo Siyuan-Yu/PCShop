@@ -185,10 +185,9 @@ namespace PCShopSell.Game
                     LastLoadMessage = path == preferred ? "读档成功。" : "已从备用存档恢复：" + Path.GetFileName(path);
                     return session;
                 }
-                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is FormatException
-                    || e is OverflowException || e is InvalidOperationException || e is KeyNotFoundException)
+                catch (Exception e)  // 含空引用/越界等：任何读档失败都继续尝试下一个候选（.bak），原文件保留
                 {
-                    Debug.LogWarning("无法读取 " + Path.GetFileName(path) + "：" + e.Message);
+                    Debug.LogWarning("无法读取 " + Path.GetFileName(path) + "：" + e);
                 }
             }
             LastLoadMessage = paths.Any(File.Exists) ? "存档无法读取，原文件已保留。" : "没有存档。";

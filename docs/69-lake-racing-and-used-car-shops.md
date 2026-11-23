@@ -96,7 +96,7 @@
 
 采用“少量明确模式、车型收集、改装和逐级赛事”的方向，参考开发者商店介绍中的街机赛车进度结构：[Super Woden GP 2](https://store.steampowered.com/app/2083210/Super_Woden_GP_2/)。练习计时参考官方FAQ对独立计时赛模式的说明：[art of rally FAQ](https://steamcommunity.com/app/550320/discussions/0/4340984986767838110/)。本游戏具体赛道、数值、交易和社交循环为本次自制，没有复制对方资源。
 
-概念图：`docs/previews/racing/lake-racing-concept.png`。头像：`Assets/Resources/PortraitsRetro/racer_0.png`至`racer_3.png`，沿用项目512像素纹理导入设置。[内置工具、全部提示词及输出路径](art/racing-image-prompts.md)。
+概念图：`docs/previews/racing/lake-racing-concept.png`。头像：`Assets/Art/PortraitsRetro/racer_0.png`至`racer_3.png`，沿用项目512像素纹理导入设置。[内置工具、全部提示词及输出路径](art/racing-image-prompts.md)。
 
 ## 验证和版本边界
 

@@ -31,7 +31,7 @@ def main():
     shutil.copyfile(source, destination)
     meta = Path(str(destination) + '.meta')
     if not meta.exists():
-        template = (ROOT / ('Assets/Resources/PortraitsRetro/' + args.id + '.png.meta')).read_text(encoding='utf-8')
+        template = (ROOT / 'Assets/Resources/PortraitsAnime/default.png.meta').read_text(encoding='utf-8')
         template = re.sub(r'(?m)^guid: [a-f0-9]+$', 'guid: ' + uuid.uuid4().hex, template)
         meta.write_text(template, encoding='utf-8')
     folder_meta = Path(str(destination.parent) + '.meta')

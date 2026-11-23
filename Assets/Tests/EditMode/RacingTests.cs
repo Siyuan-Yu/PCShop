@@ -413,11 +413,11 @@ namespace PCShopSell.Tests
         {
             var r=new RaceSimulation(RaceTracks.All[0],MotorCatalog.Get("e_city"),false);
             for(int i=0;i<12000;i++)r.Step(1d/60,0,0);
-            Drive(r);Assert.That(r.Finished,Is.True);Assert.That(r.Abandoned,Is.False);Assert.That(r.Position,Is.EqualTo(3));
+            Drive(r);Assert.That(r.Finished,Is.True);Assert.That(r.Abandoned,Is.False);int ahead=r.RivalFinishTime.Count(t=>t<r.Elapsed+r.Penalty-1e-7);Assert.That(ahead,Is.GreaterThan(0));Assert.That(r.Position,Is.EqualTo(1+ahead));
         }
         [Test] public void AllFourNewContactsHaveTheirOwnImportedPortrait()
         {
-            foreach(var t in RaceTracks.All)Assert.That(Resources.Load<Texture2D>("PortraitsRetro/"+t.Npc),Is.Not.Null,t.Npc);
+            foreach(var t in RaceTracks.All)Assert.That(Resources.Load<Texture2D>("PortraitsAnime/"+t.Npc),Is.Not.Null,t.Npc);
         }
         [Test] public void TrackModelsBuildWithoutChangingSessionOrTakingScreenshots()
         {
@@ -431,8 +431,8 @@ namespace PCShopSell.Tests
         [Test] public void AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave()
         {
             var city=Make().City;var s=GameSession.CreateCityLifePreset(city,"racing");
-            Assert.That(s.IsCityLifeTest,Is.True);Assert.That(s.Garage.Count,Is.EqualTo(6));Assert.That(s.ManagedVentures.Count(v=>v.Kind=="cars"),Is.EqualTo(1));
-            Assert.That(s.CurrentPlace.Id,Is.EqualTo("race_0"));Assert.That(s.DistrictAccessTier,Is.EqualTo(3));Assert.That(Reload(s).Garage.Count,Is.EqualTo(6));
+            Assert.That(s.IsCityLifeTest,Is.True);Assert.That(s.Garage.Count,Is.EqualTo(9));Assert.That(s.ManagedVentures.Count(v=>v.Kind=="cars"),Is.EqualTo(1));
+            Assert.That(s.CurrentPlace.Id,Is.EqualTo("race_0"));Assert.That(s.DistrictAccessTier,Is.EqualTo(3));Assert.That(Reload(s).Garage.Count,Is.EqualTo(9));
         }
         [Test] public void RealUiCanShowDealerGarageReceptionAndDrivingHud()
         {
@@ -475,14 +475,14 @@ namespace PCShopSell.Tests
             var id=s.UsedMotors.Single().Vehicle.Id;Assert.That(s.ListUsedMotor(id,50000),Is.False);Assert.That(s.InspectUsedMotor(id),Is.True);Assert.That(s.RepairUsedMotor(id),Is.True);
             Assert.That(s.ListUsedMotor(id,(long)(MotorCatalog.Get(lead.ModelId).Price*.8)),Is.True);s=Reload(s);Assert.That(s.UsedMotors.Single().Vehicle.Id,Is.EqualTo(id));Assert.That(s.CloseVenture(v.PlaceId),Is.False);
             v=s.VentureAt(v.PlaceId);var settle=typeof(GameSession).GetMethod("SettleUsedMotors",BindingFlags.NonPublic|BindingFlags.Instance);
-            for(int day=43;day<130&&s.UsedMotors.Single().Offer==0;day+=3)settle.Invoke(s,new object[]{v,new GameDate(day),0L});
+            for(int day=43;day<130&&s.UsedMotors.Single().Offer==0;day+=3)settle.Invoke(s,new object[]{v,new GameDate(day),0L,0L});
             Assert.That(s.UsedMotors.Single().Offer,Is.GreaterThan(0));At(s,v.PlaceId);Assert.That(s.AcceptMotorBuyer(id),Is.True);Assert.That(s.AcceptMotorBuyer(id),Is.False);Assert.That(s.UsedMotors.Count,Is.Zero);Assert.That(s.Garage.Count,Is.Zero);
         }
         [Test] public void PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates()
         {
             var s=Make();var ventures=(System.Collections.Generic.List<ManagedVenture>)typeof(GameSession).GetField("_ventures",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(s);
-            const string shop="life_unit_s_market_2";ventures.Add(new ManagedVenture{PlaceId=shop,Kind="cars",ReserveCents=500000});At(s,"motor_cars");
-            s.BuyMotor("v_basic");s.BuyMotor("c_city");s.BuyMotor("c_su7");var ids=s.Garage.Select(v=>v.Id).ToArray();At(s,shop);
+            const string shop="life_unit_s_market_2";ventures.Add(new ManagedVenture{PlaceId=shop,Kind="cars",ReserveCents=500000});At(s,GameSession.StarterRaceGarageId);Assert.That(s.AcquireGarage(GameSession.StarterRaceGarageId),Is.True);At(s,"motor_cars"); // 通勤车位只有一个，第三辆要停进片区车库
+            s.BuyMotor("v_basic");s.BuyMotor("c_city");Assert.That(s.BuyMotor("c_su7",false,GameSession.StarterRaceGarageId),Is.True);var ids=s.Garage.Select(v=>v.Id).ToArray();At(s,shop);
             Assert.That(s.UsedMotorCapacity(shop),Is.EqualTo(2));Assert.That(s.ConsignMotor(shop,ids[0]),Is.True);Assert.That(s.ConsignMotor(shop,ids[0]),Is.False);
             Assert.That(s.ConsignMotor(shop,ids[1]),Is.True);Assert.That(s.ConsignMotor(shop,ids[2]),Is.False);Assert.That(s.Garage.Count,Is.EqualTo(1));
             Assert.That(s.WithdrawUsedMotor(ids[0]),Is.True);Assert.That(s.WithdrawUsedMotor(ids[0]),Is.False);Assert.That(s.Garage.Count,Is.EqualTo(2));Assert.That(Reload(s).UsedMotors.Count,Is.EqualTo(1));

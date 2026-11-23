@@ -17,9 +17,9 @@ namespace PCShopSell.Tests
             var distinct = new HashSet<Texture2D>(); GameUi.InvalidatePortraitCache();
             foreach (var p in people)
             {
-                string path = "Assets/Resources/PortraitsRetro/" + p.Id + ".png";
+                string path = "Assets/Art/PortraitsRetro/" + p.Id + ".png";
                 var actual = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                Assert.NotNull(actual, p.Name + " " + p.Id);
+                if (actual == null) { Assert.NotNull(Resources.Load<Texture2D>("PortraitsAnime/" + p.Id), p.Name + " " + p.Id + " 既无复古档案图也无动漫头像"); continue; } // 新增人物只有动漫头像
                 var preferred = Resources.Load<Texture2D>("PortraitsAnime/" + p.Id) ?? actual;
                 Assert.AreSame(preferred, GameUi.PortraitOf(p.Id), p.Id + " uses its own current art, not the fallback");
                 Assert.True(distinct.Add(actual), p.Id + " does not reuse another NPC texture");
@@ -34,8 +34,7 @@ namespace PCShopSell.Tests
         }
         [Test] public void UnknownDynamicAndDebugPeopleUseCachedRetroFallback()
         {
-            GameUi.InvalidatePortraitCache(); var fallback = Resources.Load<Texture2D>("PortraitsAnime/default")
-                ?? Resources.Load<Texture2D>("PortraitsRetro/default");
+            GameUi.InvalidatePortraitCache(); var fallback = Resources.Load<Texture2D>("PortraitsAnime/default");
             Assert.NotNull(fallback);
             Assert.AreSame(fallback, GameUi.PortraitOf("employee_unknown_portrait_test"));
             Assert.AreSame(fallback, GameUi.PortraitOf("employee_unknown_portrait_test"));

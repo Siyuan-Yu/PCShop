@@ -11,14 +11,14 @@ namespace PCShopSell.Tests
 {
     public sealed class RomanceConversationTests
     {
-        private const string Partner = "resident_jiangning";
+        private const string Partner = "resident_baiming"; // 非关系故事角色，走旧的熟悉度表白流程
         private const string Lu = "life_creator";
         private const string Venue = "life_restaurant";
 
         [Test]
         public void AuthoredCandidatesAndFamiliarityCurveMatchTheApprovedRules()
         {
-            Assert.AreEqual(30, CityLifeCatalog.People.Count(p => GameSession.IsRomanceCandidate(p.Id)));
+            Assert.AreEqual(31, CityLifeCatalog.People.Count(p => GameSession.IsRomanceCandidate(p.Id)));
             foreach (string id in new[] { "res_tea", "res_mom", "res_pupil", "story_shenxiao", "resident_yeli" })
                 Assert.IsFalse(GameSession.IsRomanceCandidate(id), id);
             Assert.AreEqual(0, GameSession.ConfessionChance(70));
@@ -151,7 +151,7 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(4, story.Stage);
                 Assert.AreEqual(45, s.Relation(Lu));
                 Assert.IsNull(s.RomanceId);
-                StringAssert.Contains("70", s.ConfessionBlocker(Lu));
+                StringAssert.Contains("赴约", s.ConfessionBlocker(Lu)); // 关系故事角色需先走完赴约再当面聊
 
                 var old = s.CreateSave();
                 old.cityRomanceStateRecorded = false;

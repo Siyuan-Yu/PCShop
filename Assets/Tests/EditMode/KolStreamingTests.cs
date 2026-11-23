@@ -38,13 +38,14 @@ namespace PCShopSell.Tests
             {
                 var contract = Sign(s);
                 long fee = s.KolLiveSessionFee(contract);
-                Assert.True(s.SetKolSchedule(contract.Id, 1425, 60, false));
+                Assert.True(s.SetKolSchedule(contract.Id, 1425, 165, false));
                 At(s, 1420);
                 s.AdvanceClock(10);
                 Assert.False(s.Ledger.Entries.Any(e => e.Category == "KOL直播场次费"));
 
-                Assert.True(s.SetKolSchedule(contract.Id, 1425, 60, true));
-                Ready(s, contract.PersonId);
+                Assert.True(s.SetKolSchedule(contract.Id, 1425, 165, true));
+                // 开播时刻已过才启用排班：首场顺延到次日，所以跳到次日开播后（允许延迟开播）
+                s.Clock.Restore(s.Clock.Today.AddDays(1), 1430); Ready(s, contract.PersonId);
                 s.AdvanceClock(5);
                 var debit = s.Ledger.Entries.Single(e => e.Category == "KOL直播场次费");
                 Assert.AreEqual(-fee, debit.Amount.Cents);
@@ -53,11 +54,11 @@ namespace PCShopSell.Tests
                 {
                     Ready(loaded, contract.PersonId);
                     loaded.AdvanceClock(20);
-                    Assert.True(loaded.SetKolSchedule(contract.Id, 1425, 75, true));
+                    Assert.True(loaded.SetKolSchedule(contract.Id, 1425, 195, true));
                     loaded.AdvanceClock(20);
                     Assert.AreEqual(1, loaded.Ledger.Entries.Count(e => e.Category == "KOL直播场次费"));
                     Assert.False(loaded.Ledger.Entries.Any(e => e.Category == "KOL日薪"));
-                    Assert.AreEqual(fee, loaded.KolBrandHistory(contract.BrandId).Single().FeeCents);
+                    Assert.AreEqual(fee, loaded.KolStreaming.Sessions.Single(x => x.ContractId == contract.Id).FeeCents); // 场次要 3 小时起，此时尚未结算，不在品牌历史里
                 }
             }
         }
@@ -100,7 +101,7 @@ namespace PCShopSell.Tests
         [Test] public void MarketHasEnoughDistinctAdultNpcsWithRealPortraitsAndDifferentAptitudes()
         {
             Assert.GreaterOrEqual(KolMarket.All.Length,15);Assert.AreEqual(KolMarket.All.Length,KolMarket.All.Select(d=>d.Id).Distinct().Count());
-            foreach(var d in KolMarket.All){Assert.GreaterOrEqual(CityLifeCatalog.Person(d.Id).Age,18);Assert.NotNull(Resources.Load<Texture2D>("PortraitsRetro/"+d.Id));}
+            foreach(var d in KolMarket.All){Assert.GreaterOrEqual(CityLifeCatalog.Person(d.Id).Age,18);Assert.NotNull(Resources.Load<Texture2D>("PortraitsAnime/"+d.Id));}
             Assert.Greater(KolMarket.Get("ake").Charm,KolMarket.Get("momo").Charm);
             Assert.Greater(KolMarket.Get("momo").Intelligence,KolMarket.Get("ake").Intelligence);
 
@@ -172,7 +173,7 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var a=Sign(s);var b=Sign(s,"qiao");Ready(s,a.PersonId);Ready(s,b.PersonId);
-                Assert.True(s.SetKolSchedule(b.Id,1200,1320,true));At(s,1080);
+                Assert.True(s.SetKolSchedule(b.Id,1200,1380,true));At(s,1080);
                 Assert.IsNull(s.KolLiveBlocker(a.Id));Assert.NotNull(s.KolLiveBlocker(b.Id));
                 Assert.True(s.SetKolSchedule(a.Id,1080,120,false));At(s,1200);
                 Assert.NotNull(s.KolLiveBlocker(a.Id));Assert.IsNull(s.KolLiveBlocker(b.Id));Assert.AreEqual(2,s.BrandKolCount(a.BrandId));
@@ -183,11 +184,11 @@ namespace PCShopSell.Tests
             using (var s = Make())
             {
                 var c = Sign(s); At(s,1080); Ready(s,c.PersonId);
-                Assert.True(s.SetKolSchedule(c.Id, 1080, 1170, true));
+                Assert.True(s.SetKolSchedule(c.Id, 1080, 1260, true));
                 Brand(s).ShopIds = Array.Empty<string>();
                 double traffic = s.BrandTraffic(s.MainShop);
                 int fame = Brand(s).Influence, reputation = Brand(s).Reputation;
-                s.AdvanceClock(89);
+                s.AdvanceClock(179);
                 Assert.AreEqual(fame, Brand(s).Influence);
                 Assert.AreEqual(reputation, Brand(s).Reputation);
                 Assert.AreEqual(traffic, s.BrandTraffic(s.MainShop));
@@ -238,12 +239,12 @@ namespace PCShopSell.Tests
             {
                 var contract = Sign(s);
                 var first = s.Clock.Today;
-                Assert.True(s.SetKolSchedule(contract.Id, 1080, 1230, true, 1, first.TotalDays));
+                Assert.True(s.SetKolSchedule(contract.Id, 1080, 1260, true, 1, first.TotalDays));
                 for (int day = 0; day < 4; day++)
                 {
                     s.Clock.Restore(first.AddDays(day), 1080);
                     Ready(s, contract.PersonId);
-                    s.AdvanceClock(150);
+                    s.AdvanceClock(180);
                 }
                 var reports = s.KolBrandHistory(contract.BrandId);
                 Assert.AreEqual(4, reports.Length);
@@ -335,7 +336,7 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var c=Sign(s);At(s,1080);Ready(s,c.PersonId);s.Time.SetPaused(false);
-                Assert.True(s.SetKolSchedule(c.Id, 1080, 1170, true));
+                Assert.True(s.SetKolSchedule(c.Id, 1080, 1260, true));
                 ulong rng=s.Random.State;long cash=s.Ledger.Balance.Cents;
                 var previous=UnityEngine.EventSystems.EventSystem.current;var root=new GameObject("KolUiTest");root.SetActive(false);
                 var ctrl=root.AddComponent<GameController>();typeof(GameController).GetProperty("Session").SetValue(ctrl,s);typeof(GameController).GetProperty("City").SetValue(ctrl,s.City);
@@ -349,9 +350,10 @@ namespace PCShopSell.Tests
                     var snapshot=s.KolStreaming;snapshot.Contracts[0].StartMinute=0;Assert.AreEqual(1080,s.KolStreaming.Contracts[0].StartMinute);
                     var room=((System.Collections.Generic.List<Window>)typeof(GameUi).GetField("_windows",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(ui)).Single();
                     Assert.True(room.LiveConversation);string previousStamp=room.LiveKey();
-                    s.AdvanceClock(2);Assert.AreNotEqual(previousStamp,room.LiveKey());
+                    s.AdvanceClock(2);
                     Assert.AreEqual(2,s.KolStreaming.Sessions.Single(session => session.ContractId == c.Id).LiveMinutes);Assert.False(s.Time.IsHeld);
-                    s.AdvanceClock(88);
+                    s.AdvanceClock(58);Assert.AreNotEqual(previousStamp,room.LiveKey()); // 直播间按四个阶段刷新，跨过 1/4 场才变化
+                    s.AdvanceClock(125);
                     room.Rebuild();
                     var result = s.KolBrandHistory(c.BrandId).Single();
                     var labels = room.Content.GetComponentsInChildren<Text>().Select(label => label.text).ToArray();

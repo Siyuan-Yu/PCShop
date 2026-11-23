@@ -13,17 +13,14 @@ namespace PCShopSell.Game.UI
     {
         private static readonly Dictionary<string, Texture2D> PortraitCache = new Dictionary<string, Texture2D>();
 
-        /// <summary>按稳定人物ID优先加载03动漫头像；旧资源兼容回退，动态人物使用动漫备用图。</summary>
+        /// <summary>按稳定人物ID加载动漫头像（Resources/PortraitsAnime）；动态人物使用动漫备用图。旧复古头像已移出 Resources，不进游戏包。</summary>
         public static Texture2D PortraitOf(string npcId)
         {
             npcId = string.IsNullOrWhiteSpace(npcId) ? "default" : npcId;
             if (!PortraitCache.TryGetValue(npcId, out Texture2D tex) || tex == null)
             {
                 tex = Resources.Load<Texture2D>("PortraitsAnime/" + npcId)
-                    ?? Resources.Load<Texture2D>("PortraitsRetro/" + npcId)
-                    ?? Resources.Load<Texture2D>("Portraits/" + npcId)
-                    ?? Resources.Load<Texture2D>("PortraitsAnime/default")
-                    ?? Resources.Load<Texture2D>("PortraitsRetro/default");
+                    ?? Resources.Load<Texture2D>("PortraitsAnime/default");
                 PortraitCache[npcId] = tex;
             }
             return tex;

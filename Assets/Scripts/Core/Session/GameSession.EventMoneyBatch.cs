@@ -237,7 +237,7 @@ namespace PCShopSell.Core.Session
             _eventBills.Clear(); _eventBills.AddRange((d.moneyEventBills ?? Array.Empty<EventBillRecord>()).Select(b => b.Copy()));
             _eventBillPaymentRevision = -1; _eventBillPaymentCount = -1;
             _eventInvestments.Clear(); _eventInvestments.AddRange((d.moneyEventInvestments ?? Array.Empty<EventPrivateInvestment>()).Select(i => i.Copy()));
-            _eventTicket = d.moneyEventTicket?.Copy(); _hospitalPolicyUntil = d.moneyEventPolicyUntil; _moneyEventSequence = d.moneyEventSequence;
+            _eventTicket = d.moneyEventTicket != null && d.moneyEventTicket.Id > 0 ? d.moneyEventTicket.Copy() : null; // JsonUtility 会把 null 存成默认对象 _hospitalPolicyUntil = d.moneyEventPolicyUntil; _moneyEventSequence = d.moneyEventSequence;
         }
     }
     public sealed partial class SaveData

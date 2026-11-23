@@ -221,7 +221,7 @@ namespace PCShopSell.Core.Session
                 couponDiscount -= reduction;
                 var attribution = order.ToHome ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: orderId + ":" + line.PartId, transactionKind: "个人采购")
                     : LedgerAttribution.ForShop(order.ShopId, orderId + ":" + line.PartId, "采购").Product(line.PartId, line.Count, (lineTotal - reduction).Cents / line.Count);
-                if (!Ledger.TryDebit(Clock.Today, "进货", lineTotal - reduction, "网购 " + store.Name, attribution))
+                if ((lineTotal - reduction).IsPositive && !Ledger.TryDebit(Clock.Today, "进货", lineTotal - reduction, "网购 " + store.Name, attribution))
                     throw new InvalidOperationException("网购总额预检通过后扣款失败，未继续发货。");
             }
             if (Online1788.ShippingFee.IsPositive) Ledger.ForceDebit(Clock.Today, "运费", Online1788.ShippingFee, "网购 " + store.Name,

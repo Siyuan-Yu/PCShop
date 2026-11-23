@@ -420,6 +420,23 @@
       "height": 1448
     },
     {
+      "id": "res_bank_night",
+      "name": "林晓宁",
+      "age": 28,
+      "gender": "female",
+      "role": "银行夜班柜员",
+      "brief": "28-year-old Chinese woman, calm gentle quiet temperament, formerly a convenience-store night clerk. Shoulder-length dark brown-black hair with side-swept bangs in a low side ponytail with a dark ribbon, soft dark-teal eyes, small beauty mark under the left eye. Charcoal-gray bank vest over light collared blouse, thin dark-red neck bow, tiny copper name badge.",
+      "prompt": "(generated with Cursor GenerateImage using PortraitsAnime/res_auntie.png as style reference; see brief; same composition/background/rendering rules as other entries)",
+      "asset": "Assets/Resources/PortraitsAnime/res_bank_night.png",
+      "status": "complete",
+      "approvedSource": null,
+      "approvedSample": false,
+      "sourceFile": "F:\\_ci\\work\\res_bank_night.png",
+      "sha256": "1e704e1d116569069847de3daf1a0a81881bb66e2172afc33f8b980fdf0c21fb",
+      "width": 864,
+      "height": 1152
+    },
+    {
       "id": "res_student",
       "name": "陆宇",
       "age": 21,

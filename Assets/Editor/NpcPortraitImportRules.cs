@@ -4,7 +4,7 @@ using UnityEngine;
 // Portraits are small UI textures; source PNGs remain untouched for later reuse.
 public sealed class NpcPortraitImportRules : AssetPostprocessor
 {
-    public const string Root = "Assets/Resources/PortraitsRetro/";
+    public const string Root = "Assets/Art/PortraitsRetro/"; // 旧版复古头像：仅作存档/美术资料，不进游戏包（不在 Resources 下）
     public const string AnimeRoot = "Assets/Resources/PortraitsAnime/";
     private static bool IsPortrait(string path) => path.StartsWith(Root, System.StringComparison.Ordinal)
         || path.StartsWith(AnimeRoot, System.StringComparison.Ordinal);

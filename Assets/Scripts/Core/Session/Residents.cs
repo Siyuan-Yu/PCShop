@@ -11,7 +11,7 @@ namespace PCShopSell.Core.Session
     }
 
     /// <summary>
-    /// 住在这一带的一个真实的人：有名字、立绘（Resources/Portraits/{Person.Id}）、工作的店和作息。
+    /// 住在这一带的一个真实的人：有名字、立绘（Resources/PortraitsAnime/{Person.Id}）、工作的店和作息。
     /// 上班前、下班后、出门闲逛的时段在街上走；聊天、送礼、听他讲故事和店员一样，熟络度按 Person.Id 记。
     /// </summary>
     public sealed class ResidentDef

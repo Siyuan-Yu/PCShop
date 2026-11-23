@@ -3,7 +3,7 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
-    /// <summary>店里的一个没有交情系统的人（店员，或小店老板）。立绘 id 即 Resources/Portraits/{Id}。</summary>
+    /// <summary>店里的一个没有交情系统的人（店员，或小店老板）。立绘 id 即 Resources/PortraitsAnime/{Id}。</summary>
     public sealed class StaffDef
     {
         public string Id { get; }

@@ -27,12 +27,12 @@ namespace PCShopSell.EditorTools
             long portraitBytes = 0;
             foreach (var person in people)
             {
-                var texture = Resources.Load<Texture2D>("PortraitsRetro/" + person.Id);
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(NpcPortraitImportRules.Root + person.Id + ".png");
                 Check(texture != null, "独立头像 " + person.Id);
                 if (texture != null) portraitBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(texture);
             }
             Log("RETRO PORTRAIT_TEXTURE_BYTES=" + portraitBytes);
-            Check(GameUi.PortraitOf("employee_portrait_review_unknown") == Resources.Load<Texture2D>("PortraitsRetro/default"), "动态人物使用复古备用头像");
+            Check(GameUi.PortraitOf("employee_portrait_review_unknown") == Resources.Load<Texture2D>("PortraitsAnime/default"), "动态人物使用备用头像");
 
             for (int page = 0; page < pages; page++)
             {

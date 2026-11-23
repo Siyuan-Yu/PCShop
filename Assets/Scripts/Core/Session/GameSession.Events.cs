@@ -1781,7 +1781,7 @@ namespace PCShopSell.Core.Session
             RestoreRacingBatchEvents(d);
             _weekendWorkEnds = Math.Max(0, d.weekendWorkEnds);
             _relativeReceivable = d.relativeReceivable?.Copy() ?? new RelativeReceivable();
-            _linLoan = d.linEventLoan?.Copy();
+            _linLoan = d.linEventLoan != null && d.linEventLoan.DueDay > 0 ? d.linEventLoan.Copy() : null; // JsonUtility 会把 null 存成默认对象
             _collectorTrialThrough = d.collectorTrialThrough - 1;
             _mingAfterRace = d.mingAfterRace;
             _eventReferrals.Clear();

@@ -54,6 +54,6 @@
 ## 工程、存档与交付状态
 
 - 项目入口是 [Main.unity](../Assets/Scenes/Main.unity)。[Core](../Assets/Scripts/Core) 管理模拟、库存、账本与存档，[Game](../Assets/Scripts/Game) 管理场景、动作和界面，[Resources](../Assets/Resources) 及 [StreamingAssets](../Assets/StreamingAssets) 存放运行时资源。Windows 和 WebGL 的构建入口分别为 `WindowsPlayerBuild.Run` 与 `WebGlTrialBuild.Run`。
-- Windows 存档在本机 Unity 的 `LocalLow/DefaultCompany/PCShopSell` 下。现行源码保存招聘告示和首店教学进度、寄养首周预收、物价订阅、食物期限迁移及鱼餐属性奖励。相关处理见 [存档数据](../Assets/Scripts/Core/Session/SaveData.cs) 和 [旧档读取](../Assets/Scripts/Core/Session/GameSession.Save.cs)。
+- Windows 存档在本机 Unity 的 `LocalLow/KnifeStudio/PCShopSell`（原为 DefaultCompany，改公司名后旧档需手动复制过来） 下。现行源码保存招聘告示和首店教学进度、寄养首周预收、物价订阅、食物期限迁移及鱼餐属性奖励。相关处理见 [存档数据](../Assets/Scripts/Core/Session/SaveData.cs) 和 [旧档读取](../Assets/Scripts/Core/Session/GameSession.Save.cs)。
 - 当前 Core 和 Game 已使用 Unity 项目引用做 C# 编译检查。Unity 测试及实机逐页验收尚未进行。验收关注长文、分辨率变化、招聘高亮、采购拖动、寄养主人到店与旧档储物位置。
 - 本机现有 Windows 目录为 `Builds/Windows-20261122-233004/`，早于街坊小店全局改造。本次归档版本以源码、运行时资源、预览、测试代码和文档为准。发布包和 Unity 生成缓存沿用仓库忽略规则。
