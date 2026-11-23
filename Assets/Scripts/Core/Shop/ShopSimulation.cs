@@ -1050,6 +1050,8 @@ namespace PCShopSell.Core.Shop
             CustomerReadyToPay?.Invoke(customer);
         }
 
+        internal void RecordOffsiteSales(Money revenue) => TodaySales += revenue;
+
         internal void RecordBulkSale(string itemName, int count, Money total, string orderName = "学生团购")
         {
             _ledger.Credit(_clock.Today, SalesCategory, total, $"{orderName} · {itemName} ×{count}",

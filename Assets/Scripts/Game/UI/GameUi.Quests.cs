@@ -99,14 +99,15 @@ namespace PCShopSell.Game.UI
         /// <summary>顶栏“任务”按钮：打开当前任务说明，并重新显示左上角的任务条。</summary>
         public void OpenQuests()
         {
-            if (S.FirstChapterTrialCompleted)
+            bool sponsorGuide = S.VenueSponsorGuideQuest() != null;
+            if (!sponsorGuide && S.FirstChapterTrialCompleted)
             {
                 _questHidden = false;
                 UpdateQuestTracker();
                 OpenDistrictStory();
                 return;
             }
-            if(S.IsOwnedVenue(S.CurrentPlace)){OpenVenueManagement(S.CurrentPlace);return;}
+            if (!sponsorGuide && S.IsOwnedVenue(S.CurrentPlace)) { OpenVenueManagement(S.CurrentPlace); return; }
             _questHidden = false;
             UpdateQuestTracker();
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
@@ -169,6 +170,19 @@ namespace PCShopSell.Game.UI
             {
                 OpenQuestPopup(null, _pendingNext);
                 _pendingNext = null;
+            }
+
+            if (S.VenueSponsorGuideQuest() is QuestDef sponsorGuide)
+            {
+                bool show = !_questHidden && !S.IsGameOver && !_ctrl.Placing;
+                _questPanel.gameObject.SetActive(show);
+                if (show)
+                {
+                    var (label, action) = QuestAction(sponsorGuide.Target, sponsorGuide.GuideDestination);
+                    SetQuestCard("经营引导", sponsorGuide.Title, sponsorGuide.Short,
+                        GuideLocation(sponsorGuide.Target, sponsorGuide.GuideDestination), ProgressOf(sponsorGuide), label, action);
+                }
+                return;
             }
 
             bool showMallTravel = q?.Id == "mall" && S.OpeningMallTravelPending;
@@ -367,6 +381,9 @@ namespace PCShopSell.Game.UI
                     if (S.AtBank) return ("打开银行柜台", () => OpenBank(S.CurrentPlace));
                     if (S.BankPlace == null || S.CityIntent?.TargetPlaceId == S.BankPlace.Id) return (null, null);
                     return QuestPlaceAction("前往银行", S.BankPlace);
+                case QuestTarget.VenueSponsorship:
+                    if (destination == null || S.CityIntent?.TargetPlaceId == destination.Id) return (null, null);
+                    return QuestPlaceAction("前往" + destination.Name, destination);
                 case QuestTarget.ScooterDealer: return QuestPlaceAction("前往顺丰车行", ScooterDealer);
                 case QuestTarget.RacingEnrollment:
                     if (S.RacingUnlocked || S.RacingQualificationBlocker != null) return (null, null);
@@ -473,7 +490,7 @@ namespace PCShopSell.Game.UI
         private void BuildGuideWindow(Window w)
         {
             BuildDistrictMessage(w.Content);
-            var q = S.CurrentQuest();
+            var q = S.VenueSponsorGuideQuest() ?? S.CurrentQuest();
             if (q == null)
             {
                 int n = Quests.All.Count(x => S.QuestCompleted(x.Id));

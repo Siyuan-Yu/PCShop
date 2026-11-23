@@ -190,7 +190,8 @@ namespace PCShopSell.Core.Session
             if (OpeningClockFrozen || RequiredTutorialPaused) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
                 && (TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace()
-                    || TryShowRacingBatchFollowup() || TryOfferLeisureInvitation() || TryRollDeferredDailyEvent())) return 0;
+                    || TryShowRacingBatchFollowup() || TryOfferRelationshipStoryInvitation() || TryOfferLeisureInvitation()
+                    || TryRollDeferredDailyEvent())) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
@@ -435,7 +436,7 @@ namespace PCShopSell.Core.Session
             foreach (var o in DirectShipments) sum += Market.PriceOf(PartCatalog.Get(o.PartId)).Yuan * o.Count;
             foreach (var trip in _employeeTrips.Where(t => !t.Delivered))
                 foreach (var line in trip.Items) sum += PurchaseInventoryValue(line).Yuan;
-            return Money.FromYuan((long)Math.Round(sum * 0.9));
+            return Money.FromYuan((long)Math.Round((sum + VenueSponsorInventoryYuan()) * 0.9));
         }
 
         /// <summary>身家：现金 + 库存九折 + 铺子押金（退租能拿回来）。</summary>
@@ -474,6 +475,7 @@ namespace PCShopSell.Core.Session
             TickBrandDeliveries(to.TotalMinutes);
             TickDistrictNarrative(from.TotalMinutes, to.TotalMinutes);
             TickCityActivities(to.TotalMinutes);
+            TickVenueSponsorships(to.TotalMinutes);
             TickVenueBusinesses(to.TotalMinutes);
             NormalizeWarehouses();
             TickCityStories(to.TotalMinutes);

@@ -37,6 +37,7 @@ namespace PCShopSell.Core.Session
         public string ActivityId;
         public string DestinationId;
         public string ExpoId;
+        public string VenueSponsorId;
         public int Index = -1;
     }
 
@@ -91,6 +92,7 @@ namespace PCShopSell.Core.Session
                 if (ManualActivityClockPaused) return "请先结束当前现场活动。";
                 if(BrandExpoExclusive)return "正在连续参加4天展会，闭展后才能离开。";
                 if (IsWorking) return "正在打工，收工后才能离开。";
+                if (VenueSponsorGuidePaused) return "先完成街坊活动教学，打开赞助方案后就能离开。";
                 if (CurrentPlace == Home && OpeningMealTutorialPending) return OpeningMealLeaveBlock;
                 if (CurrentPlace == null || CurrentPlace != Home) return null;
                 HomeVisit v = RepairmanAtWork;
@@ -308,6 +310,15 @@ namespace PCShopSell.Core.Session
                     Minute = (long)Math.Max(p.DueDay, Clock.Today.TotalDays) * GameTimestamp.MinutesPerDay, HasTime = false,
                     Day = DescribeDay(Math.Max(p.DueDay, Clock.Today.TotalDays)), TimeText = "", Kind = "parcel", Text = "快递到家：" + ParcelDescription(p),
                 });
+            }
+            foreach (var activity in _venueSponsorships.Where(a => !a.Completed || a.Starts / 1440 >= Clock.Today.TotalDays - 30))
+            {
+                string venue = City.HasPlace(activity.VenueId) ? City.GetPlace(activity.VenueId).Name : activity.VenueId;
+                l.Add(new ScheduleEntry { VenueSponsorId = activity.Id, Minute = activity.Starts, Kind = "venue_sponsor",
+                    Day = DescribeDay((int)(activity.Starts / 1440)), TimeText = ClockText((int)(activity.Starts % 1440)),
+                    Text = $"{activity.Title} · {venue}"
+                        + (activity.FeeCents > 0 ? $" · {activity.ShopName}赞助" : "")
+                        + (activity.PlayerRegistered ? " · 已报名" : "") + $" · {activity.Status}" });
             }
             l.Sort((a, b) => a.Minute != b.Minute ? a.Minute.CompareTo(b.Minute) : string.CompareOrdinal(a.Kind, b.Kind));
             return l;

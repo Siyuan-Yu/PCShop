@@ -11,7 +11,7 @@ namespace PCShopSell.Core.Session
     public enum QuestTarget
     {
         Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades, Mall,
-        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed, ScooterDealer, CommunityGoal, RacingEnrollment, BankSecurities
+        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed, ScooterDealer, CommunityGoal, RacingEnrollment, BankSecurities, VenueSponsorship
     }
 
     public static partial class Quests
@@ -160,6 +160,7 @@ namespace PCShopSell.Core.Session
                         Say($"任务完成「{q.Title}」，奖励：{q.RewardText(this)}。");
                     }
                 }
+            RefreshVenueSponsorGuide();
         }
         public void VisitQuestTarget(QuestTarget target)
         {
@@ -176,6 +177,7 @@ namespace PCShopSell.Core.Session
         {
             if (!CanCompleteQuestLesson(id)) return false;
             Flags.Add("tutorial:read:" + id);
+            if (id == BankLessonId) _venueSponsorGuideEarliestDay = Clock.Today.TotalDays + 1;
             RefreshQuestProgress();
             return true;
         }

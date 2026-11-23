@@ -28,8 +28,11 @@ namespace PCShopSell.Game.UI
             if (here && S.FishingActive) { OpenFishing(); return; }
             if (here) S.PrepareVenueCompanions(place, activityId);
 
+            var sponsor = new VenueSponsorView();
             OpenWindow(place.Name, 1060, 620, w =>
             {
+                BuildVenueSponsorHeader(w, place, sponsor);
+                if (BuildVenueSponsorPage(w, place, sponsor, w.Content)) return;
                 var booking = here ? S.PendingVenueActivity(place, activityId) : null;
                 if (!GameSession.IsInteractiveFishingActivity(booking)) booking = null;
                 var goods = BuildRosterFrame(w, place, 460, scrollGoods: true, rosterWidth: 165);
@@ -107,10 +110,11 @@ namespace PCShopSell.Game.UI
             {
                 var service = S.CityActivityService(outing);
                 var topics = ActivityTopicIndices(outing, service);
+                var talks = Ui.Rect(w.Content, "FishingConversation").Anchor(.025f, .64f, .27f, .82f);
+                Ui.VList(talks, 6, 0);
+                BuildRelationshipOutingButton(talks, outing, w.RequestRebuild, "继续钓鱼");
                 if (topics.Length > 0)
                 {
-                    var talks = Ui.Rect(w.Content, "FishingConversation").Anchor(.025f, .64f, .27f, .82f);
-                    Ui.VList(talks, 6, 0);
                     foreach (int topic in topics)
                     {
                         bool unused = !outing.Choices.Contains(topic.ToString()) && (outing.DefinitionId != "social_60" || fish.Style == 0);

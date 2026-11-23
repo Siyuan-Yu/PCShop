@@ -190,7 +190,9 @@ namespace PCShopSell.Core.Session
             string chatKey = id + ":casual-conversation";
             bool followup = _cityTopicDay.TryGetValue(chatKey, out int previousDay) && previousDay <= today;
             _cityTopicDay[chatKey] = today;
+            if (TryFinishVenueSponsorGuideChat(id, remote) is string sponsorReply) return sponsorReply;
             if (!remote && id == LuZhi) BeginLuPersonalStory();
+            if (TryRelationshipStoryChat(id, remote) is string relationshipReply) return relationshipReply;
             if (firstConversation)
             {
                 var npc = Npcs.All.FirstOrDefault(person => person.Id == id);

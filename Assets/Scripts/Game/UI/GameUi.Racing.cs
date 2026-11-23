@@ -212,7 +212,17 @@ namespace PCShopSell.Game.UI
         {
             bool raceToday = S.RaceRegistrationAt(place.Id, S.Clock.Today) is { Started: false };
             var view = new RaceReceptionView { Tab = raceToday ? RaceReceptionTab.Registration : RaceReceptionTab.Practice };
-            OpenPlaceWindow(place, (w, p) => BuildRaceReception(w, RaceTracks.Get(p.Id), view), 1430, 810);
+            var sponsor = new VenueSponsorView
+            {
+                RaceActivityEntry = () =>
+                {
+                    bool formal = RaceTracks.Get(place.Id).Tier >= 2 && S.CurrentRaceMeeting != RaceMeeting.None;
+                    view.Tab = formal ? RaceReceptionTab.Registration : RaceReceptionTab.Practice;
+                    if (formal) view.SelectedDay = S.Clock.Today.TotalDays;
+                    view.ChoosingVehicle = false;
+                }
+            };
+            OpenPlaceWindow(place, (w, p) => BuildRaceReception(w, RaceTracks.Get(p.Id), view), 1430, 810, sponsor: sponsor);
         }
 
         private void BuildRaceReception(Window w, RaceTrack track, RaceReceptionView view)

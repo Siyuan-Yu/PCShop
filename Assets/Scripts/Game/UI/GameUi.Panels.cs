@@ -199,7 +199,7 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true)
+        private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true, VenueSponsorView sponsor = null)
         {
             bool isRaceTrack = RaceTracks.Get(p.Id) != null;
             bool fixedLayout = p.Kind == PlaceKind.Agency || p.Kind == PlaceKind.Garage || isRaceTrack || p.Id == GameSession.EnterpriseCenterId;
@@ -209,6 +209,11 @@ namespace PCShopSell.Game.UI
                 {
                     win.Close();
                     return;
+                }
+                if (sponsor != null)
+                {
+                    BuildVenueSponsorHeader(win, p, sponsor);
+                    if (BuildVenueSponsorPage(win, p, sponsor, win.Content)) return;
                 }
                 int contentBefore = win.Content.childCount;
                 if (p.Id != "life_expo"&&p.Id!=GameSession.EnterpriseCenterId&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness

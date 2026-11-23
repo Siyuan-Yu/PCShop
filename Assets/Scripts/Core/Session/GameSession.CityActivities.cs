@@ -815,9 +815,12 @@ namespace PCShopSell.Core.Session
                 foreach (var participant in a.Participants)
                     AwardCityActivityRelation(a, participant.PersonId, reward);
             }
+            SettleRelationshipStoryOuting(a, phase);
             RecordActivityFarewells(a, phase);
+            var billiards = _leisurePlay?.ActivityId == a.Id ? _leisurePlay.Billiards : null;
             EndLeisurePlay(a);
             EndFishingActivity(a);
+            CaptureVenueCommunityResult(a, phase, billiards);
             foreach(var participant in a.Participants)
             {
                 participant.Phase=CityParticipantPhase.Left;
@@ -836,6 +839,7 @@ namespace PCShopSell.Core.Session
                 }
                 _appointments.RemoveAll(x=>x.NpcId==participant.PersonId && Math.Abs((long)x.Day*1440+x.StartMinute-a.ScheduledStart)<240);
             }
+            ReturnVenueCommunityCompanions(a);
             RememberGardenParty(a, phase);
             if (phase == CityActivityPhase.NoShow)
             {

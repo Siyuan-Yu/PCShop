@@ -240,6 +240,7 @@ namespace PCShopSell.Core.Session
                 Leave();
                 if (CurrentPlace == s.Place) return false;
             }
+            CancelVenueSponsorshipsForClosedShop(s);
             s.Sim.ClearCustomers();
             foreach (var order in s.Sim.Orders.ToArray()) s.Sim.CancelBuild(order.Id);
             double reputation = MainShop.Sim.Reputation;

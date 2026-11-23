@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
                 || S.MarketHuntRemaining == 0 && S.PendingMarketFind == null)
                 return;
 
-            int stall = OldMarketHuntCatalog.Spot(S.PendingMarketFind?.MarketSpotId)?.Stall ?? 0;
+            int stall = OldMarketHuntCatalog.Spot(S.PendingMarketFind?.MarketSpotId)?.Stall ?? S.ActiveVenueMarketTheme;
             int selected = -1;
             float animationLeft = 0;
             _marketHuntWindow = OpenWindow("青湾旧物市场 · 淘旧物", 1920, 1080, w =>

@@ -396,10 +396,16 @@ namespace PCShopSell.Game.UI
                 OpenWindow(place.Name + " · 服务价目表", 950, 740, w => BuildCityVenue(w, place));
                 return;
             }
+            OpenCityVenueMenu(place, activityId);
+        }
+
+        private void OpenCityVenueMenu(Place place, string activityId = null)
+        {
             // Browsing a venue menu uses the same pause hold as other shop menus.
             // Closing releases only this hold and keeps the player at the venue.
             S.PrepareVenueCompanions(place, activityId);
-            OpenPlaceWindow(place, (w, p) => BuildCityVenue(w, p, activityId), 1140, 900, holds: true, leaveOnClose: false);
+            OpenPlaceWindow(place, (w, p) => BuildCityVenue(w, p, activityId), 1140, 900,
+                holds: true, leaveOnClose: false, sponsor: S.HasVenueSponsorship(place) ? new VenueSponsorView() : null);
         }
 
         private static readonly string[] InvitationCategories = { "全部", "餐饮", "休闲", "运动户外", "逛市场与展会" };

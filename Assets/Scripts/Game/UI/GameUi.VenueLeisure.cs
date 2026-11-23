@@ -116,6 +116,7 @@ namespace PCShopSell.Game.UI
             float playback = 0;
             bool finishDrink = false;
 
+            var sponsor = new VenueSponsorView();
             _barCounterWindow = OpenWindow(place.Name, 1920, 1080, w =>
             {
                 BuildLeisureBackdrop(w.Content, "event_lighthouse_bar");
@@ -127,6 +128,7 @@ namespace PCShopSell.Game.UI
                 });
                 header.GetComponentInChildren<Button>().interactable = !drinking;
                 w.Closable = !drinking;
+                if (!drinking) BuildVenueSponsorHeader(w, place, sponsor, header);
 
                 var (definition, choice) = drinks[selected];
                 var service = definition.Service(choice);
@@ -148,6 +150,7 @@ namespace PCShopSell.Game.UI
                 Ui.VList(details, 6, 0);
                 var bartender = session.BartenderAt(place);
                 BuildBarVisitors(w, place, bartender?.PersonId, booking);
+                if (!drinking && BuildVenueSponsorPage(w, place, sponsor, details)) return;
                 if (bartender != null)
                 {
                     var worker = session.CityPerson(bartender.PersonId);

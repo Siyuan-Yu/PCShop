@@ -37,11 +37,17 @@ namespace PCShopSell.Game.UI
 
             int tier = S.MarketHuntTier;
             int attempts = OldMarketHuntCatalog.PassSizes[0];
-            void Build(Window w) => BuildOldMarket(w, place, activityId, tier, attempts,
-                index => { tier = index; w.Rebuild(); }, count => { attempts = count; w.Rebuild(); });
+            var sponsor = new VenueSponsorView();
+            void Build(Window w)
+            {
+                BuildVenueSponsorHeader(w, place, sponsor);
+                if (!BuildVenueSponsorPage(w, place, sponsor, w.Content))
+                    BuildOldMarket(w, place, activityId, tier, attempts,
+                        index => { tier = index; w.Rebuild(); }, count => { attempts = count; w.Rebuild(); });
+            }
             if (_oldMarketWindow == null || _oldMarketWindow.Closed)
             {
-                _oldMarketWindow = OpenWindow(place.Name, 1000, 620, Build, fitContent: true);
+                _oldMarketWindow = OpenWindow(place.Name, 1000, 620, Build, fitContent: !S.HasVenueSponsorship(place));
                 return;
             }
             _windows.Remove(_oldMarketWindow);

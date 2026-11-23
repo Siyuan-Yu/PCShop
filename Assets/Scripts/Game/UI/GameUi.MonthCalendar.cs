@@ -120,6 +120,7 @@ namespace PCShopSell.Game.UI
             switch (e.Kind)
             {
                 case "brand_expo": return "品牌展会";
+                case "venue_sponsor": return "场所赞助活动";
                 case "city_activity": case "appointment": return "朋友邀约";
                 case "work": return "打工班次";
                 case "wallet_return": return "归还钱包";
@@ -149,6 +150,7 @@ namespace PCShopSell.Game.UI
                 .Select(e => new CalendarItem
                 {
                     Entry = e,
+                    Completed = e.VenueSponsorId != null && S.VenueSponsorships.Any(a => a.Id == e.VenueSponsorId && a.Completed),
                     Label = e.ActivityId != null && activities.TryGetValue(e.ActivityId, out var activity)
                         ? S.CityActivityService(activity)?.Name ?? CalendarEntryLabel(e) : CalendarEntryLabel(e)
                 }).ToList();
@@ -238,6 +240,8 @@ namespace PCShopSell.Game.UI
                 ActionButton("查看活动详情", () => OpenCityActivityDetail(id));
                 if (!item.Completed) ScheduleActivityGoButton(Actions(), id);
             }
+            if (e.VenueSponsorId != null)
+                ActionButton("查看赞助活动", () => OpenVenueSponsorReport(e.VenueSponsorId));
             if (e.ExpoId != null)
             {
                 string id = e.ExpoId;

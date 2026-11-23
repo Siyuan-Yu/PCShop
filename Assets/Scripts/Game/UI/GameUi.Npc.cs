@@ -195,7 +195,11 @@ namespace PCShopSell.Game.UI
             bool OnDuty(CityPersonState person) => S.IsOnDutyVenueNpc(S.City.GetPlace(person.LocationPlaceId), person);
             bool Companion(CityPersonState person) => activity?.Participants.Any(participant =>
                 participant.PersonId == person.PersonId && participant.Phase != CityParticipantPhase.Left) == true;
-            foreach(var state in present.OrderByDescending(OnDuty).ThenByDescending(Companion))
+            bool sponsorGuide = p.Id == GameSession.VenueSponsorGuidePlaceId;
+            bool GuideContact(CityPersonState person) => sponsorGuide && person.PersonId == GameSession.VenueSponsorGuidePersonId;
+            bool guideTalk = sponsorGuide && S.VenueSponsorGuideStep == SponsorGuideStep.Talk;
+            foreach (var state in present.OrderByDescending(person => guideTalk && GuideContact(person))
+                         .ThenByDescending(OnDuty).ThenByDescending(Companion))
             {
                 string id=state.PersonId;var def=S.CityPerson(id);
                 bool onDuty = OnDuty(state);
@@ -206,11 +210,17 @@ namespace PCShopSell.Game.UI
                 {
                     var row = PersonSummary(portraits, id, def.Name, role, onClick: () => OpenCityPerson(id),
                         muted: onDuty ? Ui.Accent : companion ? Ui.Good : Ui.Dim);
-                    row.GetComponentInChildren<Button>()?.Tip(tooltip);
+                    var button = row.GetComponentInChildren<Button>();
+                    if (button != null)
+                    {
+                        button.Tip(tooltip);
+                        if (GuideContact(state)) button.name = SponsorGuidePortraitControl;
+                    }
                 }
                 else
                     OrgNode(portraits, id, def.Name, role, onDuty, false,
-                        () => OpenCityPerson(id), portraitWidth, rosterWidth - 26, tooltip);
+                        () => OpenCityPerson(id), portraitWidth, rosterWidth - 26, tooltip,
+                        GuideContact(state) ? SponsorGuidePortraitControl : null);
             }
             var center=Ui.Rect(body,"Goods");Ui.VList(center,6,0);
             var goodsSize=Ui.Size(center,0,-1,1).GetComponent<LayoutElement>();
@@ -227,7 +237,7 @@ namespace PCShopSell.Game.UI
         }
 
         private void OrgNode(Transform parent, string portraitId, string name, string title, bool top, bool locked,
-            System.Action onClick, float portraitWidth = 44, float columnWidth = 72, string tooltip = null)
+            System.Action onClick, float portraitWidth = 44, float columnWidth = 72, string tooltip = null, string controlId = null)
         {
             float portraitHeight = portraitWidth * 4f / 3f;
             RectTransform row = Ui.Row(parent, portraitHeight + 64, 0);
@@ -268,6 +278,7 @@ namespace PCShopSell.Game.UI
                 Ui.SteadyButtonFeedback(b);
                 b.onClick.AddListener(() => onClick());
                 if (tooltip != null) b.Tip(tooltip);
+                if (controlId != null) b.name = controlId;
             }
 
             Ui.Size(Ui.Label(col, $"<b>{name}</b>", 14, TextAnchor.MiddleCenter), -1, 20);
@@ -505,7 +516,7 @@ namespace PCShopSell.Game.UI
             bool creatorChoice = initialPage == 3;
             bool discussingPeople = false;
             bool confirmingBreakup = false;
-            OpenDialogue(personId, name, role + (remote ? " · 电话" : ""), greeting, ctx =>
+            var dialogue = OpenDialogue(personId, name, role + (remote ? " · 电话" : ""), greeting, ctx =>
             {
                 var options = new List<TalkOpt>();
                 bool near = !remote && (definition == null || S.CitySamePlace(personId));
@@ -595,7 +606,9 @@ namespace PCShopSell.Game.UI
                 if (near && _ctrl.InPachinkoRoom && S.IsLeisureVenueWorker(S.CityPersonState(personId)))
                     options.Add(new TalkOpt { Label = "买卖弹珠", Blocker = S.PachinkoTradeBlocker, Act = () => OpenPachinkoExchange() });
                 options.Add(new TalkOpt { Label = "聊一聊", Hot = true, Blocker = canTalk ? null : "对方已离开",
+                    Id = personId == GameSession.VenueSponsorGuidePersonId ? SponsorGuideChatControl : null,
                     Act = () => StartCasualDialogue(ctx, personId, remote, Reply) });
+                AddRelationshipStoryOption(options, ctx, personId, remote, Reply);
                 options.Add(new TalkOpt { Label = "交流物价", Blocker = canTalk ? null : "对方已离开",
                     Act = () => Reply(S.ExchangeMarketTalk(personId, remote, place, text => Ui.Emphasize(text))) });
                 options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId,remote:remote), Act = () =>
@@ -617,11 +630,13 @@ namespace PCShopSell.Game.UI
                         Reply("我们要分开吗？");
                     } });
                 }
-                else if (GameSession.IsRomanceCandidate(personId) && S.Relation(personId) >= GameSession.ConfessionMinFamiliarity)
+                else if (GameSession.IsRomanceCandidate(personId) && !GameSession.HasRelationshipStory(personId)
+                    && S.Relation(personId) >= GameSession.ConfessionMinFamiliarity)
                     options.Add(new TalkOpt { Label = "表白", Hot = true,
                         Blocker = remote ? "需要当面表白" : S.ConfessionBlocker(personId),
                         Act = () => Reply(S.ConfessToPerson(personId)) });
-                if (personId == "life_creator" && near && S.CityStory("romance") is CityStoryProgress story && story.Stage == 2)
+                if (personId == "life_creator" && near && !S.HasStartedRelationshipStory(personId)
+                    && S.CityStory("romance") is CityStoryProgress story && story.Stage == 2)
                 {
                     var outing = S.CityActivities.FirstOrDefault(activity => activity.Id == story.ActivityId && activity.Active);
                     options.Add(new TalkOpt { Label = outing == null ? "约去河岸钓鱼" : "查看河岸邀约", Act = () =>
@@ -644,6 +659,8 @@ namespace PCShopSell.Game.UI
                     } });
                 return options;
             }, firstReply, () => { parent?.RequestRebuild(); onClosed?.Invoke(); },remote:remote);
+            if (!remote && personId == GameSession.VenueSponsorGuidePersonId && S.VenueSponsorGuidePaused)
+                _venueSponsorGuideDialogue = dialogue;
         }
 
         private string ConversationViewKey(string id) => S.Clock.Today.TotalDays + "|" + S.CitySamePlace(id) + "|" + S.Relation(id)

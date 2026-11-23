@@ -95,11 +95,12 @@ namespace PCShopSell.Core.Session
             else {c.Followers=Math.Min(2000000,(int)(c.Followers*1.05));c.Affection=Math.Max(0,c.Affection-4);c.Resources=Math.Max(0,c.Resources-10);}
             Say(respectChoice ? "你支持对方自己做选择，这次谈话让关系更近了。" : "你把增长机会放在前面。账号有了更多曝光，但对方觉得自己的顾虑没被理解。");return true;
         }
-        public string RomanceBlocker(CreatorState c) => RomanceId!=null ? "已有伴侣，先认真处理现有关系" : c.Affection<60 ? "私人好感达到 60" : c.StoryStage<2 ? "先完成两段私人交谈" : !CitySamePlace(c.Id)?"需要实际见面表达个人关系选择":null;
+        public string RomanceBlocker(CreatorState c) => HasRelationshipStory(c?.Id) ? ConfessionBlocker(c.Id) : RomanceId!=null ? "已有伴侣，先认真处理现有关系" : c.Affection<60 ? "私人好感达到 60" : c.StoryStage<2 ? "先完成两段私人交谈" : !CitySamePlace(c.Id)?"需要实际见面表达个人关系选择":null;
         public bool StartRomance(string id)
         {
             var c=Creator(id);if(c==null || IsGameOver)return false;
             string why=RomanceBlocker(c);if(why!=null)return Fail(why);
+            if (HasRelationshipStory(id)) { Say(ResolveRelationshipStory(id, romantic: true)); return IsPlayerPartner(id); }
             ConfirmPartner(id);Say("你与"+Creators.Get(id).Name+"确认了恋爱关系。保持联系与相处，商业合约仍按原条款独立执行。");return true;
         }
         public bool EndRomance()
@@ -108,6 +109,7 @@ namespace PCShopSell.Core.Session
             var c=Creator(RomanceId);if(c!=null)c.Affection=Math.Max(0,c.Affection-20);
             if(RomanceId==LuZhi && CityStory("romance") is CityStoryProgress p && p.Stage>=3){p.Branch="friends";p.Stage=4;}
             RememberSocial(RomanceId, "你们结束了恋爱关系，之后可以继续正常相处。");
+            SeparateRelationshipStory(RomanceId);
             RomanceId=null;
             Say("你们结束了恋爱关系。");return true;
         }

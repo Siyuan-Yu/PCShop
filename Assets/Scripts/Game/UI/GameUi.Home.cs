@@ -675,6 +675,8 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Button(row, "查看日程", () => OpenCityActivityDetail(id), 16), 90);
                         ScheduleActivityGoButton(row, id);
                     }
+                    if (e.VenueSponsorId != null)
+                        Ui.Size(Ui.Button(row, "查看活动", () => OpenVenueSponsorReport(e.VenueSponsorId), 16), 94, 40);
                     if (e.ExpoId != null)
                     {
                         string expoId = e.ExpoId;

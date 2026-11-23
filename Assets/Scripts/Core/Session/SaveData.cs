@@ -115,7 +115,7 @@ namespace PCShopSell.Core.Session
         /// <summary>手机里装的 app（旧存档没有这个字段，视为全装了）。</summary>
         public string[] apps;
         public string[] flags;
-        public int phoneQuestEarliestDay, scooterQuestEarliestDay, bankQuestEarliestDay;
+        public int phoneQuestEarliestDay, scooterQuestEarliestDay, bankQuestEarliestDay, venueSponsorGuideEarliestDay;
         public int[] scheduledDays;
         public long[] scheduledCents;
         public string[] scheduledMemos;

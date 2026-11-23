@@ -95,7 +95,7 @@ namespace PCShopSell.Game.Runtime
                 // Membership and labels are refreshed at low frequency. Never snap an existing
                 // actor here: its root and walking rig are advanced every rendered frame below.
                 bool participating = state.Route == null && !string.IsNullOrEmpty(state.ActivityId)
-                    && session.RunningCityActivity?.Id == state.ActivityId;
+                    && (session.RunningCityActivity?.Id == state.ActivityId || session.VenueSponsorGuest(state));
                 if(view.ActivityName==null)
                 {
                     var label=new GameObject("ActivityName").transform;label.SetParent(view.Go.transform,false);label.localPosition=Vector3.up*1.8f;

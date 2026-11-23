@@ -154,6 +154,9 @@ namespace PCShopSell.Core.Session
             _phoneQuestEarliestDay = d.phoneQuestEarliestDay;
             _scooterQuestEarliestDay = d.scooterQuestEarliestDay;
             _bankQuestEarliestDay = d.bankQuestEarliestDay;
+            _venueSponsorGuideEarliestDay = d.venueSponsorGuideEarliestDay;
+            if (_venueSponsorGuideEarliestDay == 0 && QuestLessonRead(BankLessonId))
+                _venueSponsorGuideEarliestDay = Clock.Today.TotalDays + 1;
             if (_bankQuestEarliestDay == 0 && QuestCompleted("scooter") && !QuestCompleted("bank_securities")
                 && !Flags.Contains("tutorial:issued:bank_securities"))
             {
@@ -183,6 +186,7 @@ namespace PCShopSell.Core.Session
             d.phoneQuestEarliestDay = _phoneQuestEarliestDay;
             d.scooterQuestEarliestDay = _scooterQuestEarliestDay;
             d.bankQuestEarliestDay = _bankQuestEarliestDay;
+            d.venueSponsorGuideEarliestDay = _venueSponsorGuideEarliestDay;
             d.scheduledDays = _scheduledCredits.Select(c => c.day).ToArray();
             d.scheduledCents = _scheduledCredits.Select(c => c.cents).ToArray();
             d.scheduledMemos = _scheduledCredits.Select(c => c.memo).ToArray();

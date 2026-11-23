@@ -345,7 +345,7 @@ namespace PCShopSell.Core.Session
                     case "chat":AddRelation(t.Person,3);_lifeContact[t.Person]=now;break;
                     case "adopt":_lifeDog.Stage="adopted";_lifeDog.Place=Home.Id;_lifeDog.LastDay=Clock.Today.TotalDays;Backpack.AddGift(LifeEventGoods.DogFood.Id,3);ApplyCargoLimit();break;
                     case "dog-walk":_lifeDog.WalkDay=Clock.Today.TotalDays;_lifeDog.Bond=Math.Min(100,_lifeDog.Bond+3);break;
-                    case "gym":if(t.Mode==3){Player.Energy=Math.Min(Player.MaxEnergy,Player.Energy+3);break;} _gymRounds++;Player.SpendEnergy(t.Mode==1?6:3);Player.Health=Math.Min(100,Player.Health+(t.Mode==1?2:1));if(_gymRounds>=3)_gymReady=false;break;
+                    case "gym": ApplyFitnessRound(t.Mode); if(t.Mode!=3 && ++_gymRounds>=3)_gymReady=false; break;
                     case "neighbor":if(t.Mode==1)Flags.Add("life:quiet:"+t.Place);AddRelation(t.Person,1);break;
                     default:FinishNeighborhoodTask(t,now);break;
                 }

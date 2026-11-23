@@ -171,6 +171,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildPartnerActivityChoices(Window w, CityActivity activity)
         {
+            BuildRelationshipOutingButton(w.Content, activity, w.RequestRebuild);
             string line = S.PartnerActivityLine(activity);
             if (line == null) return;
             Para(w.Content, line, 17, Ui.Accent);
@@ -241,8 +242,11 @@ namespace PCShopSell.Game.UI
             if (here) S.PrepareVenueCompanions(place, activityId);
             bool court = place.Business == "venue_court";
             string action = court ? "打球" : "练习挥杆";
+            var sponsor = new VenueSponsorView();
             OpenWindow(place.Name, 1060, 620, w =>
             {
+                BuildVenueSponsorHeader(w, place, sponsor);
+                if (BuildVenueSponsorPage(w, place, sponsor, w.Content)) return;
                 if (BuildOnsiteAppointment(w, place, activityId)) return;
                 var booking = here ? S.PendingVenueActivity(place, activityId) : null;
                 if (!GameSession.IsVenueSport(booking)) booking = null;

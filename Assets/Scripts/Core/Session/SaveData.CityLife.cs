@@ -22,6 +22,7 @@ namespace PCShopSell.Core.Session
         public CityActivity[] cityActivities;
         public CityStoryProgress[] cityStories;
         public bool cityRomanceStateRecorded;
+        public RelationshipStoryProgress[] relationshipStories;
         public CityTravelIntent cityTravelIntent;
         public CitySavedTrip cityTrip;
         public long cityNextActivity,cityNextIntent;
@@ -64,7 +65,9 @@ namespace PCShopSell.Core.Session
             d.cityMarketShortcutExplicit=_cityMarketShortcut!=null;
             d.cityHomeShortcut = CityHomeShortcut;
             SaveCityStories(d);
+            SaveRelationshipStories(d);
             SaveCityVisits(d);
+            SaveVenueSponsorships(d);
         }
         private void LoadCityLife(SaveData d)
         {
@@ -151,11 +154,14 @@ namespace PCShopSell.Core.Session
             }
             else if(d.cityPlayerOffNode&&CurrentPlace==null)_free=OutsideResidenceWalls(new MapPoint(d.cityPlayerX,d.cityPlayerY));
             LoadCityStories(d);
+            LoadRelationshipStories(d);
             LoadCityVisits(d);
+            RestoreVenueSponsorships(d);
             if(d.cityLifeVersion<2)MigrateCityAppointments();
             if(!DebugInvitationPersonEnabled)RemoveInvitationTestPerson();
             // Restore only; do not replay time, charge a fee or grant rewards during load.
             foreach(var p in _cityPeople.Values)if(p.ActivityId!=null&&!_cityActivities.Any(a=>a.Id==p.ActivityId&&a.Active)
+                && !_venueSponsorships.Any(a => a.Id == p.ActivityId && !a.Completed && a.Guests.Contains(p.PersonId))
                 &&!(d.venueBusinesses??Array.Empty<VenueBusiness>()).Any(v=>v!=null&&ShopAt(v.PlaceId)!=null&&(v.CustomersHere??Array.Empty<VenueCustomer>()).Any(c=>c.PersonId==p.PersonId&&c.ReservationId==p.ActivityId)))p.ActivityId=null;
             var employed = Employees.Select(row => PersonIdOf(row.Person)).ToHashSet();
             foreach (var person in _cityPeople.Values)

@@ -30,6 +30,7 @@ namespace PCShopSell.Core.Session
         public double PhotoYaw=25,PhotoPitch=25,PhotoDistance=4,PhotoOffset,Exposure=1;
         public double BasketballPlayerX, BasketballDepthOffset, BasketballAimHeightOffset, BasketballLandingHeightOffset;
         public int BasketballPoints;
+        public double BestGolfTargetError;
         public bool IsBasketball => Number is >= 54 and <= 56;
         public bool BasketballDrill => Number == 55 && Mode < 2 || Number == 54 && Mode == 2;
         public double BasketballOriginZ => (Mode == 1 ? 2.8 : 0) + BasketballDepthOffset;
@@ -662,6 +663,7 @@ namespace PCShopSell.Core.Session
                 }
                 if(t<1)return;
                 double miss = s.SportTargetError;
+                if (!s.IsBasketball && (s.Round == 0 || miss < s.BestGolfTargetError)) s.BestGolfTargetError = miss;
                 bool blocked = s.BasketballShotBlocked;
                 bool good=s.Number<=56?miss<OnsitePlayState.BasketballRimTolerance&&!blocked:miss<10;
                 if(s.Number==55&&s.Mode<2)good=Math.Abs(s.Power-(s.Mode==0?.55:.7))<.15;

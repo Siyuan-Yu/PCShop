@@ -17,6 +17,7 @@ namespace PCShopSell.Core.Session
         {
             // 城郊
             ["life_ming"] = "今天修好了一台旧机器。听见它重新响起来的时候，我就想讲给你听。",
+            ["life_singer"] = "我给你留了靠墙那个位置。坐这儿听得见我，也听得见街上的声音。",
             ["resident_sujun"] = "我下班揉了点面。下次你来，我做一碗刚出锅的给你。",
             ["resident_leiming"] = "我练了一小段口琴。只练熟了开头，你愿意听的话，我吹给你听。",
             ["keeper_agent"] = "我路过一扇好看的旧门，拍下来了。下次想跟你一起慢慢走那条街。",
@@ -84,6 +85,8 @@ namespace PCShopSell.Core.Session
             if (IsGameOver) return "现在无法表白";
             if (IsPlayerPartner(personId)) return "你们已经是伴侣";
             if (RomanceId != null) return "你已有伴侣";
+            if (HasRelationshipStory(personId)) return GetRelationshipStoryStep(personId) == RelationshipStoryStep.Decide
+                ? null : "需要先一起赴约，再当面聊聊彼此。";
             if (Relation(personId) < ConfessionMinFamiliarity) return "熟悉度高于 70 后可以表白";
             if (!CitySamePlace(personId)) return "需要当面表白";
             int days = CityPersonState(personId).ConfessionRetryDay - Clock.Today.TotalDays;
@@ -94,6 +97,7 @@ namespace PCShopSell.Core.Session
         {
             string blocker = ConfessionBlocker(personId);
             if (blocker != null) return blocker;
+            if (HasRelationshipStory(personId)) return ResolveRelationshipStory(personId, romantic: true);
             if (!Random.Chance(ConfessionChance(Relation(personId))))
             {
                 CityPersonState(personId).ConfessionRetryDay = Clock.Today.TotalDays + ConfessionCooldownDays;

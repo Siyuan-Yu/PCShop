@@ -151,8 +151,12 @@ namespace PCShopSell.Game.UI
                 return true;
             }
 
-            OpenWindow(place.Name, 980, kind == LeisureGame.Cinema ? 560 : 510, w =>
+            bool community = S.HasVenueSponsorship(place);
+            var sponsor = new VenueSponsorView();
+            OpenWindow(place.Name, 980, community ? 620 : kind == LeisureGame.Cinema ? 560 : 510, w =>
             {
+                BuildVenueSponsorHeader(w, place, sponsor);
+                if (BuildVenueSponsorPage(w, place, sponsor, w.Content)) return;
                 float bodyHeight = _venueWalkInOrder?.Window == w ? 440 : kind == LeisureGame.Cinema ? 320 : 270;
                 var goods = here ? BuildRosterFrame(w, place, bodyHeight) : w.Content;
                 if (BuildVenueWalkIn(w, goods)) return;
@@ -223,7 +227,7 @@ namespace PCShopSell.Game.UI
                         CloseAllWindows();
                         _ctrl.GoToPlace(place);
                     }, 18, Ui.ButtonHot, S.ClosedReason(place) == null).Tip(S.ClosedReason(place)), -1, 40);
-            }, fitContent: true);
+            }, fitContent: !community);
             return true;
         }
 

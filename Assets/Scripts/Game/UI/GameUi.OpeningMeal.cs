@@ -444,6 +444,11 @@ namespace PCShopSell.Game.UI
                     if (!ReferenceEquals(target, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
                 }
             }
+            else if (canShow && S.VenueSponsorGuidePaused)
+            {
+                (target, text) = VenueSponsorGuideTarget(top);
+                top = AnyModalOpen ? _windows[_windows.Count - 1] : null;
+            }
             bool show = canShow && target != null && target.IsInteractable() && target.gameObject.activeInHierarchy
                 && (top == null || target.transform.IsChildOf(top.Root));
             S.FocusOpeningMallTutorial(show && mallTravelLesson);

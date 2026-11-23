@@ -140,6 +140,12 @@ namespace PCShopSell.Game.UI
                     } });
                 if (nextSpeaker != null) replies.Add(nextSpeaker);
 
+                if (session.RelationshipStoryOutingDialogue(activity, person.Id) is string authored)
+                {
+                    ShowRelationshipOutingDialogue(ctx, activity, person.Id, authored, returnLabel);
+                    return;
+                }
+
                 string personal = topic.Topic switch
                 {
                     null => null,

@@ -282,6 +282,7 @@ namespace PCShopSell.Core.Session
             string resultTitle = r.Practice ? r.Abandoned ? "练习已结束" : "练习完成"
                 : r.Abandoned ? "已退赛" : $"{raceTitle ?? RacingSchedule.Name(r.Meeting)} · 第 {r.Position} / {r.CompetitorCount} 名";
             LastRaceReport=resultTitle+" · 用时 "+(r.Elapsed+r.Penalty).ToString("0.00")+"秒（罚时 "+r.Penalty.ToString("0")+"秒）\n奖金 ¥"+prize.ToString("N0")+" · 车况 "+v.Condition.ToString("0")+"% · "+(injury>0?"碰撞受伤，健康 -"+injury.ToString("0"):"未受伤");
+            CaptureVenueCommunityRaceResult(r, position);
             LastRaceSettlement.Extra = SettleRacingBatchRace(r, v);
             int minutes = r.PaidPractice ? Math.Min(r.Lap, r.Laps) * CityLifeCatalog.ManualAttemptMinutes : 30;
             if (r.PaidPractice)
