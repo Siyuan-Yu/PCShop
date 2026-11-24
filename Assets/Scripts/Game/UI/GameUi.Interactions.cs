@@ -80,40 +80,28 @@ namespace PCShopSell.Game.UI
             bool venue = false, bool recruiting = false, IReadOnlyCollection<EmployeeRole> guidedRoles = null,
             List<Button> guidedButtons = null)
         {
-            const int columns = 4;
             bool guided = guidedButtons != null;
+            int columns = guided ? 3 : 6;
+            var choices = guided ? EmployeeRoleChoices.Where(guidedRoles.Contains).ToArray() : EmployeeRoleChoices;
             Button first = null, selectedButton = null;
-            for (int start = 0; start < EmployeeRoleChoices.Length; start += columns)
+            for (int start = 0; start < choices.Length; start += columns)
             {
-                var row = Ui.Row(parent, 44, 8);
-                int count = Math.Min(columns, EmployeeRoleChoices.Length - start);
+                var row = Ui.Row(parent, 52, 8);
+                int count = Math.Min(columns, choices.Length - start);
                 for (int i = 0; i < count; i++)
                 {
-                    var role = EmployeeRoleChoices[start + i];
+                    var role = choices[start + i];
                     bool active = role == selected;
-                    Color background = Ui.SelectedButton(active);
                     string label = venue && role == EmployeeRole.Cashier ? "场馆值守" : GameSession.RoleName(role);
                     if (active && recruiting) label = "✓ " + label;
-                    bool allowed = !guided || guidedRoles?.Contains(role) == true;
-                    var button = Ui.Button(row, label, allowed ? () => select(role) : null, 18, background);
-                    if (guided)
-                    {
-                        button.navigation = new Navigation { mode = Navigation.Mode.None };
-                        if (!allowed)
-                        {
-                            button.image.raycastTarget = false;
-                            button.GetComponentInChildren<Text>().raycastTarget = false;
-                        }
-                        else
-                        {
-                            guidedButtons.Add(button);
-                            first ??= button;
-                            if (active) selectedButton = button;
-                        }
-                    }
-                    Ui.Size(button, -1, -1, 1);
+                    var button = Ui.Button(row, label, () => select(role), 20, Ui.SelectedButton(active));
+                    Ui.Size(button, 0, -1, 1);
+                    if (!guided) continue;
+                    guidedButtons.Add(button);
+                    first ??= button;
+                    if (active) selectedButton = button;
                 }
-                for (int i = count; i < columns; i++) Ui.Size(Ui.Rect(row, "EmptyRoleColumn"), -1, -1, 1);
+                for (int i = count; i < columns; i++) Ui.Size(Ui.Rect(row, "EmptyRoleColumn"), 0, -1, 1);
             }
             return selectedButton ?? first;
         }
@@ -130,16 +118,17 @@ namespace PCShopSell.Game.UI
             string shopId = hiringShop.Place.Id;
             EmployeeRole? selected = null;
             int destinationRows = guided ? 1 : Mathf.Clamp((S.MyShops.Count + 1) / 2, 1, 4);
-            float height = 630 + (destinationRows - 1) * 52;
+            float height = guided ? 510 : 630 + (destinationRows - 1) * 52;
             RectTransform footer = null;
             OpenWindow("聘用与工作安排 · " + candidate.Name, 1040, height, w =>
             {
-                var work = BuildEmployeeWorkColumns(w.Content, candidate, 407 + (destinationRows - 1) * 52,
-                    S.CandidateWaitText(candidate));
+                var work = w.Content;
+                BuildEmployeeWorkHeader(work, candidate);
+                Line(work, S.CandidateWaitText(candidate), 17, Ui.Warn);
                 var shop = S.ShopAt(shopId);
                 var guidedRoles = guided ? S.MissingOpeningStaffRoles(hiringShop)
                     .Where(role => S.RecruitAssignmentBlocker(candidate.Id, shopId, role) == null).ToArray() : null;
-                Line(work, "岗位", 18);
+                Line(work, "选择岗位", 20);
                 var roles = Ui.Rect(work, "RecruitRoleChoices");
                 Ui.VList(roles, 8, 0);
                 if (guided) _openingRecruitChoices.Clear();
@@ -150,12 +139,10 @@ namespace PCShopSell.Game.UI
                     w.Rebuild();
                 }, venue: S.IsDedicatedVenue(shop?.Place), recruiting: true, guidedRoles: guidedRoles,
                     guidedButtons: guided ? _openingRecruitChoices : null);
-                var preview = Ui.Size(Ui.Rect(work, "RecruitRolePreview"), -1, 100);
-                Ui.VList(preview, 0, 0);
                 string why = null;
                 if (selected is EmployeeRole role)
                 {
-                    BuildEmployeeRolePreview(preview, candidate, role, shop);
+                    BuildEmployeeRolePreview(work, candidate, role, shop);
                     if (!guided)
                         BuildEmployeeDestinationChoices(work, role, shopId, target => { shopId = target; w.Rebuild(); });
                     why = S.RecruitAssignmentBlocker(candidate.Id, shopId, role);
@@ -187,8 +174,9 @@ namespace PCShopSell.Game.UI
                     }
                     _openingRecruitWindow = w;
                     _openingRecruitTarget = roleButton ?? back;
-                    _openingRecruitRoleArea = roles;
-                    _openingRecruitInstruction = selected.HasValue ? "可在高亮岗位之间切换\n选好后点「确认聘用并安排工作」"
+                    _openingRecruitRoleArea = roleButton != null ? roles : null;
+                    _openingRecruitInstruction = roleButton == null ? "这位应聘者暂无可安排岗位\n点「返回选人」"
+                        : selected.HasValue ? "可在高亮岗位之间切换\n选好后点「确认聘用并安排工作」"
                         : "点一个高亮岗位\n查看这位应聘者的工作效果";
                 }
             }, closable: !guided, onClosed: guided ? () =>
@@ -219,22 +207,11 @@ namespace PCShopSell.Game.UI
             return Ui.Row(footer, 48, 8);
         }
 
-        private RectTransform BuildEmployeeWorkColumns(Transform parent, Employee employee, float height, string status = null)
+        private void BuildEmployeeWorkHeader(Transform parent, Employee employee)
         {
-            var columns = Ui.Row(parent, height, 14);
-            var profile = Ui.Size(Ui.FlatPanel(columns, "EmployeeWorkProfile", Ui.FlatBand), 216, -1).rectTransform;
-            Ui.VList(profile, 6, 10);
-            PersonSummary(profile, S.PersonIdOf(employee), employee.Name, "日薪 " + employee.DailyWage, 61);
-            if (status != null) Para(profile, status, 15, Ui.Warn);
-            var mental = Ui.Row(profile, 53, 5);
-            WorkAttribute(mental, "智力", employee.Intelligence);
-            WorkAttribute(mental, "魅力", GameSession.EmployeeCharm(employee));
-            var practical = Ui.Row(profile, 53, 5);
-            WorkAttribute(practical, "动手能力", employee.Dexterity);
-            WorkAttribute(practical, "体能", employee.Stamina);
-            var work = Ui.Size(Ui.Rect(columns, "EmployeeWorkAssignment"), 0, -1, 1);
-            Ui.VList(work, 5, 0);
-            return work;
+            var header = PersonSummary(parent, S.PersonIdOf(employee), employee.Name, "日薪 " + employee.DailyWage);
+            Ui.Size(BuildWorkAttributeRow(header,
+                (employee.Intelligence, GameSession.EmployeeCharm(employee), employee.Dexterity, employee.Stamina)), 600, 48);
         }
 
         private void BuildEmployeeDestinationChoices(Transform parent, EmployeeRole role, string selected, Action<string> select,

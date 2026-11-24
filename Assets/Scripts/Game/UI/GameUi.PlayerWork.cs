@@ -31,13 +31,13 @@ namespace PCShopSell.Game.UI
                 var offer = S.PlayerWorkFor(p);
                 var row = Ui.Row(parent, 40, 12);
                 Ui.Size(Ui.Button(row, "在这里打工", () => OpenPlayerWork(p, placeWindow), 18, Ui.ButtonHot), 136, 40);
-                Ui.Size(Ui.Label(row, $"{offer.Title} · ¥{offer.Wage:N0}/天", 17, TextAnchor.MiddleLeft, Ui.Accent), flexWidth: 1);
+                Ui.Size(Ui.Label(row, $"{offer.Title} · ¥{S.PlayerWorkWage(p, offer):N0}/班", 17, TextAnchor.MiddleLeft, Ui.Accent), flexWidth: 1);
             }
         }
 
         public void OpenPlayerWork(Place p, Window parent = null)
         {
-            OpenWindow("打工 · " + p.Name, 780, 720, w =>
+            OpenWindow("打工 · " + p.Name, 980, 630, w =>
             {
                 if (S.HasWorkContract)
                 {
@@ -47,29 +47,97 @@ namespace PCShopSell.Game.UI
                             : "明天再来工作。排班开始后，进入签约店铺就会自动上班，不用再点开始。", 20, Ui.Accent);
                     return;
                 }
-                var offer = S.PlayerWorkFor(p);
-                long rate = (long)System.Math.Ceiling(offer.Wage * 30.0 / (offer.End - offer.Start));
-                bool weekdaysOnly = GameSession.SupplierClosesOnWeekend(p);
-                string shifts = weekdaysOnly ? $"周一至周五 {offer.Hours}，一周 5 班，明天起算。" : $"每天 {offer.Hours}，连续 7 班，明天开始。";
-                Para(w.Content, $"{offer.Title}\n{shifts}\n底薪 ¥{offer.Wage} / 班 · 收工自动到账 · 提供工作餐和收工餐", 20, Ui.Accent);
-                var impact = S.PlayerWorkImpact(p, offer.Wage, offer.End);
-                var preview = Ui.Panel(w.Content, "WorkImpact", Ui.PanelBg2).rectTransform;
-                Ui.VList(preview, 4, 10);
-                Line(preview, $"主要属性 · {impact.attribute} {impact.score}   表现奖金 +¥{impact.bonus} / 班", 20, Ui.Accent);
-                double stress = impact.stressPerHour * (offer.End - offer.Start) / 60;
-                string energy = impact.energyMultiplier == 1 ? "精力按平常速度消耗" : $"精力消耗 {(impact.energyMultiplier - 1) * 100:+0.#;-0.#}%";
-                Para(preview, $"完整一班 · 压力 +{stress:0.#} · {energy} · 收工健康 −{offer.HealthCost}、心情 −{offer.MoodCost}", 17);
-                var penalties = new List<string>();
-                if (impact.fatiguePenalty > 0) penalties.Add($"疲劳使奖金减少 {impact.fatiguePenalty}%");
-                if (impact.stressPenalty > 0) penalties.Add($"高压力使奖金减少 {impact.stressPenalty}%");
-                if (penalties.Count > 0) Line(preview, string.Join(" · ", penalties), 17, Ui.Warn);
-                Para(preview, $"主属性越高，当班压力越少。超过 {GameSession.WorkBonusThreshold} 可获奖金，最高为底薪的 25%。到岗精力低于 {PlayerStats.TiredEnergyThreshold:0}，奖金减 {GameSession.FatigueWorkPenalty}%。压力达到 {PlayerStats.HighStressThreshold:0}，奖金减 {GameSession.HighStressWorkPenalty}%。", 16, Ui.Dim);
-                Para(w.Content, "到店自动上班，开工前 1 小时起可到岗。夜班可凭合同进店，上班时可调整倍速。", 17);
-                Para(w.Content, $"迟到每 30 分钟扣底薪 ¥{rate}，奖金按比例减少。缺勤当天无工资。", 17, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, weekdaysOnly ? "签一周合同" : "签一周合同（明天开始）",
-                    () => { if (S.SignPlayerWork(p)) { w.Rebuild(); parent?.RequestRebuild(); } }, 20, Ui.ButtonHot,
-                    S.CurrentPlace == p && S.OffersPlayerWork(p) && (!weekdaysOnly || S.IsWholesalerOpen)), -1, 50);
-            });
+                BuildPlayerWorkOffer(w, p, parent);
+            }, scrollContent: false);
+        }
+
+        private void BuildPlayerWorkOffer(Window w, Place place, Window placeWindow)
+        {
+            var offer = S.PlayerWorkFor(place);
+            long wage = S.PlayerWorkWage(place, offer);
+            var impact = S.PlayerWorkImpact(place, wage, offer.End);
+            bool weekdaysOnly = GameSession.SupplierClosesOnWeekend(place);
+            var days = Enumerable.Range(1, 7).Select(S.Clock.Today.AddDays).ToArray();
+            int firstShift = System.Array.FindIndex(days, day => !weekdaysOnly || !day.IsWeekend);
+            int shifts = weekdaysOnly ? 5 : days.Length;
+            string firstShiftText = firstShift == 0 ? "明天首班" : Ui.WeekdayName(days[firstShift].Weekday) + "首班";
+
+            var overview = Ui.Size(Ui.FlatPanel(w.Content, "WorkOffer", Ui.FlatWell, Ui.FlatWellEdge), -1, 146).rectTransform;
+            var metrics = Ui.Row(overview, 0, 18).Fill(16);
+            long raise = wage - offer.Wage;
+            string payDetail = $"岗位底薪 ¥{offer.Wage:N0} · {impact.attribute}加薪 ¥{raise:N0}";
+            BuildWorkOfferMetric(metrics, "每班底薪", $"¥{wage:N0}", payDetail, 44);
+            var divider = Ui.Size(Ui.Panel(metrics, "WorkOfferDivider", Ui.Edge), 1);
+            divider.raycastTarget = false;
+            BuildWorkOfferMetric(metrics, offer.Title, offer.Hours, firstShiftText + " · 当天收工到账", 33);
+
+            var aptitude = Ui.Size(Ui.FlatPanel(w.Content, "WorkAptitude", Ui.SelectedButton(true)), -1, 50).rectTransform;
+            var aptitudeRow = Ui.Row(aptitude, 0, 10).Fill(10);
+            Ui.Size(Ui.Label(aptitudeRow, "岗位主要看", 17, color: Ui.Good), 90);
+            var current = Ui.Size(Ui.Label(aptitudeRow, $"{impact.attribute} {impact.score}", 23, color: Ui.Good), 0, -1, 1);
+            current.fontStyle = FontStyle.Bold;
+            Ui.Size(Ui.Label(aptitudeRow, $"预计表现奖金 +¥{impact.bonus:N0} / 班", 17, TextAnchor.MiddleRight, Ui.Good), 230);
+
+            var schedule = Ui.Row(w.Content, 32, 10);
+            Ui.Size(Ui.Label(schedule, "一周排班", 20), 0, -1, 1).fontStyle = FontStyle.Bold;
+            Ui.Size(Ui.Label(schedule, $"{shifts} 班底薪合计 <b>¥{wage * shifts:N0}</b>", 18, TextAnchor.MiddleRight, Ui.Accent), 320);
+            var scheduleDays = Ui.Row(w.Content, 62, 7);
+            for (int i = 0; i < days.Length; i++)
+            {
+                bool rest = weekdaysOnly && days[i].IsWeekend;
+                bool first = i == firstShift;
+                var tile = Ui.Size(Ui.FlatPanel(scheduleDays, "WorkDay_" + i, first ? Ui.SelectedButton(true) : Ui.FlatBand), 0, -1, 1);
+                tile.raycastTarget = false;
+                string note = rest ? "\n<size=14>休息</size>" : first ? i == 0 ? "\n<size=14>明天</size>" : "\n<size=14>首班</size>" : "";
+                var label = Ui.Label(tile.transform, "<b>" + Ui.WeekdayName(days[i].Weekday) + "</b>" + note, 20, TextAnchor.MiddleCenter,
+                    first ? Ui.Good : rest ? Ui.Dim : Ui.TextColor);
+                label.rectTransform.Fill(3);
+            }
+
+            var effects = Ui.Row(w.Content, 38, 10);
+            Ui.Size(Ui.Label(effects, "上满一班", 17, color: Ui.Dim), 103);
+            double stress = impact.stressPerHour * (offer.End - offer.Start) / 60;
+            foreach (string effect in new[] { $"压力 +{stress:0.#}", $"健康 −{offer.HealthCost}", $"心情 −{offer.MoodCost}" })
+            {
+                var chip = Ui.Size(Ui.FlatPanel(effects, "WorkEffect", Ui.WarningSurface, Ui.WarningSurface), 128, 34);
+                chip.raycastTarget = false;
+                Ui.Label(chip.transform, effect, 17, TextAnchor.MiddleCenter, Ui.Warn).rectTransform.Fill(2);
+            }
+            Ui.Size(Ui.Label(w.Content, "提供工作餐和收工餐 · 到店自动上班", 17, color: Ui.Dim), -1, 30);
+
+            var spacer = Ui.Size(Ui.Rect(w.Content, "WorkFooterSpacer"));
+            spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
+            Ui.Size(Ui.Panel(w.Content, "WorkFooterDivider", Ui.Edge), -1, 1).raycastTarget = false;
+            var footer = Ui.Row(w.Content, 52, 10);
+            RectTransform helpCard = null;
+            Ui.Size(Ui.Button(footer, "?  出勤说明", () => helpCard.gameObject.SetActive(!helpCard.gameObject.activeSelf), 17), 145, 42)
+                .name = "WorkAttendanceHelpButton";
+            Ui.Size(Ui.Rect(footer, "WorkActionSpacer"), 0, -1, 1);
+            bool canSign = S.CurrentPlace == place && S.OffersPlayerWork(place) && (!weekdaysOnly || S.IsWholesalerOpen);
+            Ui.Size(Ui.Button(footer, "签一周合同", () =>
+            {
+                if (!S.SignPlayerWork(place)) return;
+                w.Rebuild();
+                placeWindow?.RequestRebuild();
+            }, 21, Ui.ButtonHot, canSign), 220, 48).name = "ContractSign";
+
+            long lateFee = PlayerWorkContract.LatePenaltyForWage(wage, offer.End - offer.Start);
+            helpCard = Ui.FlatPanel(w.Content, "WorkAttendanceHelp", Ui.FlatWell, Ui.FlatWellEdge).rectTransform;
+            helpCard.Anchor(0, 0, 0, 0, 16, 77, -570, -190);
+            helpCard.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            Ui.VList(helpCard, 6, 13);
+            Ui.Size(Ui.Label(helpCard, $"<b>迟到</b>　每 30 分钟扣底薪 ¥{lateFee:N0}，不足 30 分钟按一档计。\n　　　　 表现奖金按比例减少。", 16, TextAnchor.MiddleLeft), -1, 54);
+            Ui.Size(Ui.Label(helpCard, "<b>缺勤</b>　当天无工资。", 16), -1, 26);
+            helpCard.gameObject.SetActive(false);
+        }
+
+        private static void BuildWorkOfferMetric(Transform parent, string title, string value, string detail, int valueSize)
+        {
+            var metric = Ui.Size(Ui.Rect(parent, "WorkOfferMetric"), 0, -1, 1);
+            Ui.VList(metric, 1, 0).childAlignment = TextAnchor.MiddleLeft;
+            Ui.Size(Ui.Label(metric, title, 18, color: Ui.Accent), -1, 25);
+            Ui.Size(Ui.Label(metric, value, valueSize, color: Ui.Accent), -1, 51).fontStyle = FontStyle.Bold;
+            Ui.Size(Ui.Label(metric, detail, 17, color: Ui.Dim), -1, 26);
         }
 
         private void BuildPlayerWorkSummary(Transform parent, Window window = null)

@@ -209,9 +209,10 @@ namespace PCShopSell.Game.UI
             RectTransform footer = null;
             OpenWindow("安排工作 · " + row.Person.Name, 1040, 630 + (destinationRows - 1) * 52, w =>
             {
-                var work = BuildEmployeeWorkColumns(w.Content, row.Person, 407 + (destinationRows - 1) * 52);
+                var work = w.Content;
+                BuildEmployeeWorkHeader(work, row.Person);
                 var shop = S.ShopAt(destination);
-                Line(work, "岗位", 18);
+                Line(work, "选择岗位", 20);
                 BuildEmployeeRoleChoices(work, role, choice => { role = choice; w.Rebuild(); },
                     venue: S.IsDedicatedVenue(shop?.Place));
                 BuildEmployeeRolePreview(work, row.Person, role, shop);

@@ -78,13 +78,20 @@
 
 ## 3. 未完成与待决策
 
-1. 46 个固定 NPC 没有动漫立绘：8 个医院医生，38 个 `life_leisure_staff_*`。游戏里会显示默认头像。建议分批生成，每批脸型要有区分，用 `res_auntie.png` 作风格参考，再用导入脚本和清单登记。
+1. （已完成，见 3.1）46 个固定 NPC 的动漫立绘已补齐。
 2. `Assets/Art/PortraitsRetro`（约 350MB）已无运行时引用，可以删除。目前仍保留为归档。
 3. 304 个失败用例待分类：先区分“测试过期”和“真 bug”，只修真 bug 和关键流程，过期的统一更新。
 4. 两个会卡死的三年模拟需要加超时或放进手动运行类别，否则无法跑完整套。
 5. 之前审计列出的死代码、日历与营业时间配置重复，仍未处理。
 6. 多年存档体积的模拟还没做。
 7. `docs/art/anime-npc-portraits.md` 的数量描述还是 125，应为 126。
+
+### 3.1 立绘补齐记录（2026-11-23 追加）
+
+- 这 46 个人物（8 个医院医生，38 个 `life_leisure_staff_*`）在 git 历史里从未有过立绘，是新增人物时漏画，不是被删除。
+- 已用 GenerateImage 逐个生成（风格参考 `res_auntie.png`，3:4，768×1024），转成 PNG 后用 `tools/import-anime-npc-portrait.py` 导入，清单 `docs/art/npc-anime-portraits.json` 为 172/172。
+- 其中 `hospital_community_doctor_day` 重画过一次（第一版出现了写字的胸牌）；`life_leisure_staff_restaurant_tier3_evening` 和 `life_leisure_staff_expo_reception` 为避免与相邻女性人物脸型雷同，改为不带参考图生成，画风略偏萌，后续可统一风格重画。
+- `AnimePortraitTests`、`RetroPortraitTests` 已全部通过。
 
 ## 4. 测试运行方式
 

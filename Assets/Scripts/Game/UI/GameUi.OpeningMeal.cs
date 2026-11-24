@@ -17,7 +17,7 @@ namespace PCShopSell.Game.UI
         public override bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
         {
             if (PassThrough == null) return base.IsRaycastLocationValid(screenPoint, eventCamera);
-            var canvas = PassThrough.image.canvas;
+            var canvas = PassThrough.targetGraphic.canvas;
             var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
             if (PassThroughButtons != null)
             {
@@ -32,23 +32,20 @@ namespace PCShopSell.Game.UI
                 }
                 return true;
             }
-            var rect = PassThroughArea != null ? PassThroughArea : PassThrough.image.rectTransform;
+            var rect = PassThroughArea != null ? PassThroughArea : (RectTransform)PassThrough.transform;
             return !RectTransformUtility.RectangleContainsScreenPoint(rect, screenPoint, camera)
                 || (PassThroughViewport != null
                     && !RectTransformUtility.RectangleContainsScreenPoint(PassThroughViewport, screenPoint, camera));
         }
     }
 
-    internal sealed class RecruitmentGuideSpotlight : MaskableGraphic
+    internal sealed class RecruitmentGuideOutline : MaskableGraphic
     {
-        internal readonly List<Rect> Holes = new List<Rect>();
-        private readonly List<float> _cuts = new List<float>();
-        private Color _edgeColor;
+        internal readonly List<Rect> Buttons = new List<Rect>();
 
         internal void Refresh(Color edgeColor)
         {
-            _edgeColor = edgeColor;
-            Holes.Sort((a, b) => a.xMin.CompareTo(b.xMin));
+            color = edgeColor;
             SetVerticesDirty();
         }
 
@@ -56,33 +53,13 @@ namespace PCShopSell.Game.UI
         {
             mesh.Clear();
             var surface = rectTransform.rect;
-            _cuts.Clear();
-            _cuts.Add(0);
-            _cuts.Add(surface.height);
-            foreach (var hole in Holes)
-            {
-                _cuts.Add(hole.yMin);
-                _cuts.Add(hole.yMax);
-            }
-            _cuts.Sort();
-            for (int i = 1; i < _cuts.Count; i++)
-            {
-                float bottom = _cuts[i - 1], top = _cuts[i], x = 0;
-                foreach (var hole in Holes)
-                {
-                    if (hole.yMin >= top || hole.yMax <= bottom) continue;
-                    Quad(x, bottom, hole.xMin, top, color);
-                    x = Mathf.Max(x, hole.xMax);
-                }
-                Quad(x, bottom, surface.width, top, color);
-            }
             const float edge = 3;
-            foreach (var hole in Holes)
+            foreach (var button in Buttons)
             {
-                Quad(hole.xMin, hole.yMax, hole.xMax, hole.yMax + edge, _edgeColor);
-                Quad(hole.xMin, hole.yMin - edge, hole.xMax, hole.yMin, _edgeColor);
-                Quad(hole.xMin - edge, hole.yMin - edge, hole.xMin, hole.yMax + edge, _edgeColor);
-                Quad(hole.xMax, hole.yMin - edge, hole.xMax + edge, hole.yMax + edge, _edgeColor);
+                Quad(button.xMin, button.yMax, button.xMax, button.yMax + edge, color);
+                Quad(button.xMin, button.yMin - edge, button.xMax, button.yMin, color);
+                Quad(button.xMin - edge, button.yMin - edge, button.xMin, button.yMax + edge, color);
+                Quad(button.xMax, button.yMin - edge, button.xMax + edge, button.yMax + edge, color);
             }
 
             void Quad(float left, float bottom, float right, float top, Color tint)
@@ -288,7 +265,7 @@ namespace PCShopSell.Game.UI
         private Text _firstUseGuideText, _firstUseGuideArrow;
         private readonly Image[] _firstUseGuideFrame = new Image[4];
         private readonly Image[] _firstUseGuideDim = new Image[4];
-        private RecruitmentGuideSpotlight _recruitmentSpotlight;
+        private RecruitmentGuideOutline _recruitmentOutline;
         private OpeningGuideInputBlock _firstUseInputBlock;
         private Button _requiredGuideTarget;
         private Navigation _requiredGuideNavigation;
@@ -477,10 +454,9 @@ namespace PCShopSell.Game.UI
                     frame.rectTransform.anchorMin = frame.rectTransform.anchorMax = Vector2.zero;
                     frame.rectTransform.pivot = Vector2.zero;
                 }
-                _recruitmentSpotlight = Ui.Rect(_firstUseGuideRoot, "RecruitmentSpotlight").Fill().gameObject
-                    .AddComponent<RecruitmentGuideSpotlight>();
-                _recruitmentSpotlight.raycastTarget = false;
-                _recruitmentSpotlight.color = GuideDimColor;
+                _recruitmentOutline = Ui.Rect(_firstUseGuideRoot, "RecruitmentSpotlight").Fill().gameObject
+                    .AddComponent<RecruitmentGuideOutline>();
+                _recruitmentOutline.raycastTarget = false;
                 var card = Ui.FlatPanel(_firstUseGuideRoot, "FirstUseHint", Ui.PanelBg, Ui.FlatHotEdge);
                 card.raycastTarget = false;
                 _firstUseGuideCard = card.rectTransform;
@@ -525,20 +501,19 @@ namespace PCShopSell.Game.UI
             }
             Color color = Ui.FlatHotEdge;
             color.a = .6f + .4f * (.5f + .5f * Mathf.Sin(Time.unscaledTime * 4));
-            _recruitmentSpotlight.gameObject.SetActive(recruiting);
-            foreach (var dim in _firstUseGuideDim) dim.gameObject.SetActive(!recruiting);
+            _recruitmentOutline.gameObject.SetActive(recruiting);
             foreach (var frame in _firstUseGuideFrame) frame.gameObject.SetActive(!recruiting);
             if (recruiting)
             {
-                var holes = _recruitmentSpotlight.Holes;
-                holes.Clear();
+                var buttons = _recruitmentOutline.Buttons;
+                buttons.Clear();
                 foreach (var choice in allowedButtons)
                 {
                     var bounds = GuideTargetBounds((RectTransform)choice.transform, size, .75f);
                     if (viewport != null && choice.transform.IsChildOf(viewport)) bounds = IntersectGuideBounds(bounds, viewportBounds);
-                    if (bounds.width > 0 && bounds.height > 0) holes.Add(bounds);
+                    if (bounds.width > 0 && bounds.height > 0) buttons.Add(bounds);
                 }
-                _recruitmentSpotlight.Refresh(color);
+                _recruitmentOutline.Refresh(color);
             }
             // Keep the lesson text legible while its confirmation button is highlighted.
             Rect spotlight = showLesson
@@ -567,10 +542,11 @@ namespace PCShopSell.Game.UI
             }
             GuideRect(_firstUseGuideCard, x, Mathf.Clamp(y, 12, size.y - 92), width, 80);
             _firstUseGuideText.text = text;
-            _firstUseGuideArrow.text = above ? "▼" : "▲";
+            bool arrowAbove = recruiting || above;
+            _firstUseGuideArrow.text = arrowAbove ? "▼" : "▲";
             Rect arrowTarget = recruiting ? GuideTargetBounds((RectTransform)target.transform, size, .75f) : hole;
             GuideRect(_firstUseGuideArrow.rectTransform, arrowTarget.center.x - 16,
-                above ? arrowTarget.yMax + 2 : arrowTarget.yMin - 28, 32, 26);
+                arrowAbove ? arrowTarget.yMax + 2 : arrowTarget.yMin - 28, 32, 26);
         }
 
         private static Rect IntersectGuideBounds(Rect a, Rect b) => Rect.MinMaxRect(

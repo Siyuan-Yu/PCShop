@@ -41,7 +41,9 @@ namespace PCShopSell.Core.Session
         public int EndDay => StartDay + 6;
         public int ScheduledShiftCount => Days.Count(day => day.State != WorkDayState.Rest);
         public bool IsNightShift => ShiftEnd >= 1440;
-        public long LatePenaltyPerHalfHour => Math.Max(1, (long)Math.Ceiling(DailyWageYuan * 30.0 / (ShiftEnd - ShiftStart)));
+        public long LatePenaltyPerHalfHour => LatePenaltyForWage(DailyWageYuan, ShiftEnd - ShiftStart);
+        public static long LatePenaltyForWage(long wage, int shiftMinutes) =>
+            Math.Max(1, (long)Math.Ceiling(wage * 30.0 / shiftMinutes));
         public long EarnedYuan => Days.Sum(d => d.EarnedYuan);
         public long DeductionsYuan => Days.Count(d => d.State == WorkDayState.Completed || d.State == WorkDayState.Absent) * DailyWageYuan
             - EarnedYuan + Days.Where(d => d.State == WorkDayState.Completed).Sum(d => d.BonusYuan);
@@ -57,6 +59,8 @@ namespace PCShopSell.Core.Session
         private enum WorkAptitude { Charm, Dexterity, Stamina, Intelligence }
         public const int FatigueWorkPenalty = 50, HighStressWorkPenalty = 25;
         public const int WorkBonusThreshold = 50;
+        private const int WorkWageBaselineScore = 10;
+        private const int WorkWageMaxRaisePercent = 10;
         public const int WeekendWorkHours = 8, WeekendWorkPay = 300;
         private long _weekendWorkEnds;
         public PlayerWorkContract WorkContract { get; private set; }
@@ -107,10 +111,8 @@ namespace PCShopSell.Core.Session
             _ => WorkAptitude.Charm,
         };
 
-        public (string attribute, int score, long bonus, double energyMultiplier, double stressPerHour, int fatiguePenalty, int stressPenalty)
-            PlayerWorkImpact(Place place, long baseWage, int shiftEnd)
+        private (string attribute, int score) PlayerWorkAttribute(WorkAptitude aptitude)
         {
-            var aptitude = WorkAptitudeFor(place);
             var (attribute, score) = aptitude switch
             {
                 WorkAptitude.Dexterity => ("动手能力", Player.Skill),
@@ -118,7 +120,21 @@ namespace PCShopSell.Core.Session
                 WorkAptitude.Intelligence => ("智力", Player.Intelligence),
                 _ => ("魅力", EffectiveCharm),
             };
-            score = Math.Max(0, Math.Min(100, score));
+            return (attribute, Math.Clamp(score, 0, 100));
+        }
+
+        public long PlayerWorkWage(Place place, PlayerWorkOffer offer)
+        {
+            var (_, score) = PlayerWorkAttribute(WorkAptitudeFor(place));
+            int gain = Math.Max(0, score - WorkWageBaselineScore);
+            return offer.Wage + (long)offer.Wage * gain * WorkWageMaxRaisePercent / ((100 - WorkWageBaselineScore) * 100);
+        }
+
+        public (string attribute, int score, long bonus, double energyMultiplier, double stressPerHour, int fatiguePenalty, int stressPenalty)
+            PlayerWorkImpact(Place place, long baseWage, int shiftEnd)
+        {
+            var aptitude = WorkAptitudeFor(place);
+            var (attribute, score) = PlayerWorkAttribute(aptitude);
             int fatiguePenalty = Player.Tired ? FatigueWorkPenalty : 0;
             int stressPenalty = Player.Stress >= PlayerStats.HighStressThreshold ? HighStressWorkPenalty : 0;
             double skillBonus = Math.Max(0, score - WorkBonusThreshold) / (100.0 - WorkBonusThreshold) * .25;
@@ -141,7 +157,7 @@ namespace PCShopSell.Core.Session
             WorkContract = new PlayerWorkContract
             {
                 PlaceId = p.Id, StartDay = Clock.Today.TotalDays + 1,
-                ShiftStart = offer.Start, ShiftEnd = offer.End, JobTitle = offer.Title, DailyWageYuan = offer.Wage, HealthCost = offer.HealthCost, MoodCost = offer.MoodCost,
+                ShiftStart = offer.Start, ShiftEnd = offer.End, JobTitle = offer.Title, DailyWageYuan = PlayerWorkWage(p, offer), HealthCost = offer.HealthCost, MoodCost = offer.MoodCost,
                 LastNote = weekdaysOnly ? "已签一周合同，明天起算。工作日到店上班，周末休息，工资每天收工后到账。"
                     : "已签一周合同，明天开始。每天到店自动上班，每天收工后工资自动到账。"
             };
