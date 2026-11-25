@@ -11,14 +11,24 @@ namespace PCShopSell.Game.Runtime
         private static Material _lamplitGlass;
         private static readonly Dictionary<string,Texture2D> Normals=new Dictionary<string,Texture2D>();
 
-        private static Material _gardenWater;
-        internal static Material GardenWater()
+        internal enum WaterBasin { Still, Pond, Pool }
+        private static readonly Dictionary<WaterBasin,Material> Waters=new();
+        internal static Material GardenWater(WaterBasin basin=WaterBasin.Still)
         {
-            if(_gardenWater!=null)return _gardenWater;
+            if(Waters.TryGetValue(basin,out var material) && material!=null)return material;
             var shader=Resources.Load<Shader>("Shaders/LakeWater");
-            _gardenWater=shader!=null?new Material(shader):Mats.Lit(ArtDirection.Hex("4099AF"),.7f);
-            _gardenWater.SetColor("_BaseColor",new Color(.13f,.47f,.57f));
-            return _gardenWater;
+            material=shader!=null?new Material(shader):Mats.Lit(ArtDirection.Hex("4099AF"),.7f);
+            material.SetColor("_BaseColor",ArtDirection.Hex(basin==WaterBasin.Pool?"416F70":basin==WaterBasin.Pond?"344E47":"46655F"));
+            if(shader!=null)
+            {
+                material.SetFloat("_Basin",(float)basin);
+                if(basin==WaterBasin.Pool)material.SetTexture("_PoolLight",Resources.Load<Texture2D>("OldTown/Surfaces/poolLight"));
+                material.SetFloat("_ReflectMask",basin==WaterBasin.Pond?1:0);
+                material.SetTexture("_WaterMarks",Resources.Load<Texture2D>("OldTown/Surfaces/windRipples"));
+                material.SetTexture("_WindField",Resources.Load<Texture2D>("OldTown/Surfaces/meadowVariation"));
+            }
+            Waters[basin]=material;
+            return material;
         }
         public static Material LamplitWindow()
         {

@@ -368,9 +368,6 @@ namespace PCShopSell.Game.Runtime
             var shore=SmoothShore();
             var details=new Dictionary<Vector2Int,ForestChunk>();
             var gardens=new Dictionary<Vector2Int,MiniatureDetailMesh>();
-            var treeLeaf=Mats.Lit(ArtDirection.Hex("577D35"),.04f);
-            var treeTips=Mats.Lit(ArtDirection.Hex("A5B742"),.04f);
-            var treeBark=Mats.Lit(ArtDirection.Hex("866342"),.06f);
             bool Overlaps(RoadSurfaceGeometry.Index index,Vector2[] probe) =>
                 index.Nearby(probe).Any(id=>RoadSurfaceGeometry.Intersect(probe,index.Polygons[id]).Length>=3);
             float deadline = Time.realtimeSinceStartup + .008f;
@@ -398,11 +395,11 @@ namespace PCShopSell.Game.Runtime
                     var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
                     if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
                     if(!gardens.TryGetValue(key,out var garden)){garden=new MiniatureDetailMesh();gardens.Add(key,garden);}
-                    if (InPaintedQuarter(pos))
+                    if (InPaintedQuarter(pos) || OnOutskirtsLawn(world))
                         QuarterTree(parent, world, 1f + seed%3 * .075f, seed%360);
                     else
                     {
-                        garden.Tree(world,5.4f+seed%3*.35f,seed%12,treeLeaf,treeTips,treeBark);
+                        PaintedWoodland.Plant(parent,world,5+seed%3,seed%11==0?2:0,seed);
                         garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
                     }
                     var pole=Mats.Lit(ArtDirection.Hex("46515A"),.25f);

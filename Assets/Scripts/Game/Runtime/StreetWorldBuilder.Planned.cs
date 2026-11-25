@@ -47,6 +47,8 @@ namespace PCShopSell.Game.Runtime
             {
                 residenceBlocks.TryGetValue(place.Id, out var block);
                 BuildPlannedPlace(place, block, block == null ? _root : housing);
+                int district = ArtDistrict(place.StreetId);
+                if (district > 0) DistrictFinishes.Apply(Places[place.Id].Root.transform, district);
                 ReportBuildProgress(.14f+.20f*++buildingsDone/Mathf.Max(1,buildingsTotal));
                 if(Time.realtimeSinceStartup>=buildingDeadline)
                 { yield return null;buildingDeadline=Time.realtimeSinceStartup+.016f; }
@@ -60,6 +62,8 @@ namespace PCShopSell.Game.Runtime
                 root.rotation=Quaternion.Euler(0,(float)block.heading,0);
                 PlannedBuilding(root,block.model,block.tier,(float)block.width,(float)block.depth,null,(float)block.height,block.variant);
                 BuildResidentialPlot(root,block);
+                int district = ArtDistrict(block.street);
+                if (district > 0) DistrictFinishes.Apply(root, district);
                 ReportBuildProgress(.14f+.20f*++buildingsDone/Mathf.Max(1,buildingsTotal));
                 if(Time.realtimeSinceStartup>=buildingDeadline)
                 { yield return null;buildingDeadline=Time.realtimeSinceStartup+.016f; }
@@ -151,6 +155,8 @@ namespace PCShopSell.Game.Runtime
                 else
                 {
                     CityArchitecture.Venue(shell,p,w,d);
+                    int district = ArtDistrict(p.StreetId);
+                    if (district > 0) DistrictVenueEntrance(shell,p,w,d,district);
                     foreach(var collider in shell.GetComponentsInChildren<Collider>())collider.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
                 }
                 var inside=new GameObject("VenueInterior").transform;inside.SetParent(root,false);
@@ -249,6 +255,11 @@ namespace PCShopSell.Game.Runtime
             {
                 CityArchitecture.GardenVilla(root,w,d,h,seed);
                 if(p!=null)foreach(var c in root.GetComponentsInChildren<Collider>())c.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
+                return;
+            }
+            if (p != null && ArtDistrict(p.StreetId) > 0)
+            {
+                DistrictBusiness(root,p,w,d,h,ArtDistrict(p.StreetId),seed);
                 return;
             }
             Color wall=Facades[seed%Facades.Length];

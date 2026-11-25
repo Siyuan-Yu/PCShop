@@ -32,6 +32,20 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root, "TicketCounter", new Vector3(garden ? -8f : 5.3f, .65f, 6), new Vector3(4.1f, 1.3f, 2.2f), blue);
             Prims.Box(root, "CounterTop", new Vector3(garden ? -8f : 5.3f, 1.34f, 6), new Vector3(4.4f, .15f, 2.4f), pale);
 
+            var flowers=new StreetPlanting();
+            var joinery=new MiniatureDetailMesh();
+            var wood=DistrictFinishes.Tile("walnut",Vector2.one*.4f);
+            float counterX=garden?-8f:5.3f;
+            foreach(int side in new[]{-1,1})
+            {
+                joinery.Box(new Vector3(counterX+side*1.96f,1.8f,6.75f),new Vector3(.12f,3.4f,.13f),wood);
+                QuarterModules.Add(root,"Bench",new Vector3(side*(width*.43f),.10f,3),Vector3.one);
+                for(int row=0;row<8;row++)
+                    flowers.Add(row%3==0?PlantSpecies.Spirea:PlantSpecies.Hedge,new Vector3(side*(width*.47f),.11f,2.5f+row*1.27f),
+                        1.51f,.87f+(row%3)*.11f,row+side*29);
+            }
+            QuarterModules.Add(root,"StripedCanopy",new Vector3(counterX,3.34f,6.83f),new Vector3(.65f,1.1f,2.40f));
+            joinery.Build(root,"售票亭木构");flowers.Build(root,"游园花境");
             float radius = WheelRadius(garden);
             // Clear the neighboring coaster as the larger garden wheel passes through its lower arc.
             var wheel = Child(root, "FerrisWheel", new Vector3(garden ? -26 : -11, radius + EyeAtBottom - CabinEye.y, garden ? 29 : 16));
@@ -41,7 +55,12 @@ namespace PCShopSell.Game.Runtime
                 for (int step = 0; step < 36; step++)
                 {
                     Vector3 a = WheelOffset(radius, step / 36f), b = WheelOffset(radius, (step + 1) / 36f);
-                    Beam(rim, "RimSection", a + Vector3.forward * z, b + Vector3.forward * z, garden ? .48f : .32f, pale);
+                    Beam(rim, "RimSection", a + Vector3.forward * z, b + Vector3.forward * z, garden ? .77f : .40f, pale);
+                    if(garden)
+                    {
+                        Beam(rim,"InnerRim",a*.967f+Vector3.forward*z,b*.967f+Vector3.forward*z,.37f,pale);
+                        Beam(rim,"RimTruss",a*.967f+Vector3.forward*z,b+Vector3.forward*z,.21f,gold);
+                    }
                     if (step % 3 == 0)
                     {
                         Beam(rim, "Spoke", Vector3.forward * z, a + Vector3.forward * z, .26f, blue);
@@ -64,7 +83,12 @@ namespace PCShopSell.Game.Runtime
                     new Vector3(0, 1.52f, cabinOffset), .24f, blue);
                 Material body = i % 3 == 0 ? blue : i % 3 == 1 ? red : pale;
                 Prims.Box(cabin, "CarFloor", new Vector3(0, -.57f, 0), new Vector3(3.2f, .16f, 2.5f), body);
-                Prims.Box(cabin, "CabinRoof", new Vector3(0, 1.46f, 0), new Vector3(3.24f, .15f, 2.58f), interior);
+                Prims.Box(cabin, "CabinRoof", new Vector3(0, 1.46f, 0), new Vector3(3.38f, .25f, 2.72f), garden ? pale : interior);
+                if(garden)
+                {
+                    Prims.Box(cabin,"CabinFascia",new Vector3(0,1.29f,0),new Vector3(3.31f,.15f,2.64f),body);
+                    Prims.Box(cabin,"CabinApron",new Vector3(0,-.41f,0),new Vector3(3.24f,.39f,2.55f),body);
+                }
                 foreach (float x in new[] { -1.52f, 1.52f })
                 {
                     Prims.Box(cabin, "SideSill", new Vector3(x, -.31f, 0), new Vector3(.10f, .37f, 2.41f), body);
@@ -88,7 +112,15 @@ namespace PCShopSell.Game.Runtime
             for (int i = 0; i < 72; i++)
             {
                 Vector3 a = CoasterTrack(i / 72f), b = CoasterTrack((i + 1) / 72f);
-                Beam(root, "CoasterTrack", a, b, .49f, red);
+                var tangent=(b-a).normalized;var right=Vector3.Cross(Vector3.up,tangent).normalized*.75f;
+                Beam(root, "CoasterTrack", a+right, b+right, .25f, red);
+                Beam(root, "CoasterTrack", a-right, b-right, .25f, red);
+                Beam(root, "Sleeper", a-right*1.12f, a+right*1.12f,.18f,blue);
+                if(i%6==0)
+                {
+                    var next=CoasterTrack((i+6)/72f);
+                    Beam(root,"Track diagonal brace",new Vector3(a.x,.55f,a.z),next-Vector3.up*.45f,.17f,blue);
+                }
                 if (i % 6 == 0) Beam(root, "CoasterSupport", new Vector3(a.x, .1f, a.z), a, .65f, pale);
             }
             var carousel = Child(root, "Carousel", new Vector3(6, 0, 11));

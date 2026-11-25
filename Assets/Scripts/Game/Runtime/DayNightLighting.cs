@@ -116,6 +116,8 @@ namespace PCShopSell.Game.Runtime
         public void Apply(float minuteOfDay, bool interior, bool raining = false, float quarterWeight = 0f, float quarterYaw = 0f, Vector3 quarterCenter = default)
         {
             float night = NightFactor(minuteOfDay);
+            Shader.SetGlobalFloat("_OldTownNightFactor", night);
+            Shader.SetGlobalFloat("_CityRain", raining ? 1 : 0);
             float ungradedDaylight = interior ? 0f : Mathf.Clamp01(quarterWeight) * (1f - night);
             Shader.SetGlobalVector("_OldQuarterFigureZone", new Vector4(quarterCenter.x,quarterCenter.z,ungradedDaylight,0));
             _volume.weight = _baseVolumeWeight * (1f - ungradedDaylight);
