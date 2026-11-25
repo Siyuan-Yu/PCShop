@@ -15,14 +15,14 @@ namespace PCShopSell.Game.Runtime
         internal static void Build(Transform root, Place place, float width, float depth)
         {
             bool garden = place.Id == CityLifeCatalog.GardenAmusementVenue;
-            var pale = Mats.Lit(ArtDirection.Hex("EBDAC0"));
+            var pale = Mats.Lit(ArtDirection.Hex(garden?"E1EFEC":"DEDCD1"));
             var red = Mats.Lit(ArtDirection.Hex("A7514E"));
             var blue = Mats.Lit(ArtDirection.Hex("3F6874"));
             var gold = Mats.Glow(ArtDirection.Hex("CC9B53"), ArtDirection.Hex("FFD68E") * 1.7f);
             var floor = IndustrialMaterials.Surface("paving", ArtDirection.Hex("C7AE8B"), new Vector2(width / 5, depth / 5));
             var plot = Prims.Box(root, "AmusementPaving", new Vector3(0, .035f, depth * .5f), new Vector3(width, .1f, depth), floor, true);
             plot.AddComponent<PlaceMarker>().PlaceId = place.Id;
-            Prims.Box(root, "TicketGate", new Vector3(0, 3.7f, .7f), new Vector3(11f, 1.1f, .65f), garden ? red : blue);
+            Prims.Box(root, "TicketGate", new Vector3(0, 3.7f, .7f), new Vector3(11f, 1.1f, .65f), garden ? Mats.Lit(ArtDirection.Hex("4C7C8A")) : blue);
             Prims.SignText(root, place.Name, new Vector3(0, 3.7f, .34f), 10.3f, .85f, ArtDirection.Cream);
             foreach (int side in new[] { -1, 1 })
             {
@@ -44,7 +44,13 @@ namespace PCShopSell.Game.Runtime
                     flowers.Add(row%3==0?PlantSpecies.Spirea:PlantSpecies.Hedge,new Vector3(side*(width*.47f),.11f,2.5f+row*1.27f),
                         1.51f,.87f+(row%3)*.11f,row+side*29);
             }
-            QuarterModules.Add(root,"StripedCanopy",new Vector3(counterX,3.34f,6.83f),new Vector3(.65f,1.1f,2.40f));
+            if(garden)
+            {
+                var cap=new Vector3(counterX,3.48f,6.68f);
+                GardenStructures.Plate(root,"售票台白瓷顶",cap,new Vector3(5.4f,.23f,3.85f),DistrictFinishes.Tile("pearlCeramic",new Vector2(2,1)));
+                GardenStructures.SolarFins(joinery,cap+Vector3.up*.12f,3.8f,2.3f,3);
+            }
+            else QuarterModules.Add(root,"StripedCanopy",new Vector3(counterX,3.34f,6.83f),new Vector3(.65f,1.1f,2.40f));
             joinery.Build(root,"售票亭木构");flowers.Build(root,"游园花境");
             float radius = WheelRadius(garden);
             // Clear the neighboring coaster as the larger garden wheel passes through its lower arc.
@@ -63,7 +69,7 @@ namespace PCShopSell.Game.Runtime
                     }
                     if (step % 3 == 0)
                     {
-                        Beam(rim, "Spoke", Vector3.forward * z, a + Vector3.forward * z, .26f, blue);
+                        Beam(rim, "Spoke", Vector3.forward * z, a + Vector3.forward * z, garden ? .47f : .31f, garden ? pale : blue);
                         Prims.Box(rim, "RimLight", a + Vector3.forward * z * 1.36f, Vector3.one * .72f, gold);
                     }
                 }

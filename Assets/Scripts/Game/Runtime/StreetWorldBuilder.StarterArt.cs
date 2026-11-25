@@ -211,9 +211,25 @@ namespace PCShopSell.Game.Runtime
                 StarterWallLamp(root,new Vector3(side*width*.27f,2.36f,.29f));
             }
             StarterPart(root,"Station back",new Vector3(0,1.44f,depth-.15f),new Vector3(width,2.88f,.30f),StarterStone);
-            var canopy = StarterPart(root,"Blue standing-seam canopy",new Vector3(0,3.23f,depth/2-.14f),
-                new Vector3(width+.55f,.17f,depth+.5f),StarterBlue,"metal",new Vector2(width/4,depth/5));
-            canopy.transform.localRotation = Quaternion.Euler(5,0,0);
+            int district=ArtDistrict(place.StreetId);
+            if(district>=2)
+            {
+                var cap=new Vector3(0,3.34f,depth*.5f-.15f);
+                var ceramic=Mats.Lit(ArtDirection.Hex("E4EAE7"),.33f);
+                GardenStructures.Plate(root,"站口悬挑檐",cap,new Vector3(width+.64f,.28f,depth+.7f),ceramic);
+                if(district==3)
+                {
+                    var service=new MiniatureDetailMesh();
+                    GardenStructures.SolarFins(service,cap+Vector3.up*.15f,width*.72f,depth*.65f,3);
+                    service.Build(root,"地铁口光伏百叶");
+                }
+            }
+            else
+            {
+                var canopy = StarterPart(root,"Blue standing-seam canopy",new Vector3(0,3.23f,depth/2-.14f),
+                    new Vector3(width+.55f,.17f,depth+.5f),StarterBlue,"metal",new Vector2(width/4,depth/5));
+                canopy.transform.localRotation = Quaternion.Euler(5,0,0);
+            }
             StarterPart(root,"Station fascia",new Vector3(0,3.17f,-.40f),new Vector3(width+.52f,.72f,.22f),StarterBlue);
             StarterPart(root,"Station nameplate",new Vector3(0,3.96f,-.39f),new Vector3(width*.49f,.88f,.25f),StarterBlue);
             Prims.SignText(root,place.Name,new Vector3(0,3.96f,-.535f),width*.45f,.70f,ArtDirection.Cream);

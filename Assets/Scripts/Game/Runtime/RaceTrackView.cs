@@ -42,9 +42,17 @@ namespace PCShopSell.Game.Runtime
             BuildCircuitGarden(scenery,stand,pit);
             if (starter) BuildStarterLandmarks(scenery, resources);
 
-            QuarterModules.Add(scenery,"TinCanopy",pit+new Vector3(0,3.05f,-3.06f),new Vector3(1.38f,1,1));
-            QuarterModules.Add(scenery,"Condenser",pit+new Vector3(-3.5f,4.76f,.75f),Vector3.one*1.24f);
-            QuarterModules.Add(scenery,"CargoPallet",pit+new Vector3(4.74f,.09f,2.20f),Vector3.one);
+            if(starter)
+            {
+                QuarterModules.Add(scenery,"TinCanopy",pit+new Vector3(0,3.05f,-3.06f),new Vector3(1.38f,1,1));
+                QuarterModules.Add(scenery,"Condenser",pit+new Vector3(-3.5f,4.76f,.75f),Vector3.one*1.24f);
+                QuarterModules.Add(scenery,"CargoPallet",pit+new Vector3(4.74f,.09f,2.20f),Vector3.one);
+            }
+            else if(track.Tier==1)
+            {
+                QuarterModules.Add(scenery,"CycleShelter",pit+new Vector3(-8f,.12f,0),Vector3.one);
+                for(int i=0;i<3;i++)QuarterModules.Add(scenery,"Cycle",pit+new Vector3(-9+i*.74f,.15f,0),Vector3.one,12);
+            }
             if (track.Kerbs.Length > 0) BuildKerbs(scenery, resources);
             for(int i=0;i<4;i++){Prims.Box(scenery,"FloodlightPole",new Vector3((i%2==0?-1:1)*(float)track.Width*.43f,4,(i<2?-1:1)*(float)track.Depth*.43f),new Vector3(.3f,8,.3f),Mats.Lit(ArtDirection.Ink));}
             if(combineScenery)StaticBatchingUtility.Combine(scenery.gameObject);
@@ -206,6 +214,21 @@ namespace PCShopSell.Game.Runtime
             var alloy=Mats.Lit(ArtDirection.Hex("9BADB2"),.42f);
             var glass=DistrictFinishes.Tile("civicGlazing",new Vector2(.31f,.24f));
             var roof=stand+new Vector3(0,6.6f,2.8f);
+            var paving=DistrictFinishes.Tile("limestoneWalk",new Vector2(.44f,.44f));
+            var bed=new StreetPlanting();
+            detail.Box(stand+new Vector3(0,.16f,1.35f),new Vector3(27.4f,.19f,12.6f),paving);
+            for(int step=0;step<3;step++)
+                detail.Box(stand+new Vector3(0,.23f+step*.13f,-1.82f+step*.46f),new Vector3(22f,.14f,.54f),white);
+            foreach(int side in new[]{-1,1})
+            {
+                int count=Track.Tier==3?14:9;
+                for(int k=0;k<count;k++)
+                {
+                    var at=stand+new Vector3(side*(4.7f+k*8.1f/count),.12f,-4.65f+.34f*Mathf.Sin(k*.6f));
+                    bed.Add(Track.Tier==3?PlantSpecies.SilverGrass:k%4==0?PlantSpecies.Hydrangea:PlantSpecies.Boxwood,at,1.52f,.86f,k+side*17);
+                }
+            }
+            bed.Build(root,"看台入口花境");
             if(Track.Tier==1)
             {
                 var green=Mats.Lit(ArtDirection.Hex("427361"),.27f);
@@ -238,7 +261,15 @@ namespace PCShopSell.Game.Runtime
                 var joint=foot+new Vector3(0,2.58f,-.23f);
                 var forward=stand+new Vector3(x+bay*.53f,6.44f,-1.43f);
                 GardenStructures.Strut(detail,foot,joint,garden?.54f:.27f,.43f,white);
-                GardenStructures.Strut(detail,joint,forward,garden?.45f:.23f,.32f,white);
+                GardenStructures.Strut(detail,joint,forward,garden?.51f:.28f,.37f,white);
+                if(bay!=0)
+                {
+                    var frontFoot=stand+new Vector3(x,.30f,-.85f);
+                    var fork=frontFoot+new Vector3(-bay*.60f,2.8f,.22f);
+                    GardenStructures.Strut(detail,frontFoot,fork,garden?.44f:.23f,.28f,white);
+                    GardenStructures.Strut(detail,fork,forward,.23f,.22f,white);
+                    GardenStructures.Strut(detail,fork,forward+new Vector3(-bay*1.53f,0,2.18f),.19f,.20f,white);
+                }
                 GardenStructures.Strut(detail,joint,stand+new Vector3(x-bay*.36f,6.44f,6.88f),.24f,.27f,alloy);
             }
             foreach(int side in new[]{-1,1})

@@ -151,6 +151,7 @@ namespace PCShopSell.Game.Runtime
                     dummyDisplay.SetParent(root,false);
                     dummy.Build(dummyDisplay,"橱窗布样人台");
                     _cur.OpenOnly.Add(dummyDisplay.gameObject);
+                    QuarterModules.Add(root,"Cycle",new Vector3(-w*.5f-.26f,.07f,d*.25f),Vector3.one,8);
                     var pots=new StreetPlanting();
                     pots.Add(PlantSpecies.Broadleaf,new Vector3(w*.44f,.48f,-.74f),.88f,.87f,seed);
                     pots.Build(root,"门边盆栽");

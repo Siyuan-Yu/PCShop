@@ -374,6 +374,19 @@ namespace PCShopSell.Game.Runtime
             var gardens=new Dictionary<Vector2Int,MiniatureDetailMesh>();
             bool Overlaps(RoadSurfaceGeometry.Index index,Vector2[] probe) =>
                 index.Nearby(probe).Any(id=>RoadSurfaceGeometry.Intersect(probe,index.Polygons[id]).Length>=3);
+            // Segments without a street id inherit the palette of the nearest occupied frontage.
+            var frontages=_city.PublicPlaces.Where(p=>!IsLakeAccessNode(p.NodeId)).Select(p=>(at:DoorXZ(p),district:ArtDistrict(p.StreetId))).ToArray();
+            int DistrictAt(Vector2 at)
+            {
+                float best=float.PositiveInfinity;
+                int district=0;
+                foreach(var frontage in frontages)
+                {
+                    float distance=(frontage.at-at).sqrMagnitude;
+                    if(distance<best){best=distance;district=frontage.district;}
+                }
+                return district;
+            }
             float deadline = Time.realtimeSinceStartup + .008f;
             foreach(var street in streets)
             {
@@ -386,7 +399,8 @@ namespace PCShopSell.Game.Runtime
                 var direction=street.Direction;
                 var across=new Vector2(-direction.y,direction.x);
                 int seed=(Mathf.RoundToInt(street.A.x*5)^Mathf.RoundToInt(street.A.y*13))&1023;
-                float spacing=12f;
+                int district=DistrictAt((street.A+street.B)*.5f);
+                float spacing=district==0 ? 12f : 9.5f;
                 for(float along=4.8f+seed%4;along<street.Length-3.8f;along+=spacing)
                 for(int side=-1;side<=1;side+=2)
                 {
@@ -394,7 +408,8 @@ namespace PCShopSell.Game.Runtime
                     var world=new Vector3(pos.x,0,pos.y);
                     var lakePoint=world/LakeScale;
                     if(MountainHeight(lakePoint.x,lakePoint.z)>.04f||WithinLake(lakePoint,shore))continue;
-                    var probe=RoadSurfaceGeometry.Strip(pos-direction*2.65f,pos+direction*2.65f,5.3f);
+                    float clearance=district==0?2.65f:1.25f;
+                    var probe=RoadSurfaceGeometry.Strip(pos-direction*clearance,pos+direction*clearance,clearance*2);
                     if(Overlaps(paving,probe)||Overlaps(reserved,probe))continue;
                     var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
                     if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
@@ -403,16 +418,32 @@ namespace PCShopSell.Game.Runtime
                         QuarterTree(parent, world, 1f + seed%3 * .075f, seed%360);
                     else
                     {
-                        PaintedWoodland.Plant(parent,world,5+seed%3,seed%11==0?2:0,seed);
+                        PaintedWoodland.Plant(parent,world,6+seed%3,seed%9==0?2:0,seed);
                         garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
                     }
                     var pole=Mats.Lit(ArtDirection.Hex("46515A"),.25f);
                     var lamp=world-new Vector3(across.x,0,across.y)*side*1.8f;
                     garden.Box(lamp+Vector3.up*.13f,new Vector3(.40f,.26f,.40f),pole);
                     garden.Box(lamp+Vector3.up*1.9f,new Vector3(.11f,3.8f,.11f),pole);
-                    garden.Box(lamp+Vector3.up*3.90f,new Vector3(.42f,.55f,.42f),
-                        Mats.Glow(ArtDirection.Hex("F4CA80"),new Color(2.8f,1.7f,.65f)));
-                    garden.Box(lamp+Vector3.up*4.23f,new Vector3(.62f,.14f,.62f),pole);
+                    if(district>=2)
+                    {
+                        var arm=new Vector3(across.x,0,across.y)*(-side);
+                        var rotation=Quaternion.LookRotation(arm);
+                        var top=lamp+Vector3.up*3.84f;
+                        var alloy=Mats.Lit(ArtDirection.Hex(district==3?"C4D7D8":"A8B6B5"),.36f);
+                        garden.Box(top+arm*.33f,new Vector3(.24f,.14f,.95f),alloy,rotation);
+                        garden.Box(top+arm*.52f-Vector3.up*.085f,new Vector3(.21f,.04f,.48f),
+                            Mats.Glow(ArtDirection.Hex("C5E4E1"),new Color(.68f,.90f,.92f)),rotation);
+                        if(district==3)
+                            garden.Box(lamp+Vector3.up*1.35f+arm*.068f,new Vector3(.045f,1.35f,.018f),
+                                Mats.Lit(ArtDirection.Hex("75BBB9")),rotation);
+                    }
+                    else
+                    {
+                        garden.Box(lamp+Vector3.up*3.90f,new Vector3(.42f,.55f,.42f),
+                            Mats.Glow(ArtDirection.Hex("F4CA80"),new Color(2.8f,1.7f,.65f)));
+                        garden.Box(lamp+Vector3.up*4.23f,new Vector3(.62f,.14f,.62f),pole);
+                    }
                     if(seed%3==0)
                     {
                         var bench=world+new Vector3(direction.x,0,direction.y)*1.6f;

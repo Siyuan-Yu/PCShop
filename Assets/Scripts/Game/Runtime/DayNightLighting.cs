@@ -41,6 +41,7 @@ namespace PCShopSell.Game.Runtime
             _volume = volume;
             _baseVolumeWeight = volume.weight;
             _sun = sun;
+            RenderSettings.sun = sun;
             Light Fill(string name,Vector3 angle)
             {
                 var go=new GameObject(name);go.transform.SetParent(sun.transform.parent,false);
@@ -121,6 +122,7 @@ namespace PCShopSell.Game.Runtime
             Shader.SetGlobalFloat("_CityRain", raining ? 1 : 0);
             float districtDay = interior ? 0 : Mathf.Clamp01(townWeight) * (1 - night);
             Shader.SetGlobalFloat("_DistrictDaylight", districtDay);
+            Shader.SetGlobalFloat("_DistrictLandscape", interior ? 0 : Mathf.Clamp01(townWeight));
             float ungradedDaylight = interior ? 0f : Mathf.Clamp01(quarterWeight) * (1f - night);
             Shader.SetGlobalVector("_OldQuarterFigureZone", new Vector4(quarterCenter.x,quarterCenter.z,ungradedDaylight,0));
             _volume.weight = _baseVolumeWeight * (1f - ungradedDaylight);
@@ -141,7 +143,7 @@ namespace PCShopSell.Game.Runtime
             _cam.backgroundColor = interior ? new Color(0.08f, 0.08f, 0.1f) : Color.Lerp(a.SkyColor, b.SkyColor, t);
             if (raining) _cam.backgroundColor *= new Color(.84f, .9f, .95f, 1);
             Color ambient=interior?new Color(.65f,.65f,.62f):Color.Lerp(a.AmbientColor,b.AmbientColor,t);
-            ambient = Color.Lerp(ambient, new Color(.84f,.89f,.96f), districtDay * (raining ? .63f : 1f));
+            ambient = Color.Lerp(ambient, new Color(.75f,.81f,.89f), districtDay * (raining ? .63f : 1f));
             RenderSettings.ambientLight=ambient;
             RenderSettings.ambientSkyColor=ambient;
             RenderSettings.ambientEquatorColor=ambient*.83f;
@@ -171,10 +173,10 @@ namespace PCShopSell.Game.Runtime
                 _sun.transform.rotation = Quaternion.Slerp(_sun.transform.rotation, direction, daylight);
                 _sun.color = Color.Lerp(_sun.color, new Color(1,.985f,.947f), daylight);
                 _sun.intensity = Mathf.Lerp(_sun.intensity, 1.76f, daylight);
-                _sun.shadowStrength = Mathf.Lerp(_sun.shadowStrength, .60f, daylight);
-                _skyFill.intensity = Mathf.Lerp(_skyFill.intensity, .75f, daylight);
+                _sun.shadowStrength = Mathf.Lerp(_sun.shadowStrength, .76f, daylight);
+                _skyFill.intensity = Mathf.Lerp(_skyFill.intensity, .58f, daylight);
                 _bounceFill.color = Color.Lerp(_bounceFill.color, new Color(.92f,.96f,1f), daylight);
-                _bounceFill.intensity = Mathf.Lerp(_bounceFill.intensity, .54f, daylight);
+                _bounceFill.intensity = Mathf.Lerp(_bounceFill.intensity, .42f, daylight);
             }
             if (raining)
             {

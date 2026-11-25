@@ -30,7 +30,7 @@ namespace PCShopSell.Game.Runtime
             if (walkingPark)
                 ground = IndustrialMaterials.Surface("paving", ArtDirection.Hex("D3B993"), new Vector2(width / 4, (depth + 6) / 4));
             else if (lawn)
-                ground = districtLawn ?? IndustrialMaterials.Surface("meadow", ArtDirection.Hex("7D9859"), venueTiling);
+                ground = districtLawn ?? (kind=="park" && width>=30 ? DistrictFinishes.Meadow() : IndustrialMaterials.Surface("meadow", ArtDirection.Hex("7D9859"), venueTiling));
             else
                 ground = IndustrialMaterials.Surface("paving", floor, venueTiling);
             var body = Prims.Box(root, "Body", plotCenter, plotSize, ground, true);

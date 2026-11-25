@@ -166,6 +166,16 @@ Shader "PCShop/LakeWater"
                 color+=sun.color*(.004*glint+.013*brokenLight+.12*spec)*sun.shadowAttenuation;
                 color+=day*sun.shadowAttenuation*(scatter*(half3(.016,.023,.023)+lightPatch*half3(.38,.28,.155))
                     +_LakeShore*silver*half3(.032,.027,.017));
+                // In a district overview individual ripples are subpixel. Broader wind lanes
+                // carry the reflected sky between the tree-lined bank and open water.
+                if(_LakeShore>.5 && clearDay>.001)
+                {
+                    half2 breeze=SAMPLE_TEXTURE2D(_WindField,sampler_WindField,wind/float2(144.,93.)+eddy*.09).rg;
+                    half lane=smoothstep(.36,.82,breeze.r+.14*sin(wind.x*.031+breeze.g*5.2));
+                    half ridge=pow(saturate(.5+.5*sin(dot(p,side)*.20+dot(p,towards)*1.35+breeze.g*8.+time*.33)),9);
+                    half facing=saturate(dot(reflect(-sun.direction,n),view));
+                    color+=clearDay*offshore*sun.shadowAttenuation*lane*(.018+ridge*(.042+.12*facing))*half3(.68,.91,1.);
+                }
                 return half4(MixFog(color,i.fog),1);
             }
             ENDHLSL

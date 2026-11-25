@@ -30,7 +30,7 @@ Shader "PCShop/Painted meadow"
             TEXTURE2D(_LandUse); SAMPLER(sampler_LandUse);
             TEXTURE2D(_SoilPigment); SAMPLER(sampler_SoilPigment);
             float4 _LandBounds;
-            half _DistrictDaylight;
+            half _DistrictLandscape;
             struct Attributes {float4 positionOS:POSITION;half3 normalOS:NORMAL;};
             struct Varyings {float4 pos:SV_POSITION;float3 world:TEXCOORD0;half3 n:TEXCOORD1;float fog:TEXCOORD2;};
             Varyings Vert(Attributes v)
@@ -64,7 +64,7 @@ Shader "PCShop/Painted meadow"
                 half blade=dot(fine,half3(.27,.59,.14));
                 half3 turf=half3(.012,.027,.006)+blade*half3(.76,1.16,.30);
                 turf*=lerp(.66,1.33,smoothstep(.17,.68,patch.g))+.28*(leaf.g-fine.g);
-                pigment=lerp(pigment,lerp(turf,soil*1.12,dry*.13),_DistrictDaylight*.96);
+                pigment=lerp(pigment,lerp(turf,soil*1.12,dry*.13),_DistrictLandscape*.96);
                 half3 normal=normalize(i.n);
                 AmbientOcclusionFactor ao=GetScreenSpaceAmbientOcclusion(GetNormalizedScreenSpaceUV(i.pos));
                 half3 light=SampleSH(normal)*ao.indirectAmbientOcclusion+
