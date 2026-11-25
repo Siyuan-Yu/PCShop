@@ -12,7 +12,10 @@ namespace PCShopSell.Game.UI
     {
         private const string OpeningCinematicPath = "/Opening/OpeningCg.mp4";
         private const float OpeningCinematicTimeout = 8f;
+        private const double OpeningSkipHoldSeconds = 1;
         private Window _openingCinematic;
+        private Image _openingSkipFill;
+        private double? _openingSkipStartedAt;
 
         internal void ShowOpeningCinematic()
         {
@@ -34,7 +37,6 @@ namespace PCShopSell.Game.UI
             }
 
             RawImage picture = null;
-            Text loading = null;
             var window = OpenWindow("OpeningCinematic", 0, 0, w =>
             {
                 picture = Ui.Rect(w.Content, "CinematicPicture").Fill().gameObject.AddComponent<RawImage>();
@@ -44,12 +46,7 @@ namespace PCShopSell.Game.UI
                 aspect.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
                 aspect.aspectRatio = 16f / 9f;
 
-                loading = Ui.Label(w.Content, L("opening_cinematic_loading"), 24, TextAnchor.MiddleCenter, Ui.ChromeInk);
-                loading.rectTransform.Anchor(.1f, .44f, .9f, .56f);
-                var skip = Ui.Button(w.Content, L("opening_cinematic_skip"),
-                    () => FinishOpeningCinematic(w, enterTutorial: true), 16);
-                skip.name = "OpeningCinematicSkip";
-                ((RectTransform)skip.transform).Anchor(1, 0, 1, 0, -278, 20, 24, -62);
+                _openingSkipFill = BuildOpeningSkipRing(w.Content);
             }, closable: false, scrollContent: false, allowDuringOpeningMeal: true,
                 showTitleBar: false, fullScreen: true);
 
@@ -74,18 +71,61 @@ namespace PCShopSell.Game.UI
             {
                 if (player != null) player.Stop();
                 _openingCinematic = null;
+                _openingSkipFill = null;
+                _openingSkipStartedAt = null;
             };
-            _ctrl.StartCoroutine(PlayOpeningCinematic(window, player, picture, loading));
+            _ctrl.StartCoroutine(PlayOpeningCinematic(window, player, picture));
+        }
+
+        private static Image BuildOpeningSkipRing(Transform parent)
+        {
+            var sprite = CircleSprite();
+            Image Disc(Transform root, string name, Color color)
+            {
+                var image = Ui.Panel(root, name, color);
+                image.sprite = sprite;
+                image.type = Image.Type.Simple;
+                image.raycastTarget = false;
+                return image;
+            }
+
+            var track = Disc(parent, "OpeningSkipRing", Ui.ChromeEdge);
+            track.rectTransform.Anchor(1, 0, 1, 0, -82, 26, 26, -82);
+            var fill = Disc(track.transform, "Progress", Ui.ChromeGold);
+            fill.rectTransform.Fill();
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Radial360;
+            fill.fillOrigin = (int)Image.Origin360.Top;
+            fill.fillClockwise = true;
+            fill.fillAmount = 0;
+            var center = Disc(track.transform, "Center", Ui.ChromeWell);
+            center.rectTransform.Fill(4);
+            Ui.Label(center.transform, "Esc", 16, TextAnchor.MiddleCenter, Ui.ChromeInk).rectTransform.Fill();
+            track.gameObject.SetActive(false);
+            return fill;
         }
 
         internal bool HandleOpeningCinematicInput()
         {
             if (_openingCinematic is not { Closed: false } window) return false;
-            if (Input.GetKeyDown(KeyCode.Escape)) FinishOpeningCinematic(window, enterTutorial: true);
+            if (_openingSkipFill.fillAmount >= 1f)
+            {
+                // The ring was rendered full in the previous frame.
+                FinishOpeningCinematic(window, enterTutorial: true);
+                return true;
+            }
+
+            bool holding = Application.isFocused && Input.GetKey(KeyCode.Escape);
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (!holding) _openingSkipStartedAt = null;
+            else if (!_openingSkipStartedAt.HasValue || Input.GetKeyDown(KeyCode.Escape)) _openingSkipStartedAt = now;
+            _openingSkipFill.fillAmount = holding
+                ? Mathf.Clamp01((float)((now - _openingSkipStartedAt.Value) / OpeningSkipHoldSeconds)) : 0f;
+            _openingSkipFill.transform.parent.gameObject.SetActive(holding);
             return true;
         }
 
-        private IEnumerator PlayOpeningCinematic(Window window, VideoPlayer player, RawImage picture, Text loading)
+        private IEnumerator PlayOpeningCinematic(Window window, VideoPlayer player, RawImage picture)
         {
             string error = null;
             bool ended = false;
@@ -111,7 +151,6 @@ namespace PCShopSell.Game.UI
                     {
                         picture.texture = player.texture;
                         picture.enabled = true;
-                        loading.enabled = false;
                     }
                     if (player.time > lastTime)
                     {

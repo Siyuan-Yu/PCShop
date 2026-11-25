@@ -440,7 +440,7 @@ namespace PCShopSell.Game.UI
             var footer = Ui.Size(Ui.Rect(w.Content, "DialogueFooter"), -1, footerHeight);
             if (exitLabel != null)
             {
-                var end = Ui.Button(footer, exitLabel, w.Close, 16, exitLabel == "结束对话" ? Ui.Warn : Ui.SelectedButton(true));
+                var end = Ui.Button(footer, exitLabel, w.Close, 16, exitLabel == "结束对话" ? Ui.Warn : Ui.ButtonHot);
                 end.name = "DialogueEnd";
                 ((RectTransform)end.transform).Anchor(1, 0, 1, 0, -endWidth, 0, 0, -rowHeight);
             }
@@ -478,15 +478,12 @@ namespace PCShopSell.Game.UI
             string label = opt.Invitation ? "＋ " + opt.Label : opt.Label;
             if (opt.Blocker != null && !opt.SeparateBlocker && label.Length * 16 <= width - 8 && opt.Blocker.Length * 13 <= width - 8)
                 label += "\n<size=13>" + opt.Blocker + "</size>";
-            Color fill = opt.Invitation && !opt.Mainline
-                ? new Color32(184, 224, 216, 255)
-                : Ui.SelectedButton(opt.Mainline || opt.Hot);
+            Color fill = opt.Mainline || opt.Hot || opt.Invitation ? Ui.ButtonHot : Ui.ButtonBg;
             var button = Ui.Size(Ui.Button(row, label, opt.Act, 16, fill, opt.Blocker == null), width, height, 0);
             var caption = button.GetComponentInChildren<Text>();
             caption.rectTransform.Fill(3);
             caption.lineSpacing = .92f;
             caption.verticalOverflow = VerticalWrapMode.Truncate;
-            if (opt.Invitation) caption.fontStyle = FontStyle.Bold;
             if (opt.Id != null) button.name = opt.Id;
             if (opt.Blocker != null) button.Tip(opt.Label + "\n" + opt.Blocker);
             else if (label.Length * 16 > width - 8) button.Tip(opt.Label);

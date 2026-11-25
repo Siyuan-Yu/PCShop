@@ -556,7 +556,7 @@ namespace PCShopSell.Game.UI
                     if (!S.CompleteQuestLesson(q.Id)) return;
                     w.Close();
                     UpdateQuestTracker();
-                }, 18, Ui.FlatRow, canComplete), -1, 42);
+                }, 18, Ui.ButtonHot, canComplete), -1, 42);
             }
             else
             {

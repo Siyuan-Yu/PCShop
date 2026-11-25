@@ -158,7 +158,8 @@ namespace PCShopSell.Game.UI
                 _questAction?.Invoke();
             else RemindOpeningMeal();
         }
-        private RectTransform _guideRoot, _guideHole, _guideArrow, _guideCard, _openingHungerIllustration;
+        private RectTransform _guideRoot, _guideHole, _guideArrow, _guideCard;
+        private RectTransform _openingArrivalIllustration, _openingHungerIllustration;
         private readonly Image[] _guideDim = new Image[4];
         private readonly Image[] _guideFrame = new Image[4];
         private Text _guideTitle, _guideBody, _guideFoot;
@@ -224,21 +225,27 @@ namespace PCShopSell.Game.UI
             _guideFoot = Ui.Label(_guideCard, "", 17, TextAnchor.MiddleLeft, Ui.Warn);
             _guideFoot.raycastTarget = false;
             _guideFoot.rectTransform.Anchor(0, 0, 1, 0, 22, 10, 22, -38);
-            if (Resources.Load<Texture2D>("EventCg/opening_hunger") is Texture2D hungerArt)
-            {
-                _openingHungerIllustration = Ui.Rect(_guideCard, "OpeningHungerIllustration");
-                EventCgImage(_openingHungerIllustration, "RiceCooker", hungerArt);
-                _openingHungerIllustration.gameObject.SetActive(false);
-            }
+            _openingArrivalIllustration = BuildOpeningStoryIllustration("opening_arrival_v2", "OpeningArrivalIllustration");
+            _openingHungerIllustration = BuildOpeningStoryIllustration("opening_hunger_v2", "OpeningHungerIllustration");
             _openingMealIntroNext = Ui.Button(_guideCard, "先找点吃的", () =>
             {
                 S.Flags.Add(OpeningMealIntroPending ? OpeningMealIntroSeen : OpeningHungerSeen);
                 UpdateOpeningMealGuide();
-            }, 19, Ui.FlatRow);
+            }, 19, Ui.ButtonHot);
             _openingMealIntroNext.name = "OpeningMealIntroNext";
             ((RectTransform)_openingMealIntroNext.transform).Anchor(0, 0, 1, 0, 22, 16, 22, -62);
             _openingMealIntroNext.gameObject.SetActive(false);
             _guideRoot.gameObject.SetActive(false);
+        }
+
+        private RectTransform BuildOpeningStoryIllustration(string image, string name)
+        {
+            var texture = Resources.Load<Texture2D>("EventCg/" + image);
+            if (texture == null) return null;
+            var frame = Ui.Rect(_guideCard, name);
+            EventCgImage(frame, "Illustration", texture);
+            frame.gameObject.SetActive(false);
+            return frame;
         }
 
         public bool OpeningMealGuideVisible => _guideRoot != null && _guideRoot.gameObject.activeSelf && _openingMealInputBlock.PassThrough == null;
@@ -782,21 +789,24 @@ namespace PCShopSell.Game.UI
             _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, intro ? 78 : 66, 22, 62);
             bool compactCookerGuide = cookerOpen && (step == 0 || step == 2);
             _guideFoot.gameObject.SetActive(!intro && !movement && !compactCookerGuide);
-            bool showHungerIllustration = intro && hunger && _openingHungerIllustration != null;
+            if (_openingArrivalIllustration != null)
+                _openingArrivalIllustration.gameObject.SetActive(intro && background);
             if (_openingHungerIllustration != null)
-                _openingHungerIllustration.gameObject.SetActive(showHungerIllustration);
+                _openingHungerIllustration.gameObject.SetActive(intro && hunger);
             Rect hole = new Rect(); bool hasHole = false;
             (string title, string body) text = OpeningMealGuideText(step);
             if (intro)
             {
-                if (showHungerIllustration)
+                var illustration = background ? _openingArrivalIllustration : _openingHungerIllustration;
+                if (illustration != null)
                 {
                     float width = Mathf.Min(720, size.x - 32);
                     float textAndControlsHeight = width < 620 ? 292 : 250;
+                    if (background) textAndControlsHeight += 40;
                     float illustrationHeight = Mathf.Clamp(size.y - 32 - textAndControlsHeight, 0, Mathf.Max(0, width - 44) * 9 / 16);
                     float height = textAndControlsHeight + illustrationHeight;
                     GuideRect(_guideCard, (size.x - width) * .5f, (size.y - height) * .5f, width, height);
-                    _openingHungerIllustration.Anchor(0, 1, 1, 1, 22, -56 - illustrationHeight, 22, 56);
+                    illustration.Anchor(0, 1, 1, 1, 22, -56 - illustrationHeight, 22, 56);
                     _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, 78, 22, 72 + illustrationHeight);
                 }
                 else GuideRect(_guideCard, (size.x - 620) * .5f, (size.y - 340) * .5f, 620, 340);

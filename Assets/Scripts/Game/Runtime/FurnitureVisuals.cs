@@ -57,10 +57,7 @@ namespace PCShopSell.Game.Runtime
                 case FurnitureCatalog.FridgeSmall:
                 case FurnitureCatalog.Fridge: Fridge(root, def, c); break;
                 case FurnitureCatalog.TableCooker: TableCooker(root, w, d, c); break;
-                case "stool":
-                    Prims.Shape(PrimitiveType.Cylinder, root, "Stool", new Vector3(0, StoolSeatHeight / 2, 0),
-                        new Vector3(.34f, StoolSeatHeight / 2, .34f), Mats.Lit(new Color(.7f, .25f, .2f), .3f), c);
-                    break;
+                case "stool": Stool(root, c); break;
                 case "fan_broken": Fan(root, c, true); break;
                 case "fan_new":
                 case "fan_fixed": Fan(root, c, false); break;
@@ -286,19 +283,112 @@ namespace PCShopSell.Game.Runtime
 
         // ---------- 杂物 ----------
 
-        private static void Fan(Transform r, bool c, bool broken)
+        private static void Stool(Transform root, bool collider)
         {
-            Prims.Box(r, "Base", new Vector3(0, 0.03f, 0), new Vector3(0.38f, 0.05f, 0.38f), Mats.Lit(new Color(0.5f, 0.5f, 0.53f), 0.2f, 0.3f), c);
-            Prims.Box(r, "Pole", new Vector3(0, 0.55f, 0), new Vector3(0.05f, 1.0f, 0.05f), Mats.Lit(new Color(0.55f, 0.55f, 0.58f), 0.3f, 0.4f));
+            const float seatDiameter = .34f;
+            var redPlastic = Mats.Lit(new Color(.68f, .22f, .18f), .22f);
+            var seatTop = Mats.Lit(new Color(.73f, .27f, .22f), .26f);
+            Prims.Shape(PrimitiveType.Cylinder, root, "SeatRim", new Vector3(0, StoolSeatHeight - .029f, 0),
+                new Vector3(seatDiameter, .021f, seatDiameter), redPlastic);
+            Prims.Shape(PrimitiveType.Cylinder, root, "SeatTop", new Vector3(0, StoolSeatHeight - .012f, 0),
+                new Vector3(.323f, .012f, .323f), seatTop);
+            for (int i = 0; i < 4; i++)
+            {
+                float angle = (i + .5f) * Mathf.PI / 2f;
+                var outward = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                var foot = outward * .157f + Vector3.up * .004f;
+                var shoulder = outward * .113f + Vector3.up * (StoolSeatHeight - .043f);
+                Vector3 axis = shoulder - foot;
+                var leg = Prims.Box(root, "Leg", (foot + shoulder) * .5f, new Vector3(.052f, axis.magnitude, .052f), redPlastic);
+                leg.transform.localRotation = Quaternion.FromToRotation(Vector3.up, axis);
+            }
+
+            if (collider)
+            {
+                var hit = root.gameObject.AddComponent<CapsuleCollider>();
+                hit.center = Vector3.up * (StoolSeatHeight / 2f);
+                hit.height = StoolSeatHeight;
+                hit.radius = seatDiameter / 2f;
+            }
+        }
+
+        private static void Fan(Transform root, bool collider, bool broken)
+        {
+            var housing = Mats.Lit(new Color(.60f, .60f, .62f), .18f);
+            var metal = Mats.Lit(new Color(.47f, .48f, .50f), .28f, .35f);
+            var grille = Mats.Lit(new Color(.56f, .56f, .58f), .27f, .32f);
+            var blades = Mats.Lit(new Color(.69f, .72f, .73f), .23f);
+            Prims.Shape(PrimitiveType.Cylinder, root, "Base", new Vector3(0, .028f, 0),
+                new Vector3(.38f, .027f, .38f), metal);
+            if (collider)
+            {
+                var hit = root.gameObject.AddComponent<BoxCollider>();
+                hit.center = Vector3.up * .03f;
+                hit.size = new Vector3(.38f, .05f, .38f);
+            }
+            Prims.Shape(PrimitiveType.Cylinder, root, "BaseTop", new Vector3(0, .059f, 0),
+                new Vector3(.33f, .014f, .33f), housing);
+            Prims.Shape(PrimitiveType.Cylinder, root, "LowerPole", new Vector3(0, .32f, 0),
+                new Vector3(.052f, .27f, .052f), housing);
+            Prims.Shape(PrimitiveType.Cylinder, root, "UpperPole", new Vector3(0, .81f, 0),
+                new Vector3(.035f, .28f, .035f), metal);
+            Prims.Box(root, "Controls", new Vector3(0, .62f, -.012f), new Vector3(.061f, .15f, .056f), housing);
+            for (int i = 0; i < 3; i++)
+                Prims.Box(root, "SpeedButton", new Vector3(0, .58f + i * .037f, -.043f), new Vector3(.028f, .018f, .014f), metal);
+
             var head = new GameObject("Head").transform;
-            head.SetParent(r, false);
+            head.SetParent(root, false);
             head.localPosition = new Vector3(0, 1.1f, 0);
-            head.localRotation = broken ? Quaternion.Euler(-38f, 0, 0) : Quaternion.identity;
-            GameObject cage = Prims.Shape(PrimitiveType.Cylinder, head, "Cage", Vector3.zero, new Vector3(0.45f, 0.025f, 0.45f), Mats.Lit(new Color(0.75f, 0.75f, 0.78f), 0.3f, 0.4f));
-            cage.transform.localRotation = Quaternion.Euler(90, 0, 0);
-            Material bm = Mats.Lit(new Color(0.55f, 0.65f, 0.75f), 0.2f);
-            Prims.Box(head, "BladeA", new Vector3(0, 0, 0.02f), new Vector3(0.36f, 0.07f, 0.015f), bm);
-            Prims.Box(head, "BladeB", new Vector3(0, 0, 0.02f), new Vector3(0.07f, 0.36f, 0.015f), bm);
+            head.localRotation = broken ? Quaternion.Euler(-25f, 0, 0) : Quaternion.identity;
+            var motor = Prims.Shape(PrimitiveType.Cylinder, head, "MotorHousing", new Vector3(0, 0, .057f),
+                new Vector3(.158f, .056f, .158f), housing);
+            motor.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            for (int i = 0; i < 3; i++)
+            {
+                float angle = 120f * i;
+                var direction = Quaternion.Euler(0, 0, angle);
+                var blade = Prims.Shape(PrimitiveType.Sphere, head, "Blade", direction * new Vector3(.109f, 0, -.007f),
+                    new Vector3(.178f, .090f, .018f), blades);
+                blade.transform.localRotation = Quaternion.Euler(0, 0, angle + 25f);
+            }
+            var hub = Prims.Shape(PrimitiveType.Cylinder, head, "CenterCap", new Vector3(0, 0, -.071f),
+                new Vector3(.106f, .013f, .106f), housing);
+            hub.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+
+            // Build the guard as one continuous mesh so the blades stay visible through the wires.
+            var guard = new MiniatureDetailMesh();
+            var wire = guard.Part(grille);
+            const int segments = 24;
+            const float rimRadius = .212f;
+            const float frontRim = -.038f;
+            const float backRim = .034f;
+            for (int step = 0; step < segments; step++)
+            {
+                float angle = step * (2f * Mathf.PI / segments);
+                var a = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0);
+                var b = new Vector3(Mathf.Cos(angle + 2f * Mathf.PI / segments), Mathf.Sin(angle + 2f * Mathf.PI / segments), 0);
+                RingSegment(rimRadius, frontRim, .007f);
+                RingSegment(rimRadius, backRim, .005f);
+                RingSegment(.151f, -.052f, .0035f);
+                RingSegment(.089f, -.063f, .0035f);
+                if (step % 2 == 0)
+                    AddWire(a * .046f + Vector3.forward * -.075f, a * rimRadius + Vector3.forward * frontRim, .0037f);
+                if (step % 4 == 0)
+                {
+                    AddWire(a * .061f + Vector3.forward * backRim, a * rimRadius + Vector3.forward * backRim, .004f);
+                    AddWire(a * rimRadius + Vector3.forward * frontRim, a * rimRadius + Vector3.forward * backRim, .0045f);
+                }
+
+                void RingSegment(float radius, float depth, float thickness)
+                {
+                    var offset = Vector3.forward * depth;
+                    AddWire(a * radius + offset, b * radius + offset, thickness);
+                }
+            }
+            guard.Build(head, "WireGuard");
+
+            void AddWire(Vector3 start, Vector3 end, float radius) =>
+                MiniatureDetailMesh.Branch(wire.V, wire.T, start, end, radius, radius);
         }
 
         private static void Junk(Transform r, bool c)
