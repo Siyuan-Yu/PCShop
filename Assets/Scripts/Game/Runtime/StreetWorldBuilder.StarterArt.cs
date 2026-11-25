@@ -8,6 +8,7 @@ namespace PCShopSell.Game.Runtime
         private const string StarterHome = "home";
         private const string StarterStation = "metro_a";
         private const string StarterShop = "life_unit_s_oldhomes_2";
+        private const string RouteGrocery = "expansion_shop_s_oldhomes_01";
         private static readonly Color StarterStone = ArtDirection.Hex("CEB99D");
         private static readonly Color StarterTimber = ArtDirection.Hex("855637");
         private static readonly Color StarterBlue = ArtDirection.Hex("355474");
@@ -15,21 +16,38 @@ namespace PCShopSell.Game.Runtime
         private bool HasStarterArt => _city.IsLakeCity && _city.HasPlace(StarterHome)
             && _city.HasPlace(StarterShop) && _city.HasPlace(StarterStation);
 
+        private bool UsesQuarterShop(Place place) => place.Tier == 0 && place.Model == "shop"
+            && _city.AgencyDistrictFor(place.StreetId)?.id == "outskirts";
+
         private bool TryBuildStarterArt(Transform root, Place place, float width, float depth)
         {
             if (!HasStarterArt) return false;
+            if (place.HousingForm != ResidenceForm.Standard)
+            {
+                BuildQuarterResidence(root, place, width, depth);
+                return true;
+            }
+            if (UsesQuarterShop(place) && !CityArchitecture.HasExterior(place) && !(place.Business ?? "").StartsWith("venue_"))
+            {
+                QuarterShop(root, place, width, depth);
+                BuildShopDownlights(root, width, 2.47f);
+                var indicator = new Vector3(width*.40f, 2.0f, -.18f);
+                _cur.OpenOnly.Add(Prims.Box(root, "Open indicator", indicator, new Vector3(.20f,.12f,.07f), Mats.Unlit(UiGreen)));
+                _cur.ClosedOnly.Add(Prims.Box(root, "Closed indicator", indicator, new Vector3(.20f,.12f,.07f), Mats.Unlit(ArtDirection.Clay)));
+                _cur.LabelPos = root.TransformPoint(new Vector3(0,6.0f,depth*.3f));
+                return true;
+            }
             switch (place.Id)
             {
-                case StarterHome:
-                    BuildOldResidence(root, place, width, depth, StarterResidenceHeight, StableCityHash(place.Id), starter: true);
-                    return true;
-                case StarterShop:
-                    CityArchitecture.StreetApron(root,width);
-                    BuildStarterShop(root, place, width, depth);
-                    return true;
                 case StarterStation:
-                    CityArchitecture.StreetApron(root,width);
-                    StarterMetro(root, place, width, depth);
+                    Prims.Box(root,"Station paving",new Vector3(0,.057f,1.9f),new Vector3(width+.25f,.04f,depth+3.3f),QuarterMaterial("Pavement"));
+                    var canopy = QuarterModel(root,"RouteStation","Route");
+                    canopy.transform.localScale = new Vector3(width/7.7f,1,depth/7.7f);
+                    var hit = root.gameObject.AddComponent<BoxCollider>();
+                    hit.center = new Vector3(0,1.4f,depth/2);
+                    hit.size = new Vector3(width,2.8f,depth);
+                    root.gameObject.AddComponent<PlaceMarker>().PlaceId = place.Id;
+                    Prims.SignText(root,place.Name,new Vector3(0,2.59f,-.14f),3.9f,.46f,ArtDirection.Cream);
                     return true;
                 default:
                     return false;
@@ -51,19 +69,23 @@ namespace PCShopSell.Game.Runtime
             };
             for (int i = 0; i < points.Length; i++)
             {
-                var tree = new GameObject("Courtyard tree").transform;
-                tree.SetParent(grove,false);
-                tree.position = points[i];
-                tree.localScale = Vector3.one * (1.20f+i*.13f);
-                CityVegetation.Build(tree,Vector3.zero,5+i*2,true);
-                for (int j = 0; j < 5; j++)
-                {
-                    var offset = new Vector3(Mathf.Cos(j*1.52f)*(.9f+j*.16f), .11f,
-                        Mathf.Sin(j*1.52f)*(.9f+j*.16f));
-                    Prims.Shape(PrimitiveType.Sphere,tree,"Flowering groundcover",offset,new Vector3(.33f,.22f,.29f),
-                        Mats.Lit(ArtDirection.Hex(j%2==0 ? "B4B457" : "78914B")));
-                }
+                QuarterTree(grove, points[i], 1.05f + i * .14f, 67f * i);
             }
+            var house = home.Root.transform;
+            float side = (float)_city.GetPlace(StarterHome).Width * -.5f;
+            QuarterTree(grove, house.TransformPoint(new Vector3(side-2.50f,0,-.45f)),.99f,54f);
+            QuarterTree(grove, house.TransformPoint(new Vector3(side-2.85f,0,12.05f)),1.53f,106f);
+            var roadCenter = NodeWorld(home.Place.NodeId);
+            QuarterTree(grove, roadCenter-house.right*7.30f-house.forward*6.50f,1.12f,37f);
+            if (Places.TryGetValue("expansion_shop_s_oldhomes_02", out var shortShop))
+            {
+                var corner = new Vector3((float)shortShop.Place.Width*-.35f,0,-1.32f);
+                QuarterTree(grove,shortShop.Root.transform.TransformPoint(corner),1.19f,153f);
+                corner = new Vector3((float)shortShop.Place.Width*.46f,0,-2.16f);
+                QuarterTree(grove,shortShop.Root.transform.TransformPoint(corner),.91f,78f);
+            }
+            QuarterGround(_root, home.Root.transform);
+            BuildQuarterCourtyards(home.Entrance);
             BatchStatic(grove.gameObject);
         }
 
@@ -73,67 +95,6 @@ namespace PCShopSell.Game.Runtime
             var material = surface == null ? Mats.Lit(color, .18f)
                 : IndustrialMaterials.Surface(surface, color, tiling == default ? Vector2.one : tiling);
             return Prims.Box(root, name, position, size, material, solid);
-        }
-
-        private void BuildStarterShop(Transform root, Place place, float width, float depth)
-        {
-            float height = PlannedPlaceHeight(place);
-            Color wall = ArtDirection.Hex("B3A291");
-            Color roof = ArtDirection.Hex("556889");
-            Color trim = ArtDirection.Hex("4D5663");
-            StarterPart(root, "Masonry shell", new Vector3(0,height/2,depth/2), new Vector3(width,height,depth),
-                wall, "brick", new Vector2(width/4,height/3), true)
-                .AddComponent<PlaceMarker>().PlaceId = place.Id;
-            StarterPart(root,"Stone foundation",new Vector3(0,.24f,depth/2),new Vector3(width+.16f,.48f,depth+.16f),
-                StarterStone,"brick",new Vector2(width/4,.55f));
-            StarterPart(root,"Entry stone",new Vector3(0,.075f,-.34f),new Vector3(1.92f,.15f,.68f),StarterStone);
-            StarterDoor(root, 0, StarterBlue);
-            StarterRoof(root,width,depth,height,1.5f,roof,wall,trim);
-
-            int floors = height < 7f ? 2 : 3;
-            const int columns = 4;
-            float upperWidth = width*.14f;
-            for (int storey = 1; storey < floors; storey++)
-            {
-                float y = Mathf.Lerp(4.05f,height-1.20f,(storey-1f)/Mathf.Max(1,floors-2));
-                for (int column = 0; column < columns; column++)
-                {
-                    float x = Mathf.Lerp(-width*.36f,width*.36f,column/(columns-1f));
-                    StarterWindow(root,new Vector3(x,y,0),upperWidth,1.27f,trim,(column+storey)%3!=0);
-                }
-                StarterPart(root,"Storey cornice",new Vector3(0,y-.81f,-.05f),new Vector3(width+.09f,.12f,.16f),trim);
-            }
-
-            foreach (int side in new[] {-1,1})
-            {
-                StarterWindow(root,new Vector3(side*width*.285f,1.45f,0),width*.255f,1.5f,trim,true);
-                StarterPlanter(root,new Vector3(side*width*.31f,0,-.76f),1.15f,side+3);
-                StarterWallLamp(root,new Vector3(side*width*.38f,2.25f,-.27f));
-                var wallSide = new GameObject("Side elevation").transform;
-                wallSide.SetParent(root,false);
-                wallSide.localPosition = new Vector3(side*width/2,0,depth/2);
-                wallSide.localRotation = Quaternion.Euler(0,-side*90,0);
-                for (int i = -1; i <= 1; i += 2)
-                    StarterWindow(wallSide,new Vector3(i*depth*.24f,height-1.47f,0),upperWidth,1.2f,trim,i<0);
-            }
-
-            float canopy = width-.25f;
-            const int strips = 14;
-            for (int i = 0; i < strips; i++)
-            {
-                Color canvas = i%2==0 ? StarterBlue : ArtDirection.Hex("DFD1B9");
-                float x = (i+.5f)*canopy/strips-canopy/2;
-                var panel = StarterPart(root,"Canvas awning",new Vector3(x,2.90f,-.60f),
-                    new Vector3(canopy/strips+.01f,.08f,1.22f),canvas);
-                panel.transform.localRotation = Quaternion.Euler(-10,0,0);
-                StarterPart(root,"Canvas valance",new Vector3(x,2.70f,-1.19f),new Vector3(canopy/strips,.25f,.055f),canvas);
-            }
-            StarterPart(root,"Shop sign backing",new Vector3(0,3.35f,-.17f),new Vector3(width-.4f,.53f,.19f),trim);
-            Prims.SignText(root,place.Name,new Vector3(0,3.35f,-.285f),width-.6f,.46f,ArtDirection.Cream);
-            var open = StarterPart(root,"Open indicator",new Vector3(width*.43f,2.44f,-.22f),new Vector3(.22f,.13f,.09f),UiGreen);
-            var closed = StarterPart(root,"Closed indicator",new Vector3(width*.43f,2.44f,-.22f),new Vector3(.22f,.13f,.09f),ArtDirection.Clay);
-            _cur.OpenOnly.Add(open);
-            _cur.ClosedOnly.Add(closed);
         }
 
         private static void StarterRoof(Transform root, float width, float depth, float height, float rise,

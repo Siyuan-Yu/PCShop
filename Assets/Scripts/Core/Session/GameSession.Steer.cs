@@ -84,6 +84,7 @@ namespace PCShopSell.Core.Session
         {
             public MapPoint A, B;
             public double HalfWidth;
+            public bool Footpath;
             public double Scale; // 游戏米 / 画面米
         }
 
@@ -99,8 +100,8 @@ namespace PCShopSell.Core.Session
                 double yaw = place.Heading * Math.PI / 180;
                 _cos = Math.Cos(yaw);
                 _sin = Math.Sin(yaw);
-                _halfWidth = place.Width / 2 + Clearance;
-                _back = place.Depth + Clearance;
+                _halfWidth = place.ExteriorWidth / 2 + Clearance;
+                _back = place.ExteriorDepth + Clearance;
                 _reach = _halfWidth + _back;
             }
 
@@ -221,6 +222,14 @@ namespace PCShopSell.Core.Session
             }
             foreach(var place in City.PublicPlaces)
                 if(place.ExplicitEntrance)_corridors.Add(new Corridor { A=City.ViewPosition(place.NodeId), B=DoorOf(place), HalfWidth=1.6, Scale=City.TravelDistanceScale });
+            if (City.IsLakeCity && City.HasPlace("home") && City.GetPlace("home").HousingForm == ResidenceForm.LaneHouse)
+            {
+                var origin = DoorOf(City.GetPlace("home"));
+                foreach (var path in OldQuarterLanes.Paths)
+                    _corridors.Add(new Corridor { A = OldQuarterLanes.ToWorld(origin,path.x1,path.z1),
+                        B = OldQuarterLanes.ToWorld(origin,path.x2,path.z2), HalfWidth = path.width/2,
+                        Scale = City.TravelDistanceScale, Footpath = true });
+            }
             return _corridors;
         }
 
@@ -246,6 +255,7 @@ namespace PCShopSell.Core.Session
             double nearestDist = double.MaxValue;
             foreach (Corridor c in Corridors())
             {
+                if (c.Footpath && Vehicle != VehicleKind.Walk && Vehicle != VehicleKind.EBike) continue;
                 MapPoint q = ClosestOnSegment(c.A, c.B, point);
                 double dx = point.X - q.X, dy = point.Y - q.Y;
                 double distance = dx * dx + dy * dy;
@@ -263,6 +273,7 @@ namespace PCShopSell.Core.Session
             MapPoint clamped = want;
             foreach (Corridor c in Corridors())
             {
+                if (c.Footpath && Vehicle != VehicleKind.Walk && Vehicle != VehicleKind.EBike) continue;
                 MapPoint q = ClosestOnSegment(c.A, c.B, want);
                 double dx = want.X - q.X, dy = want.Y - q.Y;
                 double distanceSquared = dx * dx + dy * dy;

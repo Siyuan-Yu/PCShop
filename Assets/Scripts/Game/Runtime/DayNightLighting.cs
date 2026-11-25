@@ -16,6 +16,10 @@ namespace PCShopSell.Game.Runtime
         private readonly CityLookProfile _night = CityLookProfile.Night();
 
         private readonly Camera _cam;
+        private readonly UniversalAdditionalCameraData _cameraData;
+        private readonly bool _usesPostProcessing;
+        private readonly Volume _volume;
+        private readonly float _baseVolumeWeight;
         private readonly Light _sun;
         private readonly Light _skyFill, _bounceFill;
         private readonly List<Light> _lamps;
@@ -23,6 +27,7 @@ namespace PCShopSell.Game.Runtime
         private readonly ColorAdjustments _grade;
         private readonly Vignette _vignette;
         private readonly FilmGrain _grain;
+        private float _lastQuarterWeight = -1;
         private float _lastMinute = -1;
         private bool _lastInterior, _lastRain;
         private int _lastGlowCount = -1, _lastLampCount = -1;
@@ -30,6 +35,10 @@ namespace PCShopSell.Game.Runtime
         public DayNightLighting(Camera cam, Light sun, Volume volume, List<Light> lamps)
         {
             _cam = cam;
+            _cameraData = cam.GetUniversalAdditionalCameraData();
+            _usesPostProcessing = _cameraData.renderPostProcessing;
+            _volume = volume;
+            _baseVolumeWeight = volume.weight;
             _sun = sun;
             Light Fill(string name,Vector3 angle)
             {
@@ -104,19 +113,24 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <param name="interior">在店里时用暖色室内光。</param>
-        public void Apply(float minuteOfDay, bool interior, bool raining = false)
+        public void Apply(float minuteOfDay, bool interior, bool raining = false, float quarterWeight = 0f, float quarterYaw = 0f, Vector3 quarterCenter = default)
         {
+            float night = NightFactor(minuteOfDay);
+            float ungradedDaylight = interior ? 0f : Mathf.Clamp01(quarterWeight) * (1f - night);
+            Shader.SetGlobalVector("_OldQuarterFigureZone", new Vector4(quarterCenter.x,quarterCenter.z,ungradedDaylight,0));
+            _volume.weight = _baseVolumeWeight * (1f - ungradedDaylight);
+            _cameraData.renderPostProcessing = _usesPostProcessing && ungradedDaylight < .999f;
             if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && interior == _lastInterior
-                && raining == _lastRain
+                && Mathf.Abs(quarterWeight - _lastQuarterWeight) < .012f && raining == _lastRain
                 && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
             _lastMinute = minuteOfDay;
+            _lastQuarterWeight = quarterWeight;
             _lastInterior = interior;
             _lastRain = raining;
             _lastGlowCount = Mats.NightGlow.Count;
             _lastLampCount = _lamps.Count;
 
             var (a, b, t) = Blend(minuteOfDay);
-            float night = NightFactor(minuteOfDay);
 
             _cam.backgroundColor = interior ? new Color(0.08f, 0.08f, 0.1f) : Color.Lerp(a.SkyColor, b.SkyColor, t);
             if (raining) _cam.backgroundColor *= new Color(.84f, .9f, .95f, 1);
@@ -137,6 +151,9 @@ namespace PCShopSell.Game.Runtime
             _sun.color = interior ? new Color(1f, 0.93f, 0.82f) : Color.Lerp(a.SunColor, b.SunColor, t);
             _sun.intensity = interior ? 0.85f : Mathf.Lerp(a.SunIntensity, b.SunIntensity, t);
             _sun.transform.rotation = Quaternion.Euler(interior ? new Vector3(65f, 135f, 0) : Vector3.Lerp(a.SunEuler, b.SunEuler, t));
+            if (quarterWeight > 0 && !interior)
+                _sun.transform.rotation = Quaternion.Slerp(_sun.transform.rotation,
+                    Quaternion.Euler(38f,quarterYaw-48f,0),quarterWeight*(1f-night));
             _sun.shadowStrength = interior ? .55f : Mathf.Lerp(.74f,.64f,night);
             _skyFill.color=new Color(.76f,.86f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.42f,.26f,night);
             _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.35f,.12f,night);

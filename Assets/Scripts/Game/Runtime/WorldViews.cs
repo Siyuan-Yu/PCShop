@@ -167,6 +167,8 @@ namespace PCShopSell.Game.Runtime
         private string _commuteModelId;
         private readonly GameObject _taxi;
         private readonly FigureMotion _motion;
+        private readonly GameObject _streetRing;
+        private bool _paintedRing;
         private Transform _activityName;
         private string _dressed;
 
@@ -190,7 +192,7 @@ namespace PCShopSell.Game.Runtime
             _root.transform.SetParent(parent, false);
             _figure = Prims.Figure(_root.transform, "Figure", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.1f, FigureAppearance.Player);
             _motion = _figure.GetComponent<FigureMotion>();
-            Prims.Shape(PrimitiveType.Cylinder, _root.transform, "Ring", new Vector3(0, 0.03f, 0), new Vector3(1.4f, 0.01f, 1.4f), Mats.Unlit(new Color(1f, 0.85f, 0.2f, 0.6f)));
+            _streetRing = Prims.Shape(PrimitiveType.Cylinder, _root.transform, "Ring", new Vector3(0, 0.03f, 0), new Vector3(1.4f, 0.01f, 1.4f), Mats.Unlit(new Color(1f, 0.85f, 0.2f, 0.6f)));
 
             _taxi = new GameObject("Taxi");
             _taxi.transform.SetParent(_root.transform, false);
@@ -216,6 +218,16 @@ namespace PCShopSell.Game.Runtime
 
             Vector3 p = roomPosition ?? streets?.StreetPosition(s.PlayerPosition) ?? StreetWorldBuilder.ToWorld(s.PlayerPosition);
             _root.transform.position = p;
+            bool nearOldHome = !publicSpace && streets != null && streets.IsOldQuarterStreet(p);
+            if (nearOldHome != _paintedRing)
+            {
+                _paintedRing = nearOldHome;
+                float width = nearOldHome ? .90f : 1.4f;
+                _streetRing.transform.localScale = new Vector3(width,.01f,width);
+                _streetRing.GetComponent<Renderer>().sharedMaterial = nearOldHome
+                    ? Resources.Load<Material>("OldQuarter/Footmark")
+                    : Mats.Unlit(new Color(1f,.85f,.2f,.6f));
+            }
             var activity=publicSpace?s.RunningCityActivity:null;
             _motion.ActivityKind=activity!=null?s.CityActivityService(activity)?.LogicalId??s.CityActivityService(activity)?.Id:null;
             _motion.ActivityOption=activity?.ServiceChoice??-1;

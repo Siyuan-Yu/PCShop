@@ -10121,15 +10121,16 @@
     },
     {
       "id": "home",
+      "residenceForm": "lane",
       "name": "城郊老破小出租屋",
       "kind": "home",
       "node": "home",
       "street": "s_oldhomes",
       "explicitEntrance": true,
-      "entranceX": 3.9769199785659897,
-      "entranceY": -9.906743746770355,
+      "entranceX": 2.1979796378260006,
+      "entranceY": -5.475297755529125,
       "width": 9.660796216802726,
-      "depth": 9.660796216802726,
+      "depth": 7.5,
       "heading": 158.12771538231735,
       "model": "oldhome",
       "tier": 0
@@ -10980,6 +10981,7 @@
     },
     {
       "id": "life_home_s_oldhomes",
+      "residenceForm": "walkup",
       "name": "01 城郊旧居街居民住宅",
       "street": "s_oldhomes",
       "node": "s_oldhomes_1",
@@ -12565,6 +12567,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_01",
+      "residenceForm": "lane",
       "homeNumber": 1,
       "entranceNode": "s_oldhomes_1"
     },
@@ -12582,6 +12585,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_02",
+      "residenceForm": "walkup",
       "homeNumber": 2,
       "entranceNode": "s_oldhomes_0"
     },
@@ -12599,6 +12603,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_03",
+      "residenceForm": "lane",
       "homeNumber": 3,
       "entranceNode": "lake_old_back_39"
     },
@@ -12616,6 +12621,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_04",
+      "residenceForm": "walkup",
       "homeNumber": 4,
       "entranceNode": "lake_old_back_41"
     },
@@ -12633,6 +12639,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_05",
+      "residenceForm": "lane",
       "homeNumber": 5,
       "entranceNode": "lake_old_back_43"
     },
@@ -12640,8 +12647,8 @@
       "street": "s_oldhomes",
       "model": "oldhome",
       "tier": 0,
-      "x": -461.8802434959617,
-      "y": -518.7947784778506,
+      "x": -451.7785901337036,
+      "y": -519.4807828312842,
       "heading": -21.734045503967597,
       "width": 11.592955460163273,
       "depth": 11.592955460163273,
@@ -12650,6 +12657,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_06",
+      "residenceForm": "walkup",
       "homeNumber": 6,
       "entranceNode": "lake_old_back_45"
     },
@@ -12657,8 +12665,8 @@
       "street": "s_oldhomes",
       "model": "oldhome",
       "tier": 0,
-      "x": -444.4124744575366,
-      "y": -511.80921224699705,
+      "x": -441.40881870490244,
+      "y": -515.5335004341599,
       "heading": -21.872284617682666,
       "width": 8.694716595122454,
       "depth": 9.660796216802726,
@@ -12667,6 +12675,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_07",
+      "residenceForm": "lane",
       "homeNumber": 7,
       "entranceNode": "home"
     },
@@ -12684,6 +12693,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_08",
+      "residenceForm": "lane",
       "homeNumber": 8,
       "entranceNode": "lake_old_middle_34"
     },
@@ -12701,6 +12711,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_09",
+      "residenceForm": "walkup",
       "homeNumber": 9,
       "entranceNode": "lake_old_middle_34"
     },
@@ -12718,6 +12729,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_10",
+      "residenceForm": "lane",
       "homeNumber": 10,
       "entranceNode": "lake_old_middle_36"
     },
@@ -12735,6 +12747,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_11",
+      "residenceForm": "lane",
       "homeNumber": 11,
       "entranceNode": "lake_old_middle_36"
     },
@@ -12752,6 +12765,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_12",
+      "residenceForm": "walkup",
       "homeNumber": 12,
       "entranceNode": "lake_old_middle_38"
     },
@@ -12769,6 +12783,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_13",
+      "residenceForm": "lane",
       "homeNumber": 13,
       "entranceNode": "lake_old_middle_38"
     },
@@ -12786,6 +12801,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_14",
+      "residenceForm": "walkup",
       "homeNumber": 14,
       "entranceNode": "lake_old_middle_39"
     },
@@ -12803,6 +12819,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_15",
+      "residenceForm": "lane",
       "homeNumber": 15,
       "entranceNode": "lake_old_middle_40"
     },
@@ -12820,6 +12837,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_16",
+      "residenceForm": "walkup",
       "homeNumber": 16,
       "entranceNode": "lake_old_middle_41"
     },
@@ -12837,6 +12855,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_17",
+      "residenceForm": "lane",
       "homeNumber": 17,
       "entranceNode": "lake_old_middle_41"
     },
@@ -12854,6 +12873,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_18",
+      "residenceForm": "lane",
       "homeNumber": 18,
       "entranceNode": "lake_old_middle_43"
     },
@@ -12871,6 +12891,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_19",
+      "residenceForm": "walkup",
       "homeNumber": 19,
       "entranceNode": "lake_old_middle_43"
     },
@@ -14010,6 +14031,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_20",
+      "residenceForm": "lane",
       "homeNumber": 20,
       "entranceNode": "lake_old_middle_44",
       "initiallyVacant": false
@@ -14028,6 +14050,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_21",
+      "residenceForm": "walkup",
       "homeNumber": 21,
       "entranceNode": "expansion_1053",
       "initiallyVacant": true
@@ -14046,6 +14069,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_22",
+      "residenceForm": "lane",
       "homeNumber": 22,
       "entranceNode": "lake_old_back_48",
       "initiallyVacant": false
@@ -14064,6 +14088,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_23",
+      "residenceForm": "lane",
       "homeNumber": 23,
       "entranceNode": "lake_old_middle_46",
       "initiallyVacant": true
@@ -14082,6 +14107,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_24",
+      "residenceForm": "walkup",
       "homeNumber": 24,
       "entranceNode": "lake_old_middle_46",
       "initiallyVacant": false
@@ -14100,6 +14126,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_25",
+      "residenceForm": "lane",
       "homeNumber": 25,
       "entranceNode": "expansion_1054",
       "initiallyVacant": true
@@ -14118,6 +14145,7 @@
       "columns": 1,
       "rows": 1,
       "homeId": "residence_s_oldhomes_26",
+      "residenceForm": "walkup",
       "homeNumber": 26,
       "entranceNode": "lake_old_link1_8",
       "initiallyVacant": false

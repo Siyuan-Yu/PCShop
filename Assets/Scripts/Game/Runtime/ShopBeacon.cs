@@ -48,7 +48,7 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <summary>按建筑的实际外观范围重建外罩。</summary>
-        private void Rebuild(Bounds b)
+        private void Rebuild(Bounds b, bool paintedDoor)
         {
             for (int i = _root.transform.childCount - 1; i >= 0; i--)
             {
@@ -59,6 +59,25 @@ namespace PCShopSell.Game.Runtime
             }
 
             bool ownedResidence = _style == Style.OwnedResidence;
+            if (paintedDoor)
+            {
+                // A small two-sided house marker at the actual door preserves the street locator.
+                var plaque = Mats.Lit(ArtDirection.Hex(ownedResidence ? "715749" : "4A6457"));
+                var cream = Mats.Unlit(ArtDirection.Hex("E5D4A7"));
+                Prims.Box(_root.transform,"Door bracket",new Vector3(.94f,2.56f,-.34f),new Vector3(.06f,.06f,.66f),plaque);
+                Prims.Box(_root.transform,"Home plaque",new Vector3(.94f,2.27f,-.58f),new Vector3(.60f,.50f,.08f),plaque);
+                foreach (var z in new[]{-.63f,-.53f})
+                {
+                    Prims.Box(_root.transform,"House",new Vector3(.94f,2.23f,z),new Vector3(.24f,.17f,.013f),cream);
+                    for(int side=-1;side<=1;side+=2)
+                    {
+                        var roof=Prims.Box(_root.transform,"Eave",new Vector3(.94f+side*.076f,2.35f,z),new Vector3(.21f,.045f,.015f),cream);
+                        roof.transform.localRotation=Quaternion.Euler(0,0,-side*33f);
+                    }
+                }
+                foreach (Transform child in _root.transform) child.gameObject.layer=StreetPropertyEffectLayer;
+                return;
+            }
             Material tube = Residential
                 ? Mats.Unlit(ownedResidence ? new Color(.82f, .65f, 1f) : new Color(.61f, .82f, 1f, .66f))
                 : Mats.Glow(new Color(0.3f, 1f, 0.95f), new Color(1.6f, 5f, 4.6f), false);
@@ -153,7 +172,8 @@ namespace PCShopSell.Game.Runtime
             {
                 _placeId = placeId;
                 _building=building.Root;
-                Rebuild(Residential ? ResidenceBounds(building) : building.BuildingBounds(transform));
+                bool paintedDoor = Residential && building.Place.HousingForm != PCShopSell.Core.World.ResidenceForm.Standard;
+                Rebuild(Residential ? ResidenceBounds(building) : building.BuildingBounds(transform),paintedDoor);
             }
 
             if (Residential) return;

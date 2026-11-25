@@ -52,7 +52,7 @@ namespace PCShopSell.Core.Session
         public bool HasSecondaryResidenceWarehouse => CurrentPlace?.Kind == PlaceKind.Home && !AtHome && CanSleepAt(CurrentPlace);
         public bool CanDecorateCurrentResidence => AtHome || HasSecondaryResidenceWarehouse;
         public RoomSpec CurrentResidenceRoom => HasSecondaryResidenceWarehouse
-            ? RoomSpec.ForResidence(ResidentialTier(CurrentPlace)) : ResidenceRoom;
+            ? RoomForResidence(CurrentPlace) : ResidenceRoom;
         public IReadOnlyList<PlacedFurniture> CurrentResidenceLayout => PlacementLayout(false);
 
         private List<PlacedFurniture> SecondaryLayoutHere()
@@ -63,7 +63,7 @@ namespace PCShopSell.Core.Session
 
         public List<PlacedFurniture> CreateVisitResidenceLayout(Place home, bool withStorage)
         {
-            var room = RoomSpec.ForResidence(ResidentialTier(home));
+            var room = RoomForResidence(home);
             var furniture = FurnitureCatalog.StartHomeLayout();
             furniture.RemoveAll(item => item.Id == "fan_broken" || item.Id == "junk");
             var bed = furniture[0];
@@ -385,6 +385,8 @@ namespace PCShopSell.Core.Session
         public string SecondaryResidenceBed(Place place) =>
             place.Tier >= 2 ? "bed_good" : place.Tier == 1 ? "bed_spring" : PCShopSell.Core.Home.FurnitureCatalog.BedBoard;
         public CityPersonState[] ResidentialTenants(string id) => _cityPeople.Values.Where(p=>p.PersonId!=CityLifeCatalog.InvitationTestPersonId&&p.HomePlaceId==id).Select(p=>p.Copy()).ToArray();
+        public RoomSpec RoomForResidence(Place place) => RoomSpec.ForResidence(ResidentialTier(place), place.HousingForm);
+
         public int ResidentialTier(Place place) => Math.Max(0,Math.Min(3,place.Tier));
         public Money ResidentialRent(Place place) => place == _initialHome ? HomeRent : ResidentialMarketRent(ResidentialTier(place));
         public Money ResidentialPrice(Place place) => ResidentialTier(place)==0?(HomeBaseRent(0)*120).Scale(HomeSaleFactor):ResidencePrice(ResidentialTier(place));

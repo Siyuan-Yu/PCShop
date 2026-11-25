@@ -1,0 +1,8 @@
+home | LaneHouse | entered=True | room=6x4.6 | marker=home | click=True
+residence_s_oldhomes_06 | Walkup | entered=False | room=x | marker=residence_s_oldhomes_06 | click=True
+residence_s_oldhomes_07 | LaneHouse | entered=False | room=x | marker=residence_s_oldhomes_07 | click=True
+agency home | 27.6㎡ / 小平房 · 27.6㎡
+agency residence_s_oldhomes_06 | 36㎡ / 多层楼房 · 36㎡
+baked instance = True
+lease residence_s_oldhomes_21 | signed=True | entered=True | interior=7.2x5
+lease home | signed=True | entered=True | interior=6x4.6

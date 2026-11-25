@@ -103,11 +103,17 @@ namespace PCShopSell.Game.Runtime
                     for(int i=1;i+1<p.Length;i++){triangles.Add(offset);triangles.Add(offset+i+1);triangles.Add(offset+i);}
                 }
             }
-            public void Build(Transform root,string name,Material material,CityLandscapeResources owner)
+            public void Build(Transform root,string name,Material material,CityLandscapeResources owner,
+                System.Func<Vector3,Vector4> frontageCoordinates = null, bool castsShadows = true)
             {
                 if(vertices.Count==0)return;
                 var mesh=new Mesh{name=name,indexFormat=IndexFormat.UInt32};mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetUVs(0,uv);mesh.RecalculateNormals();mesh.RecalculateBounds();owner.Owned.Add(mesh);
-                var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(root,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=material;
+                if (frontageCoordinates != null)
+                    mesh.SetUVs(2,vertices.ConvertAll(v => frontageCoordinates(v)));
+                var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(root,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;
+                var renderer=go.GetComponent<MeshRenderer>();
+                renderer.sharedMaterial=material;
+                if (!castsShadows) renderer.shadowCastingMode=ShadowCastingMode.Off;
             }
         }
         private IEnumerator BuildContinuousStreetSurfaces()
@@ -134,6 +140,10 @@ namespace PCShopSell.Game.Runtime
             segments=segments.OrderByDescending(s=>s.Raised).ThenByDescending(s=>(s.B-s.A).sqrMagnitude).ToList();
             var roadIndex = _streetRoadEnvelopes = new RoadSurfaceGeometry.Index();
             var pavingIndex = new RoadSurfaceGeometry.Index();
+            var quarterRoads = new SurfaceMesh();
+            var quarterPaving = new SurfaceMesh();
+            var quarterEdges = new SurfaceMesh();
+            var quarterDashes = new SurfaceMesh();
             var roads=new SurfaceMesh();var paving=new SurfaceMesh();var white=new SurfaceMesh();var yellow=new SurfaceMesh();
             foreach (var s in segments)
             {
@@ -180,12 +190,12 @@ namespace PCShopSell.Game.Runtime
                     deadline = Time.realtimeSinceStartup + .008f;
                 }
                 var p=RoadSurfaceGeometry.Road(s.A,s.B,s.Width);
-                s.AddSurface(roads, roadIndex.Cut(new List<Vector2[]>{p},p));roadIndex.Add(p);
+                s.AddSurface(InPaintedQuarter((s.A+s.B)*.5f,55f) ? quarterRoads : roads, roadIndex.Cut(new List<Vector2[]>{p},p));roadIndex.Add(p);
             }
             void Pavement(Vector2[] p, StreetSegment street)
             {
                 var parts=roadIndex.Cut(new List<Vector2[]>{p},p);parts=pavingIndex.Cut(parts,p);
-                street.AddSurface(paving, parts, alignToStreet:true);pavingIndex.Add(p);
+                street.AddSurface(InPaintedQuarter((street.A+street.B)*.5f,55f) ? quarterPaving : paving, parts, alignToStreet:true);pavingIndex.Add(p);
             }
             foreach (var s in segments)
             {
@@ -215,6 +225,11 @@ namespace PCShopSell.Game.Runtime
                     PavingIndex = _streetPavementEnvelopes.Polygons.Count };
                 _streetPavementEnvelopes.Add(outline);
                 Pavement(outline, approach);
+                if (p.Id == StarterHome || p.Id == "expansion_shop_s_oldhomes_02")
+                {
+                    var frontage = RoadSurfaceGeometry.Strip(from,to,(float)p.Width+.4f);
+                    Pavement(frontage,approach);
+                }
                 if (raised) _lakeAccessSurfaces.Add(approach);
             }
             var crossingBands = new RoadSurfaceGeometry.Index();
@@ -288,23 +303,48 @@ namespace PCShopSell.Game.Runtime
                     parts = crossingBands.Cut(parts, p);
                     parts=markIndex.Cut(parts,p);s.AddSurface(buffer,parts,.015f);markIndex.Add(p);
                 }
+                bool paint = InPaintedQuarter((s.A+s.B)*.5f,55f);
                 foreach(int sign in new[]{-1,1})
                 {
                     var offset=normal*sign*(s.Width*.5f-.35f);
-                    Mark(RoadSurfaceGeometry.Strip(s.A+d*from+offset,s.A+d*to+offset,.08f),white);
+                    Mark(RoadSurfaceGeometry.Strip(s.A+d*from+offset,s.A+d*to+offset,.08f),paint ? quarterEdges : white);
                 }
                 float projection=Vector2.Dot(s.A,d);
-                for(float at=Mathf.Floor(projection/5)*5-projection;at<length;at+=5)
+                float spacing = paint ? 4.2f : 5f;
+                for(float at=Mathf.Floor(projection/spacing)*spacing-projection;at<length;at+=spacing)
                 {
-                    float start=Mathf.Max(from,at),end=Mathf.Min(at+2,to);
-                    if(end>start+.05f)Mark(RoadSurfaceGeometry.Strip(s.A+d*start,s.A+d*end,.12f),yellow);
+                    float start=Mathf.Max(from,at),end=Mathf.Min(at+(paint ? 1.47f : 2f),to);
+                    if(end>start+.05f)Mark(RoadSurfaceGeometry.Strip(s.A+d*start,s.A+d*end,paint ? .145f : .12f),paint ? quarterDashes : yellow);
                 }
+            }
+            quarterRoads.Build(root, "Old quarter asphalt", QuarterMaterial("Road"), resources);
+            if (HasStarterArt)
+            {
+                Matrix4x4 home = FrontageProjection(StarterHome);
+                const string nearbyShop = "expansion_shop_s_oldhomes_02";
+                Matrix4x4 shop = _city.HasPlace(nearbyShop) ? FrontageProjection(nearbyShop) : home;
+                Vector4 WearCoordinates(Vector3 world)
+                {
+                    Vector3 a = home.MultiplyPoint3x4(world), b = shop.MultiplyPoint3x4(world);
+                    return new Vector4(.5f+a.x,-a.z,.5f+b.x,-b.z);
+                }
+                quarterPaving.Build(root,"Old quarter paving",QuarterMaterial("Pavement"),resources,WearCoordinates);
+                quarterEdges.Build(root,"Old quarter road edges",QuarterMaterial("Edge"),resources,castsShadows:false);
+                quarterDashes.Build(root,"Old quarter lane paint",QuarterMaterial("Dash"),resources,castsShadows:false);
             }
             roads.Build(root,"RoadSurface",IndustrialMaterials.Surface("asphalt",Asphalt,Vector2.one),resources);
             paving.Build(root,"PavementSurface",IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(1.25f,1.25f)),resources);
             white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Cream),resources);
             yellow.Build(root,"LaneMarkings",Mats.Lit(ArtDirection.Brass),resources);
             yield return BuildStreetVerge(root,segments,pavingIndex);
+        }
+
+        private Matrix4x4 FrontageProjection(string placeId)
+        {
+            var place = _city.GetPlace(placeId);
+            var offset = new Vector3((float)place.EntranceX,0,(float)place.EntranceY);
+            var scale = new Vector3(Mathf.Max(1,(float)place.Width+.4f),1,Mathf.Max(1,offset.magnitude));
+            return Matrix4x4.TRS(NodeWorld(place.NodeId)+offset,Quaternion.Euler(0,(float)place.Heading,0),scale).inverse;
         }
 
         private IEnumerator BuildStreetVerge(Transform parent,List<StreetSegment> streets,RoadSurfaceGeometry.Index paving)
@@ -358,8 +398,13 @@ namespace PCShopSell.Game.Runtime
                     var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
                     if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
                     if(!gardens.TryGetValue(key,out var garden)){garden=new MiniatureDetailMesh();gardens.Add(key,garden);}
-                    garden.Tree(world,5.4f+seed%3*.35f,seed%12,treeLeaf,treeTips,treeBark);
-                    garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
+                    if (InPaintedQuarter(pos))
+                        QuarterTree(parent, world, 1f + seed%3 * .075f, seed%360);
+                    else
+                    {
+                        garden.Tree(world,5.4f+seed%3*.35f,seed%12,treeLeaf,treeTips,treeBark);
+                        garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
+                    }
                     var pole=Mats.Lit(ArtDirection.Hex("46515A"),.25f);
                     var lamp=world-new Vector3(across.x,0,across.y)*side*1.8f;
                     garden.Box(lamp+Vector3.up*.13f,new Vector3(.40f,.26f,.40f),pole);

@@ -55,6 +55,7 @@ namespace PCShopSell.Game
         private string _sleepDestinationId;
         private bool _wasChasing;
         private int _wasRoomKind;
+        private bool _frameOldHomeExit;
         private float _roomOverviewSize;
         private string _crowdPlace, _crowdActivity;
         private bool _autosaveDue, _wasPlayerWorking;
@@ -160,6 +161,7 @@ namespace PCShopSell.Game
             EnsureInterior(s.PlayerShop.Size);
 
             Session = s;
+            _frameOldHomeExit = City.IsLakeCity && s.CurrentPlace?.Id == "home";
             ActiveSaveSlot = saveSlot;
             _saveCampaignId = campaignId ?? Guid.NewGuid().ToString("N");
             Ui.ResetGuideState();
@@ -721,7 +723,10 @@ namespace PCShopSell.Game
             UpdateCheckout(dt);
             UpdateHomeBedTrip(dt);
             UpdateCityTravel(dt);
-            FigureMotion.AdvanceAll(dt, worldRunning);
+            Vector3? paintedStreet = null;
+            if (!room && Session.CurrentPlace==null && City.IsLakeCity && World.Places.ContainsKey("home"))
+                paintedStreet = World.ClosestOldQuarterPoint(World.StreetPosition(Session.PlayerPosition));
+            FigureMotion.AdvanceAll(dt, worldRunning, paintedStreet);
 
             if (!_communityRevealActive && (RoomKind != _wasRoomKind || residenceChanged))
             {
@@ -747,7 +752,18 @@ namespace PCShopSell.Game
         {
             bool raining = Session.CityIsRaining && !sheltered;
             _rain.Sync(raining);
-            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining);
+            float paintedDaylight = 0, heading = 0;
+            Vector3 quarterCenter = Vector3.zero;
+            if (!room && City.IsLakeCity && World.Places.TryGetValue("home",out var oldHome))
+            {
+                var player = Session.PlayerPosition;
+                quarterCenter = World.ClosestOldQuarterPoint(new Vector3((float)player.X,0,(float)player.Y));
+                var distance = Vector2.Distance(new Vector2((float)player.X,(float)player.Y),
+                    new Vector2(quarterCenter.x,quarterCenter.z));
+                paintedDaylight = Mathf.SmoothStep(1,0,Mathf.InverseLerp(28,52,distance));
+                heading = oldHome.Root.transform.eulerAngles.y;
+            }
+            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining, paintedDaylight, heading, quarterCenter);
         }
 
         private bool _overview;
@@ -1407,7 +1423,7 @@ namespace PCShopSell.Game
         private bool EnsureResidenceView()
         {
             if (!InHome && !InVisit) return false;
-            var room = InHome ? Session.ResidenceRoom : RoomSpec.ForResidence(Session.ResidentialTier(Session.CurrentPlace));
+            var room = InHome ? Session.ResidenceRoom : Session.RoomForResidence(Session.CurrentPlace);
             var view = ActiveResidence;
             if (view?.Room == room) return false;
             view?.Destroy();
@@ -1446,6 +1462,17 @@ namespace PCShopSell.Game
             else if(interior||home)_rig.SetPlaceAngles(CameraRig.DefaultYaw,CameraRig.DefaultPitch);
             _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
             float size = closeView!=null?9.5f:16f;
+            if (_frameOldHomeExit && Session.CurrentPlace==null)
+            {
+                _frameOldHomeExit = false;
+                var player = World.StreetPosition(Session.PlayerPosition);
+                if (World.Places.TryGetValue("home",out var oldHome) && (player-oldHome.Entrance).sqrMagnitude<36f)
+                {
+                    _rig.Orbit(Mathf.DeltaAngle(CameraRig.Yaw,oldHome.Root.transform.eulerAngles.y+52.6f),
+                        33.5f-CameraRig.Pitch);
+                    size = Mathf.Max(9.33f,16.6f/Mathf.Max(.75f,Cam.aspect));
+                }
+            }
             _rig.MaxSize = closeView!=null?16f:60f;
             if (home)
             {

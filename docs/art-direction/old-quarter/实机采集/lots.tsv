@@ -1,0 +1,78 @@
+id	name	street	kind	tier	size	x	z	yaw	width	depth	shell
+agency	城郊中介	s_start	Agency	0	Small	-614.64560	-475.68700	161.58260	9.66080	9.66080	agency
+city_bank	城郊银行	s_start	Shop	2	Small	-797.55690	-582.24440	171.11630	12.00000	11.00000	shop
+clothing_wholesale	四季服装批发行	s_electronics	Shop	0	Small	-880.05180	-592.61830	176.77350	26.08415	15.45727	warehouse
+dealer	顺丰车行	s_start	Dealer	0	Medium	-601.02620	-531.98640	161.26620	10.62688	11.59296	Shopfront
+expansion_shop_s_oldhomes_01	邻里杂货铺	s_oldhomes	Shop	0	Small	-521.17620	-562.07100	159.33760	8.00000	6.00000	Shopfront
+expansion_shop_s_oldhomes_02	01 城郊旧居街 · 2号招租商铺	s_oldhomes	Shop	0	Medium	-421.13700	-522.58040	158.09430	12.00000	9.00000	Shopfront
+expansion_shop_s_start_01	晨光修鞋铺	s_start	Shop	0	Small	-579.96390	-583.01920	161.08610	8.00000	6.00000	Shopfront
+expansion_shop_s_start_02	03 创业商业街 · 2号招租商铺	s_start	Shop	0	Medium	-622.99890	-597.35710	162.14890	12.00000	9.00000	Shopfront
+expansion_shop_s_start_03	庆丰五金铺	s_start	Shop	0	Small	-627.94370	-582.14040	341.84710	8.00000	6.00000	Shopfront
+garage_0	城郊赛场车库	s_start	Garage	0	Small	-728.00000	-156.00000	0.00000	6.00000	5.00000	garage
+home	城郊老破小出租屋	s_oldhomes	Home	0	Small	-438.23760	-527.19120	158.12770	9.66080	7.50000	LaneHouse
+hospital_outskirts	城郊医院	s_start	Other	0	Medium	-800.02770	-566.43630	351.11630	16.00000	12.00000	office
+life_bar	街坊酒吧	s_start	Shop	0	Small	-684.10120	-498.25420	162.59650	23.18591	15.45727	bar
+life_claw	抓娃娃小铺	s_start	Shop	0	Small	-562.17160	-435.83960	339.06750	14.00000	10.00000	shop
+life_court	青湾球场	s_start	Shop	0	Small	-655.24770	-489.09220	161.88980	13.52512	14.49119	court
+life_fishing	青湾垂钓场	s_start	Shop	0	Small	-539.15620	-448.39710	158.77820	27.05023	15.45727	park
+life_hike	城郊平地散步公园	s_oldhomes	Shop	0	Small	-310.52620	-438.86260	355.10000	27.05023	15.45727	park
+life_home_s_oldhomes	01 城郊旧居街居民住宅	s_oldhomes	Home	0	Small	-551.71730	-576.05910	160.59200	9.66080	9.66080	Walkup
+life_ktv	街坊歌房	s_start	Shop	0	Small	-718.14350	-508.35710	164.45130	23.18591	15.45727	ktv
+life_oldmarket	青湾旧物市场	s_electronics	Shop	0	Small	-869.06840	-540.16580	176.40000	22.00000	18.00000	oldmarket
+life_pachinko	弹珠店	s_start	Shop	0	Medium	-711.49260	-485.95710	343.52010	18.00000	12.00000	shop
+life_poker	地下牌庄	s_electronics	Shop	0	Small	-909.68150	-516.49020	357.69740	12.00000	9.00000	shop
+life_restaurant	街坊餐厅	s_start	Shop	0	Small	-752.47600	-517.41930	166.30550	23.18591	15.45727	restaurant
+life_unit_s_oldhomes_0	01 城郊旧居街西侧商铺	s_oldhomes	Shop	0	Small	-535.07750	-570.08850	160.07640	8.00000	6.00000	Shopfront
+life_unit_s_oldhomes_2	01 城郊旧居街东侧商铺	s_oldhomes	Shop	0	Small	-471.51660	-545.57260	158.41970	8.00000	6.00000	Shopfront
+metro_a	城郊站	s_oldhomes	Station	0	Small	-457.48810	-540.02460	158.33950	7.72864	7.72864	RouteStation
+metro_b	批发市场站	s_electronics	Station	0	Small	-852.39340	-591.00460	176.36730	7.72864	7.72864	station
+model_market	四季模型批发行	s_electronics	Shop	0	Small	-920.35310	-594.62150	177.64840	26.08415	15.45727	warehouse
+motor_cars	湖岸汽车城	s_start	Dealer	0	Medium	-685.10000	-192.40000	180.00000	18.00000	14.00000	Shopfront
+motor_scooter_mod	顺丰改车	s_start	Other	0	Medium	-744.90000	-192.40000	180.00000	18.00000	14.00000	Shopfront
+pet_wholesale	暖爪宠物用品批发市场	s_electronics	Shop	0	Medium	-825.79130	-588.73150	174.00000	18.50000	11.00000	warehouse
+player_shop	街尾空铺	s_start	Shop	0	Small	-671.61170	-615.15220	163.44440	8.00000	6.00000	Shopfront
+race_0	城郊赛车报名点	s_start	Other	0	Large	-715.00000	-156.00000	0.00000	9.00000	6.00000	racetrack
+residence_s_oldhomes_01	01 城郊旧居街 · 1号住宅	s_oldhomes	Home	0	Small	-556.47330	-555.09140	340.43060	8.69472	9.66080	LaneHouse
+residence_s_oldhomes_02	01 城郊旧居街 · 2号住宅	s_oldhomes	Home	0	Small	-538.84900	-548.73250	339.88280	9.66080	10.62688	Walkup
+residence_s_oldhomes_03	01 城郊旧居街 · 3号住宅	s_oldhomes	Home	0	Small	-517.85160	-540.82950	338.96680	11.59296	11.59296	LaneHouse
+residence_s_oldhomes_04	01 城郊旧居街 · 4号住宅	s_oldhomes	Home	0	Small	-500.36990	-534.01790	338.55590	8.69472	9.66080	Walkup
+residence_s_oldhomes_05	01 城郊旧居街 · 5号住宅	s_oldhomes	Home	0	Small	-482.87300	-527.10460	338.41960	9.66080	10.62688	LaneHouse
+residence_s_oldhomes_06	01 城郊旧居街 · 6号住宅	s_oldhomes	Home	0	Small	-451.77860	-519.48080	338.26600	11.59296	11.59296	Walkup
+residence_s_oldhomes_07	01 城郊旧居街 · 7号住宅	s_oldhomes	Home	0	Small	-441.40880	-515.53350	338.12770	8.69472	9.66080	LaneHouse
+residence_s_oldhomes_08	01 城郊旧居街 · 8号住宅	s_oldhomes	Home	0	Small	-567.65470	-520.41580	160.43060	8.69472	9.66080	LaneHouse
+residence_s_oldhomes_09	01 城郊旧居街 · 9号住宅	s_oldhomes	Home	0	Small	-574.80590	-500.29860	340.43060	9.66080	10.62688	Walkup
+residence_s_oldhomes_10	01 城郊旧居街 · 10号住宅	s_oldhomes	Home	0	Small	-549.84280	-513.97240	159.87790	11.59296	11.59296	LaneHouse
+residence_s_oldhomes_11	01 城郊旧居街 · 11号住宅	s_oldhomes	Home	0	Small	-557.18780	-493.92520	339.87800	8.69472	9.66080	LaneHouse
+residence_s_oldhomes_12	01 城郊旧居街 · 12号住宅	s_oldhomes	Home	0	Small	-532.05520	-507.27000	158.96500	9.66080	10.62688	Walkup
+residence_s_oldhomes_13	01 城郊旧居街 · 13号住宅	s_oldhomes	Home	0	Small	-539.71860	-487.34240	338.96500	11.59296	11.59296	LaneHouse
+residence_s_oldhomes_14	01 城郊旧居街 · 14号住宅	s_oldhomes	Home	0	Small	-514.42790	-500.41060	158.55470	8.69472	9.66080	Walkup
+residence_s_oldhomes_15	01 城郊旧居街 · 15号住宅	s_oldhomes	Home	0	Small	-518.74170	-479.16330	338.47630	9.66080	10.62688	LaneHouse
+residence_s_oldhomes_16	01 城郊旧居街 · 16号住宅	s_oldhomes	Home	0	Small	-496.88290	-493.48010	158.41730	11.59296	11.59296	Walkup
+residence_s_oldhomes_17	01 城郊旧居街 · 17号住宅	s_oldhomes	Home	0	Small	-501.23290	-472.24080	338.41720	8.69472	9.66080	LaneHouse
+residence_s_oldhomes_18	01 城郊旧居街 · 18号住宅	s_oldhomes	Home	0	Small	-479.35080	-486.54580	158.33660	9.66080	10.62688	LaneHouse
+residence_s_oldhomes_19	01 城郊旧居街 · 19号住宅	s_oldhomes	Home	0	Small	-483.74360	-465.31670	338.26480	11.59296	11.59296	Walkup
+residence_s_oldhomes_20	01 城郊旧居街 · 20号住宅	s_oldhomes	Home	0	Small	-467.49400	-478.93840	158.24570	9.50000	10.50000	LaneHouse
+residence_s_oldhomes_21	01 城郊旧居街 · 21号住宅	s_oldhomes	Home	0	Small	-468.18900	-461.97990	338.16190	9.50000	10.50000	Walkup
+residence_s_oldhomes_22	01 城郊旧居街 · 22号住宅	s_oldhomes	Home	0	Small	-427.10690	-507.73600	338.08930	9.50000	10.50000	LaneHouse
+residence_s_oldhomes_23	01 城郊旧居街 · 23号住宅	s_oldhomes	Home	0	Small	-452.46340	-455.66670	338.09610	9.50000	10.50000	LaneHouse
+residence_s_oldhomes_24	01 城郊旧居街 · 24号住宅	s_oldhomes	Home	0	Small	-446.49620	-470.51230	158.10840	9.50000	10.50000	Walkup
+residence_s_oldhomes_25	01 城郊旧居街 · 25号住宅	s_oldhomes	Home	0	Small	-405.89740	-497.98140	68.61137	9.50000	10.50000	LaneHouse
+residence_s_oldhomes_26	01 城郊旧居街 · 26号住宅	s_oldhomes	Home	0	Small	-411.69890	-483.16890	68.61137	9.50000	10.50000	Walkup
+shop01	蜜雪奶茶	s_start	Shop	0	Large	-633.73350	-482.02820	161.68600	18.00000	12.00000	Shopfront
+shop02	潮流服饰	s_start	Shop	0	Medium	-639.27780	-544.70730	161.92430	10.62688	11.59296	shop
+shop03	大润发超市	s_start	Shop	0	Large	-748.97820	-575.90890	167.62520	18.00000	12.00000	Shopfront
+shop04	米家	s_start	Shop	0	Medium	-620.13680	-538.39860	161.60510	10.62688	11.59296	Shopfront
+shop05	老王修鞋	s_start	Shop	0	Small	-605.50470	-510.96040	341.26620	8.00000	6.00000	Shopfront
+shop07	兴华电脑城	s_start	Shop	0	Large	-726.56490	-570.61150	165.33830	13.52512	11.59296	Shopfront
+shop08	好味快餐	s_start	Shop	0	Medium	-781.47130	-582.29670	170.11360	10.62688	11.59296	Shopfront
+shop09	阿芳理发	s_start	Shop	0	Small	-637.77730	-604.90110	162.43240	8.00000	6.00000	Shopfront
+shop10	百姓药房	s_start	Shop	0	Medium	-622.12000	-516.55380	341.54060	10.62688	11.59296	Shopfront
+shop12	宜居家具城	s_start	Shop	0	Large	-704.54530	-564.59050	164.14480	13.52512	11.59296	Shopfront
+shop13	数码先锋	s_start	Shop	0	Medium	-772.91330	-639.35650	170.12270	10.62688	11.59296	Shopfront
+shop14	农贸市场	s_start	Shop	0	Small	-592.25230	-589.99270	161.46510	7.72864	11.59296	Shopfront
+shop15	面包工坊	s_start	Shop	0	Medium	-752.94050	-635.65300	168.94580	12.00000	9.00000	Shopfront
+shop16	花语花店	s_start	Shop	0	Small	-715.58760	-627.45150	165.88610	8.00000	6.00000	Shopfront
+shop17	便利蜂	s_start	Shop	0	Medium	-733.03820	-631.53740	167.71490	12.00000	9.00000	Shopfront
+shop18	五金杂货	s_start	Shop	0	Small	-700.82450	-623.57850	164.85450	8.00000	6.00000	Shopfront
+shop19	烟酒茶行	s_start	Shop	0	Small	-686.13560	-619.42500	163.81210	7.72864	11.59296	Shopfront
+stall_cpu	电子批发市场	s_electronics	Wholesaler	0	Small	-923.97440	-536.73290	177.82480	26.08415	15.45727	warehouse

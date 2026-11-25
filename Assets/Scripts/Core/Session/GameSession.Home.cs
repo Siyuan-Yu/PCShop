@@ -8,6 +8,7 @@ using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
@@ -91,7 +92,7 @@ namespace PCShopSell.Core.Session
             StoreOrTemp(shop, FurnitureCatalog.Get(id)?.WeightKg ?? 0, count, n => BoxOf(shop).AddFurniture(id, n), n => TempOf(shop).AddFurniture(id, n));
 
         public RoomSpec ShopRoom => RoomSpec.ForShop(PlayerShop.Size);
-        public RoomSpec ResidenceRoom => RoomSpec.ForResidence(HomeTier);
+        public RoomSpec ResidenceRoom => RoomSpec.ForResidence(HomeTier, Home?.HousingForm ?? ResidenceForm.Standard);
 
         // ---------- 家里的效果 ----------
 

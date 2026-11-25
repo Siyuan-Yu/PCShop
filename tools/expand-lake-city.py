@@ -294,6 +294,32 @@ assert reached==set(nodes),"Disconnected door node"
 assert all(not overlap(a,b) for i,a in enumerate(new_shapes) for b in new_shapes[i+1:])
 assert len({p["id"] for p in d["places"]})==len(d["places"])
 assert len({b["homeId"] for b in d["blocks"]})==len(d["blocks"])
+# The walk-up opens directly onto the narrow shopfront pavement in the old quarter.
+home = next(p for p in d["places"] if p["id"] == "home")
+setback = 5.9 / math.hypot(home["entranceX"], home["entranceY"])
+home["entranceX"] *= setback
+home["entranceY"] *= setback
+home["depth"] = 7.50
+workshop = next(b for b in d["blocks"] if b.get("homeId") == "residence_s_oldhomes_07")
+nx, ny = nodes[workshop["entranceNode"]]
+dx, dy = workshop["x"] - nx, workshop["y"] - ny
+length = math.hypot(dx, dy)
+out_x, out_y = dx / length, dy / length
+yaw = math.radians(home["heading"])
+along_x, along_y = math.cos(yaw), -math.sin(yaw)
+neighbor = next(b for b in d["blocks"] if b.get("homeId") == "residence_s_oldhomes_06")
+# Leave an alley between the workshop and the taller neighboring residence.
+spacing = (workshop["width"] + neighbor["width"]) / 2 + .95
+for plot, frontage, along in [(workshop, 6.1, -1.4), (neighbor, 6.3, spacing - 1.4)]:
+    plot["x"] = nx + out_x * frontage + along_x * along
+    plot["y"] = ny + out_y * frontage + along_y * along
+# The old street uses two physical housing types within the same economic tier.
+for p in d["places"]:
+    if p["id"] in ("home", "life_home_s_oldhomes"):
+        p["residenceForm"] = "lane" if p["id"] == "home" else "walkup"
+for block in d["blocks"]:
+    if block.get("homeId") and block["street"] == "s_oldhomes":
+        block["residenceForm"] = "walkup" if block["homeNumber"] in {2, 4, 6, 9, 12, 14, 16, 19, 21, 24, 26} else "lane"
 seed_expansion_occupancy(d, base)
 # The fishing entrance branches off the lakeside road beside the suburban commercial area.
 park = next(p for p in d["places"] if p["id"] == "life_hike")

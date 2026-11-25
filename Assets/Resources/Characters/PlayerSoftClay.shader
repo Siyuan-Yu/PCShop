@@ -29,6 +29,7 @@ Shader "PETSHOP/PlayerSoftClay"
    half _Grain;
    half _SurfaceKind;
    CBUFFER_END
+   float4 _OldQuarterFigureZone;
    struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; };
    struct Varyings { float4 positionCS:SV_POSITION; half3 normalWS:TEXCOORD0; float3 positionWS:TEXCOORD1; float3 positionOS:TEXCOORD2; };
    Varyings Vert(Attributes input)
@@ -95,6 +96,26 @@ Shader "PETSHOP/PlayerSoftClay"
     color*=1.0h+_Grain*threads*fade;
     half grazing=pow(1.0h-saturate(dot(normal,viewDir)),3.0h);
     color+=_BaseColor.rgb*cloth*grazing*.035h*daylight;
+    // Keep the street figures in the same two or three value masses as the scenery.
+    // The zone is world-space so portrait cameras and characters elsewhere retain their lighting.
+    if (_OldQuarterFigureZone.z > 0)
+    {
+     half influence = _OldQuarterFigureZone.z*(1-smoothstep(24,40,distance(input.positionWS.xz,_OldQuarterFigureZone.xy)));
+     half ndl = dot(normal,key.direction);
+     half form = .39h + .31h*smoothstep(-.25h,-.14h,ndl) + .25h*smoothstep(.38h,.51h,ndl);
+     half3 dye = lerp(_BaseColor.rgb,Luminance(_BaseColor.rgb).xxx,.20h);
+     dye *= lerp(half3(1,1,1),half3(.69h,.73h,.76h),cloth);
+     dye *= 1-.29h*hair;
+     half3 painted = dye*form*lerp(.59h,1.0h,key.shadowAttenuation)*min(key.color,half3(1.14h,1.14h,1.14h));
+     // The dark-side contour is wider than the sunlit one. Pixel derivatives keep
+     // a sleeve or the edge of a cheek legible at the street camera's scale.
+     half facing = saturate(dot(normal,viewDir));
+     half edgeWidth = clamp(fwidth(facing)*1.15h,.12h,.31h);
+     half pressure = lerp(.47h,.26h,smoothstep(-.18h,.55h,ndl));
+     half ink = (1-smoothstep(pressure-edgeWidth,pressure+edgeWidth,facing))*(1-.28h*skin);
+     painted = lerp(painted,min(painted*.31h,half3(.029h,.023h,.019h)),ink);
+     color = lerp(color,painted,influence*(.96h-.47h*eye));
+    }
     return half4(color,1);
    }
    ENDHLSL

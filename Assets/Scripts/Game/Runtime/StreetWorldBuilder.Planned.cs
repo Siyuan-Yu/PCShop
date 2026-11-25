@@ -143,8 +143,16 @@ namespace PCShopSell.Game.Runtime
             else if(CityArchitecture.HasExterior(p))
             {
                 var shell=new GameObject("Exterior").transform;shell.SetParent(root,false);
-                CityArchitecture.Venue(shell,p,w,d);
-                foreach(var collider in shell.GetComponentsInChildren<Collider>())collider.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
+                if (HasStarterArt && UsesQuarterShop(p))
+                {
+                    QuarterShop(shell,p,w,d);
+                    vis.LabelPos=root.TransformPoint(new Vector3(0,6f,d*.3f));
+                }
+                else
+                {
+                    CityArchitecture.Venue(shell,p,w,d);
+                    foreach(var collider in shell.GetComponentsInChildren<Collider>())collider.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
+                }
                 var inside=new GameObject("VenueInterior").transform;inside.SetParent(root,false);
                 CityVenueView.Build(inside,p,w,d);inside.gameObject.SetActive(false);
                 vis.Exterior=shell.gameObject;vis.VenueInterior=inside.gameObject;_venueVisuals.Add(vis);
@@ -153,7 +161,7 @@ namespace PCShopSell.Game.Runtime
             else if(p.Kind==PlaceKind.Station)StarterMetro(root,p,w,d);
             else PlannedBuilding(root,p.Model,p.Tier,w,d,p,(float)(block?.height ?? 0),block?.variant ?? 0);
             if (block != null) BuildResidentialPlot(root, block);
-            else if (p.Kind == PlaceKind.Home && p.Model == "oldhome")
+            else if (p.Id != StarterHome && p.Kind == PlaceKind.Home && p.Model == "oldhome")
                 StarterPart(root, "Plain residence entry path", new Vector3(0, .035f, -1.65f), new Vector3(1.7f, .06f, 3.3f),
                     ArtDirection.Hex("BFB4A0"), "paving", new Vector2(.5f, .85f));
             // The route node is on the road; its approach ends at the actual public door.
@@ -163,13 +171,15 @@ namespace PCShopSell.Game.Runtime
                 var approach=Prims.Box(_root,"Approach_"+p.Id,(node+door)*.5f+Vector3.up*.08f,new Vector3(2,.12f,delta.magnitude),Mats.Lit(Sidewalk));
                 if(delta.sqrMagnitude>.01f)approach.transform.rotation=Quaternion.LookRotation(delta);
             }
-            vis.LabelPos=root.TransformPoint(new Vector3(0,block!=null?3.3f:CityArchitecture.HasExterior(p)?CityArchitecture.VenueHeight(p)+1:!venue && p.Kind!=PlaceKind.Station?PlannedPlaceHeight(p)+1:5,d*.3f));
+            if (vis.LabelPos == Vector3.zero)
+                vis.LabelPos=root.TransformPoint(new Vector3(0,p.HousingForm!=ResidenceForm.Standard?PlannedPlaceHeight(p)+.5f:block!=null?3.3f:CityArchitecture.HasExterior(p)?CityArchitecture.VenueHeight(p)+1:!venue && p.Kind!=PlaceKind.Station?PlannedPlaceHeight(p)+1:5,d*.3f));
             vis.Sign=root.GetComponentInChildren<UnityEngine.UI.Text>();
         }
         private static float PlannedHeight(string model,int tier)=>model=="villa"?6:model=="oldhome"?6:model=="luxury_apartment"?22:model=="apartment"?14:model=="office"?16:model=="warehouse"?6:4.5f+tier*.65f;
         private static float PlannedPlaceHeight(Place p)
         {
-            if(p.Id==StarterHome && p.Model=="oldhome")return StarterResidenceHeight+1.4f;
+            if (p.HousingForm == ResidenceForm.LaneHouse) return 3.95f;
+            if (p.HousingForm == ResidenceForm.Walkup) return WalkupHeight;
             if (GameSession.IsCommercialPremises(p))
             {
                 int variation = StableCityHash(p.Id) % 3;
@@ -187,6 +197,19 @@ namespace PCShopSell.Game.Runtime
             return p.Size==PCShopSell.Core.Shop.ShopSize.Small?4.5f+(seed%3)*2:
                 p.Size==PCShopSell.Core.Shop.ShopSize.Large?12+(seed%3)*4:8+(seed%3)*3;
         }
+        private void BuildShopDownlights(Transform root,float width,float height)
+        {
+            foreach(int side in new[]{-1,1})
+            {
+                var lamp=new GameObject("Shopfront warm downlight");lamp.transform.SetParent(root,false);
+                lamp.transform.localPosition=new Vector3(side*width*.3f,height,-.65f);
+                Prims.Box(lamp.transform,"Metal lamp shade",Vector3.zero,new Vector3(.48f,.12f,.32f),Mats.Lit(ArtDirection.Ink,.4f,.4f));
+                Prims.Box(lamp.transform,"Lamp diffuser",Vector3.down*.08f,new Vector3(.35f,.035f,.22f),Mats.Glow(ArtDirection.Cream,new Color(2.4f,1.5f,.6f)));
+                var light=lamp.AddComponent<Light>();light.type=LightType.Point;light.range=6.5f;
+                light.color=new Color(1f,.72f,.38f);light.intensity=0;light.shadows=LightShadows.None;NightLights.Add(light);
+            }
+        }
+
         private void PlannedBuilding(Transform root,string model,int tier,float w,float d,Place p,float configuredHeight=0,int variation=0)
         {
             int seed=StableCityHash(p?.Id??(root.name+"_"+variation));
@@ -194,7 +217,26 @@ namespace PCShopSell.Game.Runtime
             if(p!=null && model=="shop")h=PlannedPlaceHeight(p);
             if(model=="oldhome" && (p==null || p.Kind==PlaceKind.Home))
             {
-                BuildOldResidence(root,p,w,d,h,seed,starter:p?.Id==StarterHome);
+                if (InPaintedQuarter(new Vector2(root.position.x,root.position.z),63f))
+                {
+                    Vector2 offset=new Vector2(root.position.x,root.position.z)-_quarterOrigin;
+                    if (offset.sqrMagnitude<33*33) QuarterLaneHouse(root,p,w,d,h);
+                    else
+                    {
+                        string form=p?.Id switch {
+                            "residence_s_oldhomes_03" => "RouteGrayHouse",
+                            "residence_s_oldhomes_04" => "RouteSageHouse",
+                            "residence_s_oldhomes_05" => "RouteCreamHouse",
+                            _ => (seed%3) switch {0=>"RouteGrayHouse",1=>"RouteSageHouse",_=>"RouteCreamHouse"}
+                        };
+                        var shell=QuarterModel(root,form,"Route");
+                        shell.transform.localScale=new Vector3(w/8,h/5.4f,d/7.8f);
+                        var hit=root.gameObject.AddComponent<BoxCollider>();
+                        hit.center=new Vector3(0,h*.5f,d*.5f);hit.size=new Vector3(w,h,d);
+                        if(p!=null)root.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
+                    }
+                }
+                else BuildOldResidence(root,p,w,d,h,seed,starter:p?.Id==StarterHome);
                 return;
             }
             if(model=="apartment"||model=="luxury_apartment")
@@ -255,18 +297,7 @@ namespace PCShopSell.Game.Runtime
             CityArchitecture.ReferenceFacade(root,model,tier,w,d,h,seed);
             CityArchitecture.IndustrialDetails(root,model,w,d,h,seed);
             if(model!="warehouse")CityArchitecture.StreetLife(root,w,d,h,seed,model=="shop"||model=="market");
-            if(p!=null&&(model=="shop"||model=="warehouse"))
-            {
-                foreach(int side in new[]{-1,1})
-                {
-                    var lamp=new GameObject("Shopfront warm downlight");lamp.transform.SetParent(root,false);
-                    lamp.transform.localPosition=new Vector3(side*w*.3f,2.9f,-.65f);
-                    Prims.Box(lamp.transform,"Metal lamp shade",Vector3.zero,new Vector3(.48f,.12f,.32f),Mats.Lit(ArtDirection.Ink,.4f,.4f));
-                    Prims.Box(lamp.transform,"Lamp diffuser",Vector3.down*.08f,new Vector3(.35f,.035f,.22f),Mats.Glow(ArtDirection.Cream,new Color(2.4f,1.5f,.6f)));
-                    var light=lamp.AddComponent<Light>();light.type=LightType.Point;light.range=6.5f;
-                    light.color=new Color(1f,.72f,.38f);light.intensity=0;light.shadows=LightShadows.None;NightLights.Add(light);
-                }
-            }
+            if(p!=null&&(model=="shop"||model=="warehouse")) BuildShopDownlights(root,w,2.9f);
             if(model=="office")
             {
                 foreach(int side in new[]{-1,1})Prims.Box(root,"OfficeFrame",new Vector3(side*w*.42f,h/2,-.18f),new Vector3(.5f,h,.3f),Mats.Lit(ArtDirection.Cream));
@@ -380,7 +411,17 @@ namespace PCShopSell.Game.Runtime
                 var agency=_city.Places.FirstOrDefault(p=>p.StreetId==street.id && p.Kind!=PlaceKind.Station && BuildsPlace(p));
                 if(agency==null)continue;
                 Vector3 at=NodeWorld(agency.NodeId);
-                Prims.SignText(props,street.name,at+new Vector3(0,5,-1),22,1,ArtDirection.Cream);
+                if (street.id == "s_oldhomes" && Places.TryGetValue(StarterHome, out var home))
+                {
+                    var sign = new GameObject("旧居街路牌").transform;
+                    sign.SetParent(props,false);
+                    sign.position = home.Root.transform.TransformPoint(new Vector3(-4.8f,0,-2));
+                    sign.rotation = home.Root.transform.rotation;
+                    Prims.Box(sign,"Post",new Vector3(0,.91f,0),new Vector3(.07f,1.82f,.07f),Mats.Lit(ArtDirection.Ink));
+                    Prims.Box(sign,"Enamel plate",new Vector3(0,1.72f,0),new Vector3(1.48f,.38f,.07f),Mats.Lit(ArtDirection.Hex("526B63")));
+                    Prims.SignText(sign,street.name,new Vector3(0,1.72f,-.05f),1.41f,.30f,ArtDirection.Cream);
+                }
+                else Prims.SignText(props,street.name,at+new Vector3(0,5,-1),22,1,ArtDirection.Cream);
             }
         }
     }

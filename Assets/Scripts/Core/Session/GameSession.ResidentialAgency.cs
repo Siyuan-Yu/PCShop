@@ -56,7 +56,7 @@ namespace PCShopSell.Core.Session
         private bool PayForResidenceMove(int tier, string category, Money due, string memo, LedgerAttribution attribution = null,
             bool allowPackedFridge = false, Place targetResidence = null)
         {
-            var room = RoomSpec.ForResidence(tier);
+            var room = RoomSpec.ForResidence(tier, targetResidence?.HousingForm ?? ResidenceForm.Standard);
             List<PlacedFurniture> existingLayout = null;
             if (targetResidence != null && _residenceFreight.TryGetValue(targetResidence.Id, out var storage))
                 existingLayout = storage.Layout;

@@ -60,7 +60,7 @@ namespace PCShopSell.Core.World
     public sealed class LayoutBlockData
     {
         public bool initiallyVacant;
-        public string street, model, homeId, entranceNode;
+        public string street, model, homeId, entranceNode, residenceForm;
         public int homeNumber;
         public double x,y,width,depth,height,heading;
         public int variant;
@@ -103,7 +103,7 @@ namespace PCShopSell.Core.World
     public sealed class LayoutPlaceData
     {
         public bool initiallyVacant;
-        public string model;
+        public string model, residenceForm;
         public int tier;
         public string street;
         public bool explicitEntrance, tradable;
@@ -131,6 +131,8 @@ namespace PCShopSell.Core.World
         public string sells;
     }
 
+    public enum ResidenceForm { Standard, LaneHouse, Walkup }
+
     public enum PlaceKind
     {
         Other,
@@ -148,6 +150,7 @@ namespace PCShopSell.Core.World
     {
         public string Model { get; }
         public int Tier { get; }
+        public ResidenceForm HousingForm { get; }
         public string StreetId { get; }
         public bool ExplicitEntrance { get; }
         public bool IsTradable { get; }
@@ -156,6 +159,8 @@ namespace PCShopSell.Core.World
         public double EntranceY { get; }
         public double Width { get; }
         public double Depth { get; }
+        public double ExteriorWidth => HousingForm == ResidenceForm.LaneHouse ? Math.Min(Width, 9.5) : Width;
+        public double ExteriorDepth => HousingForm == ResidenceForm.LaneHouse ? Math.Min(Depth, 9.66) : Depth;
         public double Heading { get; }
         public int OpenMinute { get; }
         public int CloseMinute { get; }
@@ -173,8 +178,10 @@ namespace PCShopSell.Core.World
             ShopSize size = ShopSize.Small, string business = null, bool isPlayerShop = false,
             IReadOnlyList<PartCategory> sells = null, string streetId = null, bool explicitEntrance = false,
             double entranceX = 0, double entranceY = 0, double width = 10, double depth = 9, double heading = 0,
-            bool tradable = false, int openMinute = 0, int closeMinute = 0, string model = null, int tier = 0, bool initiallyVacant = false)
+            bool tradable = false, int openMinute = 0, int closeMinute = 0, string model = null, int tier = 0, bool initiallyVacant = false, string residenceForm = null)
         {
+            HousingForm = residenceForm == "walkup" ? ResidenceForm.Walkup
+                : residenceForm == "lane" ? ResidenceForm.LaneHouse : ResidenceForm.Standard;
             Model = model; Tier = tier;
             InitiallyVacant=initiallyVacant;
             Id = id;
@@ -341,7 +348,7 @@ namespace PCShopSell.Core.World
 
                     var place = new Place(p.id, p.name ?? p.id, ParseKind(p.kind), p.node,
                         ParseSize(p.size), p.business, p.player, ParseSells(p.sells), p.street, p.explicitEntrance,
-                        p.entranceX, p.entranceY, p.width, p.depth, p.heading, p.tradable, p.openMinute, p.closeMinute, p.model, p.tier, p.initiallyVacant);
+                        p.entranceX, p.entranceY, p.width, p.depth, p.heading, p.tradable, p.openMinute, p.closeMinute, p.model, p.tier, p.initiallyVacant, p.residenceForm);
                     layout._places.Add(place.Id, place);
                     layout._placeList.Add(place);
                 }
@@ -356,7 +363,7 @@ namespace PCShopSell.Core.World
                 var residence = new Place(block.homeId, name, PlaceKind.Home, block.entranceNode,
                     streetId: block.street, explicitEntrance: true, entranceX: block.x - node.X,
                     entranceY: block.y - node.Y, width: block.width, depth: block.depth, heading: block.heading,
-                    model: block.model, tier: block.tier, initiallyVacant: block.initiallyVacant);
+                    model: block.model, tier: block.tier, initiallyVacant: block.initiallyVacant, residenceForm: block.residenceForm);
                 layout._places.Add(residence.Id, residence);
                 layout._placeList.Add(residence);
             }

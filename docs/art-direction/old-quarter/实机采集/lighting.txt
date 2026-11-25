@@ -1,0 +1,1 @@
+PCShopSell_URP / Direct3D11 / Linear / Soft / strength 0.74 / 4096 / cascades 4 / post False / grass RouteGrass

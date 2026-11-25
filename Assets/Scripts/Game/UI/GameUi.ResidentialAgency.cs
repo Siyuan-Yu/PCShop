@@ -85,7 +85,7 @@ namespace PCShopSell.Game.UI
                     string label=(selected ? "✓ " : "")+number.ToString("D2")+" "+(owned?"已购":rented?"已租":occupied?"有住户":"空房");
                     var button=Ui.Button(overlay,label,()=>view.Selected?.Invoke(id),14,color);
                     button.name="ResidenceMap_"+id;AgencyAt((RectTransform)button.transform,Mathf.Clamp(at.x-53,2,view.Width-108),Mathf.Clamp(at.y-25,2,view.Height-32),106,30);
-                    button.Tip(p.Name+"\n"+ResidentialStatus(p));
+                    button.Tip(p.Name+"\n"+ResidentialRoomCaption(p,S.RoomForResidence(p))+" · "+ResidentialStatus(p));
                 }
             };
             AgencyMapControl(map,"定位中介","ResidentialFocusCurrent",548,108,()=>view.Focus(agency));
@@ -96,15 +96,26 @@ namespace PCShopSell.Game.UI
             BuildAgencyMapLegend(map, residential: true);
             view.Changed();
         }
+        private static string ResidentialRoomCaption(Place place, RoomSpec room)
+        {
+            string label = place.HousingForm switch
+            {
+                ResidenceForm.LaneHouse => "小平房 · ",
+                ResidenceForm.Walkup => "多层楼房 · ",
+                _ => "室内面积 ",
+            };
+            return $"{label}{room.Width * room.Depth:0.#}㎡";
+        }
+
         private void BuildResidentialDetail(Transform detail,Place p,int number,Window parent)
         {
             var tenants = S.ResidentialTenants(p.Id);
             var property = S.PropertyAt(p.Id);
-            var room = p == S.Home ? S.ResidenceRoom : RoomSpec.ForResidence(S.ResidentialTier(p));
+            var room = p == S.Home ? S.ResidenceRoom : S.RoomForResidence(p);
             var overview = AgencyPropertyCard(detail, "AgencyPropertyOverview");
             AgencyPropertyHeading(overview, $"{number:00}　{p.Name}", ResidentialStatus(p));
             var facts = AgencyPropertySummary(overview, room);
-            Line(facts, $"室内面积 {room.Width * room.Depth:0.#}㎡", 18);
+            Line(facts, ResidentialRoomCaption(p,room), 18);
             Para(facts, $"{S.City.StreetName(p.StreetId)} · {tenants.Length} 名住户", 16, Ui.Dim);
             if (property != null && tenants.Length > 0)
                 Line(facts, "每周应收租金 " + Money.FromCents(property.WeeklyRentCents), 16, Ui.Good);

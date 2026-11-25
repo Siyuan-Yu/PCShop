@@ -1,5 +1,7 @@
 # PETSHOP · PCShopSell
 
+**城郊旧居街美术实装（2026-11-25）**　[两类住宅、院巷、植被光照、实机对照与复现](docs/art-direction/old-quarter/README.md) · [历轮交付图档](docs/art-direction/old-quarter/图档索引.md)
+
 **当前玩法全量交接（2026-11-23）** · [玩法索引、公司、场所活动与赞助](docs/153-current-gameplay-sponsorship-and-relationships-2026-11-23.md)。涵盖 25 处场所活动、赞助特卖、银行后教学、公司经营与四阶段主线。[12 条人物感情线](docs/relationship-stories.md)含赴约回应、友情与恋爱的后续。
 
 **公司经营与企业服务中心（2026-11-23）** · [Unity 实装、门店效果、登记与上市](docs/152-company-departments-and-enterprise-center-2026-11-23.md)。包括统一公司名册、部门任命、宣传与口碑、研发商品、服务中心和自有公司挂牌。[历史治理设计与界面图](docs/151-company-governance-and-workforce-design-2026-11-23.md)

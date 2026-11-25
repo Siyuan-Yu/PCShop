@@ -208,6 +208,26 @@ namespace PCShopSell.Game.Runtime
                 if(urban&&clustering<.33f)continue;
                 if(!urban&&clustering<.28f&&hash%4!=0)continue;
                 float size=urban?7+hash%4:height<1?10+hash%6:12+hash%9;
+                var worldPosition = root.TransformPoint(p);
+                if (InPaintedQuarter(new Vector2(worldPosition.x,worldPosition.z),120f))
+                {
+                    bool blossom=urban && hash%4==0;
+                    var fromHome=new Vector2(worldPosition.x,worldPosition.z)-_quarterOrigin;
+                    float scale=fromHome.sqrMagnitude<26f*26f ? 1.1f+hash%4*.13f : size*.255f;
+                    QuarterTree(_root,worldPosition,scale,hash%360,blossom);
+                    if (fromHome.sqrMagnitude>=26f*26f)
+                    {
+                        var undergrowth=new GameObject("Street tree undergrowth").transform;
+                        undergrowth.SetParent(_root,false);
+                        undergrowth.position=worldPosition;
+                        undergrowth.rotation=Quaternion.Euler(0,hash%360,0);
+                        QuarterLeafCluster(undergrowth,"CrownA",new Vector3(-scale*.78f,scale*.40f,.4f),
+                            new Vector2(scale*1.8f,scale*1.03f),"RouteLeaves");
+                        QuarterLeafCluster(undergrowth,"CrownB",new Vector3(scale*.86f,scale*.36f,.6f),
+                            new Vector2(scale*1.64f,scale*.95f),"RouteLeaves");
+                    }
+                    continue;
+                }
                 int color=hash%4;if(urban&&hash%4==0)color=4;
                 var cell=new Vector2Int(Mathf.FloorToInt(p.x/192),Mathf.FloorToInt(p.z/192));
                 if(Baking)

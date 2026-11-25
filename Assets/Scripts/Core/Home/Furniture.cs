@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Home
 {
@@ -416,15 +417,17 @@ namespace PCShopSell.Core.Home
 
         public static readonly RoomSpec Home = new RoomSpec(6.0, 4.6, new RectD(0.05, 0.05, 5.95, 4.55), new RectD(4.7, 0.2, 6.0, 1.9), 2.55, 3.75, 0.45, 1.55, false);
 
+        private static readonly RoomSpec WalkupFlat = LargerHome(7.2, 5);
         private static readonly RoomSpec CommunityHome = LargerHome(8, 6);
         private static readonly RoomSpec ParkHome = LargerHome(11, 8);
         private static readonly RoomSpec GardenHome = LargerHome(15, 10);
 
-        public static RoomSpec ForResidence(int tier) => tier switch
+        public static RoomSpec ForResidence(int tier, ResidenceForm form = ResidenceForm.Standard) => tier switch
         {
             3 => GardenHome,
             2 => ParkHome,
             1 => CommunityHome,
+            0 when form == ResidenceForm.Walkup => WalkupFlat,
             _ => Home,
         };
 

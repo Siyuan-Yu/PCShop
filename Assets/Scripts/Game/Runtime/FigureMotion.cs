@@ -18,6 +18,8 @@ namespace PCShopSell.Game.Runtime
         private readonly Transform[] _elbows = new Transform[2];
         private Vector3 _previousPosition;
         private float _phase, _blend, _idleTime, _scale;
+        private Vector3 _baseVisualScale;
+        private float _baseScale, _quarterWeight;
         private bool _sampled, _locomotion = true;
         private bool _seated;
         private Transform _scooter;
@@ -122,7 +124,8 @@ namespace PCShopSell.Game.Runtime
             _visual = visual;
             Torso = torso;
             _head = torso.Find("Head");
-            _scale = scale;
+            _baseScale = _scale = scale;
+            _baseVisualScale = visual.localScale;
             Appearance = appearance;
             for (int i = 0; i < 2; i++)
             {
@@ -187,15 +190,36 @@ namespace PCShopSell.Game.Runtime
 
         // Called after all world/interior movement, including the editor smoke simulation.
         public bool PresentationAnimation {get;set;}
-        public static void AdvanceAll(float dt, bool animateIdle)
+        public static void AdvanceAll(float dt, bool animateIdle, Vector3? paintedStreet = null)
         {
             for (int i = Active.Count - 1; i >= 0; i--)
             {
                 var motion = Active[i];
                 if (motion == null) { Active.RemoveAt(i); continue; }
                 if (!motion.isActiveAndEnabled) { motion.ResetMotion(); continue; }
+                motion.ApplyStreetProportions(paintedStreet);
                 motion.Advance(dt, animateIdle || motion.PresentationAnimation);
             }
+        }
+
+        private void ApplyStreetProportions(Vector3? center)
+        {
+            if (_visual == null) return;
+            float weight = 0;
+            if (center.HasValue && !_seated && _scooter == null)
+            {
+                var delta = transform.position - center.Value;
+                weight = Mathf.SmoothStep(1,0,Mathf.InverseLerp(22*22,36*36,delta.sqrMagnitude));
+            }
+            if (Mathf.Approximately(weight,_quarterWeight)) return;
+            _quarterWeight = weight;
+            // Readable heads and sleeves at street distance. Keep footsteps and
+            // the stride solver on the same scale as the visible legs.
+            float height = 1+.13f*weight;
+            float width = 1+.18f*weight;
+            _scale = _baseScale*height;
+            _visual.localScale = Vector3.Scale(_baseVisualScale,new Vector3(width,height,width));
+            _head.localScale = Vector3.one*(1+.16f*weight);
         }
 
         public void ResetMotion()
