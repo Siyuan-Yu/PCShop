@@ -86,25 +86,29 @@ namespace PCShopSell.Game.Runtime
         }
 
 
-        private static Material CanopyPaint()
+        private static Material _summer;
+        private static Material CanopyPaint(bool summer=true)
         {
-            if(_paint==null)
+            var material=summer ? _summer : _paint;
+            if (material != null) return material;
+            material=new Material(Resources.Load<Shader>("OldTown/Crown"))
             {
-                var source=Resources.Load<Shader>("OldTown/Crown");
-                _paint=new Material(source){name="远山杂树林",enableInstancing=true};
-                _paint.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/townCanopies"));
-                _paint.SetFloat("_Cutoff",.32f);
-            }
-            return _paint;
+                name=summer ? "夏日香樟、垂柳与花树" : "远山杂树林", enableInstancing=true
+            };
+            string atlas=summer ? "summerCanopies" : "townCanopies";
+            material.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/"+atlas));
+            material.SetFloat("_Cutoff",.32f);
+            if(summer)_summer=material;else _paint=material;
+            return material;
         }
 
-        internal static MeshRenderer Plant(Transform parent,Vector3 foot,int height,int species,int seed)
+        internal static MeshRenderer Plant(Transform parent,Vector3 foot,int height,int species,int seed,bool summer=true)
         {
             var go=new GameObject("庭荫树",typeof(MeshFilter),typeof(MeshRenderer));
             go.transform.SetParent(parent,false);go.transform.localPosition=foot;
             go.GetComponent<MeshFilter>().sharedMesh=Template(height,species,(seed & 0x7fffffff)%6,true);
             ForestFloorShade.Footprint(parent,foot+Vector3.up*.055f,height*1.28f,height*1.12f);
-            var renderer=go.GetComponent<MeshRenderer>();renderer.sharedMaterial=CanopyPaint();
+            var renderer=go.GetComponent<MeshRenderer>();renderer.sharedMaterial=CanopyPaint(summer);
             return renderer;
         }
 

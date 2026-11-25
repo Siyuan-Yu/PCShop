@@ -235,10 +235,10 @@ namespace PCShopSell.Game.Runtime
                     continue;
                 }
                 float cover=DistrictFinishes.GroveCover(world);
-                float clearing=Mathf.Lerp(.57f,.18f,cover);
+                float clearing=Mathf.Lerp(.47f,.17f,cover);
                 if(clustering<clearing && hash%6!=0)continue;
                 float age=.78f+.34f*clustering+.16f*cover;
-                float size=(urban?6+hash%6:height<1?8+hash%8:10+hash%10)*age;
+                float size=(urban?7+hash%6:height<1?10+hash%9:13+hash%11)*age;
                 if (height < 24 && hash%7==0 && urban)
                 {
                     var tree = QuarterModules.Tree(root,p,size/5.1f,hash%360);
@@ -263,7 +263,7 @@ namespace PCShopSell.Game.Runtime
                     woodland.Add(cell,chunk);
                     if(Baking)_forestCapture.Add(chunk);
                 }
-                int species=urban && hash%19==0?2:hash%5==0?3:0;
+                int species=urban && hash%11==0?2:hash%5==0?3:0;
                 chunk.Parts.Add(new BakedCityMap.ForestPart{
                     Mesh=PaintedWoodland.Template((int)size,species,hash%6),Position=p});
             }
@@ -673,7 +673,7 @@ namespace PCShopSell.Game.Runtime
                         float angle=j*Mathf.PI/6;var tree=new GameObject("ParkGrove").transform;tree.SetParent(root,false);
                         tree.localPosition=new Vector3(Mathf.Cos(angle)*w*.43f,.2f,d*.52f+Mathf.Sin(angle)*d*.39f);tree.localScale=Vector3.one*2;
                         if(painted) QuarterModules.Tree(tree,Vector3.zero,1,j*37);
-                        else CityVegetation.Build(tree,Vector3.zero,j);
+                        else PaintedWoodland.Plant(tree,Vector3.zero,4+j%2,j%7==0?2:0,index*31+j);
                     }
                     index++;continue;
                 }
@@ -704,7 +704,17 @@ namespace PCShopSell.Game.Runtime
                         if(seed%5<3)planting.Add(PlantSpecies.Hydrangea,new Vector3(side*(w/2-1.64f),.43f,along+.15f),1.60f,.96f+seed%3*.12f,seed+3);
                     }
                     var foot=new Vector3(side*w*(side<0?.24f:.31f),.44f,d*(side<0?.60f:.75f));
-                    PaintedWoodland.Plant(root,foot,side<0?8:6,index%7==0 && side<0?2:0,index*41+side*23);
+                    PaintedWoodland.Plant(root,foot,side<0?8:6,index%7==0 && side<0?2:0,index*41+side*23,!painted);
+                    if (!painted && w > 14 && d > 14)
+                    {
+                        var edge=new Vector3(side*w*.34f,.44f,d*(side<0?.23f:.41f));
+                        PaintedWoodland.Plant(root,edge,5+(index&1),index%5==0?2:0,index+side*37);
+                        for(int cluster=0;cluster<6;cluster++)
+                        {
+                            var at=edge+new Vector3(Mathf.Cos(cluster)*1.7f,0,Mathf.Sin(cluster)*1.05f);
+                            planting.Add(cluster%3==0?PlantSpecies.Hydrangea:PlantSpecies.Spirea,at,1.65f,.94f,index+cluster);
+                        }
+                    }
                     for(int group=0;group<5;group++)
                     {
                         float angle=group*.77f+side*.46f;

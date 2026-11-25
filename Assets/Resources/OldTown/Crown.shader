@@ -42,9 +42,12 @@ Shader "PCShop/Layered town canopy"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile_fragment _ _LIGHT_COOKIES
+            half _DistrictDaylight;
             half4 ColorPass(Vary i):SV_Target
             {
-                half3 paint=Albedo(i).rgb*half3(1.02,.91,1.03);
+                half3 raw=Albedo(i).rgb;
+                half3 paint=raw*half3(1.02,.91,1.03);
+                paint=lerp(paint,raw*half3(.98,1.06,.91),_DistrictDaylight);
                 Light sun=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));
                 half diffuse=.22+.78*saturate(dot(normalize(i.n),sun.direction)*.85+.18);
                 half3 sky=lerp(half3(.43,.50,.54),half3(.13,.18,.24),_OldTownNightFactor);

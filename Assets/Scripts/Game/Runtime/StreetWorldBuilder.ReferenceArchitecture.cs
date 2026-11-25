@@ -11,8 +11,8 @@ namespace PCShopSell.Game.Runtime
         {
             // Compact residential blocks with real recessed bays and balconies replace repeated thin towers.
             float top=ResidenceArtHeight(h,tier,seed),bw=w*.83f,bd=d*.66f,center=d*.62f;
-            Color wall=ArtDirection.Hex(seed%3==0?"E2CBA6":seed%3==1?"D7CBB6":"DCC2A6");
-            Color trim=ArtDirection.Hex("E8D6B9"),blue=ArtDirection.Hex(tier>1?"527F91":"517791");
+            Color wall=ArtDirection.Hex(seed%3==0?"E6DDD2":seed%3==1?"D7DCD8":"ECE5DB");
+            Color trim=ArtDirection.Hex("E6E6DF"),blue=ArtDirection.Hex(tier>1?"527F91":"517791");
             var masonry=DistrictFinishes.Tile(DistrictFinishes.Masonry(tier),new Vector2(w/4,top/3.4f),Color.Lerp(Color.white,wall,.26f));
             Prims.Box(root,"ResidenceGarden",new Vector3(0,.035f,d/2),new Vector3(w,.07f,d),
                 IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/10,d/10)));
@@ -64,7 +64,7 @@ namespace PCShopSell.Game.Runtime
             {
                 detail.FlowerBed(new Vector3(side*w*.28f,.02f,.75f),w*.28f,.85f,seed+side);
                 detail.FlowerBed(new Vector3(side*w*.32f,.02f,front*.72f),w*.20f,.70f,seed+side+3,false);
-                CityVegetation.Build(root,new Vector3(side*w*.36f,0,front*.43f),seed+side+4);
+                PaintedWoodland.Plant(root,new Vector3(side*w*.36f,0,front*.43f),5+seed%2,side<0 && seed%5==0?2:0,seed+side+4);
                 // Knee-high garden wall with an open central route to the original door.
                 detail.Box(new Vector3(side*(w*.27f+.5f),.26f,.10f),new Vector3(w*.46f-1,.52f,.22f),stone);
             }

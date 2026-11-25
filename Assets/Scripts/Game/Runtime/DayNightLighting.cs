@@ -119,6 +119,8 @@ namespace PCShopSell.Game.Runtime
             float night = NightFactor(minuteOfDay);
             Shader.SetGlobalFloat("_OldTownNightFactor", night);
             Shader.SetGlobalFloat("_CityRain", raining ? 1 : 0);
+            float districtDay = interior ? 0 : Mathf.Clamp01(townWeight) * (1 - night);
+            Shader.SetGlobalFloat("_DistrictDaylight", districtDay);
             float ungradedDaylight = interior ? 0f : Mathf.Clamp01(quarterWeight) * (1f - night);
             Shader.SetGlobalVector("_OldQuarterFigureZone", new Vector4(quarterCenter.x,quarterCenter.z,ungradedDaylight,0));
             _volume.weight = _baseVolumeWeight * (1f - ungradedDaylight);
@@ -139,6 +141,7 @@ namespace PCShopSell.Game.Runtime
             _cam.backgroundColor = interior ? new Color(0.08f, 0.08f, 0.1f) : Color.Lerp(a.SkyColor, b.SkyColor, t);
             if (raining) _cam.backgroundColor *= new Color(.84f, .9f, .95f, 1);
             Color ambient=interior?new Color(.65f,.65f,.62f):Color.Lerp(a.AmbientColor,b.AmbientColor,t);
+            ambient = Color.Lerp(ambient, new Color(.84f,.89f,.96f), districtDay * (raining ? .63f : 1f));
             RenderSettings.ambientLight=ambient;
             RenderSettings.ambientSkyColor=ambient;
             RenderSettings.ambientEquatorColor=ambient*.83f;
@@ -166,9 +169,12 @@ namespace PCShopSell.Game.Runtime
                 float daylight = townWeight * (1 - night);
                 var direction = Quaternion.Euler(0,158,0) * Quaternion.LookRotation(new Vector3(-1.20f,-.92f,.54f));
                 _sun.transform.rotation = Quaternion.Slerp(_sun.transform.rotation, direction, daylight);
-                _sun.color = Color.Lerp(_sun.color, new Color(1,.955f,.90f), daylight);
-                _sun.intensity = Mathf.Lerp(_sun.intensity, 1.30f, daylight);
-                _bounceFill.intensity *= 1 - .42f * daylight;
+                _sun.color = Color.Lerp(_sun.color, new Color(1,.985f,.947f), daylight);
+                _sun.intensity = Mathf.Lerp(_sun.intensity, 1.76f, daylight);
+                _sun.shadowStrength = Mathf.Lerp(_sun.shadowStrength, .60f, daylight);
+                _skyFill.intensity = Mathf.Lerp(_skyFill.intensity, .75f, daylight);
+                _bounceFill.color = Color.Lerp(_bounceFill.color, new Color(.92f,.96f,1f), daylight);
+                _bounceFill.intensity = Mathf.Lerp(_bounceFill.intensity, .54f, daylight);
             }
             if (raining)
             {
@@ -179,9 +185,9 @@ namespace PCShopSell.Game.Runtime
 
             _bloom.intensity.Override(Mathf.Lerp(a.BloomIntensity, b.BloomIntensity, t));
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));
-            _grade.postExposure.Override(Mathf.Lerp(a.Exposure, b.Exposure, t));
+            _grade.postExposure.Override(Mathf.Lerp(a.Exposure, b.Exposure, t) + .32f * districtDay);
             _grade.saturation.Override(Mathf.Lerp(a.Saturation, b.Saturation, t) + (interior ? 0 : (1-night)*5));
-            _grade.contrast.Override(Mathf.Lerp(a.Contrast, b.Contrast, t));
+            _grade.contrast.Override(Mathf.Lerp(a.Contrast, b.Contrast, t) - 9 * districtDay);
             _vignette.intensity.Override(Mathf.Lerp(a.Vignette, b.Vignette, t));
             _grain.intensity.Override(Mathf.Lerp(a.FilmGrain, b.FilmGrain, t));
 

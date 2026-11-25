@@ -9,7 +9,7 @@ namespace PCShopSell.Game.Runtime
     {
         private static readonly Dictionary<(string, Vector2, Color), Material> Materials = new();
         internal static string Masonry(int district) => district == 1 ? "buffBrick" : district == 2 ? "ivoryPlaster" : "cutStone";
-        internal static string Roof(int district) => district == 2 ? "patina" : "slate";
+        internal static string Roof(int district) => district == 1 ? "slate" : "limestoneWalk";
         internal static Material Tile(string key, Vector2 repeat, Color? color = null)
         {
             Color tint = color ?? Color.white;
@@ -19,8 +19,9 @@ namespace PCShopSell.Game.Runtime
             if (original == null) throw new InvalidOperationException("Missing city surface " + key);
             result = new Material(original) { name = "街区 / " + key };
             result.SetTextureScale("_BaseMap", repeat);
-            if(key=="buffBrick") tint*=new Color(.93f,.85f,.82f);
-            if(key=="slate") tint*=new Color(1.19f,1.07f,.91f);
+            if(key=="buffBrick") tint*=new Color(1.16f,1.23f,1.29f);
+            if(key=="slate") tint*=new Color(1.04f,1.09f,1.16f);
+            if(key=="streetMeadow") tint*=new Color(1.12f,1.47f,1.06f);
             result.SetColor("_BaseColor", tint);
             Materials[id] = result;
             return result;

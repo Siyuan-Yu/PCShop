@@ -36,7 +36,7 @@ Shader "PCShop/LakeWater"
                 half4 _BaseColor;
                 half _LakeShore, _Basin;
             CBUFFER_END
-            float _PCShopWorldVisualTime, _OldTownNightFactor, _CityRain;
+            float _PCShopWorldVisualTime, _OldTownNightFactor, _CityRain, _DistrictDaylight;
             struct Attributes {float4 positionOS:POSITION;float2 uv:TEXCOORD0;float2 shore:TEXCOORD1;};
             struct Varyings {float4 positionCS:SV_POSITION;float3 world:TEXCOORD0;float fog:TEXCOORD1;float shore:TEXCOORD2;float2 uv:TEXCOORD3;};
             Varyings vert(Attributes a)
@@ -142,6 +142,9 @@ Shader "PCShop/LakeWater"
                 Light sun=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));
                 half day=1-_OldTownNightFactor;
                 half3 dusk=lerp(half3(.30,.39,.48),half3(1,.96,.87),day);
+                half clearDay=_DistrictDaylight*(1.-_CityRain*.65);
+                half3 clearWater=water*half3(.62,1.33,1.59)+half3(.012,.078,.125);
+                color=lerp(color,clearWater,clearDay*.86);
                 color*=dusk*lerp(.72,1.,sun.shadowAttenuation)*(1.-_CityRain*.14);
                 color=lerp(color,reflection.rgb*half3(.84,.94,.86),reflection.a*(_Basin>1.5?.25:.65));
                 half glint=smoothstep(.35,.81,a.b)*(.35+.65*b.r);
@@ -159,6 +162,7 @@ Shader "PCShop/LakeWater"
                 half patch=.5+.5*sin(wind.x*.64+2.9*sin(wind.y*.23)+1.7*gust.r);
                 half windBreak=smoothstep(.28,.84,.5+.5*sin(wind.y*.42+gust.r*3.9));
                 half lightPatch=pow(patch,5)*(.20+.80*windBreak);
+                color+=clearDay*(.016*glint+.033*brokenLight+.024*silver)*half3(.70,1.,1.15);
                 color+=sun.color*(.004*glint+.013*brokenLight+.12*spec)*sun.shadowAttenuation;
                 color+=day*sun.shadowAttenuation*(scatter*(half3(.016,.023,.023)+lightPatch*half3(.38,.28,.155))
                     +_LakeShore*silver*half3(.032,.027,.017));
