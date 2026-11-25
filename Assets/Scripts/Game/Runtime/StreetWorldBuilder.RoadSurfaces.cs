@@ -140,6 +140,8 @@ namespace PCShopSell.Game.Runtime
             segments=segments.OrderByDescending(s=>s.Raised).ThenByDescending(s=>(s.B-s.A).sqrMagnitude).ToList();
             var roadIndex = _streetRoadEnvelopes = new RoadSurfaceGeometry.Index();
             var pavingIndex = new RoadSurfaceGeometry.Index();
+            var townRoads = new SurfaceMesh();
+            var townWalks = new SurfaceMesh();
             var quarterRoads = new SurfaceMesh();
             var quarterPaving = new SurfaceMesh();
             var quarterEdges = new SurfaceMesh();
@@ -190,12 +192,12 @@ namespace PCShopSell.Game.Runtime
                     deadline = Time.realtimeSinceStartup + .008f;
                 }
                 var p=RoadSurfaceGeometry.Road(s.A,s.B,s.Width);
-                s.AddSurface(InPaintedQuarter((s.A+s.B)*.5f,55f) ? quarterRoads : roads, roadIndex.Cut(new List<Vector2[]>{p},p));roadIndex.Add(p);
+                s.AddSurface(InPaintedQuarter((s.A+s.B)*.5f,55f) ? quarterRoads : OuterDistrictWeight((s.A+s.B)*.5f) > .5f ? townRoads : roads, roadIndex.Cut(new List<Vector2[]>{p},p));roadIndex.Add(p);
             }
             void Pavement(Vector2[] p, StreetSegment street)
             {
                 var parts=roadIndex.Cut(new List<Vector2[]>{p},p);parts=pavingIndex.Cut(parts,p);
-                street.AddSurface(InPaintedQuarter((street.A+street.B)*.5f,55f) ? quarterPaving : paving, parts, alignToStreet:true);pavingIndex.Add(p);
+                street.AddSurface(InPaintedQuarter((street.A+street.B)*.5f,55f) ? quarterPaving : OuterDistrictWeight((street.A+street.B)*.5f) > .5f ? townWalks : paving, parts, alignToStreet:true);pavingIndex.Add(p);
             }
             foreach (var s in segments)
             {
@@ -332,6 +334,8 @@ namespace PCShopSell.Game.Runtime
                 quarterEdges.Build(root,"Old quarter road edges",QuarterMaterial("Edge"),resources,castsShadows:false);
                 quarterDashes.Build(root,"Old quarter lane paint",QuarterMaterial("Dash"),resources,castsShadows:false);
             }
+            townRoads.Build(root,"Town asphalt",OldTownSurfaces.PanelMaterial("streetAsphalt"),resources);
+            townWalks.Build(root,"Town flagstones",OldTownSurfaces.PanelMaterial("graniteWalk"),resources);
             roads.Build(root,"RoadSurface",IndustrialMaterials.Surface("asphalt",Asphalt,Vector2.one),resources);
             paving.Build(root,"PavementSurface",IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(1.25f,1.25f)),resources);
             white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Cream),resources);

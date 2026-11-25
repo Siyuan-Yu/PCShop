@@ -19,24 +19,27 @@ namespace PCShopSell.Game.Runtime
         {
             Track=track;transform.position=new Vector3((float)track.X,.65f,(float)track.Y);
             var scenery=new GameObject("CircuitScenery").transform;scenery.SetParent(transform,false);
-            Prims.Box(scenery,"IslandBank",Vector3.down*.4f,new Vector3((float)track.Width+10,.7f,(float)track.Depth+10),Mats.Lit(ArtDirection.Hex("B9AD8B")));
-            Prims.Box(scenery,"Infield",Vector3.zero,new Vector3((float)track.Width,.15f,(float)track.Depth),
-                districtLawn ?? IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2((float)track.Width/20,(float)track.Depth/20)));
+            bool starter = track.Tier == 0;
             var resources=gameObject.AddComponent<CityLandscapeResources>();
+            BuildIslandShore(scenery,resources,districtLawn);
+
             Ribbon(scenery,(float)track.HalfRoad+1.3f,.14f,Mats.Lit(ArtDirection.Cream),resources);
-            Ribbon(scenery,(float)track.HalfRoad,.18f,Mats.Lit(ArtDirection.Hex("39434A")),resources);
+            Ribbon(scenery,(float)track.HalfRoad,.18f,OldTownSurfaces.PanelMaterial("streetAsphalt"),resources);
             BuildBarriers(scenery, resources);
             BuildStartingGantry(scenery);
-            bool starter = track.Tier == 0;
             var stand = starter ? new Vector3(-35, 0, -19) : new Vector3(-10, 0, 0);
             var pit = starter ? new Vector3(-11.5f, 0, -14) : new Vector3(15, 0, 8);
             for (int i = 0; i < 4; i++)
                 Prims.Box(scenery, "Grandstand", stand + new Vector3(0, .6f + i * .6f, i * 2),
                     new Vector3(24, .7f, 2), Mats.Lit(i % 2 == 0 ? ArtDirection.Wood : ArtDirection.Cream));
-            Prims.Box(scenery, "PitOffice", pit + Vector3.up * 2.2f, new Vector3(12, 4.3f, 6), Mats.Lit(ArtDirection.Cream));
-            Prims.Box(scenery, "PitRoof", pit + Vector3.up * 4.5f, new Vector3(14, .5f, 8), Mats.Lit(ArtDirection.Blue));
+            Prims.Box(scenery, "PitOffice", pit + Vector3.up * 2.2f, new Vector3(12, 4.3f, 6), DistrictFinishes.Tile(Track.Tier==1?"buffBrick":"ivoryPlaster",new Vector2(2,1)));
+            Prims.Box(scenery, "PitRoof", pit + Vector3.up * 4.5f, new Vector3(14, .5f, 8), CircuitRoof());
             BuildCircuitGarden(scenery,stand,pit);
             if (starter) BuildStarterLandmarks(scenery, resources);
+
+            QuarterModules.Add(scenery,"TinCanopy",pit+new Vector3(0,3.05f,-3.06f),new Vector3(1.38f,1,1));
+            QuarterModules.Add(scenery,"Condenser",pit+new Vector3(-3.5f,4.76f,.75f),Vector3.one*1.24f);
+            QuarterModules.Add(scenery,"CargoPallet",pit+new Vector3(4.74f,.09f,2.20f),Vector3.one);
             if (track.Kerbs.Length > 0) BuildKerbs(scenery, resources);
             for(int i=0;i<4;i++){Prims.Box(scenery,"FloodlightPole",new Vector3((i%2==0?-1:1)*(float)track.Width*.43f,4,(i<2?-1:1)*(float)track.Depth*.43f),new Vector3(.3f,8,.3f),Mats.Lit(ArtDirection.Ink));}
             if(combineScenery)StaticBatchingUtility.Combine(scenery.gameObject);
@@ -50,6 +53,73 @@ namespace PCShopSell.Game.Runtime
             for(int i=0;i<_startLamps.Length;i++)_startLamps[i]=signals.Find("StartSignal"+(i+1)).GetComponent<Renderer>();
         }
         private Vector3 Point(int i){var p=Track.Points[i%Track.Points.Length];return new Vector3((float)p.X,0,(float)p.Y);}
+
+        private void BuildIslandShore(Transform scenery,CityLandscapeResources owner,Material districtLawn)
+        {
+            float x=(float)Track.Width*.5f,z=(float)Track.Depth*.5f;
+            // Round the island itself. The independent driving ribbon and its runoff use the race points.
+            var rim=new List<Vector3>();
+            int samples=Mathf.CeilToInt(4*(x+z)/3.4f);
+            for(int i=0;i<samples;i++)
+            {
+                float a=2*Mathf.PI*i/samples;
+                var direction=new Vector3(Mathf.Cos(a),0,Mathf.Sin(a));
+                float radial=1/Mathf.Pow(Mathf.Pow(Mathf.Abs(direction.x)/x,4)+Mathf.Pow(Mathf.Abs(direction.z)/z,4),.25f);
+                var point=direction*radial;
+                float variation=Mathf.PerlinNoise(point.x*.040f+31,point.z*.040f+17);
+                rim.Add(point+direction*(variation-.5f)*5.8f);
+            }
+            var turfVertices=new List<Vector3>{ Vector3.up*.075f };
+            var turfTriangles=new List<int>();
+            for(int i=0;i<samples;i++)
+            {
+                turfVertices.Add(rim[i]+Vector3.up*.075f);
+                turfTriangles.Add(0);turfTriangles.Add(1+(i+1)%samples);turfTriangles.Add(1+i);
+            }
+            var turfMesh=new Mesh{name="赛道岛草地"};
+            turfMesh.SetVertices(turfVertices);turfMesh.SetTriangles(turfTriangles,0);turfMesh.RecalculateNormals();turfMesh.RecalculateBounds();
+            owner.Owned.Add(turfMesh);
+            var turf=new GameObject("Infield",typeof(MeshFilter),typeof(MeshRenderer));
+            turf.transform.SetParent(scenery,false);turf.GetComponent<MeshFilter>().sharedMesh=turfMesh;
+            turf.GetComponent<MeshRenderer>().sharedMaterial=districtLawn ?? DistrictFinishes.Meadow();
+            var vertices=new List<Vector3>();var indices=new List<int>();var uv=new List<Vector2>();
+            var plants=new StreetPlanting();var door=transform.parent==null?Vector3.zero:scenery.InverseTransformPoint(transform.parent.position);
+            var access=new Vector3(Mathf.Clamp(door.x,-x,x),0,Mathf.Clamp(door.z,-z,z));
+            for(int i=0;i<rim.Count;i++)
+            {
+                var at=rim[i];var across=Vector3.Cross(Vector3.up,(rim[(i+1)%rim.Count]-rim[(i+rim.Count-1)%rim.Count]).normalized);
+                if(Vector3.Dot(at,across)<0)across=-across;
+                float irregular=Mathf.PerlinNoise(at.x*.11f+17,at.z*.11f+23);
+                var shelf=at+across*(1.8f+irregular*2.7f);
+                var wet=at+across*(4.1f+irregular*4.5f);
+                foreach(var pt in new[]{at+Vector3.up*.075f,shelf+Vector3.down*.14f,wet+Vector3.down*.65f})
+                {vertices.Add(pt);uv.Add(new Vector2(pt.x,pt.z)*.27f);}
+                int a=i*3,b=((i+1)%rim.Count)*3;
+                indices.AddRange(new[]{a,b+1,b,a,a+1,b+1,a+1,b+2,b+1,a+1,a+2,b+2});
+                if(Vector3.Distance(access,at)<13)continue;
+                plants.Add(i%4==0?PlantSpecies.Broadleaf:PlantSpecies.Reeds,
+                    Vector3.Lerp(shelf,wet,.46f)+Vector3.down*.27f,3.6f,1.28f+irregular*.65f,i+Track.Tier*19);
+                if(i%7==1)plants.Add(PlantSpecies.GoldenBush,shelf+Vector3.down*.17f,2.74f,1.46f,i);
+                if(i%3==1 && irregular>.24f)PaintedWoodland.Plant(scenery,shelf+Vector3.down*.14f,6+i%4,i%9==1?1:0,i);
+            }
+            // Keep the sloped shelf visible from above on every section of the irregular bank.
+            for(int i=0;i<indices.Count;i+=3)
+            {
+                var a=vertices[indices[i]];var b=vertices[indices[i+1]];var c=vertices[indices[i+2]];
+                if(Vector3.Cross(b-a,c-a).y<0)(indices[i+1],indices[i+2])=(indices[i+2],indices[i+1]);
+            }
+            var mesh=new Mesh{name="赛道护岸"};mesh.SetVertices(vertices);mesh.SetUVs(0,uv);mesh.SetTriangles(indices,0);mesh.RecalculateNormals();owner.Owned.Add(mesh);
+            var bank=new GameObject("Natural circuit bank",typeof(MeshFilter),typeof(MeshRenderer));
+            bank.transform.SetParent(scenery,false);bank.GetComponent<MeshFilter>().sharedMesh=mesh;
+            bank.GetComponent<MeshRenderer>().sharedMaterial=DistrictFinishes.Tile("cultivatedSoil",Vector2.one);
+            plants.Build(scenery,"赛道沿岸植被");
+        }
+
+        private Material CircuitRoof()
+        {
+            string tint = Track.Tier switch { 0 => "8393A0", 1 => "83998B", 2 => "94A7A1", _ => "D4D2BA" };
+            return IndustrialMaterials.Surface("metal",ArtDirection.Hex(tint),new Vector2(4,2));
+        }
 
         private void BuildCircuitGarden(Transform scenery,Vector3 stand,Vector3 pit)
         {
@@ -67,9 +137,24 @@ namespace PCShopSell.Game.Runtime
                 details.Box(stand+new Vector3(side*12,3,3),new Vector3(.18f,6,.18f),metal);
                 details.FlowerBed(pit+new Vector3(side*4.3f,.12f,-3.7f),2.5f,.8f,side+9);
             }
-            details.Box(stand+new Vector3(0,6.2f,3),new Vector3(26,.25f,9),Mats.Lit(ArtDirection.Hex("597587")));
+            var roof = CircuitRoof();
+            details.Box(stand+new Vector3(0,6.2f,3),new Vector3(26,.25f,9),roof);
+            for (int i=-12;i<=12;i++)
+                details.Box(stand+new Vector3(i,6.36f,3),new Vector3(.056f,.075f,8.95f),metal);
+            for(int i=-2;i<=2;i++)
+            {
+                float x=i*5.75f;
+                details.Box(stand+new Vector3(x,3.2f,6),new Vector3(.16f,6.3f,.16f),metal);
+                details.Box(stand+new Vector3(x,3.1f,-.75f),new Vector3(.14f,6.05f,.14f),metal);
+                details.Box(stand+new Vector3(x,5.94f,2.7f),new Vector3(.13f,.22f,8.9f),timber);
+            }
+            details.Box(stand+new Vector3(0,2.9f,6.58f),new Vector3(24.2f,.9f,.15f),
+                DistrictFinishes.Tile(Track.Tier==1?"buffBrick":"walnut",new Vector2(6,1)));
+            for(int i=-5;i<=5;i++)
+                details.Box(pit+new Vector3(i,4.81f,0),new Vector3(.055f,.09f,7.9f),metal);
             details.Window(pit+new Vector3(-3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
             details.Window(pit+new Vector3(3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
+            var border = new StreetPlanting();
             // Only decorate clear infield: the driving ribbon and runoff stay empty.
             for(float x=-(float)Track.Width*.33f;x<(float)Track.Width*.34f;x+=13)
             for(float z=-(float)Track.Depth*.30f;z<(float)Track.Depth*.31f;z+=13)
@@ -85,9 +170,11 @@ namespace PCShopSell.Game.Runtime
                 }
                 if(clearance<(float)Track.HalfRoad+7)continue;
                 int seed=Mathf.RoundToInt(x*7+z*13);
-                CityVegetation.Build(scenery,at,seed);
+                PaintedWoodland.Plant(scenery,at,5+Mathf.Abs(seed%3),seed%3==0?3:0,seed);
+                border.Add(PlantSpecies.Spirea, at + Vector3.left * 2, 1.6f, .85f, seed);
                 details.FlowerBed(at+Vector3.forward*1.5f,2.8f,1.3f,seed,false);
             }
+            border.Build(scenery,"看台草地与花境");
             details.Build(scenery,"Circuit seating, windows and gardens");
         }
 
@@ -381,7 +468,10 @@ namespace PCShopSell.Game.Runtime
         {
             int n=Track.Points.Length;var v=new Vector3[n*2];var tri=new int[n*6];
             for(int i=0;i<n;i++){var normal=RoadNormal(i);var at=Point(i)+Vector3.up*height;v[i*2]=at-normal*half;v[i*2+1]=at+normal*half;int j=(i+1)%n;int k=i*6;tri[k]=i*2;tri[k+1]=j*2;tri[k+2]=i*2+1;tri[k+3]=i*2+1;tri[k+4]=j*2;tri[k+5]=j*2+1;}
-            var mesh=new Mesh{name="RaceRoad"};mesh.vertices=v;mesh.triangles=tri;mesh.RecalculateNormals();mesh.RecalculateBounds();resources.Owned.Add(mesh);
+            var mesh=new Mesh{name="RaceRoad"};mesh.vertices=v;mesh.triangles=tri;
+            var uv=new Vector2[v.Length];
+            for(int i=0;i<v.Length;i++) uv[i]=new Vector2(v[i].x,v[i].z)/4;
+            mesh.uv=uv;mesh.RecalculateNormals();mesh.RecalculateBounds();resources.Owned.Add(mesh);
             var go=new GameObject("RoadRibbon",typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(parent,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=mat;
         }
         public void Begin(RaceSimulation race)

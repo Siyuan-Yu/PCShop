@@ -118,7 +118,7 @@ namespace PCShopSell.Game.Runtime
         private static void FishingPark(Transform root, float width, float depth)
         {
             Prims.Box(root,"FishingPondBank",new Vector3(width*.14f,.12f,depth*.63f),new Vector3(width*.63f,.18f,depth*.61f),Mats.Lit(ArtDirection.Cream));
-            Prims.Box(root,"FishingPondWater",new Vector3(width*.14f,.225f,depth*.63f),new Vector3(width*.58f,.025f,depth*.55f),IndustrialMaterials.GardenWater());
+            Prims.Box(root,"FishingPondWater",new Vector3(width*.14f,.225f,depth*.63f),new Vector3(width*.58f,.025f,depth*.55f),IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.FishingPond));
             Prims.Box(root,"ParkWalkingTrail",new Vector3(-width*.36f,.12f,depth*.5f),new Vector3(2,.12f,depth*.88f),IndustrialMaterials.Surface("paving",ArtDirection.Cream,new Vector2(.5f,depth/4)));
             Prims.Box(root,"FishingReception",new Vector3(-width*.32f,.6f,depth*.3f),new Vector3(2,1.2f,1.2f),Mats.Lit(ArtDirection.Wood));
             Prims.SignText(root,"青湾垂钓场 · 租杆 / 鱼获回收",new Vector3(-width*.29f,2,depth*.28f),width*.38f,.48f,ArtDirection.Cream);
@@ -135,8 +135,21 @@ namespace PCShopSell.Game.Runtime
             var garden=new MiniatureDetailMesh();
             for(int i=0;i<5;i++)
                 garden.FlowerBed(new Vector3(-width*.12f+i*width*.13f,.10f,depth*.96f),width*.11f,.65f,i,false);
+            var reflections = new LakesideReflections(root,.2375f);
             foreach(float z in new[]{depth*.12f,depth*.69f,depth*.91f})
-                CityVegetation.Build(root,new Vector3(-width*.46f,.10f,z),(int)z);
+                reflections.Add(PaintedWoodland.Plant(root,new Vector3(-width*.46f,.10f,z),6,0,(int)z));
+            var margin = new StreetPlanting();
+            float right = width*.43f, back = depth*.905f;
+            for (int i=0;i<12;i++)
+            {
+                float t=(i+.5f)/12;
+                var bank=new Vector3(Mathf.Lerp(-width*.14f,right,t),.235f,back-.18f);
+                margin.Add(i%4==0?PlantSpecies.Cattail:PlantSpecies.Reeds,bank,.48f,.43f+(i%3)*.17f,i+32);
+                var stone=bank+new Vector3(.13f,-.034f,-.20f-i%2*.19f);
+                garden.Lobe(stone,new Vector3(.26f,.073f,.16f),Mats.Lit(ArtDirection.Hex("848777")),i);
+            }
+            reflections.Add(PaintedWoodland.Plant(root,new Vector3(right+.46f,.11f,back+.50f),6,0,89));
+            margin.Build(root,"钓池岸边的蒲草");reflections.Build();
             var wood=IndustrialMaterials.Surface("wood",ArtDirection.Hex("A78052"),Vector2.one);
             var shelter=new Vector3(-width*.29f,0,depth*.28f);
             foreach(int side in new[]{-1,1})garden.Box(shelter+new Vector3(side*1.4f,1.6f,.9f),new Vector3(.14f,3.2f,.14f),wood);

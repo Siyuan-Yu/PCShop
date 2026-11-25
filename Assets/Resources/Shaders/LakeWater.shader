@@ -118,9 +118,9 @@ Shader "PCShop/LakeWater"
                     float2 local=abs(i.uv*2.-1.);
                     half edge=_Basin>1.5?max(local.x,local.y):length(local);
                     half shelf=smoothstep(.61,1.,edge+.05*(gust.r-.5));
-                    half3 bottom=_Basin>1.5?half3(.16,.37,.33):half3(.22,.25,.13);
+                    half3 bottom=(_Basin>1.5 && _Basin<2.5)?half3(.16,.37,.33):half3(.22,.25,.13);
                     water=lerp(water,bottom*(.75+.45*b.g),shelf*.67);
-                    if(_Basin>1.5)
+                    if(_Basin>1.5 && _Basin<2.5)
                     {
                         float2 tile=abs(frac(p*1.75)-.5);
                         half joint=smoothstep(.455,.497,max(tile.x,tile.y));

@@ -27,6 +27,7 @@ namespace PCShopSell.Game.Runtime
         private readonly ColorAdjustments _grade;
         private readonly Vignette _vignette;
         private readonly FilmGrain _grain;
+        private float _lastTownWeight = -1;
         private float _lastQuarterWeight = -1;
         private float _lastMinute = -1;
         private bool _lastInterior, _lastRain;
@@ -113,7 +114,7 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <param name="interior">在店里时用暖色室内光。</param>
-        public void Apply(float minuteOfDay, bool interior, bool raining = false, float quarterWeight = 0f, float quarterYaw = 0f, Vector3 quarterCenter = default)
+        public void Apply(float minuteOfDay, bool interior, bool raining = false, float quarterWeight = 0f, float quarterYaw = 0f, Vector3 quarterCenter = default, float townWeight = 0)
         {
             float night = NightFactor(minuteOfDay);
             Shader.SetGlobalFloat("_OldTownNightFactor", night);
@@ -123,10 +124,11 @@ namespace PCShopSell.Game.Runtime
             _volume.weight = _baseVolumeWeight * (1f - ungradedDaylight);
             _cameraData.renderPostProcessing = _usesPostProcessing && ungradedDaylight < .999f;
             if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && interior == _lastInterior
-                && Mathf.Abs(quarterWeight - _lastQuarterWeight) < .012f && raining == _lastRain
+                && Mathf.Abs(townWeight - _lastTownWeight) < .012f && Mathf.Abs(quarterWeight - _lastQuarterWeight) < .012f && raining == _lastRain
                 && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
             _lastMinute = minuteOfDay;
             _lastQuarterWeight = quarterWeight;
+            _lastTownWeight = townWeight;
             _lastInterior = interior;
             _lastRain = raining;
             _lastGlowCount = Mats.NightGlow.Count;
@@ -159,6 +161,15 @@ namespace PCShopSell.Game.Runtime
             _sun.shadowStrength = interior ? .55f : Mathf.Lerp(.74f,.64f,night);
             _skyFill.color=new Color(.76f,.86f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.42f,.26f,night);
             _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.35f,.12f,night);
+            if (!interior && townWeight > 0)
+            {
+                float daylight = townWeight * (1 - night);
+                var direction = Quaternion.Euler(0,158,0) * Quaternion.LookRotation(new Vector3(-1.20f,-.92f,.54f));
+                _sun.transform.rotation = Quaternion.Slerp(_sun.transform.rotation, direction, daylight);
+                _sun.color = Color.Lerp(_sun.color, new Color(1,.955f,.90f), daylight);
+                _sun.intensity = Mathf.Lerp(_sun.intensity, 1.30f, daylight);
+                _bounceFill.intensity *= 1 - .42f * daylight;
+            }
             if (raining)
             {
                 _sun.intensity *= .55f;

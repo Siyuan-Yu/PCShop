@@ -763,7 +763,8 @@ namespace PCShopSell.Game
                 paintedDaylight = Mathf.SmoothStep(1,0,Mathf.InverseLerp(28,52,distance));
                 heading = oldHome.Root.transform.eulerAngles.y;
             }
-            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining, paintedDaylight, heading, quarterCenter);
+            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining, paintedDaylight, heading, quarterCenter,
+                !room && City.IsLakeCity ? World.OuterDistrictWeight(new Vector2((float)Session.PlayerPosition.X,(float)Session.PlayerPosition.Y)) : 0);
         }
 
         private bool _overview;

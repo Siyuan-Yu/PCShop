@@ -11,7 +11,7 @@ namespace PCShopSell.Game.Runtime
         private static Material _lamplitGlass;
         private static readonly Dictionary<string,Texture2D> Normals=new Dictionary<string,Texture2D>();
 
-        internal enum WaterBasin { Still, Pond, Pool }
+        internal enum WaterBasin { Still, Pond, Pool, FishingPond }
         private static readonly Dictionary<WaterBasin,Material> Waters=new();
         internal static Material GardenWater(WaterBasin basin=WaterBasin.Still)
         {
@@ -23,7 +23,7 @@ namespace PCShopSell.Game.Runtime
             {
                 material.SetFloat("_Basin",(float)basin);
                 if(basin==WaterBasin.Pool)material.SetTexture("_PoolLight",Resources.Load<Texture2D>("OldTown/Surfaces/poolLight"));
-                material.SetFloat("_ReflectMask",basin==WaterBasin.Pond?1:0);
+                material.SetFloat("_ReflectMask",basin==WaterBasin.Pond || basin==WaterBasin.FishingPond ? 1 : 0);
                 material.SetTexture("_WaterMarks",Resources.Load<Texture2D>("OldTown/Surfaces/windRipples"));
                 material.SetTexture("_WindField",Resources.Load<Texture2D>("OldTown/Surfaces/meadowVariation"));
             }

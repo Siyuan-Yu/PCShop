@@ -8,7 +8,7 @@ namespace PCShopSell.Game.Runtime
         private const float WalkupHeight = 10.06f;
         private readonly System.Collections.Generic.List<Vector3> _quarterTrees = new System.Collections.Generic.List<Vector3>();
         private Rect? _quarterBounds;
-        private Rect _mainlandLawn;
+        private Rect _mainlandLawn, _starterCircuit;
         private Vector2 _quarterAlong, _quarterAcross, _quarterOrigin;
 
         private Vector2 LawnCoordinates(Vector2 world)
@@ -43,6 +43,9 @@ namespace PCShopSell.Game.Runtime
                 max = Vector2.Max(max,point);
             }
             _quarterBounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+            var circuit = PCShopSell.Core.Session.RaceTracks.Get("race_0", _city);
+            _starterCircuit = new Rect((float)(circuit.X-circuit.Width/2),(float)(circuit.Y-circuit.Depth/2),
+                (float)circuit.Width,(float)circuit.Depth);
             _mainlandLawn = Rect.MinMaxRect(mainlandMin.x, mainlandMin.y, mainlandMax.x, mainlandMax.y);
         }
 
@@ -51,6 +54,18 @@ namespace PCShopSell.Game.Runtime
             if (!HasStarterArt) return false;
             if (!_quarterBounds.HasValue) FindResidentialBounds();
             return _mainlandLawn.Contains(LawnCoordinates(new Vector2(world.x, world.z)));
+        }
+
+        internal float OuterDistrictWeight(Vector2 world)
+        {
+            if (!HasStarterArt) return 0;
+            if (!_quarterBounds.HasValue) FindResidentialBounds();
+            var point = LawnCoordinates(world);
+            var closest = Vector2.Max(_mainlandLawn.min, Vector2.Min(_mainlandLawn.max, point));
+            float distance = Vector2.Distance(point, closest);
+            var island = Vector2.Max(_starterCircuit.min, Vector2.Min(_starterCircuit.max, world));
+            distance = Mathf.Min(distance, Vector2.Distance(world, island));
+            return Mathf.SmoothStep(0, 1, Mathf.InverseLerp(65, 160, distance));
         }
 
         private Vector2 DoorXZ(Place place)
