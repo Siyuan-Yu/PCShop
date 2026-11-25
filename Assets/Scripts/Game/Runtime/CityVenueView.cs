@@ -50,11 +50,12 @@ namespace PCShopSell.Game.Runtime
             }
             else Prims.Box(root, "BackBoundary", new Vector3(0, 1.5f, depth), new Vector3(width, 3, .2f), Mats.Lit(ArtDirection.Ink));
             float gateWidth = walkingPark ? Mathf.Min(width - .4f, 10.8f) : width - .4f;
-            Color fascia = walkingPark ? ArtDirection.Hex("945B3C") : ArtDirection.Sage;
-            var support = Mats.Lit(walkingPark ? ArtDirection.Hex("79533A") : ArtDirection.Brass);
+            bool civicPark = kind=="park" && width>=30;
+            Color fascia = civicPark ? ArtDirection.Hex("E5EAE5") : walkingPark ? ArtDirection.Hex("945B3C") : ArtDirection.Sage;
+            var support = Mats.Lit(civicPark ? ArtDirection.Hex("B8C5BF") : walkingPark ? ArtDirection.Hex("79533A") : ArtDirection.Brass);
             float postSize = walkingPark ? .32f : .18f;
             Prims.Box(root, "EntranceFascia", new Vector3(0, 3.5f, -.1f), new Vector3(gateWidth, .9f, .24f), Mats.Lit(fascia));
-            Prims.SignText(root, p.Name, new Vector3(0, 3.5f, -.25f), gateWidth - .4f, .65f, ArtDirection.Cream);
+            Prims.SignText(root, p.Name, new Vector3(0, 3.5f, -.25f), gateWidth - .4f, .65f, civicPark ? ArtDirection.Hex("456661") : ArtDirection.Cream);
             Prims.Box(root, "SignSupportLeft", new Vector3(-gateWidth / 2 + .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
             Prims.Box(root, "SignSupportRight", new Vector3(gateWidth / 2 - .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
             switch (kind)
@@ -137,7 +138,7 @@ namespace PCShopSell.Game.Runtime
                 garden.FlowerBed(new Vector3(-width*.12f+i*width*.13f,.10f,depth*.96f),width*.11f,.65f,i,false);
             var reflections = new LakesideReflections(root,.2375f);
             foreach(float z in new[]{depth*.12f,depth*.69f,depth*.91f})
-                reflections.Add(PaintedWoodland.Plant(root,new Vector3(-width*.46f,.10f,z),6,0,(int)z));
+                reflections.Add(PaintedWoodland.Plant(root,new Vector3(-width*.46f,.10f,z),6,0,(int)z,false));
             var margin = new StreetPlanting();
             float right = width*.43f, back = depth*.905f;
             for (int i=0;i<12;i++)
@@ -148,7 +149,7 @@ namespace PCShopSell.Game.Runtime
                 var stone=bank+new Vector3(.13f,-.034f,-.20f-i%2*.19f);
                 garden.Lobe(stone,new Vector3(.26f,.073f,.16f),Mats.Lit(ArtDirection.Hex("848777")),i);
             }
-            reflections.Add(PaintedWoodland.Plant(root,new Vector3(right+.46f,.11f,back+.50f),6,0,89));
+            reflections.Add(PaintedWoodland.Plant(root,new Vector3(right+.46f,.11f,back+.50f),6,0,89,false));
             margin.Build(root,"钓池岸边的蒲草");reflections.Build();
             var wood=IndustrialMaterials.Surface("wood",ArtDirection.Hex("A78052"),Vector2.one);
             var shelter=new Vector3(-width*.29f,0,depth*.28f);
@@ -362,7 +363,20 @@ namespace PCShopSell.Game.Runtime
                 var stone=DistrictFinishes.Tile("cutStone",new Vector2(width/4,depth/4));
                 var center=new Vector3(0,.29f,depth*.55f);
                 var radius=new Vector2(width*.336f,depth*.306f);
-                PondWalk(root,center,radius,1.28f,DistrictFinishes.Tile("limestoneWalk",Vector2.one,ArtDirection.Hex("DFDDC6")));
+                PondWalk(root,center,radius,1.55f,DistrictFinishes.Tile("limestoneWalk",Vector2.one,new Color(1.19f,1.23f,1.26f)));
+                var edging=new MiniatureDetailMesh();
+                var coping=Mats.Lit(ArtDirection.Hex("DFE4D9"));
+                var joint=Mats.Lit(ArtDirection.Hex("ABB9AF"));
+                Vector3 Rim(float angle) => center+new Vector3(Mathf.Cos(angle)*radius.x,.045f,Mathf.Sin(angle)*radius.y);
+                for(int i=0;i<80;i++)
+                {
+                    Vector3 a=Rim(i*2*Mathf.PI/80), b=Rim((i+1)*2*Mathf.PI/80);
+                    var direction=b-a;
+                    var orientation=Quaternion.LookRotation(direction,Vector3.up);
+                    edging.Box((a+b)*.5f,new Vector3(.26f,.19f,direction.magnitude+.02f),coping,orientation);
+                    edging.Box(a+Vector3.up*.099f,new Vector3(.24f,.011f,.022f),joint,orientation);
+                }
+                edging.Build(root,"分段浅石驳岸");
                 // A horizontal disk just below the inner paving edge, open underneath to avoid depth fighting.
                 Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.196f,center.z),
                     new Vector3(2*radius.x+.13f,.045f,2*radius.y+.13f),IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.Pond));
@@ -397,7 +411,7 @@ namespace PCShopSell.Game.Runtime
                     {
                         bool willow=i==6;
                         var foot=willow?bank+new Vector3(-.6f,0,.6f):bank;
-                        var canopy=PaintedWoodland.Plant(root,foot,willow?9:i==3?7:5+i%3,willow?1:0,i+21);
+                        var canopy=PaintedWoodland.Plant(root,foot,willow?10:i==3?7:6+i%3,willow?1:0,i+21);
                         reflections.Add(canopy);
                     }
                     for(int j=-1;j<=1;j++)
@@ -413,6 +427,19 @@ namespace PCShopSell.Game.Runtime
                             var reed=new Vector3(Mathf.Cos(a)*(radius.x-.35f),.18f,center.z+Mathf.Sin(a)*(radius.y-.35f));
                             planting.Add(PlantSpecies.Cattail,reed,.77f,1.06f+.16f*(j%2),i*8+j);
                         }
+                }
+                // Repeat flower beds along the outer arc. The stone circuit and both entries remain clear.
+                for(int i=0;i<74;i++)
+                {
+                    float angle=(i+.32f)*2*Mathf.PI/74;
+                    float ca=Mathf.Cos(angle), sa=Mathf.Sin(angle);
+                    if(Mathf.Abs(sa)<.16f || Mathf.Abs(ca)<.17f)continue;
+                    var normal=new Vector3(ca/radius.x,0,sa/radius.y).normalized;
+                    var bank=new Vector3(ca*radius.x,.12f,center.z+sa*radius.y);
+                    var foot=bank+normal*(2.5f+.42f*Mathf.Sin(angle*4));
+                    if(foot.z>depth*.91f || foot.z<depth*.12f)continue;
+                    planting.Add(i%9<5?PlantSpecies.Spirea:PlantSpecies.Hydrangea,foot,1.9f,1.05f,i);
+                    planting.Add(i%5==0?PlantSpecies.Boxwood:PlantSpecies.Broadleaf,foot+normal*.9f,1.85f,.83f,i+12);
                 }
                 planting.Build(root,"池畔花丛与浅水芦苇");reflections.Build();
                 var pergola=new GameObject("LakesidePergola").transform;pergola.SetParent(root,false);pergola.localPosition=new Vector3(-width*.27f,0,depth*.20f);

@@ -18,7 +18,7 @@ namespace PCShopSell.Game.Runtime
             if(Waters.TryGetValue(basin,out var material) && material!=null)return material;
             var shader=Resources.Load<Shader>("Shaders/LakeWater");
             material=shader!=null?new Material(shader):Mats.Lit(ArtDirection.Hex("4099AF"),.7f);
-            material.SetColor("_BaseColor",ArtDirection.Hex(basin==WaterBasin.Pool?"416F70":basin==WaterBasin.Pond?"344E47":"46655F"));
+            material.SetColor("_BaseColor",ArtDirection.Hex(basin==WaterBasin.Pool?"408D97":basin==WaterBasin.Pond?"387D87":"46655F"));
             if(shader!=null)
             {
                 material.SetFloat("_Basin",(float)basin);
