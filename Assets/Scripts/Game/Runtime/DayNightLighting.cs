@@ -20,11 +20,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Light _skyFill, _bounceFill;
         private readonly List<Light> _lamps;
         private readonly Bloom _bloom;
-        private readonly Tonemapping _tone;
-        private bool _lastQuarter;
         private readonly ColorAdjustments _grade;
-        private readonly ColorLookup _townPalette;
-        private readonly Texture2D _cloudFilter;
         private readonly Vignette _vignette;
         private readonly FilmGrain _grain;
         private float _lastMinute = -1;
@@ -35,9 +31,6 @@ namespace PCShopSell.Game.Runtime
         {
             _cam = cam;
             _sun = sun;
-            RenderSettings.sun=sun;
-            _cloudFilter=Resources.Load<Texture2D>("OldTown/Surfaces/afternoonCloud");
-            sun.GetUniversalAdditionalLightData().lightCookieSize=new Vector2(134,111);
             Light Fill(string name,Vector3 angle)
             {
                 var go=new GameObject(name);go.transform.SetParent(sun.transform.parent,false);
@@ -51,15 +44,13 @@ namespace PCShopSell.Game.Runtime
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
             _bloom = profile.Add<Bloom>(true);
             _bloom.scatter.Override(0.7f);
-            _tone = profile.Add<Tonemapping>(true);
-            _tone.mode.Override(TonemappingMode.ACES);
+            var tone = profile.Add<Tonemapping>(true);
+            tone.mode.Override(TonemappingMode.ACES);
             var split=profile.Add<SplitToning>(true);
             split.shadows.Override(new Color(.44f,.48f,.55f));
             split.highlights.Override(new Color(.54f,.52f,.47f));
             split.balance.Override(-8);
             _grade = profile.Add<ColorAdjustments>(true);
-            _townPalette=profile.Add<ColorLookup>(true);
-            _townPalette.texture.Override(Resources.Load<Texture2D>("OldTown/Surfaces/townAfternoon"));
             _vignette = profile.Add<Vignette>(true);
             _vignette.smoothness.Override(0.5f);
             _grain = profile.Add<FilmGrain>(true);
@@ -113,14 +104,13 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <param name="interior">在店里时用暖色室内光。</param>
-        public void Apply(float minuteOfDay, bool interior, bool raining = false, bool oldQuarter = false)
+        public void Apply(float minuteOfDay, bool interior, bool raining = false)
         {
             if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && interior == _lastInterior
                 && raining == _lastRain
-                && oldQuarter == _lastQuarter && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
+                && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
             _lastMinute = minuteOfDay;
             _lastInterior = interior;
-            _lastQuarter = oldQuarter;
             _lastRain = raining;
             _lastGlowCount = Mats.NightGlow.Count;
             _lastLampCount = _lamps.Count;
@@ -131,13 +121,6 @@ namespace PCShopSell.Game.Runtime
             _cam.backgroundColor = interior ? new Color(0.08f, 0.08f, 0.1f) : Color.Lerp(a.SkyColor, b.SkyColor, t);
             if (raining) _cam.backgroundColor *= new Color(.84f, .9f, .95f, 1);
             Color ambient=interior?new Color(.65f,.65f,.62f):Color.Lerp(a.AmbientColor,b.AmbientColor,t);
-            float daylight = 1 - night;
-            _sun.cookie=oldQuarter && !interior && !raining && daylight>.80f ? _cloudFilter : null;
-            _townPalette.contribution.Override(oldQuarter && !interior ? daylight*(raining?.29f:.42f) : 0);
-            if (oldQuarter) ambient = Color.Lerp(ambient, interior ? new Color(.68f,.65f,.58f) : new Color(.64f,.64f,.56f), daylight);
-            Shader.SetGlobalFloat("_OldTownNightFactor",night);
-            Shader.SetGlobalFloat("_CityRain",raining?1:0);
-            Shader.SetGlobalFloat("_OldTownView",oldQuarter?1:0);
             RenderSettings.ambientLight=ambient;
             RenderSettings.ambientSkyColor=ambient;
             RenderSettings.ambientEquatorColor=ambient*.83f;
@@ -157,18 +140,6 @@ namespace PCShopSell.Game.Runtime
             _sun.shadowStrength = interior ? .55f : Mathf.Lerp(.74f,.64f,night);
             _skyFill.color=new Color(.76f,.86f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.42f,.26f,night);
             _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.35f,.12f,night);
-            if (oldQuarter)
-            {
-                var afternoon = interior ? Quaternion.LookRotation(new Vector3(.72f,-1f,.07f)) :
-                    Quaternion.Euler(0,158,0) * Quaternion.LookRotation(new Vector3(-1.20f,-.92f,.54f));
-                _sun.transform.rotation = Quaternion.Slerp(_sun.transform.rotation, afternoon, daylight);
-                _sun.color = Color.Lerp(_sun.color,interior ? new Color(1,.94f,.84f) : new Color(1,.944f,.87f),daylight);
-                _sun.intensity = Mathf.Lerp(_sun.intensity,interior ? 1.12f : 1.35f,daylight);
-                _sun.shadowStrength = Mathf.Lerp(_sun.shadowStrength,interior ? .64f : .77f,daylight);
-                _skyFill.intensity *= 1-.52f*daylight;
-                _bounceFill.intensity *= 1-.65f*daylight;
-            }
-            _tone.mode.Override(oldQuarter ? TonemappingMode.Neutral : TonemappingMode.ACES);
             if (raining)
             {
                 _sun.intensity *= .55f;
@@ -180,14 +151,14 @@ namespace PCShopSell.Game.Runtime
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));
             _grade.postExposure.Override(Mathf.Lerp(a.Exposure, b.Exposure, t));
             _grade.saturation.Override(Mathf.Lerp(a.Saturation, b.Saturation, t) + (interior ? 0 : (1-night)*5));
-            _grade.contrast.Override(Mathf.Lerp(a.Contrast, b.Contrast, t) + (oldQuarter ? (interior ? -8 : 5)*daylight : 0));
+            _grade.contrast.Override(Mathf.Lerp(a.Contrast, b.Contrast, t));
             _vignette.intensity.Override(Mathf.Lerp(a.Vignette, b.Vignette, t));
             _grain.intensity.Override(Mathf.Lerp(a.FilmGrain, b.FilmGrain, t));
 
             float glow = Mathf.Lerp(0.08f, 1f, night);
-            foreach (var (mat, baseEmission, minimumGlow) in Mats.NightGlow)
+            foreach (var (mat, baseEmission, daylight) in Mats.NightGlow)
             {
-                if (mat != null) mat.SetColor("_EmissionColor", baseEmission * Mathf.Max(glow,minimumGlow));
+                if (mat != null) mat.SetColor("_EmissionColor", baseEmission * Mathf.Max(glow,daylight));
             }
             foreach (Light l in _lamps)
             {

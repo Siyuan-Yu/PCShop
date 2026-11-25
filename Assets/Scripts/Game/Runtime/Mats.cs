@@ -346,8 +346,6 @@ namespace PCShopSell.Game.Runtime
 
             var model = root.AddComponent<PlayerCharacterModel>();
             model.Build(visual, torso, appearance, npc);
-            if (appearance == FigureAppearance.Player) model.AttachPainted("JacketYouth");
-            else if (personId == "landlady") model.AttachPainted("Landlady");
             root.AddComponent<FigureMotion>().Initialize(visual, torso, scale, appearance);
             if (appearance == FigureAppearance.Player)
                 Dress(root, "tee");
@@ -371,7 +369,7 @@ namespace PCShopSell.Game.Runtime
             var outfit = PCShopSell.Core.Session.Outfits.Get(outfitId) ?? PCShopSell.Core.Session.Outfits.Get("tee");
             Color top = ArtDirection.Hex(outfit.Id == "tee" ? "B85E42" : outfit.ColorHex);
             Color trousers = ArtDirection.Hex(outfit.VisualPreset == "formal" ? "303040" : "34394F");
-            figure.GetComponent<PlayerCharacterModel>().Dress(outfit.VisualPreset, top, trousers, outfit.Id == "tee");
+            figure.GetComponent<PlayerCharacterModel>().Dress(outfit.VisualPreset, top, trousers);
         }
 
         /// <summary>扇形网格（视野锥），在 XZ 平面，朝 +Z。</summary>

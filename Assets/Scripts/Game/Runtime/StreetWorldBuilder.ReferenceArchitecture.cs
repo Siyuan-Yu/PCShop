@@ -13,11 +13,11 @@ namespace PCShopSell.Game.Runtime
             float top=ResidenceArtHeight(h,tier,seed),bw=w*.83f,bd=d*.66f,center=d*.62f;
             Color wall=ArtDirection.Hex(seed%3==0?"E2CBA6":seed%3==1?"D7CBB6":"DCC2A6");
             Color trim=ArtDirection.Hex("E8D6B9"),blue=ArtDirection.Hex(tier>1?"527F91":"517791");
-            var masonry=DistrictFinishes.Tile(DistrictFinishes.Masonry(tier),new Vector2(w/4,top/3.4f),Color.Lerp(Color.white,wall,.26f));
+            var masonry=IndustrialMaterials.Surface("concrete",wall,new Vector2(w/5,top/4));
             Prims.Box(root,"ResidenceGarden",new Vector3(0,.035f,d/2),new Vector3(w,.07f,d),
                 IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/10,d/10)));
             Prims.Box(root,"Low-rise residential body",new Vector3(0,top/2,center),new Vector3(bw,top,bd),masonry,true);
-            var detail=new MiniatureDetailMesh();var stone=Mats.Lit(trim);var roof=DistrictFinishes.Tile(DistrictFinishes.Roof(tier),Vector2.one*.27f);
+            var detail=new MiniatureDetailMesh();var stone=Mats.Lit(trim);var roof=Mats.Lit(blue,.24f);
             detail.Box(new Vector3(0,.18f,center),new Vector3(bw+.4f,.36f,bd+.4f),stone);
             detail.Box(new Vector3(0,top+.13f,center),new Vector3(bw+.65f,.26f,bd+.65f),stone);
             detail.Box(new Vector3(0,top+.28f,center),new Vector3(bw-.38f,.10f,bd-.38f),roof);
@@ -45,9 +45,7 @@ namespace PCShopSell.Game.Runtime
                     {
                         float x=(col-(columns-1)*.5f)*spacing;
                         if(floor==0&&face==0&&Mathf.Abs(x)<2)continue;
-                        if ((col+floor+face)%3!=0)
-                            QuarterModules.Add(elevation,"SideWindow",new Vector3(x,y-.79f,-depth/2-.02f),new Vector3(windowW/1.47f,1.37f,.82f));
-                        else facade.Window(new Vector3(x,y,-depth/2-.015f),windowW,1.65f,trim,(seed+col+floor*3+face)%4!=0);
+                        facade.Window(new Vector3(x,y,-depth/2-.015f),windowW,1.65f,trim,(seed+col+floor*3+face)%4!=0);
                         if(floor>0&&(face==0||face==2)&&col%2==(floor+seed)%2)
                             facade.Balcony(new Vector3(x,y-1.0f,-depth/2),windowW+.40f,seed+floor+col);
                     }
@@ -68,9 +66,6 @@ namespace PCShopSell.Game.Runtime
                 // Knee-high garden wall with an open central route to the original door.
                 detail.Box(new Vector3(side*(w*.27f+.5f),.26f,.10f),new Vector3(w*.46f-1,.52f,.22f),stone);
             }
-            QuarterModules.Add(root,"Condenser",new Vector3(bw*.34f,top+.40f,center-bd*.21f),Vector3.one);
-            QuarterModules.Add(root,tier==1?"StripedCanopy":"TinCanopy",new Vector3(0,2.83f,front-.09f),new Vector3(.48f,.8f,.81f));
-            QuarterModules.Add(root,"Bench",new Vector3(-w*.28f,.08f,front*.64f),Vector3.one);
             detail.Build(root,"Residential architecture and front garden");
         }
     }

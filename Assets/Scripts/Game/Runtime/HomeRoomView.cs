@@ -188,17 +188,7 @@ namespace PCShopSell.Game.Runtime
 
             BuildDoor();
 
-            bool oldTown = Room == RoomSpec.Home;
-            if (oldTown)
-            {
-                // The glass owns a changing day/night material. Only dress fixed architecture here.
-                foreach (string part in new[] { "WallBack", "WallRight", "DadoBack", "DadoRight" })
-                {
-                    var wall = _root.Find(part);
-                    if (wall != null) OldTownSurfaces.Apply(wall);
-                }
-            }
-            _furniture = new RoomFurniture(_root, true);
+            _furniture = new RoomFurniture(_root);
             _owner = Prims.Figure(_root, "Owner", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.05f, FigureAppearance.Player);
             ResetOwner();
         }
@@ -671,18 +661,11 @@ namespace PCShopSell.Game.Runtime
                 _root.Find(name).gameObject.SetActive(tier == 0);
             Color floor = tier == 3 ? ArtDirection.Hex("BA9472") : tier == 2 ? ArtDirection.Wood
                 : tier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f);
-            _root.Find("Floor").GetComponent<Renderer>().sharedMaterial = tier == 0
-                ? OldTownSurfaces.Surface("paving", floor, new Vector2(Width*.5f, Depth*.65f))
-                : DistrictFinishes.Tile(tier >= 2 ? "walnut" : "graniteWalk", new Vector2(Width*.32f,Depth*.32f));
-            foreach(string wall in new[]{"WallBack","WallRight"})
-            {
-                var repeat=new Vector2((wall=="WallBack"?Width:Depth)/3,1);
-                _root.Find(wall).GetComponent<Renderer>().sharedMaterial=tier>0 ? DistrictFinishes.Tile("ivoryPlaster",repeat)
-                    : OldTownSurfaces.Surface("plaster",wall=="WallBack"?ArtDirection.Cream:ArtDirection.Cream*.93f,repeat);
-            }
+            _root.Find("Floor").GetComponent<Renderer>().sharedMaterial = IndustrialMaterials.Surface(tier >= 2 ? "wood" : "paving",
+                floor, new Vector2(Width*.5f, Depth*.65f));
             Color trim = tier == 3 ? ArtDirection.Hex("555F55") : tier == 2 ? ArtDirection.Blue : ArtDirection.Sage;
             foreach (string name in new[] { "DadoBack", "DadoRight" })
-                _root.Find(name).GetComponent<Renderer>().sharedMaterial = tier>0 ? DistrictFinishes.Tile(tier==3?"walnut":tier==2?"cutStone":"ivoryPlaster",new Vector2((name=="DadoBack"?Width:Depth)/3,.4f),Color.Lerp(Color.white,trim,.23f)) : Mats.Lit(trim);
+                _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(trim);
         }
 
         // ---------- 上门的师傅 ----------

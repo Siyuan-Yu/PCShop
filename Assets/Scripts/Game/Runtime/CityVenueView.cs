@@ -7,7 +7,7 @@ namespace PCShopSell.Game.Runtime
     /// <summary>Open-front social spaces share a legible entrance and real furniture, without loading parallel scenes.</summary>
     public static class CityVenueView
     {
-        public static void Build(Transform root, Place p, float width, float depth, bool oldQuarter=false)
+        public static void Build(Transform root, Place p, float width, float depth)
         {
             string kind = (p.Business ?? "").Replace("venue_", "");
             if (kind is "ferris" or "amusement")
@@ -29,7 +29,6 @@ namespace PCShopSell.Game.Runtime
                 ? IndustrialMaterials.Surface("paving", ArtDirection.Hex("D3B993"), new Vector2(width / 4, (depth + 6) / 4))
                 : IndustrialMaterials.Surface(lawn ? "meadow" : "paving", lawn ? ArtDirection.Hex("7D9859") : floor,
                     new Vector2(width / 14, depth / 14));
-            if(oldQuarter && lawn && !walkingPark)ground=DistrictFinishes.Meadow();
             var body = Prims.Box(root, "Body", plotCenter, plotSize, ground, true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
             if (walkingPark)
@@ -68,8 +67,8 @@ namespace PCShopSell.Game.Runtime
                     LeisureVenueEntrance.Build(root, p, width, depth);
                     break;
                 case "hike":
-                    if (walkingPark) WalkingPark(root, width, depth,oldQuarter);
-                    else FishingPark(root, width, depth,oldQuarter);
+                    if (walkingPark) WalkingPark(root, width, depth);
+                    else FishingPark(root, width, depth);
                     break;
                 default: Park(root, width, depth, p.Id == GameSession.CommunityParkId); break;
             }
@@ -112,7 +111,7 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root, "OldMarketWorkbench", new Vector3(0, .65f, depth - 1.5f), new Vector3(3, 1.3f, 1.1f), Mats.Lit(ArtDirection.Ink));
             Prims.SignText(root, "公共修理台 · 检测后选择处理方法", new Vector3(0, 2.2f, depth - .25f), width - 1, .6f, ArtDirection.Cream);
         }
-        private static void FishingPark(Transform root, float width, float depth,bool oldQuarter)
+        private static void FishingPark(Transform root, float width, float depth)
         {
             Prims.Box(root,"FishingPondBank",new Vector3(width*.14f,.12f,depth*.63f),new Vector3(width*.63f,.18f,depth*.61f),Mats.Lit(ArtDirection.Cream));
             Prims.Box(root,"FishingPondWater",new Vector3(width*.14f,.225f,depth*.63f),new Vector3(width*.58f,.025f,depth*.55f),IndustrialMaterials.GardenWater());
@@ -133,8 +132,7 @@ namespace PCShopSell.Game.Runtime
             for(int i=0;i<5;i++)
                 garden.FlowerBed(new Vector3(-width*.12f+i*width*.13f,.10f,depth*.96f),width*.11f,.65f,i,false);
             foreach(float z in new[]{depth*.12f,depth*.69f,depth*.91f})
-                if(oldQuarter) QuarterModules.Tree(root,new Vector3(-width*.46f,.10f,z),.92f,(int)(z*19));
-                else CityVegetation.Build(root,new Vector3(-width*.46f,.10f,z),(int)z);
+                CityVegetation.Build(root,new Vector3(-width*.46f,.10f,z),(int)z);
             var wood=IndustrialMaterials.Surface("wood",ArtDirection.Hex("A78052"),Vector2.one);
             var shelter=new Vector3(-width*.29f,0,depth*.28f);
             foreach(int side in new[]{-1,1})garden.Box(shelter+new Vector3(side*1.4f,1.6f,.9f),new Vector3(.14f,3.2f,.14f),wood);
@@ -293,7 +291,7 @@ namespace PCShopSell.Game.Runtime
         {
             root.gameObject.AddComponent<QuarterlyExpoView>().Initialize(width,depth);
         }
-        private static void WalkingPark(Transform root, float width, float depth,bool oldQuarter)
+        private static void WalkingPark(Transform root, float width, float depth)
         {
             float trailLength = depth + 4;
             var paving = IndustrialMaterials.Surface("paving", ArtDirection.Hex("DDC9A8"), new Vector2(.85f, trailLength / 4));
@@ -302,72 +300,26 @@ namespace PCShopSell.Game.Runtime
             var timber = IndustrialMaterials.Surface("wood", ArtDirection.Hex("B88B64"), new Vector2((width - 3) / 4, 1));
             Prims.Box(root, "ViewDeck", new Vector3(0, .4f, depth - 1.8f), new Vector3(width - 3, .8f, 2.7f), timber);
             for (int side = -1; side <= 1; side += 2)
-            {
-                var corner=new Vector3(side*(width/2-1.5f),0,depth-2);
-                if(!oldQuarter) { CityVegetation.Build(root,corner,side+3);continue; }
-                QuarterModules.Tree(root,corner,.94f,79+side*41);
-                QuarterModules.Add(root,"Bench",new Vector3(side*(width*.5f-2.6f),.124f,depth*.46f),Vector3.one,side<0?270:90);
-            }
+                CityVegetation.Build(root, new Vector3(side * (width / 2 - 1.5f), 0, depth - 2), side + 3);
             Prims.SignText(root, "步道 · 观景平台", new Vector3(0, 2, depth - .13f), width - 1, .65f, ArtDirection.Cream);
-        }
-
-        private static void PondWalk(Transform root, Vector3 center, Vector2 radii, float pathWidth, Material paving)
-        {
-            const int sectors = 64;
-            var vertices = new Vector3[(sectors+1)*2];
-            var uv = new Vector2[vertices.Length];
-            var triangles = new int[sectors*6];
-            float distance = 0;
-            for (int i=0;i<=sectors;i++)
-            {
-                float angle = i*2*Mathf.PI/sectors;
-                var radial = new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle));
-                var bank = center+new Vector3(radial.x*radii.x,0,radial.z*radii.y);
-                var outward = new Vector3(radial.x/radii.x,0,radial.z/radii.y).normalized;
-                int v = 2*i;
-                vertices[v] = bank;
-                vertices[v+1] = bank+outward*(pathWidth+.16f*Mathf.Sin(angle*3));
-                if(i>0) distance+=Vector3.Distance(bank,vertices[v-2]);
-                uv[v]=new Vector2(distance/2.5f,0);
-                uv[v+1]=new Vector2(distance/2.5f,.7f);
-                if(i==sectors) continue;
-                int t = i*6;
-                triangles[t]=v; triangles[t+1]=v+2; triangles[t+2]=v+1;
-                triangles[t+3]=v+1; triangles[t+4]=v+2; triangles[t+5]=v+3;
-            }
-            var mesh = new Mesh { name="河岸公园石板环道", vertices=vertices, triangles=triangles, uv=uv };
-            mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();
-            var owner=root.GetComponent<CityLandscapeResources>() ?? root.gameObject.AddComponent<CityLandscapeResources>();
-            owner.Owned.Add(mesh);
-            var walk = new GameObject("池畔环道",typeof(MeshFilter),typeof(MeshRenderer));
-            walk.transform.SetParent(root,false);
-            walk.GetComponent<MeshFilter>().sharedMesh=mesh;
-            walk.GetComponent<MeshRenderer>().sharedMaterial=paving;
         }
 
         private static void Park(Transform root, float width, float depth, bool rowing)
         {
             if(width>=30)
             {
-                var stone=DistrictFinishes.Tile("cutStone",new Vector2(width/4,depth/4));
-                var center=new Vector3(0,.29f,depth*.55f);
-                var radius=new Vector2(width*.336f,depth*.306f);
-                PondWalk(root,center,radius,1.28f,DistrictFinishes.Tile("limestoneWalk",Vector2.one,ArtDirection.Hex("DFDDC6")));
-                // A horizontal disk just below the inner paving edge, open underneath to avoid depth fighting.
-                Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.196f,center.z),
-                    new Vector3(2*radius.x+.13f,.045f,2*radius.y+.13f),IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.Pond));
-                var reflections=new LakesideReflections(root,.241f);
-                var planting=new StreetPlanting();
+                var stone=Mats.Lit(ArtDirection.Cream);
+                Prims.Shape(PrimitiveType.Cylinder,root,"LakeShore",new Vector3(0,.12f,depth*.53f),new Vector3(width*.65f,.12f,depth*.63f),stone);
+                Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.25f,depth*.53f),new Vector3(width*.61f,.025f,depth*.57f),IndustrialMaterials.GardenWater());
                 foreach(int side in new[]{-1,1})
                 {
                     Prims.Box(root,"LakesideWalk",new Vector3(0,.16f,depth*(side<0?.13f:.91f)),new Vector3(width*.9f,.08f,1.8f),stone);
-                    QuarterModules.Add(root,"Bench",new Vector3(side*width*.25f,.16f,depth*.86f),Vector3.one,side*18);
-                    QuarterModules.Add(root,"Bench",new Vector3(side*width*.33f,.16f,depth*.20f),Vector3.one,180-side*14);
+                    CityVegetation.Build(root,new Vector3(side*width*.31f,0,depth*.16f),side+7);
+                    Prims.Box(root,"LakesideBench",new Vector3(side*width*.25f,.5f,depth*.84f),new Vector3(2,.2f,.6f),Mats.Lit(ArtDirection.Wood));
                 }
                 var wood = Mats.Lit(ArtDirection.Wood);
-                var landing=rowing?wood:DistrictFinishes.Tile("limestoneWalk",Vector2.one*.8f);
-                Prims.Box(root,"LakesideDeck",new Vector3(width*.25f,.31f,depth*.35f),
-                    new Vector3(rowing?5:3.1f,.14f,rowing?3:1.8f),landing);
+                Prims.Box(root, "LakesideDeck", new Vector3(width * .25f, .35f, depth * .35f),
+                    new Vector3(5, .18f, 3), wood);
                 if (rowing)
                 {
                     var boat = new GameObject("CommunityParkRowboat").transform;
@@ -382,29 +334,12 @@ namespace PCShopSell.Game.Runtime
                 for(int i=0;i<16;i++)
                 {
                     float angle=i*Mathf.PI/8;
-                    Vector3 bank=new Vector3(Mathf.Cos(angle)*(radius.x+2.15f),0,center.z+Mathf.Sin(angle)*(radius.y+2.10f));
-                    if(i==0 || i==2 || i==3 || i==6 || i==8 || i==10 || i==14)
-                    {
-                        bool willow=i==6;
-                        var foot=willow?bank+new Vector3(-.6f,0,.6f):bank;
-                        var canopy=PaintedWoodland.Plant(root,foot,willow?9:i==3?7:5+i%3,willow?1:0,i+21);
-                        reflections.Add(canopy);
-                    }
-                    for(int j=-1;j<=1;j++)
-                    {
-                        var tangent=new Vector3(-Mathf.Sin(angle),0,Mathf.Cos(angle));
-                        var plant=bank+tangent*j*.91f;
-                        planting.Add(i%3==0?PlantSpecies.Hydrangea:PlantSpecies.SilverGrass,plant,1.6f+j*.13f,.84f,i*9+j);
-                    }
-                    if(i==3 || i==11)
-                        for(int j=0;j<5;j++)
-                        {
-                            float a=angle+j*.045f;
-                            var reed=new Vector3(Mathf.Cos(a)*(radius.x-.35f),.18f,center.z+Mathf.Sin(a)*(radius.y-.35f));
-                            planting.Add(PlantSpecies.Cattail,reed,.77f,1.06f+.16f*(j%2),i*8+j);
-                        }
+                    Vector3 bank=new Vector3(Mathf.Cos(angle)*width*.37f,0,depth*.53f+Mathf.Sin(angle)*depth*.37f);
+                    if(i%4!=0)CityVegetation.Build(root,bank,i+21);
+                    Prims.Shape(PrimitiveType.Sphere,root,"ShoreRock",bank+new Vector3(-.65f,.22f,.3f),new Vector3(.9f,.5f,.65f),Mats.Lit(ArtDirection.Hex("C6C4AD")));
+                    if(i%2==0)for(int f=-1;f<=1;f++)
+                        Prims.Shape(PrimitiveType.Sphere,root,"WatersideFlowers",bank+new Vector3(f*.4f,.3f,-.8f),new Vector3(.5f,.4f,.5f),Mats.Lit(ArtDirection.Hex("E3B54C")));
                 }
-                planting.Build(root,"池畔花丛与浅水芦苇");reflections.Build();
                 var pergola=new GameObject("LakesidePergola").transform;pergola.SetParent(root,false);pergola.localPosition=new Vector3(-width*.27f,0,depth*.20f);
                 foreach(int x in new[]{-1,1})foreach(int z in new[]{-1,1})
                     Prims.Box(pergola,"Post",new Vector3(x*1.7f,1.4f,z),new Vector3(.16f,2.8f,.16f),stone);

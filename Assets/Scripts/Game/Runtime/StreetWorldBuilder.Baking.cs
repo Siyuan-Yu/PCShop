@@ -14,6 +14,7 @@ namespace PCShopSell.Game.Runtime
         private readonly bool _firstChapterTrial;
         private readonly List<BakedCityMap.ForestChunk> _forestCapture=new List<BakedCityMap.ForestChunk>();
         private Transform _bakedForestRoot;
+        private readonly Dictionary<int,Mesh[]> _forestTemplates=new Dictionary<int,Mesh[]>();
         private readonly List<GameObject> _bakeBatchRoots=new List<GameObject>();
         private void BatchStatic(GameObject root)
         {
@@ -124,18 +125,72 @@ namespace PCShopSell.Game.Runtime
                 if(Time.realtimeSinceStartup>=deadline){yield return null;deadline=Time.realtimeSinceStartup+.016f;}
             }
         }
+        private static readonly string[] ForestColors={"3F683C","608437","7C9938","A8B643","B87594","866342","E5A9BE"};
         private IEnumerator RestoreBakedForest(BakedCityMap data)
         {
             if(data.ForestRoot==null)yield break;
             ReportBuildStage("loading_forest_meshes");
-            var owner=data.ForestRoot.GetComponent<CityLandscapeResources>()??data.ForestRoot.gameObject.AddComponent<CityLandscapeResources>();
+            var owner=data.ForestRoot.gameObject.AddComponent<CityLandscapeResources>();
             var forest=data.ForestData.Chunks;
+            int done=0,total=forest.Length*ForestColors.Length;
             float deadline=Time.realtimeSinceStartup+.016f;
-            for(int i=0;i<forest.Length;i++)
+            foreach(var chunk in forest)for(int color=0;color<ForestColors.Length;color++)
             {
-                PaintedWoodland.Build(data.ForestRoot,forest[i],owner);
-                ReportBuildProgress(.60f+.36f*(i+1)/Mathf.Max(1,forest.Length));
+                var parts=chunk.Parts.Where(p=>p.Color==color).Select(p=>new CombineInstance {
+                    mesh=p.Mesh,transform=Matrix4x4.Translate(p.Position) }).ToArray();
+                if(parts.Length>0)
+                {
+                    var mesh=new Mesh {name=chunk.Name+"_"+color,indexFormat=IndexFormat.UInt32};
+                    mesh.CombineMeshes(parts,true,true,false);
+                    var go=new GameObject(mesh.name,typeof(MeshFilter),typeof(MeshRenderer));
+                    go.transform.SetParent(data.ForestRoot,false);
+                    go.GetComponent<MeshFilter>().sharedMesh=mesh;
+                    go.GetComponent<MeshRenderer>().sharedMaterial=Mats.Lit(ArtDirection.Hex(ForestColors[color]));
+                    owner.Owned.Add(mesh);
+                }
+                ReportBuildProgress(.60f+.36f*++done/Mathf.Max(1,total));
                 if(Time.realtimeSinceStartup>=deadline){yield return null;deadline=Time.realtimeSinceStartup+.016f;}
+            }
+        }
+        private static Mesh ForestTemplateMesh(List<Vector3> vertices,List<int> triangles)
+        {
+            var mesh=new Mesh {name="共用树林模型",indexFormat=IndexFormat.UInt32};
+            mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();
+            // Forest materials are untextured. Local UVs preserve the same shading.
+            mesh.SetUVs(0,vertices.Select(v=>new Vector2(v.x/7,v.z/7)).ToList());
+            return mesh;
+        }
+        private Mesh[] CaptureTreeTemplate(int key,float size,bool conifer,int seed)
+        {
+            if(_forestTemplates.TryGetValue(key,out var meshes))return meshes;
+            var template=new ForestTreeTemplate(size,conifer,seed);
+            meshes=template.ExportMeshes();_forestTemplates.Add(key,meshes);return meshes;
+        }
+        private Mesh CaptureUnderstoreyTemplate(int key,Action<List<Vector3>,List<int>> build)
+        {
+            if(_forestTemplates.TryGetValue(key,out var meshes))return meshes[0];
+            var v=new List<Vector3>();var t=new List<int>();build(v,t);
+            var mesh=ForestTemplateMesh(v,t);_forestTemplates.Add(key,new[]{mesh});return mesh;
+        }
+        private void CaptureForestTree(BakedCityMap.ForestChunk chunk,Vector3 p,float size,bool conifer,int seed,int color,int tip,int hash,bool urban)
+        {
+            void Part(Mesh mesh,int shade,Vector3 at)=>chunk.Parts.Add(new BakedCityMap.ForestPart {Mesh=mesh,Color=shade,Position=at});
+            int key=seed+((int)size<<5)+(conifer?1<<10:0);
+            var tree=CaptureTreeTemplate(key,size,conifer,seed);
+            Part(tree[0],color,p);Part(tree[1],tip,p);Part(tree[2],5,p);
+            if(!urban&&hash%2!=0)return;
+            for(int shrub=0;shrub<5;shrub++)
+            {
+                int j=shrub;
+                var mesh=CaptureUnderstoreyTemplate(2000+j,(v,t)=>MiniatureDetailMesh.Lobe(v,t,Vector3.zero,new Vector3(1.15f,.75f,1.05f),j,true));
+                float angle=j*2.4f+hash%13;
+                Part(mesh,1+j%2,p+new Vector3(Mathf.Cos(angle)*2.2f,.6f+j%2*.25f,Mathf.Sin(angle)*2.2f));
+            }
+            if(urban&&hash%3==0)Part(CaptureUnderstoreyTemplate(2100,(v,t)=>AddCrown(v,t,Vector3.zero,new Vector3(1.15f,.6f,1.1f),false)),4,p+new Vector3(1.8f,1.2f,-1.3f));
+            if(urban&&hash%2==0)for(int j=0;j<3;j++)
+            {
+                int grassSeed=hash%47+j*7;
+                Part(CaptureUnderstoreyTemplate(2200+grassSeed,(v,t)=>AddGrassTuft(v,t,Vector3.zero,grassSeed)),3,p);
             }
         }
     }

@@ -67,18 +67,12 @@ namespace PCShopSell.Game.Runtime
             Box(root,"BalustradeCap",new Vector3(terraceX,floor+1.5f,front-.09f),new Vector3(terraceW,.055f,.08f),dark);
             // Every property gets a conspicuous private swimming pool, including the smallest lots.
             float poolW=w*.43f,poolD=d*.22f,poolX=-w*.15f,poolZ=d*.28f;
-            // An open coping rim keeps the pale stone out of the water depth buffer at aerial distances.
-            const float coping = .28f;
-            foreach (int edge in new[] { -1, 1 })
-            {
-                Box(root,"PoolCoping",new Vector3(poolX+edge*(poolW+coping)*.5f,.32f,poolZ),
-                    new Vector3(coping,.27f,poolD),white);
-                Box(root,"PoolCoping",new Vector3(poolX,.32f,poolZ+edge*(poolD+coping)*.5f),
-                    new Vector3(poolW+2*coping,.27f,coping),white);
-            }
-            Prims.Box(root,"PoolDeepWater",new Vector3(poolX,.405f,poolZ),new Vector3(poolW,.025f,poolD),IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.Pool));
+            Box(root,"PoolCoping",new Vector3(poolX,.29f,poolZ),new Vector3(poolW+.5f,.22f,poolD+.5f),white);
+            Prims.Box(root,"PoolDeepWater",new Vector3(poolX,.405f,poolZ),new Vector3(poolW,.025f,poolD),IndustrialMaterials.GardenWater());
 
-            // Moving caustics are resolved on the pool surface in both street and aerial views.
+            var water=Mats.Lit(ArtDirection.Hex("91B0B5"),.7f,.12f);
+            for(int i=0;i<7;i++)
+                Prims.Box(root,"WaterGlint",new Vector3(poolX+Mathf.Sin(i*2.1f)*poolW*.27f,.43f,poolZ+(i-3)*poolD*.12f),new Vector3(poolW*(i%2==0?.15f:.09f),.008f,.035f),water);
             foreach(int side in new[]{-1,1})
             {
                 float loungeX=w*.25f+side*w*.055f;
@@ -95,25 +89,16 @@ namespace PCShopSell.Game.Runtime
             Box(root,"OutdoorSofa",new Vector3(pergolaX,.65f,pergolaZ+pergolaD*.23f),new Vector3(pergolaW*.8f,.65f,.65f),white);
             Box(root,"OutdoorTable",new Vector3(pergolaX,.5f,pergolaZ-.3f),new Vector3(pergolaW*.45f,.17f,.65f),dark);
             var garden=new MiniatureDetailMesh();
-            var borders=new StreetPlanting();
-            var bronze=DistrictFinishes.Tile("walnut",Vector2.one*.45f);
-            for(int fin=0;fin<7;fin++)
-                garden.Box(new Vector3(topX+topW*(.26f+fin*.027f),floor*2+1.79f,topZ-topD/2-.25f),new Vector3(.09f,2.35f,.32f),bronze,
-                    Quaternion.Euler(0,22,0));
-            QuarterModules.Add(root,"PlantPot",new Vector3(pergolaX-pergolaW*.38f,.14f,pergolaZ-pergolaD*.32f),Vector3.one*1.3f);
             foreach(int edge in new[]{-1,1})
             {
-                for(float x=w*.15f;x<w*.46f;x+=.91f)
-                    borders.Add(PlantSpecies.Hydrangea,new Vector3(edge*x,.45f,.85f),1.36f,.97f,seed%59+Mathf.RoundToInt(x));
+                garden.FlowerBed(new Vector3(edge*w*.28f,.48f,.85f),w*.28f,1.0f,seed+edge);
                 for(float along=d*.21f;along<d*.91f;along+=1.25f)
                 {
-                    int clump=Mathf.RoundToInt(along)+seed%71;
-                    borders.Add(clump%4==0?PlantSpecies.Boxwood:PlantSpecies.Hydrangea,
-                        new Vector3(edge*(w/2-.75f),.48f,along),1.60f,1.03f+clump%3*.14f,clump);
+                    garden.Lobe(new Vector3(edge*(w/2-.75f),.70f,along),new Vector3(.60f,.65f,.78f),Mats.Lit(Hedge),Mathf.RoundToInt(along));
+                    garden.FlowerBed(new Vector3(edge*(w/2-.70f),.73f,along),.95f,1.20f,seed+Mathf.RoundToInt(along),false);
                 }
             }
             garden.FlowerBed(new Vector3(upperX,floor*2+.76f,z-upperD/2-.10f),upperW*.74f,.70f,seed+6);
-            borders.Build(root,"别墅庭院绣球与黄杨");
             garden.Build(root,"Layered villa gardens and terrace planters");
             // Boundary, entrance and planting stay inside the original plot and leave its door aisle open.
             foreach(int side in new[]{-1,1})
@@ -123,8 +108,8 @@ namespace PCShopSell.Game.Runtime
                 Box(root,"EntranceWall",new Vector3(side*(w*.27f+.5f),.44f,.22f),new Vector3(w*.46f-1,.88f,.3f),white);
                 Box(root,"EntryPier",new Vector3(side*1.05f,.9f,.22f),new Vector3(.35f,1.8f,.4f),dark);
                 Prims.Box(root,"EntryLight",new Vector3(side*1.05f,1.4f,-.005f),new Vector3(.12f,.45f,.035f),Mats.Glow(white,new Color(1,.75f,.4f)));
-                PaintedWoodland.Plant(root,new Vector3(side*w*.40f,.10f,d*.81f),side<0?7:6,side<0?3:0,seed+side);
-                PaintedWoodland.Plant(root,new Vector3(side*w*.40f,.10f,d*.14f),side<0?6:4,side<0?0:3,seed+side+11);
+                CityVegetation.Build(root,new Vector3(side*w*.40f,0,d*.82f),seed+side);
+                CityVegetation.Build(root,new Vector3(side*w*.40f,0,d*.12f),seed+side+11);
             }
             for(int i=0;i<4;i++)Box(root,"EntrySteppingStone",new Vector3(0,.15f,.65f+i*d*.025f),new Vector3(1.6f,.12f,d*.019f),paving);
             Box(root,"EntryPathTurn",new Vector3(w*.07f,.15f,d*.12f),new Vector3(w*.14f+1,.12f,.9f),paving);
@@ -139,7 +124,8 @@ namespace PCShopSell.Game.Runtime
             var root=new GameObject("FloorToCeilingGlazing").transform;root.SetParent(parent,false);root.localPosition=at;root.localRotation=Quaternion.Euler(0,yaw,0);
             Box(root,"RecessFrame",Vector3.zero,new Vector3(width+.18f,height+.18f,.15f),frame);
             Prims.Box(root,"ReflectiveGlass",new Vector3(0,0,-.09f),new Vector3(width,height,.04f),
-                DistrictFinishes.WindowGlass(true));
+                Mats.Glow(ArtDirection.Hex("547B94"),new Color(1.50f,.86f,.35f)));
+            Box(root,"SkyReflection",new Vector3(0,height*.28f,-.115f),new Vector3(width,height*.22f,.012f),ArtDirection.Hex("6DABB9"));
             int panes=Mathf.Max(2,Mathf.RoundToInt(width/1.7f));
             for(int i=1;i<panes;i++)Box(root,"SlenderMullion",new Vector3(-width/2+i*width/panes,0,-.13f),new Vector3(.065f,height,.06f),frame);
         }

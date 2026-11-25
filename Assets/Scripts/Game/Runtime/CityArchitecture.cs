@@ -125,8 +125,7 @@ namespace PCShopSell.Game.Runtime
                     {
                         float x=-bayW/2+(strip+.5f)*bayW/8;
                         float y=h+.5f+Mathf.Cos(x/bayW*Mathf.PI)*2.5f;
-                        var roof=Prims.Box(root,"Expo standing seam vault",new Vector3(bay*bayW+x,y,d/2),new Vector3(bayW/8+.08f,.24f,d+.4f),
-                            DistrictFinishes.Tile("patina",new Vector2(.65f,d/4)));
+                        var roof=Box(root,"ExpoBlueVault",new Vector3(bay*bayW+x,y,d/2),new Vector3(bayW/8+.08f,.24f,d+.4f),ArtDirection.Hex("4498D1"));
                         roof.transform.localRotation=Quaternion.Euler(0,0,-Mathf.Sin(x/bayW*Mathf.PI)*25);
                         foreach(float z in new[]{-.3f,d*.33f,d*.67f,d+.3f})
                         {
