@@ -41,7 +41,7 @@ namespace PCShopSell.Game.Runtime
             }
             else
             {
-                var hedge=new StreetPlanting();
+                var hedge=new StreetPlanting(maintained:true);
                 foreach(int side in new[]{-1,1})
                 {
                     if(p.Model!="warehouse")
@@ -152,9 +152,24 @@ namespace PCShopSell.Game.Runtime
                     dummy.Build(dummyDisplay,"橱窗布样人台");
                     _cur.OpenOnly.Add(dummyDisplay.gameObject);
                     QuarterModules.Add(root,"Cycle",new Vector3(-w*.5f-.26f,.07f,d*.25f),Vector3.one,8);
-                    var pots=new StreetPlanting();
+                    var pots=new StreetPlanting(maintained:true);
                     pots.Add(PlantSpecies.Broadleaf,new Vector3(w*.44f,.48f,-.74f),.88f,.87f,seed);
                     pots.Build(root,"门边盆栽");
+                }
+                if(district==1 && p.Business=="裁缝")
+                {
+                    var joinery=new MiniatureDetailMesh();
+                    var timber=Mats.Lit(ArtDirection.Hex("A1825E"));
+                    foreach(int side in new[]{-1,1})
+                    {
+                        var bay=new Vector3(side*w*.31f,1.29f,-.27f);
+                        joinery.Box(bay-Vector3.up*.81f,new Vector3(w*.26f,.11f,.24f),timber);
+                        joinery.Box(bay+Vector3.up*.83f,new Vector3(w*.26f,.10f,.19f),timber);
+                        for(int edge=-1;edge<=1;edge+=2)
+                            joinery.Box(bay+Vector3.right*edge*w*.124f,new Vector3(.085f,1.65f,.14f),timber);
+                    }
+                    var frames=new GameObject("营业窗框").transform;frames.SetParent(root,false);
+                    joinery.Build(frames,"暖木橱窗压条");_cur.OpenOnly.Add(frames.gameObject);
                 }
                 var shutter=QuarterModules.Add(root,"ShutterFront",Vector3.back*.045f,scale);
                 shutter.gameObject.SetActive(false);_cur.OpenOnly.Add(front.gameObject);_cur.ClosedOnly.Add(shutter.gameObject);
@@ -176,13 +191,13 @@ namespace PCShopSell.Game.Runtime
             float canopyWidth=Mathf.Max(2,w*(retail || market ? .95f : .52f));
             if(market && district < 3)
             {
-                var awning=QuarterModules.Add(root,market?"TinCanopy":"StripedCanopy",new Vector3(0,2.88f,-.12f),new Vector3(canopyWidth/7.8f,.9f,.90f));
+                var awning=QuarterModules.Add(root,"TinCanopy",new Vector3(0,2.88f,-.12f),new Vector3(canopyWidth/7.8f,.9f,.90f));
                 if (seed%3==0) QuarterModules.Tint(awning,ArtDirection.Hex("E2CBB3"));
             }
             else
             {
                 var cap=DistrictFinishes.Tile(district==1?"sageCloth":"steel",Vector2.one*.4f);
-                detail.Box(new Vector3(0,2.85f,-.67f),new Vector3(canopyWidth,.16f,1.49f),district==1 ? Mats.Lit(ArtDirection.Hex("427C80")) : cap,Quaternion.Euler(-8,0,0));
+                detail.Box(new Vector3(0,2.85f,-.67f),new Vector3(canopyWidth,.16f,1.49f),district==1 ? Mats.Lit(ArtDirection.Hex("527C79")) : cap,Quaternion.Euler(-8,0,0));
                 for(int i=0;i<4;i++)
                     detail.Box(new Vector3((i-1.5f)*canopyWidth/4,2.61f,-.50f),new Vector3(.09f,.11f,1.03f),frame,Quaternion.Euler(-23,0,0));
             }
@@ -217,7 +232,7 @@ namespace PCShopSell.Game.Runtime
             QuarterModules.Add(root,"PlantPot",new Vector3(w*.42f,-.06f,-.73f),Vector3.one);
             if(market)
             {
-                var stock=new StreetPlanting();
+                var stock=new StreetPlanting(maintained:true);
                 foreach(int side in new[]{-1,1})
                 {
                     float x=side*w*.31f;

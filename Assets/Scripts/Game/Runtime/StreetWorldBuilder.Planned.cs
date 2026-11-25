@@ -129,6 +129,7 @@ namespace PCShopSell.Game.Runtime
             {
                 var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track,!Baking,OutskirtsLawnFor(p));
                 BuildRaceEntrance(root,door,track);
+                BuildRacePier(root,track.Tier);
                 var office=Prims.Box(root,"RaceReception",new Vector3(0,2,0),new Vector3(9,4,6),Mats.Lit(ArtDirection.Cream),true);
                 var reception=new MiniatureDetailMesh();
                 if(track.Tier<2)
@@ -173,6 +174,25 @@ namespace PCShopSell.Game.Runtime
             else if(venue)CityVenueView.Build(root,p,w,d,OutskirtsLawnFor(p));
             else if(p.Kind==PlaceKind.Station)StarterMetro(root,p,w,d);
             else PlannedBuilding(root,p.Model,p.Tier,w,d,p,(float)(block?.height ?? 0),block?.variant ?? 0);
+            if (p.Model=="villa" && ArtDistrict(p.StreetId)==3)
+            {
+                float apron=Mathf.Min(3.4f,(door-node).magnitude-6.1f);
+                if(apron>.65f)
+                {
+                    Prims.Box(root,"庭院入口铺地",new Vector3(0,.062f,-apron*.5f),new Vector3(w*.97f,.072f,apron),
+                        DistrictFinishes.Tile("graniteWalk",new Vector2(w*.30f,apron*.32f)));
+                    var strip=new StreetPlanting(maintained:true);
+                    for(int side=-1;side<=1;side+=2)
+                    {
+                        var light=new Vector3(side*w*.46f,.41f,-apron*.64f);
+                        Prims.Box(root,"庭院短灯",light,new Vector3(.18f,.76f,.2f),Mats.Lit(ArtDirection.Hex("8AA5A6")));
+                        Prims.Box(root,"短灯导光面",light+new Vector3(0,.15f,-.108f),new Vector3(.11f,.25f,.03f),
+                            Mats.Glow(ArtDirection.Hex("BCE6E1"),new Color(.42f,1,1)));
+                        strip.Add(PlantSpecies.SilverGrass,new Vector3(side*w*.42f,.11f,-.40f),1.16f,.65f,side+6);
+                    }
+                    strip.Build(root,"入口观赏草");
+                }
+            }
             if (block != null) BuildResidentialPlot(root, block);
             else if (p.Id != StarterHome && p.Kind == PlaceKind.Home && p.Model == "oldhome")
                 StarterPart(root, "Plain residence entry path", new Vector3(0, .035f, -1.65f), new Vector3(1.7f, .06f, 3.3f),

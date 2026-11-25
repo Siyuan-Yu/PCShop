@@ -370,6 +370,7 @@ namespace PCShopSell.Game.Runtime
             foreach(var parcel in _city.LakeParcels) Reserve(new Vector2((float)parcel.x,(float)parcel.y),
                 (float)parcel.heading,(float)parcel.width,(float)parcel.depth);
             var shore=SmoothShore();
+            var planted=new RoadSurfaceGeometry.Index();
             var details=new Dictionary<Vector2Int,ForestChunk>();
             var gardens=new Dictionary<Vector2Int,MiniatureDetailMesh>();
             bool Overlaps(RoadSurfaceGeometry.Index index,Vector2[] probe) =>
@@ -411,6 +412,7 @@ namespace PCShopSell.Game.Runtime
                     float clearance=district==0?2.65f:1.25f;
                     var probe=RoadSurfaceGeometry.Strip(pos-direction*clearance,pos+direction*clearance,clearance*2);
                     if(Overlaps(paving,probe)||Overlaps(reserved,probe))continue;
+                    planted.Add(probe);
                     var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
                     if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
                     if(!gardens.TryGetValue(key,out var garden)){garden=new MiniatureDetailMesh();gardens.Add(key,garden);}
@@ -470,6 +472,57 @@ namespace PCShopSell.Game.Runtime
                                 new Vector3(.065f,.05f,.065f),false);
                     }
                     seed=(seed*113+91)&1023;
+                }
+            }
+            // Fill the strips between occupied plots and the reserved street. Every bed
+            // and its planting stay outside door approaches, paths, hills and water.
+            foreach(var place in _city.PublicPlaces.Where(BuildsPlace))
+            {
+                int district=ArtDistrict(place.StreetId);
+                if(district==0 || IsLakeAccessNode(place.NodeId))continue;
+                if(Time.realtimeSinceStartup>=deadline){yield return null;deadline=Time.realtimeSinceStartup+.008f;}
+                var door=DoorXZ(place);
+                float width=(float)place.Width, depth=(float)place.Depth;
+                if(GameSession.IsCommercialPremises(place))
+                {
+                    var room=PCShopSell.Core.Home.RoomSpec.ForShop(place.Size);
+                    width=Mathf.Max(width,(float)room.Width);
+                    depth=Mathf.Max(depth,(float)room.Depth);
+                }
+                var rotation=Quaternion.Euler(0,(float)place.Heading,0);
+                var along3=rotation*Vector3.forward;
+                var along=new Vector2(along3.x,along3.z);
+                int hash=StableCityHash(place.Id)&int.MaxValue;
+                // The near beds frame the entrance, the far beds break up the wide lawn
+                // between parcels. Check each complete bed against existing circulation.
+                for(int row=0;row<3;row++)
+                foreach(int side in new[]{-1,1})
+                {
+                    float z=row==0 ? depth*((side<0)==((hash&1)==0)?.23f:.75f)
+                        : row==1 ? depth*.60f : depth+4.4f;
+                    float x=row==0 ? width*.5f+2.75f : row==1 ? width*.5f+7.6f+(hash%3) : width*.25f;
+                    var offset=rotation*new Vector3(side*x,0,z);
+                    var pos=door+new Vector2(offset.x,offset.z);
+                    var probe=RoadSurfaceGeometry.Strip(pos-along*2.25f,pos+along*2.25f,2.65f);
+                    if(Overlaps(paving,probe)||Overlaps(reserved,probe)||Overlaps(planted,probe))continue;
+                    var world=new Vector3(pos.x,.08f,pos.y);
+                    var lakePoint=world/LakeScale;
+                    if(WithinLake(lakePoint,shore)||MountainHeight(lakePoint.x,lakePoint.z)>.04f)continue;
+                    planted.Add(probe);
+                    var island=new GameObject("街角种植带").transform;
+                    island.SetParent(parent,false);island.position=world;island.rotation=rotation;
+                    var bed=new StreetPlanting(maintained:true);
+                    int treeSeed=(hash%323)+side+row*47;
+                    if(row==0 || (treeSeed&1)==0)
+                        PaintedWoodland.Plant(island,new Vector3(0,0,.64f),5+(hash%3)+row,
+                            (treeSeed%5==0)?2:0,treeSeed);
+                    for(int k=0;k<7;k++)
+                    {
+                        var at=new Vector3((k%2-.5f)*.95f,.04f,(k-3)*.48f);
+                        bed.Add(k%4==0?PlantSpecies.Hydrangea:k%3==0?PlantSpecies.Spirea:PlantSpecies.Boxwood,
+                            at,1.27f,.65f+(k%3)*.12f,treeSeed+k);
+                    }
+                    bed.Build(island,"阔叶与花灌木");
                 }
             }
             foreach(var pair in gardens)

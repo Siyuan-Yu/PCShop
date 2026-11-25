@@ -177,7 +177,7 @@ namespace PCShopSell.Game.Runtime
                 details.Window(pit+new Vector3(-3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
                 details.Window(pit+new Vector3(3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
             }
-            var border = new StreetPlanting();
+            var border = new StreetPlanting(maintained:Track.Tier>0);
             // Only decorate clear infield: the driving ribbon and runoff stay empty.
             for(float x=-(float)Track.Width*.33f;x<(float)Track.Width*.34f;x+=13)
             for(float z=-(float)Track.Depth*.30f;z<(float)Track.Depth*.31f;z+=13)
@@ -215,7 +215,7 @@ namespace PCShopSell.Game.Runtime
             var glass=DistrictFinishes.Tile("civicGlazing",new Vector2(.31f,.24f));
             var roof=stand+new Vector3(0,6.6f,2.8f);
             var paving=DistrictFinishes.Tile("limestoneWalk",new Vector2(.44f,.44f));
-            var bed=new StreetPlanting();
+            var bed=new StreetPlanting(maintained:true);
             detail.Box(stand+new Vector3(0,.16f,1.35f),new Vector3(27.4f,.19f,12.6f),paving);
             for(int step=0;step<3;step++)
                 detail.Box(stand+new Vector3(0,.23f+step*.13f,-1.82f+step*.46f),new Vector3(22f,.14f,.54f),white);

@@ -30,6 +30,26 @@ namespace PCShopSell.Game.Runtime
             float accessW=Mathf.Min(3.2f,bw*.25f),accessD=Mathf.Min(3.0f,bd*.28f);
             detail.Box(new Vector3(bw*.20f,top+.86f,center+bd*.23f),new Vector3(accessW,1.15f,accessD),stone);
             detail.Box(new Vector3(bw*.20f,top+1.48f,center+bd*.23f),new Vector3(accessW+.24f,.13f,accessD+.24f),roof);
+            int variant=(seed&int.MaxValue)%4;
+            if(tier>=2 && variant!=2)
+            {
+                var lightwell=new Vector3(-bw*.20f,top+.59f,center-bd*.16f);
+                detail.Box(lightwell,new Vector3(bw*.32f,.40f,bd*.22f),stone);
+                detail.Box(lightwell+Vector3.up*.23f,new Vector3(bw*.29f,.10f,bd*.195f),
+                    DistrictFinishes.Tile("civicGlazing",Vector2.one*.45f));
+                for(int rib=0;rib<3;rib++)
+                    detail.Box(lightwell+new Vector3((rib-1)*bw*.091f,.33f,0),new Vector3(.09f,.07f,bd*.22f),stone);
+            }
+            if(variant==1 || variant==3)
+            {
+                var roofPlants=new StreetPlanting(maintained:true);
+                float planterX=-bw*.30f,planterZ=center+bd*.30f;
+                detail.Box(new Vector3(planterX,top+.50f,planterZ),new Vector3(bw*.27f,.40f,1.15f),stone);
+                for(int k=0;k<4;k++)
+                    roofPlants.Add(k==2?PlantSpecies.Hydrangea:PlantSpecies.Boxwood,
+                        new Vector3(planterX+(k-1.5f)*bw*.066f,top+.70f,planterZ),1.12f,.68f,seed+k);
+                roofPlants.Build(root,"住宅屋面种植槽");
+            }
             for(int face=0;face<4;face++)
             {
                 var elevation=new GameObject("Residential framed elevation").transform;elevation.SetParent(root,false);

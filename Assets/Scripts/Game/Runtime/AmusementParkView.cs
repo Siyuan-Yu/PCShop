@@ -32,7 +32,7 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root, "TicketCounter", new Vector3(garden ? -8f : 5.3f, .65f, 6), new Vector3(4.1f, 1.3f, 2.2f), blue);
             Prims.Box(root, "CounterTop", new Vector3(garden ? -8f : 5.3f, 1.34f, 6), new Vector3(4.4f, .15f, 2.4f), pale);
 
-            var flowers=new StreetPlanting();
+            var flowers=new StreetPlanting(maintained:true);
             var joinery=new MiniatureDetailMesh();
             var wood=DistrictFinishes.Tile("walnut",Vector2.one*.4f);
             float counterX=garden?-8f:5.3f;

@@ -37,6 +37,7 @@ Shader "PCShop/Painted street paving"
                 Output o;o.world=TransformObjectToWorld(v.pos.xyz);o.pos=TransformWorldToHClip(o.world);o.normal=TransformObjectToWorldNormal(v.normal);
                 o.uv=TRANSFORM_TEX(v.uv,_BaseMap);o.fog=ComputeFogFactor(o.pos.z);return o;
             }
+            half _DistrictDaylight;
             half4 Frag(Output i):SV_Target
             {
                 half3 pigment=SAMPLE_TEXTURE2D(_BaseMap,sampler_BaseMap,i.uv).rgb*_BaseColor.rgb;
@@ -45,6 +46,8 @@ Shader "PCShop/Painted street paving"
                 pigment*=lerp(half3(.84,.84,.90),half3(1.08,1.00,.93),dust);
                 pigment*=lerp(half3(.79,.79,.78),half3(1.37,1.35,1.29),_Asphalt);
                 pigment+=_Asphalt*dust*half3(.037,.023,.017);
+                half gray=dot(pigment,half3(.27,.59,.14));
+                pigment=lerp(pigment,gray*half3(.85,.96,1.06),_Asphalt*_DistrictDaylight*.65);
                 half3 n=normalize(i.normal);
                 Light sun=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));
                 AmbientOcclusionFactor ao=GetScreenSpaceAmbientOcclusion(GetNormalizedScreenSpaceUV(i.pos));

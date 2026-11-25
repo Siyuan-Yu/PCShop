@@ -51,13 +51,30 @@ namespace PCShopSell.Game.Runtime
             else Prims.Box(root, "BackBoundary", new Vector3(0, 1.5f, depth), new Vector3(width, 3, .2f), Mats.Lit(ArtDirection.Ink));
             float gateWidth = walkingPark ? Mathf.Min(width - .4f, 10.8f) : width - .4f;
             bool civicPark = kind=="park" && width>=30;
-            Color fascia = civicPark ? ArtDirection.Hex("E5EAE5") : walkingPark ? ArtDirection.Hex("945B3C") : ArtDirection.Sage;
-            var support = Mats.Lit(civicPark ? ArtDirection.Hex("B8C5BF") : walkingPark ? ArtDirection.Hex("79533A") : ArtDirection.Brass);
+            Color fascia = walkingPark ? ArtDirection.Hex("945B3C") : ArtDirection.Sage;
+            var support = Mats.Lit(walkingPark ? ArtDirection.Hex("79533A") : ArtDirection.Brass);
             float postSize = walkingPark ? .32f : .18f;
-            Prims.Box(root, "EntranceFascia", new Vector3(0, 3.5f, -.1f), new Vector3(gateWidth, .9f, .24f), Mats.Lit(fascia));
-            Prims.SignText(root, p.Name, new Vector3(0, 3.5f, -.25f), gateWidth - .4f, .65f, civicPark ? ArtDirection.Hex("456661") : ArtDirection.Cream);
-            Prims.Box(root, "SignSupportLeft", new Vector3(-gateWidth / 2 + .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
-            Prims.Box(root, "SignSupportRight", new Vector3(gateWidth / 2 - .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
+            if(civicPark)
+            {
+                var wall=DistrictFinishes.Tile("pearlCeramic",new Vector2(4,1));
+                float wing=width*.5f-1.8f;
+                foreach(int side in new[]{-1,1})
+                    Prims.Box(root,"池岸景墙",new Vector3(side*(1.65f+wing*.5f),.72f,0),new Vector3(wing,1.28f,.30f),wall);
+                var arch=new MiniatureDetailMesh();
+                float end=width*.5f-.24f;
+                arch.Box(new Vector3(end,1.28f,0),new Vector3(.27f,2.55f,.30f),wall);
+                arch.Box(new Vector3(end-1.43f,2.49f,0),new Vector3(3.12f,.18f,.30f),wall);
+                arch.Box(new Vector3(end-2.87f,1.28f,0),new Vector3(.23f,2.55f,.30f),wall);
+                arch.Build(root,"白瓷观景框");
+                Prims.SignText(root,p.Name,new Vector3(wing*.56f,.85f,-.17f),Mathf.Min(5,wing*.7f),.63f,ArtDirection.Hex("49625A"));
+            }
+            else
+            {
+                Prims.Box(root, "EntranceFascia", new Vector3(0, 3.5f, -.1f), new Vector3(gateWidth, .9f, .24f), Mats.Lit(fascia));
+                Prims.SignText(root, p.Name, new Vector3(0, 3.5f, -.25f), gateWidth - .4f, .65f, ArtDirection.Cream);
+                Prims.Box(root, "SignSupportLeft", new Vector3(-gateWidth / 2 + .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
+                Prims.Box(root, "SignSupportRight", new Vector3(gateWidth / 2 - .1f, 1.8f, 0), new Vector3(postSize, 3.6f, postSize), support);
+            }
             switch (kind)
             {
                 case "服装": Clothing(root, width, depth); break;
@@ -381,7 +398,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.196f,center.z),
                     new Vector3(2*radius.x+.13f,.045f,2*radius.y+.13f),IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.Pond));
                 var reflections=new LakesideReflections(root,.241f);
-                var planting=new StreetPlanting();
+                var planting=new StreetPlanting(maintained:true);
                 foreach(int side in new[]{-1,1})
                 {
                     Prims.Box(root,"LakesideWalk",new Vector3(0,.16f,depth*(side<0?.13f:.91f)),new Vector3(width*.9f,.08f,1.8f),stone);

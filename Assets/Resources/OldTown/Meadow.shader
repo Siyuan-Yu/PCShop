@@ -3,6 +3,7 @@ Shader "PCShop/Painted meadow"
     Properties
     {
         _BaseMap("Meadow",2D)="white"{}
+        _Lawn("Summer turf",2D)="white"{}
         _Soil("Broken earth",2D)="white"{}
         _Variation("Patch distribution",2D)="gray"{}
         _LandUse("District soil and grove weights",2D)="gray"{}
@@ -25,6 +26,7 @@ Shader "PCShop/Painted meadow"
             #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_Lawn); SAMPLER(sampler_Lawn);
             TEXTURE2D(_Soil); SAMPLER(sampler_Soil);
             TEXTURE2D(_Variation); SAMPLER(sampler_Variation);
             TEXTURE2D(_LandUse); SAMPLER(sampler_LandUse);
@@ -61,10 +63,16 @@ Shader "PCShop/Painted meadow"
                 pigment*=exp2((balance-.5)*1.8*coverage);
                 // Managed turf keeps the brushwork of the original ground plate. Light and dark
                 // blades shift together, while exposed earth keeps its own hue.
-                half blade=dot(fine,half3(.27,.59,.14));
-                half3 turf=half3(.012,.027,.006)+blade*half3(.76,1.16,.30);
-                turf*=lerp(.66,1.33,smoothstep(.17,.68,patch.g))+.28*(leaf.g-fine.g);
-                pigment=lerp(pigment,lerp(turf,soil*1.12,dry*.13),_DistrictLandscape*.96);
+                if (_DistrictLandscape>.001)
+                {
+                    half3 nearGrass=SAMPLE_TEXTURE2D(_Lawn,sampler_Lawn,p/6.25+patch.rg*.11).rgb;
+                    half3 broadGrass=SAMPLE_TEXTURE2D(_Lawn,sampler_Lawn,rotated/15.7).rgb;
+                    half3 turf=lerp(nearGrass,broadGrass,.26)*half3(.91,.84,1.12);
+                    half painterly=SAMPLE_TEXTURE2D(_Variation,sampler_Variation,rotated/4.8+patch.rg*.29).g;
+                    half mow=smoothstep(.19,.69,patch.g*.72+painterly*.28);
+                    turf*=lerp(half3(.59,.66,.74),half3(1.35,1.18,.99),mow);
+                    pigment=lerp(pigment,lerp(turf,soil*1.12,dry*.13),_DistrictLandscape*.80);
+                }
                 half3 normal=normalize(i.n);
                 AmbientOcclusionFactor ao=GetScreenSpaceAmbientOcclusion(GetNormalizedScreenSpaceUV(i.pos));
                 half3 light=SampleSH(normal)*ao.indirectAmbientOcclusion+

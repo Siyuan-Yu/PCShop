@@ -9,7 +9,7 @@ namespace PCShopSell.Game.Runtime
             int variant=(seed&int.MaxValue)%3;
             Color white=ArtDirection.Hex(variant==0?"EDF2EF":variant==1?"E3EDF0":"D8E5E5");
             Color dark=ArtDirection.Hex("3D5365"),wood=ArtDirection.Hex("A37955"),paving=ArtDirection.Hex("D0DCDC");
-            float floor=2.7f,h=floor*3,bw=w*.72f,bd=d*.37f,z=d*.73f,front=z-bd/2;
+            float floor=2.7f,h=floor*3,bw=w*.83f,bd=d*.42f,z=d*.70f,front=z-bd/2;
             Prims.Box(root,"PrivateEstateLawn",new Vector3(0,.045f,d/2),new Vector3(w,.09f,d),
                 IndustrialMaterials.Surface("meadow",Lawn,new Vector2(w/25,d/25)));
             Prims.Box(root,"StoneTerrace",new Vector3(0,.14f,d*.37f),new Vector3(w*.85f,.18f,d*.36f),
@@ -17,12 +17,12 @@ namespace PCShopSell.Game.Runtime
             Box(root,"GroundFloor",new Vector3(0,floor/2+.2f,z),new Vector3(bw,floor,bd),white,true);
             Box(root,"GroundFloorPlinth",new Vector3(0,.26f,z),new Vector3(bw+.3f,.3f,bd+.25f),dark);
             // A smaller, shifted upper storey leaves a real terrace and an overhanging wing.
-            float upperW=bw*(variant==1?.61f:.73f),upperD=bd*.88f,upperX=(variant==2?1:-1)*bw*.13f;
+            float upperW=bw*(variant==1?.77f:.84f),upperD=bd*.88f,upperX=(variant==2?1:-1)*bw*.13f;
             var ceramic = DistrictFinishes.Tile("pearlCeramic",new Vector2(2,2),white);
             var alloy = DistrictFinishes.Tile("brushedAlloy",Vector2.one);
             var graphite = DistrictFinishes.Tile("graniteWalk",new Vector2(2,2),ArtDirection.Hex("A1ABAC"));
             var garden = new MiniatureDetailMesh();
-            var borders = new StreetPlanting();
+            var borders = new StreetPlanting(maintained:true);
             Box(root,"UpperStorey",new Vector3(upperX,floor*1.5f+.5f,z),new Vector3(upperW,floor,upperD),white,true);
             float firstY=floor+.38f, secondY=floor*2+.59f;
             float terraceDepth=bd+2.05f, terraceWidth=bw+1.42f;
@@ -30,9 +30,9 @@ namespace PCShopSell.Game.Runtime
             Vector3 second=new Vector3(upperX*.55f,secondY,z-.53f);
             void Terrace(Vector3 at,float width,float depth,int level)
             {
-                GardenStructures.Plate(root,"悬挑板银灰阴缝",at-Vector3.up*.14f,new Vector3(width-.24f,.18f,depth-.22f),alloy);
-                GardenStructures.Plate(root,"弧形白瓷露台",at,new Vector3(width,.28f,depth),ceramic);
-                GardenStructures.Plate(root,"露台面",at+Vector3.up*.16f,new Vector3(width-.24f,.045f,depth-.24f),graphite);
+                GardenStructures.Plate(root,"悬挑板银灰阴缝",at-Vector3.up*.14f,new Vector3(width-.24f,.18f,depth-.22f),alloy,sculpted:true);
+                GardenStructures.Plate(root,"弧形白瓷露台",at,new Vector3(width,.28f,depth),ceramic,sculpted:true);
+                GardenStructures.Plate(root,"露台面",at+Vector3.up*.16f,new Vector3(width-.24f,.045f,depth-.24f),graphite,sculpted:true);
                 float edgeZ=at.z-depth*.5f+.33f;
                 for(int k=-3;k<=3;k++)
                 {
@@ -62,7 +62,7 @@ namespace PCShopSell.Game.Runtime
                 ModernGlazing(root,new Vector3(upperX+side*(upperW/2+.065f),floor+1.72f,z),upperD*.70f,2,side<0?90:270,dark);
             }
             ModernGlazing(root,new Vector3(upperX,floor+1.72f,z+upperD/2+.065f),upperW*.70f,2,180,dark);
-            float topW=upperW*.90f, topD=upperD*.86f;
+            float topW=upperW*.94f, topD=upperD*.91f;
             float topX=upperX+Mathf.Sign(upperX)*upperW*.025f, topZ=z+bd*.04f;
             float glassY=floor*2+1.72f;
             Box(root,"SetbackStorey",new Vector3(topX,floor*2.5f+.5f,topZ),new Vector3(topW,floor,topD),white,true);
@@ -71,8 +71,8 @@ namespace PCShopSell.Game.Runtime
             foreach(int side in new[]{-1,1})
                 ModernGlazing(root,new Vector3(topX+side*(topW/2+.065f),glassY,topZ),topD*.88f,2.12f,side<0?90:270,dark);
             var crown=new Vector3(topX,h+.63f,topZ-.34f);
-            GardenStructures.Plate(root,"顶层悬挑翼",crown,new Vector3(topW+2.35f,.28f,topD+1.95f),ceramic);
-            GardenStructures.Plate(root,"顶层银边",crown-Vector3.up*.17f,new Vector3(topW+2.08f,.09f,topD+1.70f),alloy);
+            GardenStructures.Plate(root,"顶层悬挑翼",crown,new Vector3(topW+2.35f,.28f,topD+1.95f),ceramic,sculpted:true);
+            GardenStructures.Plate(root,"顶层银边",crown-Vector3.up*.17f,new Vector3(topW+2.08f,.09f,topD+1.70f),alloy,sculpted:true);
             GardenStructures.SolarFins(garden,crown+Vector3.up*.16f,topW*.85f,topD*1.06f,3);
             var fork=new Vector3(topX-topW*.42f,secondY+.18f,topZ-topD*.5f-.48f);
             var joint=fork+Vector3.up*.85f;
@@ -155,7 +155,10 @@ namespace PCShopSell.Game.Runtime
         {
             var root=new GameObject("FloorToCeilingGlazing").transform;root.SetParent(parent,false);root.localPosition=at;root.localRotation=Quaternion.Euler(0,yaw,0);
             Box(root,"RecessFrame",Vector3.zero,new Vector3(width+.18f,height+.18f,.15f),frame);
-            Prims.Box(root,"ReflectiveGlass",new Vector3(0,0,-.09f),new Vector3(width,height,.04f),
+            Prims.Box(root,"幕墙窗带",new Vector3(0,0,-.09f),new Vector3(width,height,.04f),
+                DistrictFinishes.Tile("civicGlazing",new Vector2(2,1)));
+            // Only part of each glazed ribbon looks through into a furnished bay.
+            Prims.Box(root,"起居室通透窗",new Vector3(width*.19f,0,-.119f),new Vector3(width*.33f,height*.98f,.014f),
                 DistrictFinishes.WindowGlass(true));
             int panes=Mathf.Max(2,Mathf.RoundToInt(width/1.7f));
             for(int i=1;i<panes;i++)Box(root,"SlenderMullion",new Vector3(-width/2+i*width/panes,0,-.13f),new Vector3(.065f,height,.06f),frame);

@@ -694,7 +694,7 @@ namespace PCShopSell.Game.Runtime
                     lawn);
                 Prims.Box(root,"GardenPath",new Vector3(0,.46f,d/2),new Vector3(1.4f,.08f,d),
                     DistrictFinishes.Tile("limestoneWalk",new Vector2(1,d/3.5f),ArtDirection.Hex("E7DEC9")));
-                var planting=new StreetPlanting();
+                var planting=new StreetPlanting(maintained:!painted);
                 foreach(int side in new[]{-1,1})
                 {
                     for(float along=1.25f;along<d-1;along+=1.30f)

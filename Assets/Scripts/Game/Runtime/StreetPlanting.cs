@@ -14,7 +14,10 @@ namespace PCShopSell.Game.Runtime
         private readonly List<Color32> _shading = new();
         private readonly List<Vector3> _normals = new();
         private readonly List<int> _indices = new();
-        private static Material _material;
+        private static readonly Material[] Materials = new Material[2];
+        private readonly bool _maintained;
+
+        internal StreetPlanting(bool maintained=false) => _maintained=maintained;
 
         internal void Add(PlantSpecies species, Vector3 foot, float width, float height, int seed)
         {
@@ -47,20 +50,23 @@ namespace PCShopSell.Game.Runtime
         internal void Build(Transform parent,string name)
         {
             if(_indices.Count==0)return;
-            if(_material==null)
+            int palette=_maintained?1:0;
+            var material=Materials[palette];
+            if(material==null)
             {
                 var source=Resources.Load<GameObject>("OldTown/StreetTree").transform.Find("Foliage").GetComponent<MeshRenderer>().sharedMaterial;
-                _material=new Material(source){name="手绘灌木、芦苇与菜畦",enableInstancing=true};
-                _material.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/gardenPlants"));
-                _material.SetFloat("_Cull",0);_material.SetFloat("_Cutoff",.37f);
-                _material.SetColor("_Pigment",Color.white);
+                material=new Material(source){name="手绘灌木、芦苇与菜畦",enableInstancing=true};
+                material.SetTexture("_BaseMap",Resources.Load<Texture2D>(_maintained?"OldTown/Surfaces/summerBorders":"OldTown/Surfaces/gardenPlants"));
+                material.SetFloat("_Cull",0);material.SetFloat("_Cutoff",.37f);
+                material.SetColor("_Pigment",Color.white);
+                Materials[palette]=material;
             }
             var mesh=new Mesh{name=name,indexFormat=_positions.Count>65535?IndexFormat.UInt32:IndexFormat.UInt16};
             mesh.SetVertices(_positions);mesh.SetNormals(_normals);mesh.SetColors(_shading);mesh.SetUVs(0,_uv);
             mesh.SetTriangles(_indices,0);mesh.RecalculateBounds();
             var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer),typeof(CityLandscapeResources));
             go.transform.SetParent(parent,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;
-            go.GetComponent<MeshRenderer>().sharedMaterial=_material;
+            go.GetComponent<MeshRenderer>().sharedMaterial=material;
             go.GetComponent<CityLandscapeResources>().Owned.Add(mesh);
         }
     }

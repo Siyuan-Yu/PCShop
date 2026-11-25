@@ -42,6 +42,60 @@ namespace PCShopSell.Game.Runtime
             }
             vis.LabelPos=root.TransformPoint(new Vector3(0,4.5f,d*.35f));
         }
+        // The two service buildings share a node. Their configured offsets differ at the park
+        // circuit, so size the waterside apron from both real footprints in reception space.
+        private void BuildRacePier(Transform root,int tier)
+        {
+            if(!_city.IsLakeCity || tier==0 || !_city.HasPlace("garage_"+tier))return;
+            var garage=_city.GetPlace("garage_"+tier);
+            var garageDoor=DoorXZ(garage);
+            var garageCenter=new Vector3(garageDoor.x,root.position.y,garageDoor.y)
+                +Quaternion.Euler(0,(float)garage.Heading,0)*Vector3.forward*(float)garage.Depth*.5f;
+            var bounds=new Bounds(Vector3.zero,new Vector3(9,0,6));
+            for(int x=-1;x<=1;x+=2)
+            for(int z=-1;z<=1;z+=2)
+            {
+                Vector3 corner=garageCenter+Quaternion.Euler(0,(float)garage.Heading,0)*
+                    new Vector3(x*(float)garage.Width*.5f,0,z*(float)garage.Depth*.5f);
+                bounds.Encapsulate(root.InverseTransformPoint(corner));
+            }
+            bounds.Expand(new Vector3(4.8f,0,4.8f));
+            var plate=DistrictFinishes.Tile("limestoneWalk",new Vector2(bounds.size.x/4,bounds.size.z/4));
+            var midpoint=new Vector3(bounds.center.x,-.27f,bounds.center.z);
+            Prims.Box(root,"赛场临水服务平台",midpoint,new Vector3(bounds.size.x,.51f,bounds.size.z),plate);
+            var trim=new MiniatureDetailMesh();
+            var metal=Mats.Lit(ArtDirection.Hex(tier==3?"8EA9AE":"657972"),.37f);
+            var edge=DistrictFinishes.Tile("cutStone",Vector2.one*.4f);
+            void Rails(Vector3 a,Vector3 b)
+            {
+                int spans=Mathf.CeilToInt(Vector3.Distance(a,b)/2.15f);
+                for(int i=0;i<spans;i++)
+                {
+                    Vector3 from=Vector3.Lerp(a,b,(float)i/spans),to=Vector3.Lerp(a,b,(i+1f)/spans);
+                    var world=root.TransformPoint((from+to)*.5f);
+                    // The existing road and its crossing remain open along the wharf.
+                    var at=new Vector2(world.x,world.z);
+                    var probe=RoadSurfaceGeometry.Strip(at-Vector2.right*1.4f,at+Vector2.right*1.4f,2.8f);
+                    if(_streetPavementEnvelopes!=null && System.Linq.Enumerable.Any(_streetPavementEnvelopes.Nearby(probe),
+                        id=>RoadSurfaceGeometry.Intersect(probe,_streetPavementEnvelopes.Polygons[id]).Length>=3))continue;
+                    trim.Box(from+Vector3.up*.49f,new Vector3(.09f,.98f,.09f),metal);
+                    trim.Box(to+Vector3.up*.49f,new Vector3(.09f,.98f,.09f),metal);
+                    GardenStructures.Strut(trim,from+Vector3.up*.93f,to+Vector3.up*.93f,.065f,.065f,metal);
+                    GardenStructures.Strut(trim,from+Vector3.up*.51f,to+Vector3.up*.51f,.045f,.045f,metal);
+                }
+            }
+            var farLeft=new Vector3(bounds.min.x,0,bounds.max.z);
+            var farRight=new Vector3(bounds.max.x,0,bounds.max.z);
+            Rails(farLeft,farRight);
+            Rails(farRight,new Vector3(bounds.max.x,0,bounds.center.z));
+            foreach(int x in new[]{-1,1})
+            foreach(int z in new[]{-1,1})
+            {
+                var at=midpoint+new Vector3(x*(bounds.extents.x-.55f),-.44f,z*(bounds.extents.z-.55f));
+                trim.Box(at,new Vector3(.72f,1.28f,.72f),edge);
+            }
+            trim.Build(root,"平台临水栏杆与桥桩");
+        }
         private static void BuildRaceEntrance(Transform root,Vector3 door,PCShopSell.Core.Session.RaceTrack track)
         {
             var edge=new Vector3(

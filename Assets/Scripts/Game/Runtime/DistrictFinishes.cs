@@ -20,7 +20,7 @@ namespace PCShopSell.Game.Runtime
             result = new Material(original) { name = "街区 / " + key };
             result.SetTextureScale("_BaseMap", repeat);
             if(key=="buffBrick") tint*=new Color(1.16f,1.23f,1.29f);
-            if(key=="slate") tint*=new Color(1.04f,1.09f,1.16f);
+            if(key=="slate") tint*=new Color(.94f,.91f,.83f);
             if(key=="streetMeadow") tint*=new Color(1.12f,1.47f,1.06f);
             if(key=="pearlCeramic" || key=="brushedAlloy" || key=="civicGlazing" || key=="solarCells")
             {
@@ -49,6 +49,7 @@ namespace PCShopSell.Game.Runtime
             {
                 _meadow=new Material(Resources.Load<Shader>("OldTown/Meadow")){name="草甸与裸土"};
                 _meadow.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/livingMeadow"));
+                _meadow.SetTexture("_Lawn",Resources.Load<Texture2D>("OldTown/Surfaces/tendedLawn"));
                 _meadow.SetTexture("_Soil",Resources.Load<Texture2D>("OldTown/Surfaces/cultivatedSoil"));
                 _meadow.SetTexture("_Variation",Resources.Load<Texture2D>("OldTown/Surfaces/meadowVariation"));
                 _meadow.SetTexture("_LandUse",LandUse);_meadow.SetVector("_LandBounds",LandBounds);
@@ -105,7 +106,7 @@ namespace PCShopSell.Game.Runtime
                     }
                     // The new albedo already carries its local pigment. Keep the source palette on coloured fittings.
                     var tint = Color.Lerp(Color.white, source.GetColor("_BaseColor"), tile == "ivoryPlaster" ? .45f : .18f);
-                    materials[i] = Tile(tile, repeat, tint);
+                    materials[i] = tile=="streetMeadow" ? Meadow() : Tile(tile, repeat, tint);
                     changed = true;
                 }
                 if (changed) renderer.sharedMaterials = materials;
