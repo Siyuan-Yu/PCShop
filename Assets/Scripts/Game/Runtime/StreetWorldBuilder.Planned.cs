@@ -123,7 +123,7 @@ namespace PCShopSell.Game.Runtime
             var track=RaceTracks.Get(p.Id,_city);
             if(track!=null)
             {
-                var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track,!Baking);
+                var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track,!Baking,OutskirtsLawnFor(p));
                 BuildRaceEntrance(root,door,track);
                 var office=Prims.Box(root,"RaceReception",new Vector3(0,2,0),new Vector3(9,4,6),Mats.Lit(ArtDirection.Cream),true);
                 CityArchitecture.Roof(root,new Vector3(0,4.1f,0),9.8f,6.8f,1.3f,ArtDirection.Hex("57758A"));
@@ -157,7 +157,7 @@ namespace PCShopSell.Game.Runtime
                 CityVenueView.Build(inside,p,w,d);inside.gameObject.SetActive(false);
                 vis.Exterior=shell.gameObject;vis.VenueInterior=inside.gameObject;_venueVisuals.Add(vis);
             }
-            else if(venue)CityVenueView.Build(root,p,w,d);
+            else if(venue)CityVenueView.Build(root,p,w,d,OutskirtsLawnFor(p));
             else if(p.Kind==PlaceKind.Station)StarterMetro(root,p,w,d);
             else PlannedBuilding(root,p.Model,p.Tier,w,d,p,(float)(block?.height ?? 0),block?.variant ?? 0);
             if (block != null) BuildResidentialPlot(root, block);

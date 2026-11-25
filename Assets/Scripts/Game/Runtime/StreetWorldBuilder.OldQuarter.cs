@@ -8,7 +8,14 @@ namespace PCShopSell.Game.Runtime
         private const float WalkupHeight = 10.06f;
         private readonly System.Collections.Generic.List<Vector3> _quarterTrees = new System.Collections.Generic.List<Vector3>();
         private Rect? _quarterBounds;
+        private Rect _mainlandLawn;
         private Vector2 _quarterAlong, _quarterAcross, _quarterOrigin;
+
+        private Vector2 LawnCoordinates(Vector2 world)
+        {
+            var offset = world - _quarterOrigin;
+            return new Vector2(Vector2.Dot(offset, _quarterAlong), Vector2.Dot(offset, _quarterAcross));
+        }
 
         internal bool IsOldQuarterStreet(Vector3 position) => InPaintedQuarter(new Vector2(position.x,position.z));
 
@@ -21,15 +28,29 @@ namespace PCShopSell.Game.Runtime
             _quarterAcross = new Vector2(-_quarterAlong.y, _quarterAlong.x);
             var min = Vector2.zero;
             var max = Vector2.zero;
+            var mainlandMin = Vector2.zero;
+            var mainlandMax = Vector2.zero;
             foreach (var place in _city.Places)
             {
+                var point = LawnCoordinates(DoorXZ(place));
+                if (_city.AgencyDistrictFor(place.StreetId)?.id == "outskirts" && !IsLakeAccessNode(place.NodeId))
+                {
+                    mainlandMin = Vector2.Min(mainlandMin, point);
+                    mainlandMax = Vector2.Max(mainlandMax, point);
+                }
                 if (place.HousingForm == ResidenceForm.Standard && place.Id != RouteGrocery) continue;
-                var offset = DoorXZ(place) - _quarterOrigin;
-                var point = new Vector2(Vector2.Dot(offset,_quarterAlong), Vector2.Dot(offset,_quarterAcross));
                 min = Vector2.Min(min,point);
                 max = Vector2.Max(max,point);
             }
             _quarterBounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+            _mainlandLawn = Rect.MinMaxRect(mainlandMin.x, mainlandMin.y, mainlandMax.x, mainlandMax.y);
+        }
+
+        private bool OnOutskirtsLawn(Vector3 world)
+        {
+            if (!HasStarterArt) return false;
+            if (!_quarterBounds.HasValue) FindResidentialBounds();
+            return _mainlandLawn.Contains(LawnCoordinates(new Vector2(world.x, world.z)));
         }
 
         private Vector2 DoorXZ(Place place)
@@ -58,6 +79,10 @@ namespace PCShopSell.Game.Runtime
         {
             return Resources.Load<Material>("OldQuarter/" + name + "Paint");
         }
+
+        private Material OutskirtsLawnFor(Place place) =>
+            HasStarterArt && _city.AgencyDistrictFor(place.StreetId)?.id == "outskirts"
+                ? QuarterMaterial("DistrictGrass") : null;
 
         private static GameObject QuarterModel(Transform parent, string model,string paint="Atlas")
         {
@@ -205,16 +230,23 @@ namespace PCShopSell.Game.Runtime
             lawn.transform.position = home.position + Vector3.up * .004f;
             var mesh = new Mesh { name = "Old quarter lawn" };
             if (!_quarterBounds.HasValue) FindResidentialBounds();
-            var rect = _quarterBounds.Value;
+            var study = _quarterBounds.Value;
             const float fringe = 105;
             Vector3 Corner(float x, float z)
             {
                 var off = _quarterAlong * x + _quarterAcross * z;
                 return new Vector3(off.x, 0, off.y);
             }
-            mesh.vertices = new[]{Corner(rect.xMin-fringe,rect.yMin-fringe), Corner(rect.xMin-fringe,rect.yMax+fringe),
-                Corner(rect.xMax+fringe,rect.yMax+fringe), Corner(rect.xMax+fringe,rect.yMin-fringe)};
+            var min = Vector2.Min(study.min, _mainlandLawn.min) - Vector2.one * fringe;
+            var max = Vector2.Max(study.max, _mainlandLawn.max) + Vector2.one * fringe;
+            var corners = new[] { min, new Vector2(min.x, max.y), max, new Vector2(max.x, min.y) };
+            mesh.vertices = System.Array.ConvertAll(corners, point => Corner(point.x, point.y));
             mesh.uv = new[] { Vector2.zero,Vector2.up,Vector2.one,Vector2.right };
+            // Keep the original hand-painted garden strokes registered to the same houses.
+            var studyMin = study.min - Vector2.one * fringe;
+            var studySize = study.size + Vector2.one * (2 * fringe);
+            mesh.uv3 = System.Array.ConvertAll(corners, p => new Vector2(
+                (p.x - studyMin.x) / studySize.x, (p.y - studyMin.y) / studySize.y));
             mesh.triangles = new[] {0,1,2,0,2,3};
             mesh.RecalculateNormals();mesh.RecalculateBounds();
             lawn.GetComponent<MeshFilter>().sharedMesh = mesh;

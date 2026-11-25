@@ -108,16 +108,26 @@ Shader "PCShop/Old Quarter Paint"
                     albedo=lerp(albedo,other,_RouteGrass>.5 ? .40h*turn : turn);
                     if (_RouteGrass>.5)
                     {
-                        half4 meadow = SAMPLE_TEXTURE2D(_MeadowMap,sampler_MeadowMap,v.uv);
-                        // The district-scale wash supplies broad colour. Preserve the scanned lawn's
-                        // small directional strokes in both fully painted and unobserved areas.
                         half3 pigment = clamp(albedo / half3(.275h,.242h,.058h),.68h,1.44h);
-                        half4 strokes = SAMPLE_TEXTURE2D(_TurfStrokes,sampler_TurfStrokes,TRANSFORM_TEX(v.uv,_TurfStrokes));
-                        // Broad meadow colour, tileable turf and locally registered bristles each
-                        // occupy a different scale. Keep the full turf relief outside the study area.
-                        half3 wash = lerp(half3(.275h,.242h,.058h),meadow.rgb,meadow.a*.90h);
+                        half fresh = smoothstep(.22h,.78h,BrushField(v.world.xz*.057)+.16h*(BrushField(v.world.xz*.19)-.5h));
+                        half3 wash = lerp(half3(.253h,.227h,.069h),half3(.248h,.266h,.087h),fresh);
+                        half4 strokes = half4(.5h,.5h,.5h,0);
+                        if (_Patch > .5)
+                        {
+                            float2 garden = v.frontage.xy;
+                            half4 meadow = SAMPLE_TEXTURE2D(_MeadowMap,sampler_MeadowMap,saturate(garden));
+                            float2 border = min(garden,1-garden);
+                            half coverage = saturate(min(border.x,border.y)*36);
+                            wash = lerp(wash,meadow.rgb,coverage*meadow.a*.90h);
+                            half4 localStrokes = SAMPLE_TEXTURE2D(_TurfStrokes,sampler_TurfStrokes,TRANSFORM_TEX(garden,_TurfStrokes));
+                            strokes = lerp(strokes,localStrokes,coverage);
+                        }
                         half3 tileRelief = pow(pigment,lerp(1.72h,.77h,strokes.a));
                         albedo = wash * tileRelief * exp2((strokes.rgb-.5h)*2.28h);
+                        // Damp growth reads greener; the drier blades keep a warm ochre tip.
+                        half3 leaf = albedo * half3(.75h,1.045h,1.16h);
+                        leaf.b += .037h * Luminance(albedo);
+                        albedo = lerp(albedo,leaf,.62h + .34h*fresh);
                     }
                 }
                 half lamp=0;

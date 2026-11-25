@@ -55,14 +55,14 @@ namespace PCShopSell.Game.Runtime
             }
             BatchStatic(root.gameObject);
         }
-        private void Garden(Transform parent,Rect area,bool lake)
+        private void Garden(Transform parent,Rect area,bool lake, Material districtLawn = null)
         {
             var root=new GameObject(lake?"ApartmentLakeGarden":"CommunityFountainGarden").transform;
             root.SetParent(parent,false);root.localPosition=new Vector3(area.center.x,0,area.center.y);
             float w=area.width,d=area.height;
             var stone=Mats.Lit(ArtDirection.Hex("D4CDB0"));
             Prims.Box(root,"GardenLawn",new Vector3(0,.04f,0),new Vector3(w,.08f,d),
-                IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/22,d/22)));
+                districtLawn ?? IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/22,d/22)));
             foreach(int side in new[]{-1,1})
             {
                 Prims.Box(root,"PerimeterWalk",new Vector3(0,.10f,side*(d/2-1)),new Vector3(w, .08f,1.5f),

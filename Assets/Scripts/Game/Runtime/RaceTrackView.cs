@@ -15,13 +15,13 @@ namespace PCShopSell.Game.Runtime
         private ParticleSystem _tyreSmoke;
         private int _visibleStartLights = -1, _previousRecoveries;
         private bool _wasDrifting;
-        public void Build(RaceTrack track,bool combineScenery=true)
+        public void Build(RaceTrack track,bool combineScenery=true, Material districtLawn = null)
         {
             Track=track;transform.position=new Vector3((float)track.X,.65f,(float)track.Y);
             var scenery=new GameObject("CircuitScenery").transform;scenery.SetParent(transform,false);
             Prims.Box(scenery,"IslandBank",Vector3.down*.4f,new Vector3((float)track.Width+10,.7f,(float)track.Depth+10),Mats.Lit(ArtDirection.Hex("B9AD8B")));
             Prims.Box(scenery,"Infield",Vector3.zero,new Vector3((float)track.Width,.15f,(float)track.Depth),
-                IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2((float)track.Width/20,(float)track.Depth/20)));
+                districtLawn ?? IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2((float)track.Width/20,(float)track.Depth/20)));
             var resources=gameObject.AddComponent<CityLandscapeResources>();
             Ribbon(scenery,(float)track.HalfRoad+1.3f,.14f,Mats.Lit(ArtDirection.Cream),resources);
             Ribbon(scenery,(float)track.HalfRoad,.18f,Mats.Lit(ArtDirection.Hex("39434A")),resources);

@@ -683,11 +683,12 @@ namespace PCShopSell.Game.Runtime
                 root.localPosition=position;root.localRotation=Quaternion.Euler(0,(float)parcel.heading,0);
                 float w=(float)parcel.width/LakeScale,d=(float)parcel.depth/LakeScale;
                 var stone=Mats.Lit(ArtDirection.Hex("D8CEB3"));var leaf=Mats.Lit(ArtDirection.Hex("6D9545"));
+                var districtLawn = OnOutskirtsLawn(root.position) ? QuarterMaterial("DistrictGrass") : null;
                 if(parcel.kind=="park")
                 {
-                    Garden(root,new Rect(-w/2,0,w,d),false);
+                    Garden(root,new Rect(-w/2,0,w,d),false,districtLawn);
                     Prims.Shape(PrimitiveType.Cylinder,root,"ParkPromenade",new Vector3(0,.15f,d*.52f),new Vector3(w*.8f,.1f,d*.62f),stone);
-                    Prims.Shape(PrimitiveType.Cylinder,root,"ParkIslandLawn",new Vector3(0,.27f,d*.52f),new Vector3(w*.69f,.04f,d*.53f),leaf);
+                    Prims.Shape(PrimitiveType.Cylinder,root,"ParkIslandLawn",new Vector3(0,.27f,d*.52f),new Vector3(w*.69f,.04f,d*.53f),districtLawn ?? leaf);
                     Prims.Shape(PrimitiveType.Cylinder,root,"ParkReflectingPond",new Vector3(0,.34f,d*.52f),new Vector3(w*.45f,.04f,d*.28f),IndustrialMaterials.GardenWater());
                     for(int j=0;j<12;j++)
                     {
@@ -699,7 +700,7 @@ namespace PCShopSell.Game.Runtime
                 }
                 if(parcel.kind=="fountain")
                 {
-                    Garden(root,new Rect(-w/2,0,w,d),false);
+                    Garden(root,new Rect(-w/2,0,w,d),false,districtLawn);
                     Prims.Shape(PrimitiveType.Cylinder,root,"CentralPlazaRing",new Vector3(0,.14f,d*.5f),new Vector3(29,.12f,29),stone);
                     Prims.Shape(PrimitiveType.Cylinder,root,"CentralFountainBasin",new Vector3(0,.45f,d*.5f),new Vector3(20,.38f,20),Mats.Lit(ArtDirection.Cream));
                     Prims.Shape(PrimitiveType.Cylinder,root,"CentralFountainWater",new Vector3(0,.85f,d*.5f),new Vector3(18.8f,.04f,18.8f),IndustrialMaterials.GardenWater());
@@ -711,7 +712,7 @@ namespace PCShopSell.Game.Runtime
                 }
                 Prims.Box(root,"GardenRetainingEdge",new Vector3(0,.18f,d/2),new Vector3(w,.35f,d),stone);
                 Prims.Box(root,"InsetLawn",new Vector3(0,.37f,d/2),new Vector3(w-.6f,.12f,d-.6f),
-                    IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/22,d/22)));
+                    districtLawn ?? IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/22,d/22)));
                 Prims.Box(root,"GardenPath",new Vector3(0,.46f,d/2),new Vector3(1.4f,.08f,d),
                     IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(.4f,d/5)));
                 var planting=new MiniatureDetailMesh();

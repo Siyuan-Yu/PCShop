@@ -120,7 +120,7 @@ namespace PCShopSell.Game.Runtime
             float scale=(float)_city.ExpansionScale;
             float bankTop = LakeAccessHeight(_city) - .015f;
             Prims.Box(root,"StarterMotorHubBank",new Vector3(-550*scale,(bankTop+bottom)*.5f,-135*scale),new Vector3(65*scale,bankTop-bottom,65*scale),
-                IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2(4,4)));
+                HasStarterArt ? QuarterMaterial("DistrictGrass") : IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2(4,4)));
             var planting=new MiniatureDetailMesh();
             var hub=new Vector3(-550*scale,bankTop,-135*scale);
             int seed=0;

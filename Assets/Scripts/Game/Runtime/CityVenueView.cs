@@ -7,7 +7,7 @@ namespace PCShopSell.Game.Runtime
     /// <summary>Open-front social spaces share a legible entrance and real furniture, without loading parallel scenes.</summary>
     public static class CityVenueView
     {
-        public static void Build(Transform root, Place p, float width, float depth)
+        public static void Build(Transform root, Place p, float width, float depth, Material districtLawn = null)
         {
             string kind = (p.Business ?? "").Replace("venue_", "");
             if (kind is "ferris" or "amusement")
@@ -25,15 +25,19 @@ namespace PCShopSell.Game.Runtime
             Color floor = kind == "court" ? ArtDirection.Sage : ArtDirection.Cream;
             Vector3 plotCenter = new Vector3(0, .045f, depth / 2 - 1);
             Vector3 plotSize = new Vector3(width, .09f, depth + 6);
-            var ground = walkingPark
-                ? IndustrialMaterials.Surface("paving", ArtDirection.Hex("D3B993"), new Vector2(width / 4, (depth + 6) / 4))
-                : IndustrialMaterials.Surface(lawn ? "meadow" : "paving", lawn ? ArtDirection.Hex("7D9859") : floor,
-                    new Vector2(width / 14, depth / 14));
+            var venueTiling = new Vector2(width / 14, depth / 14);
+            Material ground;
+            if (walkingPark)
+                ground = IndustrialMaterials.Surface("paving", ArtDirection.Hex("D3B993"), new Vector2(width / 4, (depth + 6) / 4));
+            else if (lawn)
+                ground = districtLawn ?? IndustrialMaterials.Surface("meadow", ArtDirection.Hex("7D9859"), venueTiling);
+            else
+                ground = IndustrialMaterials.Surface("paving", floor, venueTiling);
             var body = Prims.Box(root, "Body", plotCenter, plotSize, ground, true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
             if (walkingPark)
             {
-                var trimmedLawn = IndustrialMaterials.Surface("meadow", ArtDirection.Hex("A9C986"), new Vector2(width / 14, depth / 14));
+                var trimmedLawn = districtLawn ?? IndustrialMaterials.Surface("meadow", ArtDirection.Hex("A9C986"), venueTiling);
                 Prims.Box(root, "WalkingParkLawn", new Vector3(0, .09f, plotCenter.z),
                     new Vector3(plotSize.x - 1.15f, .06f, plotSize.z - 1.15f), trimmedLawn);
             }
