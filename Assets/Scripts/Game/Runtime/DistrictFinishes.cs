@@ -22,6 +22,11 @@ namespace PCShopSell.Game.Runtime
             if(key=="buffBrick") tint*=new Color(1.16f,1.23f,1.29f);
             if(key=="slate") tint*=new Color(1.04f,1.09f,1.16f);
             if(key=="streetMeadow") tint*=new Color(1.12f,1.47f,1.06f);
+            if(key=="pearlCeramic" || key=="brushedAlloy" || key=="civicGlazing" || key=="solarCells")
+            {
+                result.SetFloat("_Smoothness",key=="brushedAlloy"?.46f:key=="pearlCeramic"?.31f:.60f);
+                result.SetFloat("_Metallic",key=="brushedAlloy"?.28f:key=="solarCells"?.12f:.02f);
+            }
             result.SetColor("_BaseColor", tint);
             Materials[id] = result;
             return result;

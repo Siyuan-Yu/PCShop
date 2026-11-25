@@ -58,6 +58,7 @@ namespace PCShopSell.Game.Runtime
                 hedge.Build(shell,"屋顶花池");
             }
             detail.Build(shell,"Arcade and entrance joinery");
+            if(district==3) GardenStructures.StreetFront(shell,w,d,h);
         }
 
         // All elevations use the original pavement-level front door as their origin.
@@ -71,6 +72,7 @@ namespace PCShopSell.Game.Runtime
             var shell = Prims.Box(root,"Street masonry",new Vector3(0,h*.5f,d*.5f),new Vector3(w,h,d),
                 DistrictFinishes.Tile(DistrictFinishes.Masonry(district),new Vector2(Mathf.Max(1,w/4),Mathf.Max(1,h/3.5f))),true);
             shell.AddComponent<PlaceMarker>().PlaceId=p.Id;
+            ForestFloorShade.Footprint(root,new Vector3(0,.115f,d*.48f),w+3.6f,d+3,true);
             var detail = new MiniatureDetailMesh();
             var stone = DistrictFinishes.Tile("cutStone",Vector2.one*.36f);
             var wood = DistrictFinishes.Tile("walnut",Vector2.one*.55f);
@@ -99,12 +101,12 @@ namespace PCShopSell.Game.Runtime
                     {
                         float x=((bay+.5f)/bays-.5f)*width;
                         var at=new Vector3(x,y,-depth*.5f-.025f);
-                        if (district==1 && !retail || level==0 && !retail)
+                        if (!retail && (district==1 || level==0))
                             QuarterModules.Add(elevation,"SideWindow",at,new Vector3(Mathf.Min(1.45f,width/bays*.44f),1.03f,.8f));
                         else
                         {
                             float ww=width/bays*.73f;
-                            var glass=DistrictFinishes.Tile("celadonGlass",Vector2.one);
+                            var glass=district==1 ? DistrictFinishes.WindowGlass() : DistrictFinishes.Tile("celadonGlass",Vector2.one);
                             Prims.Box(elevation,"Bay frame",at+Vector3.up*.68f,new Vector3(ww+.16f,1.57f,.18f),frame);
                             Prims.Box(elevation,"Glazing",at+new Vector3(0,.68f,-.12f),new Vector3(ww,1.38f,.08f),glass);
                             Prims.Box(elevation,"Slender mullion",at+new Vector3(0,.68f,-.18f),new Vector3(.07f,1.42f,.08f),frame);
@@ -139,11 +141,11 @@ namespace PCShopSell.Game.Runtime
                     // The shop keeps its original entrance; the mannequin sits in the outer display bay.
                     var dummy=new MiniatureDetailMesh();
                     var foot=new Vector3(w*.33f,.12f,-.52f);
-                    var fabric=Mats.Lit(ArtDirection.Hex("CFB695"));
+                    var linen=Mats.Lit(ArtDirection.Hex("CFB695"));
                     dummy.Box(foot+Vector3.up*.05f,new Vector3(.49f,.10f,.44f),frame);
                     dummy.Box(foot+Vector3.up*.49f,new Vector3(.075f,.86f,.075f),frame);
-                    dummy.Lobe(foot+Vector3.up*1.09f,new Vector3(.26f,.37f,.16f),fabric,3);
-                    dummy.Lobe(foot+Vector3.up*1.38f,new Vector3(.29f,.19f,.16f),fabric,4);
+                    dummy.Lobe(foot+Vector3.up*1.09f,new Vector3(.26f,.37f,.16f),linen,3);
+                    dummy.Lobe(foot+Vector3.up*1.38f,new Vector3(.29f,.19f,.16f),linen,4);
                     dummy.Box(foot+Vector3.up*1.56f,new Vector3(.11f,.13f,.10f),wood);
                     var dummyDisplay=new GameObject("营业时陈列的人台").transform;
                     dummyDisplay.SetParent(root,false);
@@ -208,8 +210,9 @@ namespace PCShopSell.Game.Runtime
             var open=Prims.Box(root,"Open lamp",new Vector3(w*.40f,2.56f,-.31f),new Vector3(.23f,.13f,.04f),Mats.Unlit(UiGreen));
             var closed=Prims.Box(root,"Closed lamp",open.transform.localPosition,open.transform.localScale,Mats.Lit(ArtDirection.Clay));
             _cur.OpenOnly.Add(open);_cur.ClosedOnly.Add(closed);
-            QuarterModules.Add(root,"Condenser",new Vector3(w*.26f,h+.39f,d*.61f),Vector3.one,90);
-            QuarterModules.Add(root,"ServiceStack",new Vector3(-w*.48f,0,-.04f),new Vector3(1,h/3.05f,.8f));
+            if(district==3) GardenStructures.StreetFront(root,w,d,h);
+            else QuarterModules.Add(root,"Condenser",new Vector3(w*.26f,h+.39f,d*.61f),Vector3.one,90);
+            if(district<3) QuarterModules.Add(root,"ServiceStack",new Vector3(-w*.48f,0,-.04f),new Vector3(1,h/3.05f,.8f));
             QuarterModules.Add(root,"PlantPot",new Vector3(w*.42f,-.06f,-.73f),Vector3.one);
             if(market)
             {
