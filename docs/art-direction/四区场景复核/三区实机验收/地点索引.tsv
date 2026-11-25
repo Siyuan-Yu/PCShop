@@ -1,0 +1,183 @@
+地区	地点 ID	地点名	模型类型	图版	行	列
+社区	agency_s_services	社区中介	agency	02-社区地点索引.jpg	1	1
+社区	enterprise_service_center	湖城企业服务中心	office	02-社区地点索引.jpg	1	2
+社区	expansion_shop_s_market_01	日新文具店	shop	02-社区地点索引.jpg	1	3
+社区	expansion_shop_s_market_02	05 社区商业街 · 2号招租商铺	shop	02-社区地点索引.jpg	1	4
+社区	expansion_shop_s_market_03	锦线裁缝铺	shop	02-社区地点索引.jpg	1	5
+社区	expansion_shop_s_services_01	04 宜居社区街 · 1号招租商铺	shop	02-社区地点索引.jpg	2	1
+社区	expansion_shop_s_services_02	灯下钟表铺	shop	02-社区地点索引.jpg	2	2
+社区	garage_1	社区赛场车库	garage	02-社区地点索引.jpg	2	3
+社区	home_tier1	宜居改善住宅	apartment	02-社区地点索引.jpg	2	4
+社区	hospital_community	社区医院	office	02-社区地点索引.jpg	2	5
+社区	life_bar_tier2	邻里酒吧	bar	02-社区地点索引.jpg	3	1
+社区	life_billiards	社区台球厅	shop	02-社区地点索引.jpg	3	2
+社区	life_cinema_community	社区电影院	shop	02-社区地点索引.jpg	3	3
+社区	life_community_ferris	社区摩天轮	amusement	02-社区地点索引.jpg	3	4
+社区	life_community_park	宜居社区公园	park	02-社区地点索引.jpg	3	5
+社区	life_court_mid	社区运动场	court	02-社区地点索引.jpg	4	1
+社区	life_expo	云帆会展中心	expo	02-社区地点索引.jpg	4	2
+社区	life_home_s_market	05 社区商业街居民住宅	apartment	02-社区地点索引.jpg	4	3
+社区	life_home_s_services	04 宜居社区街居民住宅	apartment	02-社区地点索引.jpg	4	4
+社区	life_ktv_tier2	邻里歌房	ktv	02-社区地点索引.jpg	4	5
+社区	life_market	禾田集市	market	02-社区地点索引.jpg	5	1
+社区	life_mcn	澄光传媒 MCN	office	02-社区地点索引.jpg	5	2
+社区	life_restaurant_tier2	邻里餐厅	restaurant	02-社区地点索引.jpg	5	3
+社区	life_service	桥东社区服务站	shop	02-社区地点索引.jpg	5	4
+社区	life_unit_s_market_0	05 社区商业街西侧商铺	shop	02-社区地点索引.jpg	5	5
+社区	life_unit_s_market_2	05 社区商业街东侧商铺	shop	02-社区地点索引.jpg	6	1
+社区	life_unit_s_market_3	05 社区商业街3号商铺	shop	02-社区地点索引.jpg	6	2
+社区	life_unit_s_market_4	05 社区商业街4号商铺	shop	02-社区地点索引.jpg	6	3
+社区	life_unit_s_services_0	04 宜居社区街西侧商铺	shop	02-社区地点索引.jpg	6	4
+社区	life_unit_s_services_2	04 宜居社区街东侧商铺	shop	02-社区地点索引.jpg	6	5
+社区	metro_center	中心商业站	station	02-社区地点索引.jpg	7	1
+社区	metro_community	宜居社区站	station	02-社区地点索引.jpg	7	2
+社区	race_1	社区俱乐部	racetrack	02-社区地点索引.jpg	7	3
+社区	residence_s_services_01	04 宜居社区街 · 1号住宅	apartment	02-社区地点索引.jpg	7	4
+社区	residence_s_services_02	04 宜居社区街 · 2号住宅	apartment	02-社区地点索引.jpg	7	5
+社区	residence_s_services_03	04 宜居社区街 · 3号住宅	apartment	02-社区地点索引.jpg	8	1
+社区	residence_s_services_04	04 宜居社区街 · 4号住宅	apartment	02-社区地点索引.jpg	8	2
+社区	residence_s_services_05	04 宜居社区街 · 5号住宅	apartment	02-社区地点索引.jpg	8	3
+社区	residence_s_services_06	04 宜居社区街 · 6号住宅	apartment	02-社区地点索引.jpg	8	4
+社区	residence_s_services_07	04 宜居社区街 · 7号住宅	apartment	02-社区地点索引.jpg	8	5
+社区	residence_s_services_08	04 宜居社区街 · 8号住宅	apartment	02-社区地点索引.jpg	9	1
+社区	residence_s_services_09	04 宜居社区街 · 9号住宅	apartment	02-社区地点索引.jpg	9	2
+社区	residence_s_services_10	04 宜居社区街 · 10号住宅	apartment	02-社区地点索引.jpg	9	3
+社区	residence_s_services_11	04 宜居社区街 · 11号住宅	apartment	02-社区地点索引.jpg	9	4
+社区	residence_s_services_12	04 宜居社区街 · 12号住宅	apartment	02-社区地点索引.jpg	9	5
+社区	residence_s_services_13	04 宜居社区街 · 13号住宅	apartment	02-社区地点索引.jpg	10	1
+社区	residence_s_services_14	04 宜居社区街 · 14号住宅	apartment	02-社区地点索引.jpg	10	2
+社区	residence_s_services_15	04 宜居社区街 · 15号住宅	apartment	02-社区地点索引.jpg	10	3
+社区	residence_s_services_16	04 宜居社区街 · 16号住宅	apartment	02-社区地点索引.jpg	10	4
+社区	residence_s_services_17	04 宜居社区街 · 17号住宅	apartment	02-社区地点索引.jpg	10	5
+社区	residence_s_services_18	04 宜居社区街 · 18号住宅	apartment	02-社区地点索引.jpg	11	1
+社区	residence_s_services_19	04 宜居社区街 · 19号住宅	apartment	02-社区地点索引.jpg	11	2
+社区	residence_s_services_20	04 宜居社区街 · 20号住宅	apartment	02-社区地点索引.jpg	11	3
+社区	residence_s_services_21	04 宜居社区街 · 21号住宅	apartment	02-社区地点索引.jpg	11	4
+社区	residence_s_services_22	04 宜居社区街 · 22号住宅	apartment	02-社区地点索引.jpg	11	5
+社区	residence_s_services_23	04 宜居社区街 · 23号住宅	apartment	02-社区地点索引.jpg	12	1
+社区	residence_s_services_24	04 宜居社区街 · 24号住宅	apartment	02-社区地点索引.jpg	12	2
+社区	residence_s_services_25	04 宜居社区街 · 25号住宅	apartment	02-社区地点索引.jpg	12	3
+公园	agency_s_sports	公园中介	agency	03-公园地点索引.jpg	1	1
+公园	clothing_boutique	拾光原创衣舍	shop	03-公园地点索引.jpg	1	2
+公园	expansion_shop_s_creative_01	06 品质商业街 · 1号招租商铺	shop	03-公园地点索引.jpg	1	3
+公园	expansion_shop_s_creative_02	木色手作铺	shop	03-公园地点索引.jpg	1	4
+公园	expansion_shop_s_expo_01	08 会展商务街 · 1号招租商铺	shop	03-公园地点索引.jpg	1	5
+公园	expansion_shop_s_expo_02	栖页旧书店	shop	03-公园地点索引.jpg	2	1
+公园	expansion_shop_s_sports_01	青岚画材店	shop	03-公园地点索引.jpg	2	2
+公园	garage_2	公园赛场车库	garage	03-公园地点索引.jpg	2	3
+公园	home_tier2	公园豪华公寓	luxury_apartment	03-公园地点索引.jpg	2	4
+公园	hospital_park	公园医院	office	03-公园地点索引.jpg	2	5
+公园	life_bar_tier3	云庭酒吧	bar	03-公园地点索引.jpg	3	1
+公园	life_cinema_park	公园电影院	shop	03-公园地点索引.jpg	3	2
+公园	life_company	云帆技术服务公司	office	03-公园地点索引.jpg	3	3
+公园	life_fitness	公园健身场	court	03-公园地点索引.jpg	3	4
+公园	life_home_s_creative	06 品质商业街居民住宅	luxury_apartment	03-公园地点索引.jpg	3	5
+公园	life_home_s_expo	08 会展商务街居民住宅	luxury_apartment	03-公园地点索引.jpg	4	1
+公园	life_home_s_sports	07 公园公寓街居民住宅	luxury_apartment	03-公园地点索引.jpg	4	2
+公园	life_ktv_tier3	云庭歌房	ktv	03-公园地点索引.jpg	4	3
+公园	life_park	河岸公园	park	03-公园地点索引.jpg	4	4
+公园	life_restaurant_tier3	云庭餐厅	restaurant	03-公园地点索引.jpg	4	5
+公园	life_studio	纸风车原创工作室	studio	03-公园地点索引.jpg	5	1
+公园	life_unit_s_creative_0	06 品质商业街西侧商铺	shop	03-公园地点索引.jpg	5	2
+公园	life_unit_s_creative_2	06 品质商业街东侧商铺	shop	03-公园地点索引.jpg	5	3
+公园	life_unit_s_expo_0	08 会展商务街西侧商铺	shop	03-公园地点索引.jpg	5	4
+公园	life_unit_s_expo_2	08 会展商务街东侧商铺	shop	03-公园地点索引.jpg	5	5
+公园	life_unit_s_sports_0	07 公园公寓街西侧商铺	shop	03-公园地点索引.jpg	6	1
+公园	life_unit_s_sports_2	07 公园公寓街东侧商铺	shop	03-公园地点索引.jpg	6	2
+公园	metro_expo	会展站	station	03-公园地点索引.jpg	6	3
+公园	metro_park	公园公寓站	station	03-公园地点索引.jpg	6	4
+公园	model_workshop	纸风车原创模型工坊	shop	03-公园地点索引.jpg	6	5
+公园	race_2	公园竞速场	racetrack	03-公园地点索引.jpg	7	1
+公园	residence_s_sports_01	07 公园公寓街 · 1号住宅	luxury_apartment	03-公园地点索引.jpg	7	2
+公园	residence_s_sports_02	07 公园公寓街 · 2号住宅	luxury_apartment	03-公园地点索引.jpg	7	3
+公园	residence_s_sports_03	07 公园公寓街 · 3号住宅	luxury_apartment	03-公园地点索引.jpg	7	4
+公园	residence_s_sports_04	07 公园公寓街 · 4号住宅	luxury_apartment	03-公园地点索引.jpg	7	5
+公园	residence_s_sports_05	07 公园公寓街 · 5号住宅	luxury_apartment	03-公园地点索引.jpg	8	1
+公园	residence_s_sports_06	07 公园公寓街 · 6号住宅	luxury_apartment	03-公园地点索引.jpg	8	2
+公园	residence_s_sports_07	07 公园公寓街 · 7号住宅	luxury_apartment	03-公园地点索引.jpg	8	3
+公园	residence_s_sports_08	07 公园公寓街 · 8号住宅	luxury_apartment	03-公园地点索引.jpg	8	4
+公园	residence_s_sports_09	07 公园公寓街 · 9号住宅	luxury_apartment	03-公园地点索引.jpg	8	5
+公园	residence_s_sports_10	07 公园公寓街 · 10号住宅	luxury_apartment	03-公园地点索引.jpg	9	1
+公园	residence_s_sports_11	07 公园公寓街 · 11号住宅	luxury_apartment	03-公园地点索引.jpg	9	2
+公园	residence_s_sports_12	07 公园公寓街 · 12号住宅	luxury_apartment	03-公园地点索引.jpg	9	3
+公园	residence_s_sports_13	07 公园公寓街 · 13号住宅	luxury_apartment	03-公园地点索引.jpg	9	4
+公园	residence_s_sports_14	07 公园公寓街 · 14号住宅	luxury_apartment	03-公园地点索引.jpg	9	5
+公园	residence_s_sports_15	07 公园公寓街 · 15号住宅	luxury_apartment	03-公园地点索引.jpg	10	1
+公园	residence_s_sports_16	07 公园公寓街 · 16号住宅	luxury_apartment	03-公园地点索引.jpg	10	2
+公园	residence_s_sports_17	07 公园公寓街 · 17号住宅	luxury_apartment	03-公园地点索引.jpg	10	3
+公园	residence_s_sports_18	07 公园公寓街 · 18号住宅	luxury_apartment	03-公园地点索引.jpg	10	4
+公园	residence_s_sports_19	07 公园公寓街 · 19号住宅	luxury_apartment	03-公园地点索引.jpg	10	5
+公园	residence_s_sports_20	07 公园公寓街 · 20号住宅	luxury_apartment	03-公园地点索引.jpg	11	1
+公园	residence_s_sports_21	07 公园公寓街 · 21号住宅	luxury_apartment	03-公园地点索引.jpg	11	2
+公园	residence_s_sports_22	07 公园公寓街 · 22号住宅	luxury_apartment	03-公园地点索引.jpg	11	3
+公园	residence_s_sports_23	07 公园公寓街 · 23号住宅	luxury_apartment	03-公园地点索引.jpg	11	4
+公园	residence_s_sports_24	07 公园公寓街 · 24号住宅	luxury_apartment	03-公园地点索引.jpg	11	5
+公园	residence_s_sports_25	07 公园公寓街 · 25号住宅	luxury_apartment	03-公园地点索引.jpg	12	1
+公园	residence_s_sports_26	07 公园公寓街 · 26号住宅	luxury_apartment	03-公园地点索引.jpg	12	2
+公园	residence_s_sports_27	07 公园公寓街 · 27号住宅	luxury_apartment	03-公园地点索引.jpg	12	3
+公园	residence_s_sports_28	07 公园公寓街 · 28号住宅	luxury_apartment	03-公园地点索引.jpg	12	4
+公园	residence_s_sports_29	07 公园公寓街 · 29号住宅	luxury_apartment	03-公园地点索引.jpg	12	5
+公园	residence_s_sports_30	07 公园公寓街 · 30号住宅	luxury_apartment	03-公园地点索引.jpg	13	1
+公园	residence_s_sports_31	07 公园公寓街 · 31号住宅	luxury_apartment	03-公园地点索引.jpg	13	2
+公园	residence_s_sports_32	07 公园公寓街 · 32号住宅	luxury_apartment	03-公园地点索引.jpg	13	3
+公园	residence_s_sports_33	07 公园公寓街 · 33号住宅	luxury_apartment	03-公园地点索引.jpg	13	4
+公园	residence_s_sports_34	07 公园公寓街 · 34号住宅	luxury_apartment	03-公园地点索引.jpg	13	5
+公园	residence_s_sports_35	07 公园公寓街 · 35号住宅	luxury_apartment	03-公园地点索引.jpg	14	1
+公园	residence_s_sports_36	07 公园公寓街 · 36号住宅	luxury_apartment	03-公园地点索引.jpg	14	2
+公园	residence_s_sports_37	07 公园公寓街 · 37号住宅	luxury_apartment	03-公园地点索引.jpg	14	3
+花园	agency_s_night	花园中介	agency	04-花园地点索引.jpg	1	1
+花园	expansion_shop_s_newtown_01	10 花园别墅街 · 1号招租商铺	shop	04-花园地点索引.jpg	1	2
+花园	expansion_shop_s_newtown_02	松庭织物店	shop	04-花园地点索引.jpg	1	3
+花园	expansion_shop_s_newtown_03	10 花园别墅街 · 3号招租商铺	shop	04-花园地点索引.jpg	1	4
+花园	expansion_shop_s_night_01	观湖家饰店	shop	04-花园地点索引.jpg	1	5
+花园	expansion_shop_s_night_02	09 顶奢商业街 · 2号招租商铺	shop	04-花园地点索引.jpg	2	1
+花园	expansion_shop_s_night_03	良木修复铺	shop	04-花园地点索引.jpg	2	2
+花园	garage_3	花园赛场车库	garage	04-花园地点索引.jpg	2	3
+花园	home_tier3	花园独栋别墅	villa	04-花园地点索引.jpg	2	4
+花园	hospital_garden	花园医院	office	04-花园地点索引.jpg	2	5
+花园	life_bar_tier4	星苑酒吧	bar	04-花园地点索引.jpg	3	1
+花园	life_garden_amusement	花园游乐园	amusement	04-花园地点索引.jpg	3	2
+花园	life_golf	青湾练习场	golf	04-花园地点索引.jpg	3	3
+花园	life_home_s_newtown	10 花园别墅街居民住宅	villa	04-花园地点索引.jpg	3	4
+花园	life_home_s_night	09 顶奢商业街居民住宅	villa	04-花园地点索引.jpg	3	5
+花园	life_ktv_tier4	星苑歌房	ktv	04-花园地点索引.jpg	4	1
+花园	life_restaurant_tier4	星苑餐厅	restaurant	04-花园地点索引.jpg	4	2
+花园	life_unit_s_newtown_0	10 花园别墅街西侧商铺	shop	04-花园地点索引.jpg	4	3
+花园	life_unit_s_newtown_2	10 花园别墅街东侧商铺	shop	04-花园地点索引.jpg	4	4
+花园	life_unit_s_night_0	09 顶奢商业街西侧商铺	shop	04-花园地点索引.jpg	4	5
+花园	life_unit_s_night_2	09 顶奢商业街东侧商铺	shop	04-花园地点索引.jpg	5	1
+花园	metro_garden	花园站	station	04-花园地点索引.jpg	5	2
+花园	metro_luxury	顶奢商业站	station	04-花园地点索引.jpg	5	3
+花园	race_3	花园大奖赛	racetrack	04-花园地点索引.jpg	5	4
+花园	residence_s_newtown_01	10 花园别墅街 · 1号住宅	villa	04-花园地点索引.jpg	5	5
+花园	residence_s_newtown_02	10 花园别墅街 · 2号住宅	villa	04-花园地点索引.jpg	6	1
+花园	residence_s_newtown_03	10 花园别墅街 · 3号住宅	villa	04-花园地点索引.jpg	6	2
+花园	residence_s_newtown_04	10 花园别墅街 · 4号住宅	villa	04-花园地点索引.jpg	6	3
+花园	residence_s_newtown_05	10 花园别墅街 · 5号住宅	villa	04-花园地点索引.jpg	6	4
+花园	residence_s_newtown_06	10 花园别墅街 · 6号住宅	villa	04-花园地点索引.jpg	6	5
+花园	residence_s_newtown_07	10 花园别墅街 · 7号住宅	villa	04-花园地点索引.jpg	7	1
+花园	residence_s_newtown_08	10 花园别墅街 · 8号住宅	villa	04-花园地点索引.jpg	7	2
+花园	residence_s_newtown_09	10 花园别墅街 · 9号住宅	villa	04-花园地点索引.jpg	7	3
+花园	residence_s_newtown_10	10 花园别墅街 · 10号住宅	villa	04-花园地点索引.jpg	7	4
+花园	residence_s_newtown_11	10 花园别墅街 · 11号住宅	villa	04-花园地点索引.jpg	7	5
+花园	residence_s_newtown_12	10 花园别墅街 · 12号住宅	villa	04-花园地点索引.jpg	8	1
+花园	residence_s_newtown_13	10 花园别墅街 · 13号住宅	villa	04-花园地点索引.jpg	8	2
+花园	residence_s_newtown_14	10 花园别墅街 · 14号住宅	villa	04-花园地点索引.jpg	8	3
+花园	residence_s_newtown_15	10 花园别墅街 · 15号住宅	villa	04-花园地点索引.jpg	8	4
+花园	residence_s_newtown_16	10 花园别墅街 · 16号住宅	villa	04-花园地点索引.jpg	8	5
+花园	residence_s_newtown_17	10 花园别墅街 · 17号住宅	villa	04-花园地点索引.jpg	9	1
+花园	residence_s_newtown_18	10 花园别墅街 · 18号住宅	villa	04-花园地点索引.jpg	9	2
+花园	residence_s_newtown_19	10 花园别墅街 · 19号住宅	villa	04-花园地点索引.jpg	9	3
+花园	residence_s_newtown_20	10 花园别墅街 · 20号住宅	villa	04-花园地点索引.jpg	9	4
+花园	residence_s_newtown_21	10 花园别墅街 · 21号住宅	villa	04-花园地点索引.jpg	9	5
+花园	residence_s_newtown_22	10 花园别墅街 · 22号住宅	villa	04-花园地点索引.jpg	10	1
+花园	residence_s_newtown_23	10 花园别墅街 · 23号住宅	villa	04-花园地点索引.jpg	10	2
+花园	residence_s_newtown_24	10 花园别墅街 · 24号住宅	villa	04-花园地点索引.jpg	10	3
+花园	residence_s_newtown_25	10 花园别墅街 · 25号住宅	villa	04-花园地点索引.jpg	10	4
+花园	residence_s_newtown_26	10 花园别墅街 · 26号住宅	villa	04-花园地点索引.jpg	10	5
+花园	residence_s_newtown_27	10 花园别墅街 · 27号住宅	villa	04-花园地点索引.jpg	11	1
+花园	residence_s_newtown_28	10 花园别墅街 · 28号住宅	villa	04-花园地点索引.jpg	11	2
+花园	residence_s_newtown_29	10 花园别墅街 · 29号住宅	villa	04-花园地点索引.jpg	11	3
+花园	residence_s_newtown_30	10 花园别墅街 · 30号住宅	villa	04-花园地点索引.jpg	11	4
+花园	residence_s_newtown_31	10 花园别墅街 · 31号住宅	villa	04-花园地点索引.jpg	11	5
+花园	residence_s_newtown_32	10 花园别墅街 · 32号住宅	villa	04-花园地点索引.jpg	12	1
