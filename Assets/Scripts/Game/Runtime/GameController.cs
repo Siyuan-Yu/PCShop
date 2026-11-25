@@ -118,7 +118,7 @@ namespace PCShopSell.Game
 
             _actors = new GameObject("Actors").transform;
             _avatar = new AvatarView(_actors);
-            Interior = new ShopInteriorView(_actors, City.PlayerShop().Size);
+            Interior = new ShopInteriorView(_actors, City.PlayerShop().Size, City.IsLakeCity, Session?.DistrictTierOf(City.PlayerShop()) ?? 0);
             HomeRoom = new HomeRoomView(_actors);
             Ui ??= new GameUi(this);
         }
@@ -157,7 +157,7 @@ namespace PCShopSell.Game
                 Session.Dispose();
             }
             Interior.Clear();
-            EnsureInterior(s.PlayerShop.Size);
+            EnsureInterior(s.PlayerShop.Size, ownerSession: s);
 
             Session = s;
             ActiveSaveSlot = saveSlot;
@@ -735,7 +735,8 @@ namespace PCShopSell.Game
             bool insideVenue = Session.CurrentPlace != null
                 && World.Places.TryGetValue(Session.CurrentPlace.Id, out var venue)
                 && venue.VenueInterior != null && venue.VenueInterior.activeInHierarchy;
-            UpdateWeather(room || InPachinkoRoom, room || insideVenue);
+            bool indoors=room || insideVenue || InPachinkoRoom;
+            UpdateWeather(indoors,indoors);
             _rain.SetPaused(scooterTutorialPaused || _communityRevealActive);
 
             bool chasing = Session.Police.AnyChasing;
@@ -747,7 +748,7 @@ namespace PCShopSell.Game
         {
             bool raining = Session.CityIsRaining && !sheltered;
             _rain.Sync(raining);
-            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining);
+            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining, City.IsLakeCity);
         }
 
         private bool _overview;
@@ -1397,11 +1398,14 @@ namespace PCShopSell.Game
         }
 
         /// <summary>店内场景按店面大小重建（扩建、读档时用）。</summary>
-        private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size, bool rebuild = false)
+        private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size, bool rebuild = false, GameSession ownerSession = null)
         {
-            if (!rebuild && Interior != null && Interior.Size == size) return;
+            var session = ownerSession ?? Session;
+            bool painted = City.IsLakeCity;
+            int district = session?.PlayerShopPlace == null ? 0 : session.DistrictTierOf(session.PlayerShopPlace);
+            if (!rebuild && Interior != null && Interior.Size == size && Interior.PaintedShop == painted && Interior.District == district) return;
             Interior?.Destroy();
-            Interior = new ShopInteriorView(_actors, size);
+            Interior = new ShopInteriorView(_actors, size, painted, district);
         }
 
         private bool EnsureResidenceView()
@@ -1551,6 +1555,7 @@ namespace PCShopSell.Game
             Cam.clearFlags = CameraClearFlags.SolidColor;
             Cam.allowHDR = true;
             Cam.allowMSAA = true;
+            if(Cam.GetComponent<TownShadowRange>()==null)Cam.gameObject.AddComponent<TownShadowRange>();
             var extra = Cam.GetUniversalAdditionalCameraData();
             extra.renderPostProcessing = true;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;

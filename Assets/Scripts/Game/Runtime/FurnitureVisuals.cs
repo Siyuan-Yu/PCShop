@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using UnityEngine;
 
@@ -572,9 +572,11 @@ namespace PCShopSell.Game.Runtime
         /// <summary>布局重建过几次（店内场景据此刷新设施数据）。</summary>
         public int Version { get; private set; }
 
-        public RoomFurniture(Transform parent)
+        private readonly bool _painted;
+        public RoomFurniture(Transform parent, bool painted = false)
         {
             _parent = parent;
+            _painted = painted;
         }
 
         /// <summary>布局有变化就重建，返回是否重建了。</summary>
@@ -603,6 +605,28 @@ namespace PCShopSell.Game.Runtime
                 FurnitureDef def = FurnitureCatalog.Get(layout[i].Id);
                 if (def == null) continue;
                 GameObject go = FurnitureVisuals.Build(_parent, def, true, layout[i].Item);
+                if (_painted)
+                {
+                    OldTownSurfaces.Apply(go.transform);
+                    var shelf=go.GetComponent<FixtureHandle>()?.Shelf;
+                    if(shelf!=null && !shelf.Unset && !shelf.Goods)
+                    {
+                        var ink=OldTownSurfaces.PanelMaterial("pack"+shelf.Category);
+                        foreach(var item in shelf.BoxedItems)
+                        {
+                            var label=item.transform.Find("Label");
+                            if(ink==null || label==null) continue;
+                            item.transform.Find("Art").gameObject.SetActive(false);
+                            label.GetComponent<MeshRenderer>().sharedMaterial=ink;
+                            label.localScale=Vector3.Scale(label.localScale,new Vector3(1.28f,1.42f,1));
+                        }
+                    }
+                    if (def.Fixture == FixtureKind.Counter)
+                        QuarterModules.Add(go.transform,"DrawerFront",new Vector3(0,0,-(float)def.Depth/2-.031f),
+                            new Vector3((float)def.Width*.53f,1,1));
+                    if (def.Fixture == FixtureKind.Bench)
+                        QuarterModules.Add(go.transform,"BenchTools",new Vector3((float)def.Width*.17f,.975f,-.07f),Vector3.one);
+                }
                 FurnitureVisuals.Place(go, def, layout[i], room);
                 var pv = go.AddComponent<PlacedVisual>();
                 pv.Index = i;

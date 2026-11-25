@@ -25,6 +25,56 @@ namespace PCShopSell.Game.Runtime
         private Matrix4x4[] _bindPoses;
         private Material[] _paint;
         private bool _prefersSkirt;
+        private SkinnedMeshRenderer _painted;
+        private Mesh _paintedBody, _paintedHead;
+        private static readonly Dictionary<Mesh, Mesh> ExposedSkin = new();
+
+        internal void AttachPainted(string asset)
+        {
+            var mesh = Resources.Load<Mesh>("OldTown/" + asset);
+            var material = Resources.Load<Material>("OldTown/" + asset + "Paint");
+            var head = Resources.Load<Mesh>("OldTown/" + asset + "Head");
+            if (mesh == null || material == null || head == null) return;
+            _paintedBody = mesh;
+            _paintedHead = head;
+            _painted = Renderer(_bones[0], asset);
+            _painted.sharedMesh = mesh;
+            _painted.bones = _bones;
+            _painted.sharedMaterial = material;
+            // Other outfits supply their original sleeves and trousers. Keep the same face
+            // and only the exposed skin below the collar from the original body.
+            var core = _core.sharedMesh;
+            if (!ExposedSkin.TryGetValue(core, out var skin) || skin == null)
+            {
+                skin = UnityEngine.Object.Instantiate(core);
+                skin.name = core.name + " below collar";
+                var points = core.vertices;
+                var weights = core.boneWeights;
+                for (int sub = 0; sub < core.subMeshCount; sub++)
+                {
+                    var triangles = core.GetTriangles(sub);
+                    var keep = new List<int>(triangles.Length);
+                    for (int i = 0; i < triangles.Length; i += 3)
+                    {
+                        int a = triangles[i], b = triangles[i+1], c = triangles[i+2];
+                        if ((points[a].y + points[b].y + points[c].y) / 3 > 1.29f ||
+                            weights[a].boneIndex0 == 2 && weights[b].boneIndex0 == 2 && weights[c].boneIndex0 == 2) continue;
+                        keep.Add(a); keep.Add(b); keep.Add(c);
+                    }
+                    skin.SetTriangles(keep, sub, false);
+                }
+                ExposedSkin[core] = skin;
+            }
+            _core.sharedMesh = skin;
+            _painted.localBounds = new Bounds(Vector3.up * .9f, new Vector3(2, 2.3f, 2));
+        }
+
+        private void ShowPainted(bool show)
+        {
+            if (_painted == null) return;
+            _painted.sharedMesh = show ? _paintedBody : _paintedHead;
+            _core.enabled = _top.enabled = _legs.enabled = !show;
+        }
 
         internal void Build(Transform visual, Transform torso, FigureAppearance appearance, NpcLook npc)
         {
@@ -111,8 +161,9 @@ namespace PCShopSell.Game.Runtime
             Apply(_core, "Core");
         }
 
-        internal void Dress(string cut, Color shirt, Color trousers)
+        internal void Dress(string cut, Color shirt, Color trousers, bool defaultOutfit)
         {
+            ShowPainted(defaultOutfit);
             bool shortSleeve = cut is "short" or "sport";
             _paint[(int)Paint.Top] = PlayerPaint(shirt, .14f);
             _paint[(int)Paint.Trim] = PlayerPaint(Color.Lerp(shirt, ArtDirection.Hex("5E352A"), .10f), .12f);
@@ -123,6 +174,7 @@ namespace PCShopSell.Game.Runtime
 
         internal void DressNpc(string cut, Color shirt, Color trousers, Color layer, Color accent)
         {
+            ShowPainted(cut == "jacket");
             bool uniform = cut is "uniform" or "apron" or "patrol";
             string bottoms = _prefersSkirt && !uniform && cut != "coat" ? "skirt"
                 : cut == "short" ? "shorts" : "pants";

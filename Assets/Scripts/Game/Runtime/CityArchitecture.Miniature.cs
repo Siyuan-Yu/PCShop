@@ -4,10 +4,10 @@ namespace PCShopSell.Game.Runtime
 {
     public static partial class CityArchitecture
     {
-        internal static void StreetApron(Transform root,float width)
+        internal static void StreetApron(Transform root,float width,bool oldQuarter=false,Material paving=null)
         {
             Prims.Box(root,"Stone entrance forecourt",new Vector3(0,.075f,-1.65f),new Vector3(width+.6f,.09f,3.6f),
-                IndustrialMaterials.Surface("paving",ArtDirection.Hex("DDD0B5"),new Vector2(width/4,.9f)));
+                paving ?? (oldQuarter ? OldTownSurfaces.Ground("streetPavers",new Vector2(width+.6f,3.6f)) : IndustrialMaterials.Surface("paving",ArtDirection.Hex("DDD0B5"),new Vector2(width/4,.9f))));
         }
         internal static void SculptedRoofTiles(Transform parent,Vector3 at,float w,float d,float rise,Color color,bool hip,
             int repairSeed = -1)

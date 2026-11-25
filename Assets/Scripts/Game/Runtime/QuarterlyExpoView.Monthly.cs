@@ -45,6 +45,7 @@ namespace PCShopSell.Game.Runtime
                 _monthlyIndicators[i] = Prims.Box(_monthlyHall, "TaskIndicator" + i, table + new Vector3(1.2f, .25f, -.6f), Vector3.one * .18f, _monthlyFault).GetComponent<Renderer>();
                 _monthlySigns[i] = Label(_monthlyHall, "", table + new Vector3(0, 1.5f, .7f), 4.5f, .5f, ArtDirection.Ink);
             }
+            DistrictFinishes.Apply(_monthlyHall,2);
             _monthlyHall.gameObject.SetActive(false);
         }
         private bool SyncMonthlyHall(GameSession s, bool visible)

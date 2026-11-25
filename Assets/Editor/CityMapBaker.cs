@@ -41,6 +41,8 @@ public sealed class CityMapBaker : IPreprocessBuildWithReport
         var files=Directory.GetFiles("Assets/Scripts","*",SearchOption.AllDirectories)
             .Concat(Directory.GetFiles("Assets/Editor","*.cs",SearchOption.AllDirectories))
             .Concat(Directory.GetFiles("Assets/Resources","*",SearchOption.AllDirectories))
+            .Concat(Directory.GetFiles("Assets/Art/OldTownStreetStudy","*",SearchOption.AllDirectories)
+                .Where(f=>!f.EndsWith(".unity",StringComparison.OrdinalIgnoreCase)))
             .Where(f=>!f.EndsWith(".meta",StringComparison.OrdinalIgnoreCase)).OrderBy(f=>f,StringComparer.Ordinal);
         using(var sha=SHA256.Create())
         {

@@ -41,7 +41,7 @@ namespace PCShopSell.Game.Runtime
         {
             public Vector2 A, B;
             public float Width, PavedWidth, Deck, DryStart, DryEnd, RampLength;
-            public bool Raised, GroundAtA, GroundAtB;
+            public bool Raised, GroundAtA, GroundAtB, Outskirts;
             public int PavingIndex;
             public Vector2 Direction => (B - A).normalized;
             public float Length => (B - A).magnitude;
@@ -110,6 +110,27 @@ namespace PCShopSell.Game.Runtime
                 var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(root,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=material;
             }
         }
+        private readonly ForestSpatialIndex<Rect> _quarterYards=new();
+        private const float OldTownLandscapeReach = 83f;
+        private readonly ForestSpatialIndex<StreetSegment> _paintedStreets = new();
+
+        private const float ForestTransition=92f;
+        private float OldTownGroundCover(Vector3 world,float woodland=0)
+        {
+            var streets = _paintedStreets.At(world);
+            if (streets == null) return 0;
+            float cover = 0;
+            foreach (var street in streets)
+            {
+                float radius = street.PavedWidth * .5f + OldTownLandscapeReach + woodland;
+                float distance = Mathf.Sqrt(SegmentDistanceSquared(world, new Vector3(street.A.x,0,street.A.y),
+                    new Vector3(street.B.x,0,street.B.y)));
+                cover = Mathf.Max(cover, Mathf.SmoothStep(0, 1, (radius - distance) / 32f));
+                if (cover >= 1) return 1;
+            }
+            return cover;
+        }
+
         private IEnumerator BuildContinuousStreetSurfaces()
         {
             var root=new GameObject("ContinuousStreetSurfaces").transform;root.SetParent(_root,false);
@@ -128,13 +149,15 @@ namespace PCShopSell.Game.Runtime
                 float width = PlannedRoadWidth(a, b);
                 segments.Add(new StreetSegment { A = new Vector2(a.x, a.z), B = new Vector2(b.x, b.z), Width = width,
                     PavedWidth = width + (float)GameSession.CityPavingWidth * 2, Deck = deck,
+                    Outskirts = _outskirtsNodes?.Contains(n.Id) == true && _outskirtsNodes.Contains(e.To),
                     Raised = raisedA || raisedB, GroundAtA = !raisedA, GroundAtB = !raisedB });
             }
             // A raised access road owns its junction; the ground road terminates at that boundary.
             segments=segments.OrderByDescending(s=>s.Raised).ThenByDescending(s=>(s.B-s.A).sqrMagnitude).ToList();
             var roadIndex = _streetRoadEnvelopes = new RoadSurfaceGeometry.Index();
             var pavingIndex = new RoadSurfaceGeometry.Index();
-            var roads=new SurfaceMesh();var paving=new SurfaceMesh();var white=new SurfaceMesh();var yellow=new SurfaceMesh();
+            var oldPaving = new SurfaceMesh();
+            var roads=new SurfaceMesh();var paving=new SurfaceMesh();var curb=new SurfaceMesh();var white=new SurfaceMesh();var yellow=new SurfaceMesh();
             foreach (var s in segments)
             {
                 if (Time.realtimeSinceStartup >= deadline)
@@ -185,7 +208,7 @@ namespace PCShopSell.Game.Runtime
             void Pavement(Vector2[] p, StreetSegment street)
             {
                 var parts=roadIndex.Cut(new List<Vector2[]>{p},p);parts=pavingIndex.Cut(parts,p);
-                street.AddSurface(paving, parts, alignToStreet:true);pavingIndex.Add(p);
+                street.AddSurface(street.Outskirts ? oldPaving : paving, parts, alignToStreet:true);pavingIndex.Add(p);
             }
             foreach (var s in segments)
             {
@@ -211,10 +234,21 @@ namespace PCShopSell.Game.Runtime
                 bool raised = IsLakeAccessNode(p.NodeId);
                 const float entranceWidth = 2f;
                 var outline = raised ? RoadSurfaceGeometry.Road(from, to, entranceWidth) : RoadSurfaceGeometry.Strip(from, to, entranceWidth);
-                var approach = new StreetSegment { A = from, B = to, PavedWidth = entranceWidth, Raised = raised, Deck = deck,
+                var approach = new StreetSegment { A = from, B = to, Outskirts = OutskirtsStreet(p.StreetId), PavedWidth = entranceWidth, Raised = raised, Deck = deck,
                     PavingIndex = _streetPavementEnvelopes.Polygons.Count };
                 _streetPavementEnvelopes.Add(outline);
                 Pavement(outline, approach);
+                if (!raised && approach.Outskirts && (GameSession.IsCommercialPremises(p) || p.Model=="warehouse")
+                    && (to-from).sqrMagnitude < 18f*18f)
+                {
+                    var facing=new Vector2(Mathf.Sin((float)p.Heading*Mathf.Deg2Rad),Mathf.Cos((float)p.Heading*Mathf.Deg2Rad));
+                    float length=Vector2.Dot(to-from,facing);
+                    if (length>2 && Vector2.Dot((to-from).normalized,facing)>.94f)
+                    {
+                        float width=GameSession.IsCommercialPremises(p) ? (float)PCShopSell.Core.Home.RoomSpec.ForShop(p.Size).Width : (float)p.Width;
+                        Pavement(RoadSurfaceGeometry.Strip(to,to-facing*length,width+.6f),approach);
+                    }
+                }
                 if (raised) _lakeAccessSurfaces.Add(approach);
             }
             var crossingBands = new RoadSurfaceGeometry.Index();
@@ -292,6 +326,12 @@ namespace PCShopSell.Game.Runtime
                 {
                     var offset=normal*sign*(s.Width*.5f-.35f);
                     Mark(RoadSurfaceGeometry.Strip(s.A+d*from+offset,s.A+d*to+offset,.08f),white);
+                    if(!s.Raised)
+                    {
+                        var lip=normal*sign*(s.Width*.5f+.13f);
+                        var kerb=RoadSurfaceGeometry.Strip(s.A+d*from+lip,s.A+d*to+lip,.25f);
+                        s.AddSurface(curb,roadIndex.Cut(new List<Vector2[]>{kerb},kerb),.045f,alignToStreet:true);
+                    }
                 }
                 float projection=Vector2.Dot(s.A,d);
                 for(float at=Mathf.Floor(projection/5)*5-projection;at<length;at+=5)
@@ -300,12 +340,28 @@ namespace PCShopSell.Game.Runtime
                     if(end>start+.05f)Mark(RoadSurfaceGeometry.Strip(s.A+d*start,s.A+d*end,.12f),yellow);
                 }
             }
-            roads.Build(root,"RoadSurface",IndustrialMaterials.Surface("asphalt",Asphalt,Vector2.one),resources);
-            paving.Build(root,"PavementSurface",IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(1.25f,1.25f)),resources);
-            white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Cream),resources);
+
+            foreach (var segment in segments)
+            {
+                if (!segment.Outskirts) continue;
+                float radius = segment.PavedWidth * .5f + OldTownLandscapeReach;
+                var min = Vector2.Min(segment.A,segment.B) - Vector2.one * radius;
+                var max = Vector2.Max(segment.A,segment.B) + Vector2.one * radius;
+                _paintedStreets.Add(Rect.MinMaxRect(min.x-ForestTransition,min.y-ForestTransition,max.x+ForestTransition,max.y+ForestTransition),segment);
+            }
+
+            oldPaving.Build(root, "Old town stone sidewalks", OldTownSurfaces.PanelMaterial("streetPavers"), resources);
+            curb.Build(root,"路沿石",DistrictFinishes.Tile("cutStone",new Vector2(1.6f,.74f),ArtDirection.Hex("BAAE96")),resources);
+            roads.Build(root,"RoadSurface",OldTownSurfaces.PanelMaterial("streetAsphalt"),resources);
+            paving.Build(root,"PavementSurface",OldTownSurfaces.PanelMaterial("graniteWalk"),resources);
+            white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Hex("AC9F83")),resources);
             yellow.Build(root,"LaneMarkings",Mats.Lit(ArtDirection.Brass),resources);
             yield return BuildStreetVerge(root,segments,pavingIndex);
         }
+
+        private static GameObject _oldTownTree;
+        private static GameObject OldTownTree => _oldTownTree != null ? _oldTownTree :
+            (_oldTownTree = Resources.Load<GameObject>("OldTown/StreetTree"));
 
         private IEnumerator BuildStreetVerge(Transform parent,List<StreetSegment> streets,RoadSurfaceGeometry.Index paving)
         {
@@ -319,8 +375,13 @@ namespace PCShopSell.Game.Runtime
             foreach(var p in _city.PublicPlaces.Where(BuildsPlace))
             {
                 var at=NodeWorld(p.NodeId);
-                Reserve(new Vector2(at.x+(float)p.EntranceX,at.z+(float)p.EntranceY),
-                    (float)p.Heading,(float)p.Width,(float)p.Depth);
+                float width=(float)p.Width,depth=(float)p.Depth;
+                if(GameSession.IsCommercialPremises(p))
+                {
+                    var room=PCShopSell.Core.Home.RoomSpec.ForShop(p.Size);
+                    width=Mathf.Max(width,(float)room.Width);depth=Mathf.Max(depth,(float)room.Depth);
+                }
+                Reserve(new Vector2(at.x+(float)p.EntranceX,at.z+(float)p.EntranceY),(float)p.Heading,width,depth);
             }
             foreach(var b in _city.Blocks) Reserve(new Vector2((float)b.x,(float)b.y),(float)b.heading,(float)b.width,(float)b.depth);
             foreach(var parcel in _city.LakeParcels) Reserve(new Vector2((float)parcel.x,(float)parcel.y),
@@ -328,11 +389,126 @@ namespace PCShopSell.Game.Runtime
             var shore=SmoothShore();
             var details=new Dictionary<Vector2Int,ForestChunk>();
             var gardens=new Dictionary<Vector2Int,MiniatureDetailMesh>();
+            var borders=new Dictionary<Vector2Int,StreetPlanting>();
             var treeLeaf=Mats.Lit(ArtDirection.Hex("577D35"),.04f);
             var treeTips=Mats.Lit(ArtDirection.Hex("A5B742"),.04f);
             var treeBark=Mats.Lit(ArtDirection.Hex("866342"),.06f);
             bool Overlaps(RoadSurfaceGeometry.Index index,Vector2[] probe) =>
                 index.Nearby(probe).Any(id=>RoadSurfaceGeometry.Intersect(probe,index.Polygons[id]).Length>=3);
+            // Small rear courts occupy only free dry land, outside every configured plot and approach.
+            foreach(var place in _city.PublicPlaces.Where(BuildsPlace))
+            {
+                if(IsLakeAccessNode(place.NodeId)) continue;
+                bool home=place.Model=="oldhome";
+                bool market=place.Model=="warehouse";
+                if(!home && !market && !GameSession.IsCommercialPremises(place)) continue;
+                var node=NodeWorld(place.NodeId);
+                var door=new Vector2(node.x+(float)place.EntranceX,node.z+(float)place.EntranceY);
+                float rad=(float)place.Heading*Mathf.Deg2Rad;
+                var back=new Vector2(Mathf.Sin(rad),Mathf.Cos(rad));
+                var right=new Vector2(back.y,-back.x);
+                int variant=StableCityHash(place.Id)%3;
+                float depth=(float)place.Depth;
+                if(GameSession.IsCommercialPremises(place)) depth=Mathf.Max(depth,(float)PCShopSell.Core.Home.RoomSpec.ForShop(place.Size).Depth);
+                var rear=door+back*(depth+3.10f)+right*Mathf.Max(0,(float)place.Width*.5f-2.7f)*(variant==1?-1:1);
+                float halfWidth=(float)place.Width*.5f;
+                if(GameSession.IsCommercialPremises(place)) halfWidth=Mathf.Max(halfWidth,(float)PCShopSell.Core.Home.RoomSpec.ForShop(place.Size).Width*.5f);
+                var sideOffset=right*(halfWidth+3.65f)*(variant==1?-1:1);
+                var sideBase=door+back*2.0f;
+                var mid=rear;
+                Vector2[] probe=null;
+                foreach(var candidate in new[]{sideBase+sideOffset,sideBase-sideOffset,rear})
+                {
+                    var rect=RoadSurfaceGeometry.Strip(candidate-back*2.10f,candidate+back*2.10f,5.20f);
+                    if(Overlaps(reserved,rect)||Overlaps(paving,rect)||Overlaps(_streetRoadEnvelopes,rect)) continue;
+                    if(rect.Any(v=>MountainHeight(v.x/LakeScale,v.y/LakeScale)>.055f ||
+                        WithinLake(new Vector3(v.x,0,v.y)/LakeScale,shore))) continue;
+                    mid=candidate;probe=rect;break;
+                }
+                if(probe==null) continue;
+                var exclusion=Rect.MinMaxRect(probe.Min(v=>v.x)-1,probe.Min(v=>v.y)-1,probe.Max(v=>v.x)+1,probe.Max(v=>v.y)+1);
+                _quarterYards.Add(exclusion,exclusion);
+                reserved.Add(probe);
+                var court=new GameObject("Service court "+place.Id).transform;
+                court.SetParent(parent,false);
+                court.position=new Vector3(mid.x,0,mid.y);
+                court.rotation=Quaternion.Euler(0,(float)place.Heading,0);
+                Prims.Box(court,"Yard paving",new Vector3(0,.023f,0),new Vector3(4.80f,.04f,3.68f),
+                    OldTownSurfaces.Surface("paving",ArtDirection.Hex("BEAD91"),Vector2.one));
+                QuarterModules.Add(court,"YardWall",new Vector3(0,.043f,1.78f),new Vector3(1.18f,1,1));
+                if(market)
+                {
+                    QuarterModules.Add(court,"CargoPallet",new Vector3(-1.1f,.046f,.55f),Vector3.one);
+                    QuarterModules.Add(court,"Crates",new Vector3(.65f,.046f,.54f),Vector3.one,6);
+                }
+                else if(variant==0 && (home || OutskirtsStreet(place.StreetId)))
+                {
+                    // A low service wing occupies only the already reserved side court.
+                    var shell=QuarterModules.Add(court,"WallShell",new Vector3(-.16f,.06f,-.62f),new Vector3(.47f,.72f,.39f));
+                    QuarterModules.Tint(shell,ArtDirection.Hex("DFD6B9"));
+                    var roof=Prims.Box(court,"Lean-to roof",new Vector3(-.16f,2.36f,.48f),new Vector3(4.40f,.13f,2.62f),
+                        DistrictFinishes.Tile("patina",new Vector2(1.35f,.90f)));
+                    roof.transform.localRotation=Quaternion.Euler(-6,0,0);
+                    QuarterModules.Add(court,"CargoBay",new Vector3(-.71f,.08f,-.63f),new Vector3(.57f,.70f,.72f));
+                    QuarterModules.Add(court,"SideWindow",new Vector3(1.14f,.77f,-.64f),new Vector3(.72f,.68f,.73f));
+                    QuarterModules.Add(court,"Crates",new Vector3(.94f,.07f,-1.22f),Vector3.one*.78f);
+                    QuarterModules.Add(court,"BenchTools",new Vector3(-.86f,.07f,-1.27f),Vector3.one*.77f);
+                }
+                else if(home && variant!=0)
+                {
+                    QuarterModules.Add(court,"WashLine",new Vector3(-.37f,.046f,.83f),Vector3.one);
+                    QuarterModules.Add(court,"Bench",new Vector3(1.82f,.046f,.02f),Vector3.one,270);
+                }
+                else
+                {
+                    QuarterModules.Add(court,"CycleShelter",new Vector3(-.34f,.046f,.06f),Vector3.one);
+                    QuarterModules.Add(court,"Cycle",new Vector3(-.68f,.046f,.46f),Vector3.one,70);
+                    QuarterModules.Add(court,"Cycle",new Vector3(.58f,.046f,.46f),Vector3.one,73);
+                }
+            }
+            PlantOldHomesShade(parent,reserved,paving,shore);
+            PlantVacantPlots(parent,reserved,paving,shore);
+            PlantNeighbourhoodEdges(parent,reserved,paving,shore);
+            // Road nodes often divide one straight frontage into several short segments.
+            // Span from one actual frontage to the next, keeping driveways clear at ground level.
+            var poles=new List<(string street,Vector2 foot,Vector2 right)>();
+            foreach(var place in _city.PublicPlaces.Where(BuildsPlace))
+            {
+                if(!OutskirtsStreet(place.StreetId) || IsLakeAccessNode(place.NodeId) ||
+                    !(place.Model=="shop" || place.Model=="warehouse" || place.Model=="oldhome" || place.Model=="station")) continue;
+                var node=NodeWorld(place.NodeId);
+                var door=new Vector2(node.x+(float)place.EntranceX,node.z+(float)place.EntranceY);
+                float rad=(float)place.Heading*Mathf.Deg2Rad;
+                var right=new Vector2(Mathf.Cos(rad),-Mathf.Sin(rad));var back=new Vector2(-right.y,right.x);
+                float width=GameSession.IsCommercialPremises(place) ? (float)PCShopSell.Core.Home.RoomSpec.ForShop(place.Size).Width : (float)place.Width;
+                var foot=door-right*(width*.5f-.23f)-back*2.29f;
+                var pad=RoadSurfaceGeometry.Strip(foot-right*.33f,foot+right*.33f,.66f);
+                if (Overlaps(reserved,pad) || Overlaps(_streetRoadEnvelopes,pad) ||
+                    poles.Any(other=>(other.foot-foot).sqrMagnitude<25)) continue;
+                reserved.Add(pad);
+                poles.Add((place.StreetId,foot,right));
+            }
+            var used=new HashSet<int>();
+            for(int i=0;i<poles.Count;i++)
+            {
+                var pole=poles[i];int nearest=-1;float limit=35f;
+                for(int j=0;j<poles.Count;j++)
+                {
+                    var next=poles[j];var delta=next.foot-pole.foot;float dist=delta.magnitude;
+                    if(next.street!=pole.street || dist<5 || dist>=limit || Vector2.Dot(pole.right,next.right)<.94f ||
+                        Vector2.Dot(delta.normalized,pole.right)<.99f) continue;
+                    var path=RoadSurfaceGeometry.Strip(pole.foot+delta.normalized,next.foot-delta.normalized,.66f);
+                    if(Overlaps(_streetRoadEnvelopes,path)||Overlaps(reserved,path)) continue;
+                    nearest=j;limit=dist;
+                }
+                if(nearest<0) continue;
+                var other=poles[nearest];var axis=other.foot-pole.foot;
+                float yaw=-Mathf.Atan2(axis.y,axis.x)*Mathf.Rad2Deg;
+                QuarterModules.Add(parent,"PowerSpan",new Vector3(pole.foot.x,6.69f,pole.foot.y),new Vector3(limit/12,1,1),yaw);
+                foreach(int end in new[]{i,nearest})
+                    if(used.Add(end)) QuarterModules.Add(parent,"PowerPole",
+                        new Vector3(poles[end].foot.x,.115f,poles[end].foot.y),Vector3.one,yaw);
+            }
             float deadline = Time.realtimeSinceStartup + .008f;
             foreach(var street in streets)
             {
@@ -358,8 +534,21 @@ namespace PCShopSell.Game.Runtime
                     var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
                     if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
                     if(!gardens.TryGetValue(key,out var garden)){garden=new MiniatureDetailMesh();gardens.Add(key,garden);}
-                    garden.Tree(world,5.4f+seed%3*.35f,seed%12,treeLeaf,treeTips,treeBark);
-                    garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
+                    if (OldTownTree != null)
+                    {
+                        int treeSeed=seed+Mathf.RoundToInt(along)+side;
+                        PaintedWoodland.Plant(parent,world,5+(treeSeed%4),treeSeed%11==0?2:treeSeed%3==0?3:0,treeSeed);
+                    }
+                    else garden.Tree(world,5.4f+seed%3*.35f,seed%12,treeLeaf,treeTips,treeBark);
+                    if(!borders.TryGetValue(key,out var bed))borders.Add(key,bed=new StreetPlanting());
+                    var axis=new Vector3(direction.x,0,direction.y);
+                    var normal=new Vector3(across.x,0,across.y)*side;
+                    for(int j=-2;j<=2;j++)
+                    {
+                        var flora=world+axis*(j*.82f)+normal*(.42f+.36f*Mathf.Sin(seed+j));
+                        bed.Add(j==0?PlantSpecies.Broadleaf:j==1?PlantSpecies.GoldenBush:PlantSpecies.Grass,flora,
+                            j==0?1.85f:1.26f,j==0?.94f:.45f+.13f*((seed+j+3)%3),seed+j);
+                    }
                     var pole=Mats.Lit(ArtDirection.Hex("46515A"),.25f);
                     var lamp=world-new Vector3(across.x,0,across.y)*side*1.8f;
                     garden.Box(lamp+Vector3.up*.13f,new Vector3(.40f,.26f,.40f),pole);
@@ -395,6 +584,7 @@ namespace PCShopSell.Game.Runtime
                     seed=(seed*113+91)&1023;
                 }
             }
+            foreach(var bed in borders.Values)bed.Build(parent,"街边下层植被");
             foreach(var pair in gardens)
             {
                 pair.Value.Build(parent,$"Street planting {pair.Key.x}/{pair.Key.y}");

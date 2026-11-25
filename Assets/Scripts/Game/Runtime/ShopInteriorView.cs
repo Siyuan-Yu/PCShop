@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
@@ -381,6 +381,11 @@ namespace PCShopSell.Game.Runtime
             Material leaf2 = Mats.Lit(new Color(0.3f, 0.62f, 0.34f), 0.3f);
             foreach (float px in new[] { doorX - 1.3f, doorX + 1.3f })
             {
+                if(PaintedShop)
+                {
+                    QuarterModules.Add(_root,"PlantPot",new Vector3(px,-.10f,.40f),Vector3.one);
+                    continue;
+                }
                 Prims.Shape(PrimitiveType.Cylinder, _root, "PlantPot", new Vector3(px, 0.2f, 0.4f), new Vector3(0.38f, 0.2f, 0.38f), pot);
                 Prims.Shape(PrimitiveType.Sphere, _root, "PlantLeaf", new Vector3(px, 0.62f, 0.4f), new Vector3(0.55f, 0.5f, 0.55f), leaf);
                 Prims.Shape(PrimitiveType.Sphere, _root, "PlantLeaf", new Vector3(px + 0.08f, 0.92f, 0.36f), new Vector3(0.36f, 0.34f, 0.36f), leaf2);
@@ -420,13 +425,13 @@ namespace PCShopSell.Game.Runtime
         private void BuildStreet(float w, float d, float doorX)
         {
             float x0 = -StreetExtent, x1 = w + StreetExtent, len = x1 - x0, cx = (x0 + x1) / 2;
-            Prims.Box(_root, "Outside", new Vector3(cx, -0.12f, d / 2 - 6f), new Vector3(len + 20f, 0.05f, d + 40f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f)));
-            Prims.Box(_root, "Sidewalk", new Vector3(cx, -0.03f, CurbZ / 2), new Vector3(len, 0.06f, -CurbZ), Mats.Lit(new Color(0.55f, 0.54f, 0.52f), 0.15f));
+            Prims.Box(_root, "Outside", new Vector3(cx, -0.12f, d / 2 - 6f), new Vector3(len + 20f, 0.05f, d + 40f), PaintedShop ? OldTownSurfaces.Ground("streetMeadow",new Vector2(len+20,d+40)) : Mats.Lit(new Color(0.12f, 0.12f, 0.14f)));
+            Prims.Box(_root, "Sidewalk", new Vector3(cx, -0.03f, CurbZ / 2), new Vector3(len, 0.06f, -CurbZ), PaintedShop ? OldTownSurfaces.Ground("streetPavers",new Vector2(len,-CurbZ)) : Mats.Lit(new Color(0.55f, 0.54f, 0.52f), 0.15f));
             Material seam = Mats.Lit(new Color(0.45f, 0.44f, 0.43f), 0.1f);
-            for (float x = x0 + 1.5f; x < x1; x += 1.5f)
+            for (float x = x0 + 1.5f; !PaintedShop && x < x1; x += 1.5f)
                 Prims.Box(_root, "Paving", new Vector3(x, 0.002f, CurbZ / 2), new Vector3(0.04f, 0.01f, -CurbZ), seam);
             Prims.Box(_root, "Curb", new Vector3(cx, 0.04f, CurbZ), new Vector3(len, 0.16f, 0.2f), Mats.Lit(new Color(0.7f, 0.7f, 0.68f), 0.2f));
-            Prims.Box(_root, "Road", new Vector3(cx, -0.06f, (CurbZ + RoadFarZ) / 2), new Vector3(len, 0.04f, CurbZ - RoadFarZ), Mats.Lit(new Color(0.2f, 0.2f, 0.22f), 0.25f));
+            Prims.Box(_root, "Road", new Vector3(cx, -0.06f, (CurbZ + RoadFarZ) / 2), new Vector3(len, 0.04f, CurbZ - RoadFarZ), PaintedShop ? OldTownSurfaces.Ground("streetAsphalt",new Vector2(len,CurbZ-RoadFarZ)) : Mats.Lit(new Color(0.2f, 0.2f, 0.22f), 0.25f));
             Material paint = Mats.Lit(new Color(0.9f, 0.88f, 0.75f), 0.2f);
             float mid = (CurbZ + RoadFarZ) / 2;
             for (float x = x0 + 1f; x < x1; x += 3.2f)
@@ -456,22 +461,48 @@ namespace PCShopSell.Game.Runtime
 
             // 右边隔壁：一家奶茶店的门面（在店的右后方，不挡视线）
             float nx0 = w + 0.15f, nw = StreetExtent - 0.15f;
-            Prims.Box(_root, "NeighborR", new Vector3(nx0 + nw / 2, 1.7f, d / 2), new Vector3(nw, 3.4f, d), Mats.Lit(new Color(0.78f, 0.7f, 0.6f), 0.1f));
-            Prims.Box(_root, "NeighborRWindow", new Vector3(nx0 + 2.6f, 1.2f, -0.02f), new Vector3(3.2f, 1.6f, 0.04f), Mats.Glow(new Color(0.35f, 0.42f, 0.48f), new Color(1.4f, 1.2f, 0.8f), false));
-            Prims.Box(_root, "NeighborRDoor", new Vector3(nx0 + 5.0f, 1.0f, -0.02f), new Vector3(1.1f, 2.0f, 0.04f), Mats.Lit(new Color(0.3f, 0.22f, 0.18f), 0.3f));
-            Prims.Box(_root, "NeighborRSign", new Vector3(nx0 + 3.6f, 2.75f, -0.05f), new Vector3(5.2f, 0.55f, 0.08f), Mats.Glow(new Color(0.85f, 0.35f, 0.5f), new Color(2.6f, 0.8f, 1.3f), false));
-            Prims.Box(_root, "NeighborRAwning", new Vector3(nx0 + 3.6f, 2.35f, -0.45f), new Vector3(5.4f, 0.08f, 0.9f), Mats.Lit(new Color(0.75f, 0.2f, 0.25f), 0.2f));
-            Prims.Box(_root, "NeighborR2", new Vector3(nx0 + 9.6f, 1.6f, -0.02f), new Vector3(3.6f, 1.4f, 0.04f), Mats.Glow(new Color(0.3f, 0.35f, 0.3f), new Color(0.6f, 1.3f, 0.7f), false));
+            if(PaintedShop)
+            {
+                var shops=new GameObject("Neighbor tea shop").transform;
+                shops.SetParent(_root,false);
+                shops.localPosition=new Vector3(nx0+nw*.5f,0,0);
+                QuarterModules.Add(shops,"WallShell",Vector3.zero,new Vector3(nw/8.7f,3.4f/3.05f,d/5.8f));
+                QuarterModules.Add(shops,"TileRoof",new Vector3(0,3.40f,0),new Vector3(nw/8.7f,1,d/5.8f));
+                QuarterModules.Add(shops,"DisplayFront",Vector3.zero,new Vector3(nw/8.7f,1,1));
+                QuarterModules.Add(shops,"TinCanopy",new Vector3(0,2.47f,0),new Vector3((nw-.50f)/7.8f,1,1));
+                Prims.Box(shops,"Tea sign",new Vector3(0,2.82f,-.14f),new Vector3(nw-.55f,.54f,.17f),Mats.Lit(ArtDirection.Hex("955E49")));
+                Prims.SignText(shops,"街坊茶饮",new Vector3(0,2.82f,-.235f),nw-.85f,.40f,ArtDirection.Cream);
+                QuarterModules.Add(shops,"PlantPot",new Vector3(-nw*.31f,-.085f,-.69f),Vector3.one);
+            }
+            else
+            {
+                Prims.Box(_root, "NeighborR", new Vector3(nx0 + nw / 2, 1.7f, d / 2), new Vector3(nw, 3.4f, d), Mats.Lit(new Color(0.78f, 0.7f, 0.6f), 0.1f));
+                Prims.Box(_root, "NeighborRWindow", new Vector3(nx0 + 2.6f, 1.2f, -0.02f), new Vector3(3.2f, 1.6f, 0.04f), Mats.Glow(new Color(0.35f, 0.42f, 0.48f), new Color(1.4f, 1.2f, 0.8f), false));
+                Prims.Box(_root, "NeighborRDoor", new Vector3(nx0 + 5.0f, 1.0f, -0.02f), new Vector3(1.1f, 2.0f, 0.04f), Mats.Lit(new Color(0.3f, 0.22f, 0.18f), 0.3f));
+                Prims.Box(_root, "NeighborRSign", new Vector3(nx0 + 3.6f, 2.75f, -0.05f), new Vector3(5.2f, 0.55f, 0.08f), Mats.Glow(new Color(0.85f, 0.35f, 0.5f), new Color(2.6f, 0.8f, 1.3f), false));
+                Prims.Box(_root, "NeighborRAwning", new Vector3(nx0 + 3.6f, 2.35f, -0.45f), new Vector3(5.4f, 0.08f, 0.9f), Mats.Lit(new Color(0.75f, 0.2f, 0.25f), 0.2f));
+                Prims.Box(_root, "NeighborR2", new Vector3(nx0 + 9.6f, 1.6f, -0.02f), new Vector3(3.6f, 1.4f, 0.04f), Mats.Glow(new Color(0.3f, 0.35f, 0.3f), new Color(0.6f, 1.3f, 0.7f), false));
+            }
 
             // 左边：矮花坛 + 共享单车，不挡柜台
             Material planter = Mats.Lit(new Color(0.5f, 0.48f, 0.45f), 0.1f);
             Material bush = Mats.Lit(new Color(0.24f, 0.46f, 0.26f), 0.2f);
             Prims.Box(_root, "PlanterL", new Vector3(-1.6f, 0.2f, d / 2), new Vector3(2.4f, 0.4f, d - 0.6f), planter);
-            Prims.Box(_root, "BushL", new Vector3(-1.6f, 0.5f, d / 2), new Vector3(2.1f, 0.3f, d - 0.9f), bush);
+            Prims.Box(_root, "BushL", new Vector3(-1.6f, PaintedShop?.40f:.50f, d / 2), new Vector3(2.1f, PaintedShop?.04f:.30f, d - 0.9f), PaintedShop ? Mats.Lit(ArtDirection.Hex("79694D")) : bush);
+            if(PaintedShop)
+            {
+                for(float z=1.25f;z<d;z+=2.1f)
+                    QuarterModules.Add(_root,"PlantPot",new Vector3(-1.6f,-.22f,z),Vector3.one*1.26f);
+            }
             Material bike = Mats.Lit(new Color(0.95f, 0.75f, 0.1f), 0.3f);
             for (int i = 0; i < 3; i++)
             {
                 float bx = -6.5f + i * 0.7f;
+                if(PaintedShop)
+                {
+                    QuarterModules.Add(_root,"Cycle",new Vector3(bx,0,-.70f),Vector3.one,7);
+                    continue;
+                }
                 Prims.Box(_root, "Bike", new Vector3(bx, 0.45f, -0.7f), new Vector3(0.08f, 0.5f, 1.3f), bike);
                 Prims.Box(_root, "BikeSeat", new Vector3(bx, 0.75f, -0.5f), new Vector3(0.14f, 0.05f, 0.25f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
             }
@@ -593,14 +624,19 @@ namespace PCShopSell.Game.Runtime
             _cars.Add(new Walker { Go = root, Target = Origin + new Vector3(eastbound ? xb : xa, 0, z), Speed = 6f + (float)_rng.NextDouble() * 4f });
         }
 
-        public ShopInteriorView(Transform parent, ShopSize size)
+        public bool PaintedShop { get; }
+        public int District { get; }
+
+        public ShopInteriorView(Transform parent, ShopSize size, bool paintedShop = false, int district = 0)
         {
             _moveAlongRoute = MoveOwner;
             Size = size;
             _root = new GameObject("ShopInterior").transform;
             _root.SetParent(parent, false);
             _root.position = Origin;
-            _decor = new RoomFurniture(_root);
+            PaintedShop = paintedShop;
+            District = district;
+            _decor = new RoomFurniture(_root, paintedShop);
 
             var room = RoomSpec.ForShop(size);
             Width = (float)room.Width;
@@ -614,19 +650,21 @@ namespace PCShopSell.Game.Runtime
             for (int tz = 0; tz * tile < d; tz++)
             {
                 float sx = Mathf.Min(tile, w - tx * tile), sz = Mathf.Min(tile, d - tz * tile);
-                Prims.Box(_root, "Tile", new Vector3(tx * tile + sx / 2, 0.005f, tz * tile + sz / 2), new Vector3(sx - 0.012f, 0.012f, sz - 0.012f), tileMat);
+                Prims.Box(_root, "Tile", new Vector3(tx * tile + sx / 2, 0.005f, tz * tile + sz / 2), new Vector3(sx - 0.012f, 0.012f, sz - 0.012f), paintedShop ? (district < 2 ? OldTownSurfaces.FloorTile(tx,tz) : DistrictFinishes.Tile(district==3?"walnut":"graniteWalk",new Vector2(.5f,.5f))) : tileMat);
             }
             BuildStreet(w, d, w - 3.0f);
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("brick", ArtDirection.Hex("B5AA96"), new Vector2(w / 3, 1.5f)));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B2B4AC"), new Vector2(d / 3, 1.5f)));
-            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));
-            Prims.Box(_root, "WallDadoBack", new Vector3(w / 2, 0.38f, d - 0.015f), new Vector3(w, 0.76f, 0.025f), Mats.Lit(ArtDirection.Ink, .25f, .2f));
-            Prims.Box(_root, "WallDadoRight", new Vector3(w - 0.015f, 0.38f, d / 2), new Vector3(0.025f, 0.76f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));
+            var dado=paintedShop ? OldTownSurfaces.Surface("plaster",ArtDirection.Hex("788776"),Vector2.one)
+                : Mats.Lit(ArtDirection.Ink, .25f, .2f);
+            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), paintedShop ? OldTownSurfaces.Surface("plaster",ArtDirection.Hex("DECBA7"),new Vector2(w/4,1)) : IndustrialMaterials.Surface("brick", ArtDirection.Hex("B5AA96"), new Vector2(w / 3, 1.5f)));
+            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), paintedShop ? OldTownSurfaces.Surface("plaster",ArtDirection.Hex("D6C5A8"),new Vector2(d/4,1)) : IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B2B4AC"), new Vector2(d / 3, 1.5f)));
+            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), dado);
+            Prims.Box(_root, "WallDadoBack", new Vector3(w / 2, 0.38f, d - 0.015f), new Vector3(w, 0.76f, 0.025f), dado);
+            Prims.Box(_root, "WallDadoRight", new Vector3(w - 0.015f, 0.38f, d / 2), new Vector3(0.025f, 0.76f, d), dado);
             Prims.Box(_root, "BrassRailBack", new Vector3(w / 2, 0.78f, d - 0.035f), new Vector3(w, 0.035f, 0.035f), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
             Prims.Box(_root, "BrassRailRight", new Vector3(w - 0.035f, 0.78f, d / 2), new Vector3(0.035f, 0.035f, d), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
             // 大门开在货架这一侧（右前方），收银台在左边：顾客进门先逛货架，再回左边结账
             float doorX = w - 3.0f;
-            Material lowWall = Mats.Lit(ArtDirection.Ink, .25f, .2f);
+            Material lowWall = dado;
             Prims.Box(_root, "WallFrontLowA", new Vector3((doorX - 0.7f) / 2, 0.3f, -0.05f), new Vector3(doorX - 0.7f, 0.6f, 0.1f), lowWall);
             Prims.Box(_root, "WallFrontLowB", new Vector3((doorX + 0.7f + w) / 2, 0.3f, -0.05f), new Vector3(w - doorX - 0.7f, 0.6f, 0.1f), lowWall);
             Prims.Box(_root, "DoorMat", new Vector3(doorX, 0.012f, 0.45f), new Vector3(1.3f, 0.014f, 0.8f), Mats.Lit(new Color(0.35f, 0.18f, 0.16f)));
@@ -670,6 +708,22 @@ namespace PCShopSell.Game.Runtime
 
             // 铺子租下来是空的：货架、收银台、展示桌、装机操作台都是玩家自己买、自己摆的家具，
             // 摆好后由 RebuildFixtures 从布局里认出来（顾客逛哪、排队站哪、老板站哪都跟着摆放走）。
+            if (paintedShop)
+            {
+                var wood = OldTownSurfaces.Surface("wood", ArtDirection.Hex("946F4F"), Vector2.one);
+                foreach (float y in new[]{.10f, .80f, 2.91f})
+                {
+                    Prims.Box(_root, "Timber wall batten", new Vector3(w/2,y,d-.04f), new Vector3(w,.055f,.06f),wood);
+                    Prims.Box(_root, "Timber wall batten", new Vector3(w-.04f,y,d/2), new Vector3(.06f,.055f,d),wood);
+                }
+                if(district>0)
+                {
+                    Prims.Box(_root,"Wall panelling",new Vector3(w/2,.44f,d-.035f),new Vector3(w,.8f,.028f),
+                        DistrictFinishes.Tile(district==3?"walnut":district==2?"cutStone":"buffBrick",new Vector2(w/3,.5f)));
+                    DistrictFinishes.Apply(_root,district);
+                }
+                OldTownSurfaces.Apply(_root);
+            }
             _owner = Prims.Figure(_root, "Owner", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.05f, FigureAppearance.Player);
             _owner.transform.localPosition = new Vector3(_doorX = doorX, 0, 0.9f);
             _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);

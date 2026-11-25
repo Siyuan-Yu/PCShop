@@ -47,6 +47,8 @@ namespace PCShopSell.Game.Runtime
             {
                 residenceBlocks.TryGetValue(place.Id, out var block);
                 BuildPlannedPlace(place, block, block == null ? _root : housing);
+                if (OutskirtsStreet(place.StreetId)) OldTownSurfaces.Apply(Places[place.Id].Root.transform);
+                else if (_city.IsLakeCity) DistrictFinishes.Apply(Places[place.Id].Root.transform, ArtDistrict(place.StreetId));
                 ReportBuildProgress(.14f+.20f*++buildingsDone/Mathf.Max(1,buildingsTotal));
                 if(Time.realtimeSinceStartup>=buildingDeadline)
                 { yield return null;buildingDeadline=Time.realtimeSinceStartup+.016f; }
@@ -58,8 +60,12 @@ namespace PCShopSell.Game.Runtime
                 Vector3 at=new Vector3((float)block.x,0,(float)block.y);
                 var root=new GameObject("Compound_"+block.street).transform;root.SetParent(housing,false);root.position=at;
                 root.rotation=Quaternion.Euler(0,(float)block.heading,0);
-                PlannedBuilding(root,block.model,block.tier,(float)block.width,(float)block.depth,null,(float)block.height,block.variant);
+                if (block.model=="oldhome" && OutskirtsStreet(block.street))
+                    BuildQuarterShell(root,null,(float)block.width,(float)block.depth,(float)block.height,false,block.variant);
+                else PlannedBuilding(root,block.model,block.tier,(float)block.width,(float)block.depth,null,(float)block.height,block.variant);
                 BuildResidentialPlot(root,block);
+                if (OutskirtsStreet(block.street)) OldTownSurfaces.Apply(root);
+                else if (_city.IsLakeCity) DistrictFinishes.Apply(root, ArtDistrict(block.street));
                 ReportBuildProgress(.14f+.20f*++buildingsDone/Mathf.Max(1,buildingsTotal));
                 if(Time.realtimeSinceStartup>=buildingDeadline)
                 { yield return null;buildingDeadline=Time.realtimeSinceStartup+.016f; }
@@ -75,6 +81,9 @@ namespace PCShopSell.Game.Runtime
             BuildStarterTrees();
             ReportBuildProgress(.96f);
         }
+        private bool OutskirtsStreet(string street) =>
+            _city.IsLakeCity && _city.AgencyDistrictFor(street)?.id == "outskirts";
+
         private void BuildResidentialPlot(Transform root,LayoutBlockData block)
         {
             if(block.model=="villa"||block.model=="apartment"||block.model=="luxury_apartment")return;
@@ -134,6 +143,12 @@ namespace PCShopSell.Game.Runtime
                 reception.FlowerBed(new Vector3(-3.2f,.05f,-3.7f),1.6f,.7f,2);
                 reception.FlowerBed(new Vector3(3.2f,.05f,-3.7f),1.6f,.7f,3);
                 reception.Build(root,"Race reception facade");
+                if(_city.IsLakeCity)
+                {
+                    QuarterModules.Add(root,"TinCanopy",new Vector3(0,3.13f,-3.16f),new Vector3(.88f,1,1));
+                    QuarterModules.Add(root,"Bench",new Vector3(2.92f,.10f,-3.80f),Vector3.one);
+                    QuarterModules.Add(root,"Condenser",new Vector3(-4.57f,1.90f,.83f),Vector3.one,90);
+                }
                 office.AddComponent<PlaceMarker>().PlaceId=p.Id;vis.LabelPos=door+Vector3.up*6;
                 return;
             }
@@ -144,12 +159,14 @@ namespace PCShopSell.Game.Runtime
             {
                 var shell=new GameObject("Exterior").transform;shell.SetParent(root,false);
                 CityArchitecture.Venue(shell,p,w,d);
+                if(OutskirtsStreet(p.StreetId)) QuarterVenueFront(shell,p,w,d);
+                else if(_city.IsLakeCity) DistrictVenueEntrance(shell,p,w,d,ArtDistrict(p.StreetId));
                 foreach(var collider in shell.GetComponentsInChildren<Collider>())collider.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
                 var inside=new GameObject("VenueInterior").transform;inside.SetParent(root,false);
-                CityVenueView.Build(inside,p,w,d);inside.gameObject.SetActive(false);
+                CityVenueView.Build(inside,p,w,d,_city.IsLakeCity);inside.gameObject.SetActive(false);
                 vis.Exterior=shell.gameObject;vis.VenueInterior=inside.gameObject;_venueVisuals.Add(vis);
             }
-            else if(venue)CityVenueView.Build(root,p,w,d);
+            else if(venue)CityVenueView.Build(root,p,w,d,_city.IsLakeCity);
             else if(p.Kind==PlaceKind.Station)StarterMetro(root,p,w,d);
             else PlannedBuilding(root,p.Model,p.Tier,w,d,p,(float)(block?.height ?? 0),block?.variant ?? 0);
             if (block != null) BuildResidentialPlot(root, block);
@@ -163,7 +180,7 @@ namespace PCShopSell.Game.Runtime
                 var approach=Prims.Box(_root,"Approach_"+p.Id,(node+door)*.5f+Vector3.up*.08f,new Vector3(2,.12f,delta.magnitude),Mats.Lit(Sidewalk));
                 if(delta.sqrMagnitude>.01f)approach.transform.rotation=Quaternion.LookRotation(delta);
             }
-            vis.LabelPos=root.TransformPoint(new Vector3(0,block!=null?3.3f:CityArchitecture.HasExterior(p)?CityArchitecture.VenueHeight(p)+1:!venue && p.Kind!=PlaceKind.Station?PlannedPlaceHeight(p)+1:5,d*.3f));
+            vis.LabelPos=root.TransformPoint(new Vector3(0,block!=null?3.3f:OutskirtsStreet(p.StreetId) && (GameSession.IsCommercialPremises(p) || p.Model=="shop" && !CityArchitecture.HasExterior(p))?OldTownEaves(p)+1:CityArchitecture.HasExterior(p)?CityArchitecture.VenueHeight(p)+1:!venue && p.Kind!=PlaceKind.Station?PlannedPlaceHeight(p)+1:5,d*.3f));
             vis.Sign=root.GetComponentInChildren<UnityEngine.UI.Text>();
         }
         private static float PlannedHeight(string model,int tier)=>model=="villa"?6:model=="oldhome"?6:model=="luxury_apartment"?22:model=="apartment"?14:model=="office"?16:model=="warehouse"?6:4.5f+tier*.65f;
@@ -194,7 +211,34 @@ namespace PCShopSell.Game.Runtime
             if(p!=null && model=="shop")h=PlannedPlaceHeight(p);
             if(model=="oldhome" && (p==null || p.Kind==PlaceKind.Home))
             {
-                BuildOldResidence(root,p,w,d,h,seed,starter:p?.Id==StarterHome);
+                if (p != null && OutskirtsStreet(p.StreetId)) BuildQuarterShell(root,p,w,d,h,false,seed);
+                else BuildOldResidence(root,p,w,d,h,seed,starter:p?.Id==StarterHome);
+                return;
+            }
+            if (p != null && model=="warehouse" && OutskirtsStreet(p.StreetId))
+            {
+                BuildQuarterMarket(root,p,w,d,h);
+                return;
+            }
+            if(p!=null && OutskirtsStreet(p.StreetId) && (model=="office" || model=="agency"))
+            {
+                // The lower floor remains a working public counter, with apartments/office bays above.
+                BuildQuarterShell(root,p,w,d,h,false,seed);
+                var fascia=StarterPart(root,"Public counter fascia",new Vector3(0,2.72f,-.16f),
+                    new Vector3(w*.82f,.56f,.19f),p.Kind==PlaceKind.Agency?AgencyColor(p):ArtDirection.Hex("597669"));
+                Prims.SignText(root,p.Name,fascia.transform.localPosition+Vector3.back*.108f,w*.77f,.46f,ArtDirection.Cream);
+                QuarterModules.Add(root,"TinCanopy",new Vector3(0,2.39f,0),new Vector3(.65f,1,.77f));
+                if(p.Kind==PlaceKind.Agency)
+                    Prims.SignText(root,_city.AgencyCoverageName(p)+" · 租售办理",new Vector3(w*.29f,2.06f,-.31f),w*.33f,.26f,ArtDirection.Cream);
+                else
+                {
+                    var paint=Mats.Lit(ArtDirection.Hex("A15C45"));
+                    Prims.Box(root,"Clinic cross vertical",new Vector3(-w*.36f,2.72f,-.268f),new Vector3(.09f,.34f,.025f),paint);
+                    Prims.Box(root,"Clinic cross horizontal",new Vector3(-w*.36f,2.72f,-.28f),new Vector3(.32f,.09f,.025f),paint);
+                }
+                var lamp=StarterPart(root,"Open indicator",new Vector3(.87f,1.74f,-.18f),new Vector3(.17f,.12f,.055f),UiGreen);
+                _cur.OpenOnly.Add(lamp);
+                _cur.ClosedOnly.Add(StarterPart(root,"Closed indicator",lamp.transform.localPosition,new Vector3(.17f,.12f,.055f),ArtDirection.Clay));
                 return;
             }
             if(model=="apartment"||model=="luxury_apartment")
@@ -207,6 +251,11 @@ namespace PCShopSell.Game.Runtime
             {
                 CityArchitecture.GardenVilla(root,w,d,h,seed);
                 if(p!=null)foreach(var c in root.GetComponentsInChildren<Collider>())c.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
+                return;
+            }
+            if (_city.IsLakeCity && p!=null && ArtDistrict(p.StreetId)>0)
+            {
+                DistrictBusiness(root,p,w,d,h,ArtDistrict(p.StreetId),seed);
                 return;
             }
             Color wall=Facades[seed%Facades.Length];

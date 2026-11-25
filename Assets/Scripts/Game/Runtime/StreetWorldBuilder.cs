@@ -112,6 +112,7 @@ namespace PCShopSell.Game.Runtime
         private readonly System.Random _rng;
         private Transform _root;
         private HashSet<string> _trialRoadNodes;
+        private HashSet<string> _outskirtsNodes;
         private int _shopNeonCount;
         private PlaceVisual _cur;
 
@@ -133,13 +134,14 @@ namespace PCShopSell.Game.Runtime
 
         private void LimitTrialScenery()
         {
-            if (!_firstChapterTrial || !_city.IsLakeCity) return;
+            if (!_city.IsLakeCity) return;
             var gates = DistrictRoadGate.ForCity(_city);
             if (gates.Count == 0) return;
 
             // The road graph remains intact for saves and city simulation.
             var home = _city.GetPlace(StarterHome).NodeId;
-            _trialRoadNodes = new HashSet<string> { home };
+            _outskirtsNodes = new HashSet<string> { home };
+            if (_firstChapterTrial) _trialRoadNodes = _outskirtsNodes;
             var frontier = new Queue<string>();
             frontier.Enqueue(home);
             while (frontier.Count > 0)
@@ -149,10 +151,12 @@ namespace PCShopSell.Game.Runtime
                 {
                     if (gates.Any(gate => (node == gate.FromNode && edge.To == gate.ToNode)
                         || (node == gate.ToNode && edge.To == gate.FromNode))) continue;
-                    if (_trialRoadNodes.Add(edge.To)) frontier.Enqueue(edge.To);
+                    if (_outskirtsNodes.Add(edge.To)) frontier.Enqueue(edge.To);
                 }
             }
         }
+
+        internal bool IsOldTownNode(string node) => node != null && _outskirtsNodes != null && _outskirtsNodes.Contains(node);
 
         private bool BuildsRoad(string a, string b) =>
             _trialRoadNodes == null || _trialRoadNodes.Contains(a) || _trialRoadNodes.Contains(b);
@@ -223,7 +227,7 @@ namespace PCShopSell.Game.Runtime
             var groundBounds = _trialRoadNodes == null ? CityBounds : BoundsOf(_city);
             var ground = Prims.Box(_root, "Ground", new Vector3(groundBounds.center.x, -0.06f, groundBounds.center.z),
                 new Vector3(groundBounds.size.x, 0.1f, groundBounds.size.z),
-                IndustrialMaterials.Surface("meadow",Grass,new Vector2(groundBounds.size.x/11,groundBounds.size.z/11)),true);
+                _city.IsLakeCity ? DistrictFinishes.Meadow() : IndustrialMaterials.Surface("meadow",Grass,new Vector2(groundBounds.size.x/11,groundBounds.size.z/11)),true);
             ground.AddComponent<GroundMarker>();
 
             ReportBuildProgress(.02f);

@@ -18,6 +18,12 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root,"RollerDoor",new Vector3(0,1.5f,-.06f),new Vector3(w-1,2.8f,.15f),Mats.Lit(ArtDirection.Blue));
             for(int i=0;i<7;i++)Prims.Box(root,"DoorSlat",new Vector3(0,.35f+i*.36f,-.16f),new Vector3(w-1,.035f,.025f),Mats.Lit(ArtDirection.Ink));
             Prims.SignText(root,"车库",new Vector3(0,3.2f,-.2f),w-.7f,.45f,ArtDirection.Cream);
+            if(_city.IsLakeCity)
+            {
+                QuarterModules.Add(root,"TinCanopy",new Vector3(0,2.94f,-.2f),new Vector3((w-.36f)/7.8f,1,1));
+                QuarterModules.Add(root,"Condenser",new Vector3(-w*.27f,3.83f,d*.66f),Vector3.one);
+                QuarterModules.Add(root,"ServiceStack",new Vector3(w*.46f,0,0),Vector3.one);
+            }
             var delta=door-node;
             if(!_city.IsLakeCity && delta.sqrMagnitude>.1f)
             {
@@ -120,7 +126,7 @@ namespace PCShopSell.Game.Runtime
             float scale=(float)_city.ExpansionScale;
             float bankTop = LakeAccessHeight(_city) - .015f;
             Prims.Box(root,"StarterMotorHubBank",new Vector3(-550*scale,(bankTop+bottom)*.5f,-135*scale),new Vector3(65*scale,bankTop-bottom,65*scale),
-                IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2(4,4)));
+                OldTownSurfaces.Ground("streetMeadow",new Vector2(65*scale,65*scale)));
             var planting=new MiniatureDetailMesh();
             var hub=new Vector3(-550*scale,bankTop,-135*scale);
             int seed=0;
@@ -140,7 +146,7 @@ namespace PCShopSell.Game.Runtime
                     if(Mathf.Abs(local.x)<(float)place.Width/2+4&&local.z>-5&&local.z<(float)place.Depth+4){clear=false;break;}
                 }
                 if(!clear)continue;
-                CityVegetation.Build(root,at,seed++);
+                QuarterModules.Tree(root,at,.95f,67*seed++);
                 planting.FlowerBed(at+Vector3.forward*1.6f,2.5f,1.2f,seed,false);
             }
             planting.Build(root,"Motor hub waterside planting");

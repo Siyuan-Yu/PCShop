@@ -166,6 +166,7 @@ namespace PCShopSell.Game.Runtime
             _effects=Child(_live,"CurrentExpoEvent");
             foreach(string effect in new[]{"queue","question","interview","rival","fault","buyer","empty","camera","stock","performance"})_eventProps[effect]=BuildEventProp(effect);
             _highlight=Prims.Shape(PrimitiveType.Cylinder,_live,"CurrentEventMarker",Vector3.zero,new Vector3(3,.035f,3),Mats.Unlit(new Color(1f,.78f,.2f,.4f)));
+            DistrictFinishes.Apply(_live,2);
         }
         private string sessionBrandName(string id)=>_session.BrandBusiness.Brands.FirstOrDefault(b=>b.Id==id)?.Name??"品牌展台";
         private static void PointBox(Transform parent,string name,Vector3 at,Vector3 size,Material material,string zone)

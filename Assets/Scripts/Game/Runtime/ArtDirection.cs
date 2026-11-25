@@ -50,7 +50,7 @@ namespace PCShopSell.Game.Runtime
             for (int y = -1; y <= 1; y += 2)
             for (int z = -1; z <= 1; z += 2)
                 Face(new Vector3(x * 0.5f,y * inner.y,z * inner.z), new Vector3(x * inner.x,y * 0.5f,z * inner.z), new Vector3(x * inner.x,y * inner.y,z * 0.5f));
-            mesh = new Mesh { name = "Chamfered prop" }; mesh.SetVertices(vertices); mesh.SetTriangles(triangles, 0); mesh.SetUVs(0, uv); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            mesh = new Mesh { name = "Chamfered prop" }; mesh.SetVertices(vertices); mesh.SetTriangles(triangles, 0); mesh.SetUVs(0, uv); mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();
             Bevels[size] = mesh; return mesh;
         }
     }
