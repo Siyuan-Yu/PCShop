@@ -130,8 +130,15 @@ namespace PCShopSell.Game.Runtime
                 var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track,!Baking,OutskirtsLawnFor(p));
                 BuildRaceEntrance(root,door,track);
                 var office=Prims.Box(root,"RaceReception",new Vector3(0,2,0),new Vector3(9,4,6),Mats.Lit(ArtDirection.Cream),true);
-                CityArchitecture.Roof(root,new Vector3(0,4.1f,0),9.8f,6.8f,1.3f,ArtDirection.Hex("57758A"));
                 var reception=new MiniatureDetailMesh();
+                if(track.Tier<2)
+                    CityArchitecture.Roof(root,new Vector3(0,4.1f,0),9.8f,6.8f,1.3f,ArtDirection.Hex(track.Tier==1?"507361":"57758A"));
+                else
+                {
+                    var cap=new Vector3(0,4.21f,-.4f);
+                    GardenStructures.Plate(root,"接待处悬挑檐",cap,new Vector3(10.1f,.27f,8.3f),Mats.Lit(ArtDirection.Hex("E3EAE8")));
+                    if(track.Tier==3)GardenStructures.SolarFins(reception,cap+Vector3.up*.14f,6.8f,4.6f,4);
+                }
                 reception.Window(new Vector3(-2.5f,2.15f,-3.08f),2.1f,1.7f,ArtDirection.Cream,true);
                 reception.Window(new Vector3(2.5f,2.15f,-3.08f),2.1f,1.7f,ArtDirection.Cream,true);
                 reception.Box(new Vector3(0,1.4f,-3.10f),new Vector3(1.3f,2.8f,.13f),Mats.Lit(ArtDirection.Hex("405B68")));

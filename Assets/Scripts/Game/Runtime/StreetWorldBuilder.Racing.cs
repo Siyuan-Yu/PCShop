@@ -13,8 +13,23 @@ namespace PCShopSell.Game.Runtime
             var body=Prims.Box(root,"GarageAnnex",new Vector3(0,1.8f,d*.5f),new Vector3(w,3.6f,d),
                 IndustrialMaterials.Surface("brick",ArtDirection.Hex("D6BE9E"),new Vector2(w/4,1.2f)),true);
             body.AddComponent<PlaceMarker>().PlaceId=p.Id;
-            Prims.Box(root,"GarageRoof",new Vector3(0,3.7f,d*.5f),new Vector3(w+.4f,.25f,d+.4f),
-                IndustrialMaterials.Surface("metal",ArtDirection.Hex("48627A"),new Vector2(w/4,d/5)));
+            int district=ArtDistrict(p.StreetId);
+            if(district>=2)
+            {
+                var deck=new Vector3(0,3.78f,d*.5f);
+                GardenStructures.Plate(root,"维修站轻型檐板",deck,new Vector3(w+.54f,.25f,d+.72f),Mats.Lit(ArtDirection.Hex("E3EAE8")));
+                if(district==3)
+                {
+                    var service=new MiniatureDetailMesh();
+                    GardenStructures.SolarFins(service,deck+Vector3.up*.14f,w*.66f,d*.61f,3);
+                    service.Build(root,"维修站顶棚光伏");
+                }
+            }
+            else
+            {
+                Prims.Box(root,"GarageRoof",new Vector3(0,3.7f,d*.5f),new Vector3(w+.4f,.25f,d+.4f),
+                    IndustrialMaterials.Surface("metal",ArtDirection.Hex("48627A"),new Vector2(w/4,d/5)));
+            }
             Prims.Box(root,"RollerDoor",new Vector3(0,1.5f,-.06f),new Vector3(w-1,2.8f,.15f),Mats.Lit(ArtDirection.Blue));
             for(int i=0;i<7;i++)Prims.Box(root,"DoorSlat",new Vector3(0,.35f+i*.36f,-.16f),new Vector3(w-1,.035f,.025f),Mats.Lit(ArtDirection.Ink));
             Prims.SignText(root,"车库",new Vector3(0,3.2f,-.2f),w-.7f,.45f,ArtDirection.Cream);

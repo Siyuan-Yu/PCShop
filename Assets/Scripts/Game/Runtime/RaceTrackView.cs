@@ -32,8 +32,13 @@ namespace PCShopSell.Game.Runtime
             for (int i = 0; i < 4; i++)
                 Prims.Box(scenery, "Grandstand", stand + new Vector3(0, .6f + i * .6f, i * 2),
                     new Vector3(24, .7f, 2), Mats.Lit(i % 2 == 0 ? ArtDirection.Wood : ArtDirection.Cream));
-            Prims.Box(scenery, "PitOffice", pit + Vector3.up * 2.2f, new Vector3(12, 4.3f, 6), DistrictFinishes.Tile(Track.Tier==1?"buffBrick":"ivoryPlaster",new Vector2(2,1)));
-            Prims.Box(scenery, "PitRoof", pit + Vector3.up * 4.5f, new Vector3(14, .5f, 8), CircuitRoof());
+            if (track.Tier == 3)
+                BuildTimingCabin(scenery,pit);
+            else
+            {
+                Prims.Box(scenery,"PitOffice",pit+Vector3.up*2.2f,new Vector3(12,4.3f,6),DistrictFinishes.Tile(track.Tier==1?"buffBrick":"ivoryPlaster",new Vector2(2,1)));
+                Prims.Box(scenery,"PitRoof",pit+Vector3.up*4.5f,new Vector3(14,.5f,8),CircuitRoof());
+            }
             BuildCircuitGarden(scenery,stand,pit);
             if (starter) BuildStarterLandmarks(scenery, resources);
 
@@ -100,7 +105,7 @@ namespace PCShopSell.Game.Runtime
                 plants.Add(i%4==0?PlantSpecies.Broadleaf:PlantSpecies.Reeds,
                     Vector3.Lerp(shelf,wet,.46f)+Vector3.down*.27f,3.6f,1.28f+irregular*.65f,i+Track.Tier*19);
                 if(i%7==1)plants.Add(PlantSpecies.GoldenBush,shelf+Vector3.down*.17f,2.74f,1.46f,i);
-                if(i%3==1 && irregular>.24f)PaintedWoodland.Plant(scenery,shelf+Vector3.down*.14f,6+i%4,i%9==1?1:0,i);
+                if(i%3==1 && irregular>.24f)PaintedWoodland.Plant(scenery,shelf+Vector3.down*.14f,6+i%4,i%9==1?1:0,i,Track.Tier>0);
             }
             // Keep the sloped shelf visible from above on every section of the irregular bank.
             for(int i=0;i<indices.Count;i+=3)
@@ -117,7 +122,7 @@ namespace PCShopSell.Game.Runtime
 
         private Material CircuitRoof()
         {
-            string tint = Track.Tier switch { 0 => "8393A0", 1 => "83998B", 2 => "94A7A1", _ => "D4D2BA" };
+            string tint = Track.Tier switch { 0 => "8393A0", 1 => "467762", 2 => "D2DAD6", _ => "C1D1D3" };
             return IndustrialMaterials.Surface("metal",ArtDirection.Hex(tint),new Vector2(4,2));
         }
 
@@ -126,34 +131,44 @@ namespace PCShopSell.Game.Runtime
             var details=new MiniatureDetailMesh();
             var timber=IndustrialMaterials.Surface("wood",ArtDirection.Hex("A77E50"),Vector2.one);
             var metal=Mats.Lit(ArtDirection.Hex("405363"));
+            var seatPaint=Track.Tier switch {
+                1 => Mats.Lit(ArtDirection.Hex("51836A")), 2 => Mats.Lit(ArtDirection.Hex("E0E4DF")),
+                3 => Mats.Lit(ArtDirection.Hex("416A83")), _ => timber };
             for(int row=0;row<4;row++)for(int seat=-5;seat<=5;seat++)
             {
                 var at=stand+new Vector3(seat*2,1.1f+row*.6f,row*2);
-                details.Box(at,new Vector3(1.5f,.12f,.65f),timber);
-                details.Box(at+new Vector3(0,.38f,.32f),new Vector3(1.5f,.6f,.10f),timber);
+                details.Box(at,new Vector3(1.5f,.12f,.65f),seatPaint);
+                details.Box(at+new Vector3(0,.38f,.32f),new Vector3(1.5f,.6f,.10f),seatPaint);
             }
             foreach(int side in new[]{-1,1})
             {
-                details.Box(stand+new Vector3(side*12,3,3),new Vector3(.18f,6,.18f),metal);
+                if (Track.Tier==0) details.Box(stand+new Vector3(side*12,3,3),new Vector3(.18f,6,.18f),metal);
                 details.FlowerBed(pit+new Vector3(side*4.3f,.12f,-3.7f),2.5f,.8f,side+9);
             }
-            var roof = CircuitRoof();
-            details.Box(stand+new Vector3(0,6.2f,3),new Vector3(26,.25f,9),roof);
-            for (int i=-12;i<=12;i++)
-                details.Box(stand+new Vector3(i,6.36f,3),new Vector3(.056f,.075f,8.95f),metal);
-            for(int i=-2;i<=2;i++)
+            if(Track.Tier==0)
             {
-                float x=i*5.75f;
-                details.Box(stand+new Vector3(x,3.2f,6),new Vector3(.16f,6.3f,.16f),metal);
-                details.Box(stand+new Vector3(x,3.1f,-.75f),new Vector3(.14f,6.05f,.14f),metal);
-                details.Box(stand+new Vector3(x,5.94f,2.7f),new Vector3(.13f,.22f,8.9f),timber);
+                var roof = CircuitRoof();
+                details.Box(stand+new Vector3(0,6.2f,3),new Vector3(26,.25f,9),roof);
+                for (int i=-12;i<=12;i++)
+                    details.Box(stand+new Vector3(i,6.36f,3),new Vector3(.056f,.075f,8.95f),metal);
+                for(int i=-2;i<=2;i++)
+                {
+                    float x=i*5.75f;
+                    details.Box(stand+new Vector3(x,3.2f,6),new Vector3(.16f,6.3f,.16f),metal);
+                    details.Box(stand+new Vector3(x,3.1f,-.75f),new Vector3(.14f,6.05f,.14f),metal);
+                    details.Box(stand+new Vector3(x,5.94f,2.7f),new Vector3(.13f,.22f,8.9f),timber);
+                }
+                details.Box(stand+new Vector3(0,2.9f,6.58f),new Vector3(24.2f,.9f,.15f),
+                    DistrictFinishes.Tile(Track.Tier==1?"buffBrick":"walnut",new Vector2(6,1)));
             }
-            details.Box(stand+new Vector3(0,2.9f,6.58f),new Vector3(24.2f,.9f,.15f),
-                DistrictFinishes.Tile(Track.Tier==1?"buffBrick":"walnut",new Vector2(6,1)));
-            for(int i=-5;i<=5;i++)
-                details.Box(pit+new Vector3(i,4.81f,0),new Vector3(.055f,.09f,7.9f),metal);
-            details.Window(pit+new Vector3(-3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
-            details.Window(pit+new Vector3(3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
+            else BuildDistrictGrandstand(scenery,details,stand);
+            if(Track.Tier<3)
+            {
+                for(int i=-5;i<=5;i++)
+                    details.Box(pit+new Vector3(i,4.81f,0),new Vector3(.055f,.09f,7.9f),metal);
+                details.Window(pit+new Vector3(-3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
+                details.Window(pit+new Vector3(3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
+            }
             var border = new StreetPlanting();
             // Only decorate clear infield: the driving ribbon and runoff stay empty.
             for(float x=-(float)Track.Width*.33f;x<(float)Track.Width*.34f;x+=13)
@@ -170,12 +185,88 @@ namespace PCShopSell.Game.Runtime
                 }
                 if(clearance<(float)Track.HalfRoad+7)continue;
                 int seed=Mathf.RoundToInt(x*7+z*13);
-                PaintedWoodland.Plant(scenery,at,5+Mathf.Abs(seed%3),seed%3==0?3:0,seed);
+                if(Track.Tier>0)
+                {
+                    // Stagger the orchard; the offset stays inside the checked runoff clearance.
+                    at+=new Vector3(Mathf.Sin(x*.42f+z)*1.6f,0,Mathf.Cos(z*.37f+x)*1.4f);
+                    border.Add(PlantSpecies.Grass,at+Vector3.right*1.2f,2.8f,1.16f,seed+1);
+                    border.Add(Track.Tier==3?PlantSpecies.SilverGrass:PlantSpecies.Hydrangea,at+Vector3.forward*1.38f,2.15f,.97f,seed+7);
+                }
+                PaintedWoodland.Plant(scenery,at,5+Mathf.Abs(seed%3),Track.Tier>0 && seed%4==0 ? 2 : seed%3==0?3:0,seed,Track.Tier>0);
                 border.Add(PlantSpecies.Spirea, at + Vector3.left * 2, 1.6f, .85f, seed);
                 details.FlowerBed(at+Vector3.forward*1.5f,2.8f,1.3f,seed,false);
             }
             border.Build(scenery,"看台草地与花境");
             details.Build(scenery,"Circuit seating, windows and gardens");
+        }
+
+        private void BuildDistrictGrandstand(Transform root, MiniatureDetailMesh detail, Vector3 stand)
+        {
+            var white=DistrictFinishes.Tile("pearlCeramic",new Vector2(5,2));
+            var alloy=Mats.Lit(ArtDirection.Hex("9BADB2"),.42f);
+            var glass=DistrictFinishes.Tile("civicGlazing",new Vector2(.31f,.24f));
+            var roof=stand+new Vector3(0,6.6f,2.8f);
+            if(Track.Tier==1)
+            {
+                var green=Mats.Lit(ArtDirection.Hex("427361"),.27f);
+                var wood=Mats.Lit(ArtDirection.Hex("A78155"));
+                var tilt=Quaternion.Euler(-6,0,0);
+                detail.Box(roof,new Vector3(25.8f,.28f,9.3f),green,tilt);
+                for(int rib=-15;rib<=15;rib++)
+                    detail.Box(roof+new Vector3(rib*.82f,.17f,0),new Vector3(.055f,.065f,9.2f),green,tilt);
+                foreach(int side in new[]{-1,1})
+                {
+                    for(int i=0;i<8;i++)
+                        detail.Box(stand+new Vector3(side*12.25f,3.1f,-.8f+i*.98f),new Vector3(.21f,5.9f,.23f),wood);
+                    detail.FlowerBed(stand+new Vector3(side*10.5f,.1f,-2.45f),3.1f,1.0f,side+13);
+                }
+                detail.Box(stand+new Vector3(0,3.6f,6.8f),new Vector3(24,3.35f,.18f),wood);
+                return;
+            }
+            bool garden=Track.Tier==3;
+            GardenStructures.Plate(root,"看台悬挑翼",roof,new Vector3(garden?28.1f:26.7f,garden?.43f:.24f,10.1f),white);
+            if(garden)
+            {
+                GardenStructures.Plate(root,"翼板下缘",roof-Vector3.up*.24f,new Vector3(27.6f,.15f,9.8f),alloy);
+                GardenStructures.SolarFins(detail,roof+Vector3.up*.23f,22,7.35f,8);
+                detail.Box(stand+new Vector3(0,4.25f,6.78f),new Vector3(24.6f,3.9f,.15f),glass);
+            }
+            for(int bay=-1;bay<=1;bay++)
+            {
+                float x=bay*11.1f;
+                var foot=stand+new Vector3(x,.35f,5.55f);
+                var joint=foot+new Vector3(0,2.58f,-.23f);
+                var forward=stand+new Vector3(x+bay*.53f,6.44f,-1.43f);
+                GardenStructures.Strut(detail,foot,joint,garden?.54f:.27f,.43f,white);
+                GardenStructures.Strut(detail,joint,forward,garden?.45f:.23f,.32f,white);
+                GardenStructures.Strut(detail,joint,stand+new Vector3(x-bay*.36f,6.44f,6.88f),.24f,.27f,alloy);
+            }
+            foreach(int side in new[]{-1,1})
+            {
+                for(int i=0;i<5;i++)
+                    detail.Box(stand+new Vector3(side*12.2f,1.05f+i*.47f,i*1.5f),new Vector3(.09f,1.35f,.11f),alloy);
+                GardenStructures.Strut(detail,stand+new Vector3(side*12.2f,1.7f,0),stand+new Vector3(side*12.2f,3.55f,6),.075f,.085f,alloy);
+                detail.FlowerBed(stand+new Vector3(side*10,.1f,-2.6f),4.4f,1.35f,side+5);
+            }
+        }
+
+        private static void BuildTimingCabin(Transform root, Vector3 pit)
+        {
+            var white=DistrictFinishes.Tile("pearlCeramic",new Vector2(3,2));
+            var glass=DistrictFinishes.Tile("civicGlazing",new Vector2(8,1));
+            var ink=Mats.Lit(ArtDirection.Hex("324D5A"),.33f);
+            GardenStructures.Plate(root,"计时舱基座",pit+Vector3.up*.35f,new Vector3(11.8f,.54f,6.6f),white);
+            GardenStructures.Plate(root,"计时舱环窗",pit+Vector3.up*2.25f,new Vector3(11.1f,3.46f,5.86f),glass);
+            GardenStructures.Plate(root,"计时舱顶",pit+Vector3.up*4.06f,new Vector3(11.75f,.35f,6.4f),white);
+            var detail=new MiniatureDetailMesh();
+            for(int i=-2;i<=2;i++)
+                detail.Box(pit+new Vector3(i*1.92f,2.27f,-2.95f),new Vector3(.105f,3.57f,.18f),white);
+            var clock=pit+new Vector3(-6.8f,0,-.54f);
+            detail.Box(clock+Vector3.up*2.8f,new Vector3(.35f,5.6f,.46f),white);
+            detail.Box(clock+Vector3.up*4.08f,new Vector3(1.45f,2.5f,.42f),ink);
+            for(int i=0;i<4;i++)
+                detail.Box(clock+new Vector3(0,4.82f-i*.43f,-.225f),new Vector3(.94f-i*.10f,.105f,.045f),Mats.Lit(ArtDirection.Hex("8ACCD3")));
+            detail.Build(root,"计时舱窗框与电子计时牌");
         }
 
         private void BuildStartingGantry(Transform scenery)
@@ -409,7 +500,9 @@ namespace PCShopSell.Game.Runtime
                 var go = new GameObject("Barrier", typeof(MeshFilter), typeof(MeshRenderer));
                 go.transform.SetParent(parent, false);
                 go.GetComponent<MeshFilter>().sharedMesh = mesh;
-                go.GetComponent<MeshRenderer>().sharedMaterials = new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) };
+                go.GetComponent<MeshRenderer>().sharedMaterials = Track.Tier == 3
+                    ? new[] { Mats.Lit(ArtDirection.Hex("4E9391")), Mats.Lit(ArtDirection.Hex("C7D1CC")) }
+                    : new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) };
             }
         }
         private Vector3 RoadNormal(int index)
@@ -461,7 +554,9 @@ namespace PCShopSell.Game.Runtime
             var kerbs = new GameObject("Kerbs", typeof(MeshFilter), typeof(MeshRenderer));
             kerbs.transform.SetParent(parent, false);
             kerbs.GetComponent<MeshFilter>().sharedMesh = mesh;
-            kerbs.GetComponent<MeshRenderer>().sharedMaterials = new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) };
+            kerbs.GetComponent<MeshRenderer>().sharedMaterials = Track.Tier == 3
+                    ? new[] { Mats.Lit(ArtDirection.Hex("4E9391")), Mats.Lit(ArtDirection.Hex("C7D1CC")) }
+                    : new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) };
         }
 
         private void Ribbon(Transform parent,float half,float height,Material mat,CityLandscapeResources resources)
