@@ -1,0 +1,116 @@
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using PCShopSell.Game;
+using PCShopSell.Game.Runtime;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering.Universal;
+
+namespace PCShopSell.EditorTools
+{
+    // Local-only benchmark #2: the game's real skinned characters, before and after a toon + outline pass.
+    public static partial class GameSceneBuilder
+    {
+        private static GameObject SpawnFigure(Transform parent, string id, float x)
+        {
+            const BindingFlags F = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
+            GameObject fig;
+            if (id == "")
+            {
+                var appType = typeof(Prims).Assembly.GetType("PCShopSell.Game.Runtime.FigureAppearance");
+                var mi = typeof(Prims).GetMethod("Figure", F, null, new[] { typeof(Transform), typeof(string), typeof(Color), typeof(Color), typeof(float), appType }, null);
+                fig = (GameObject)mi.Invoke(null, new object[] { parent, "player", ArtDirection.Clay, new Color(.95f, .8f, .65f), 1.0f, System.Enum.ToObject(appType, 1) });
+            }
+            else
+            {
+                var mi = typeof(Prims).GetMethod("FigureForPerson", F);
+                fig = (GameObject)mi.Invoke(null, new object[] { parent, id, new Color(.5f, .5f, .5f), new Color(.93f, .75f, .6f), 1.0f, id, null });
+                CityNpcClothing.Apply(fig, _game.Session, id);
+            }
+            fig.transform.localPosition = new Vector3(x, 0, 0); fig.transform.localRotation = Quaternion.Euler(0, 180, 0);
+            return fig;
+        }
+
+        private static void StyleFigure(GameObject fig, float headScale)
+        {
+            var toon = Shader.Find("Bench/Toon"); var outline = Shader.Find("Bench/Outline");
+            var outlineMat = new Material(outline);
+            foreach (var head in fig.GetComponentsInChildren<Transform>(true).Where(t => t.name == "Head")) head.localScale = Vector3.one * headScale;
+            foreach (var r in fig.GetComponentsInChildren<Renderer>(true).ToArray())
+            {
+                if (r.name == "Outline" || r.sharedMaterials.Length == 0) continue;
+                var mats = r.sharedMaterials.Select(m =>
+                {
+                    var n = new Material(toon);
+                    Color c = m != null ? (m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : m.color) : Color.gray;
+                    n.SetColor("_BaseColor", c); return n;
+                }).ToArray();
+                var original = r.sharedMaterials;
+                r.sharedMaterials = mats;
+                if (r is SkinnedMeshRenderer s && s.sharedMesh != null)
+                {
+                    var go = new GameObject("Outline"); go.transform.SetParent(s.transform, false);
+                    var o = go.AddComponent<SkinnedMeshRenderer>();
+                    o.sharedMesh = s.sharedMesh; o.bones = s.bones; o.rootBone = s.rootBone; o.localBounds = s.localBounds;
+                    o.sharedMaterials = Enumerable.Repeat(outlineMat, s.sharedMesh.subMeshCount).ToArray();
+                }
+                else if (r is MeshRenderer mr && r.GetComponent<MeshFilter>() != null && r.GetComponent<MeshFilter>().sharedMesh != null)
+                {
+                    var go = new GameObject("Outline"); go.transform.SetParent(r.transform, false);
+                    go.AddComponent<MeshFilter>().sharedMesh = r.GetComponent<MeshFilter>().sharedMesh;
+                    go.AddComponent<MeshRenderer>().sharedMaterials = Enumerable.Repeat(outlineMat, r.GetComponent<MeshFilter>().sharedMesh.subMeshCount).ToArray();
+                }
+            }
+        }
+
+        public static void CharBench2FromBatch() => RunSmokeBatch(() =>
+        {
+            _outDir = Path.GetFullPath("docs/previews/char-bench2"); Directory.CreateDirectory(_outDir);
+            ShaderUtil.allowAsyncCompilation = false; UrpSetup.Ensure();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
+            SaveStore.DirectoryOverride = Path.GetFullPath("work/char-bench-saves");
+            _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 7);
+            _game.Ui.CloseAllWindows(); foreach (var cv in _game.Ui.Canvases) cv.gameObject.SetActive(false);
+            _game.World.Root.SetActive(false); _game.enabled = false;
+            var actors = (Transform)typeof(GameController).GetField("_actors", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_game);
+            if (actors != null) actors.gameObject.SetActive(false);
+            RenderSettings.fog = false; RenderSettings.ambientLight = new Color(.62f, .63f, .65f); RenderSettings.ambientIntensity = 1.0f;
+            foreach (var l in Object.FindObjectsOfType<Light>()) if (l.type == LightType.Directional) { l.intensity = .9f; l.color = new Color(1, .98f, .94f); l.transform.rotation = Quaternion.Euler(52, -22, 0); }
+            var cam = _game.Cam; cam.orthographic = true; cam.nearClipPlane = .1f; cam.farClipPlane = 200; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = ArtDirection.Hex("E4E4E6");
+            var data = cam.GetUniversalAdditionalCameraData(); data.renderPostProcessing = false; data.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            var groups = new[]
+            {
+                ("key5", new[] { "", "landlady", "keeper_agent", "life_chef", "life_bartender" }),
+                ("npcA", new[] { "res_rider", "res_grandpa", "res_baker", "res_coder", "life_singer" }),
+                ("npcB", new[] { "racer_0", "life_teacher", "hospital_garden_doctor_day", "res_auntie", "res_pupil" }),
+            };
+            foreach (var (gname, ids) in groups)
+                foreach (bool styled in new[] { false, true })
+                {
+                    var stage = new GameObject("Stage").transform; stage.position = new Vector3(0, 300, 0);
+                    var floorMat = styled ? M("E4E4E6", .02f) : M("E4E4E6", .02f);
+                    
+                    for (int i = 0; i < ids.Length; i++)
+                    {
+                        var fig = SpawnFigure(stage, ids[i], (i - 2) * .8f);
+                        if (styled) StyleFigure(fig, 1.18f);
+                    }
+                    if (styled)
+                        foreach (var r in stage.GetComponentsInChildren<MeshRenderer>().Where(r => r.name == "Floor"))
+                            r.sharedMaterial = new Material(Shader.Find("Bench/Toon")) { color = ArtDirection.Hex("E4E4E6") };
+                    cam.transform.rotation = Quaternion.Euler(8, 0, 0); cam.orthographicSize = 1.12f; cam.aspect = 16f / 9;
+                    cam.transform.position = stage.position + new Vector3(0, .85f, 0) - cam.transform.forward * 30;
+                    var rt = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 4 };
+                    cam.targetTexture = rt; cam.Render(); cam.Render();
+                    var prev = RenderTexture.active; RenderTexture.active = rt;
+                    var img = new Texture2D(1920, 1080, TextureFormat.RGB24, false); img.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0); img.Apply();
+                    File.WriteAllBytes(Path.Combine(_outDir, gname + (styled ? "-styled" : "-current") + ".png"), img.EncodeToPNG());
+                    RenderTexture.active = prev; cam.targetTexture = null; rt.Release();
+                    Object.DestroyImmediate(stage.gameObject);
+                }
+            Debug.Log("CHAR BENCH2 DONE");
+        });
+    }
+}

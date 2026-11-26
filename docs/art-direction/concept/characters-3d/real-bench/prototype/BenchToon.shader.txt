@@ -1,0 +1,47 @@
+﻿Shader "Bench/Toon"
+{
+    Properties { _BaseColor("Color", Color) = (1,1,1,1) }
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
+        Pass
+        {
+            Name "Forward"
+            Tags { "LightMode"="UniversalForward" }
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            CBUFFER_START(UnityPerMaterial)
+                half4 _BaseColor;
+            CBUFFER_END
+            struct A { float4 p : POSITION; float3 n : NORMAL; };
+            struct V { float4 p : SV_POSITION; float3 n : TEXCOORD0; float3 w : TEXCOORD1; };
+            V vert(A a)
+            {
+                V v;
+                v.p = TransformObjectToHClip(a.p.xyz);
+                v.n = TransformObjectToWorldNormal(a.n);
+                v.w = TransformObjectToWorld(a.p.xyz);
+                return v;
+            }
+            half4 frag(V v) : SV_Target
+            {
+                Light l = GetMainLight();
+                float nl = dot(normalize(v.n), l.direction);
+                float lit = smoothstep(-0.10, 0.30, nl);
+                float rim = smoothstep(0.55, 0.85, nl);
+                half3 baseC = _BaseColor.rgb;
+                half3 shade = baseC * half3(0.66, 0.65, 0.74);
+                half3 c = lerp(shade, baseC, lit);
+                c = lerp(c, saturate(baseC * 1.10), rim * 0.55);
+                float3 q = floor(v.w * 70.0);
+                float n = frac(sin(dot(q.xy + q.z * 1.7, float2(12.9898, 78.233))) * 43758.5453);
+                c *= 0.975 + 0.05 * n;
+                return half4(c, 1);
+            }
+            ENDHLSL
+        }
+    }
+}

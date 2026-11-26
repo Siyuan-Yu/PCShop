@@ -1,0 +1,32 @@
+﻿Shader "Bench/Outline"
+{
+    Properties { _OutlineColor("Color", Color) = (0.17,0.13,0.11,1) _Width("Width", Float) = 0.006 }
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry+1" }
+        Pass
+        {
+            Name "Outline"
+            Tags { "LightMode"="UniversalForward" }
+            Cull Front
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            CBUFFER_START(UnityPerMaterial)
+                half4 _OutlineColor;
+                float _Width;
+            CBUFFER_END
+            struct A { float4 p : POSITION; float3 n : NORMAL; };
+            struct V { float4 p : SV_POSITION; };
+            V vert(A a)
+            {
+                V v;
+                v.p = TransformObjectToHClip(a.p.xyz + normalize(a.n) * _Width);
+                return v;
+            }
+            half4 frag(V v) : SV_Target { return _OutlineColor; }
+            ENDHLSL
+        }
+    }
+}
