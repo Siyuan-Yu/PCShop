@@ -169,7 +169,7 @@ namespace PCShopSell.Game.UI
                 var gestures = Ui.Row(w.Content, 43, 8);
                 var buttons = new List<Button>();
                 var actions = Ui.Row(w.Content, 46, 8);
-                Ui.Size(Ui.Button(actions, "取消申请", w.Close, 17), 150, 46);
+                Ui.Size(Ui.Button(actions, "取消申请", w.Close, 17, Ui.ButtonSecondary), 150, 46);
                 var submit = Ui.Size(Ui.Button(actions, $"确认借款 · 到账 {quote.Principal}", null, 19, Ui.ButtonHot), 0, 46, 1);
                 submit.onClick.AddListener(() =>
                 {

@@ -43,7 +43,8 @@ namespace PCShopSell.Game.UI
             var controls = Ui.Row(panel.transform, 42, gap).Fill();
             controls.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(padding, padding, 5, 5);
 
-            _pauseButton = Ui.Size(Ui.Button(controls, "暂停", () => S.Time.TogglePause(), 16, Ui.HudTile), pauseWidth);
+            _pauseButton = Ui.Size(Ui.Button(controls, "暂停", () => S.Time.TogglePause(), 16, Ui.HudTile,
+                exclusiveEmphasis: false), pauseWidth);
             _pauseButton.name = "HudPauseTime";
             _pauseLabel = _pauseButton.GetComponentInChildren<Text>();
             _pauseLabel.rectTransform.Anchor(0, 0, 1, 1, padding, 0, padding, 0);
@@ -69,17 +70,17 @@ namespace PCShopSell.Game.UI
         {
             bool tutorialPaused = S.OpeningClockFrozen || S.RequiredTutorialPaused;
             bool paused = !S.Time.IsRunning || tutorialPaused || S.ManualActivityClockPaused;
-            Ui.SetButtonFill(_pauseButton, paused ? Ui.ButtonSecondary : Ui.HudTile);
+            Ui.SetButtonFill(_pauseButton, paused ? Ui.ButtonHot : Ui.HudTile);
             _pauseLabel.text = S.ManualActivityClockPaused ? "活动暂停" : S.Time.IsHeld ? "窗口暂停"
                 : tutorialPaused ? "教学暂停" : S.Time.IsUserPaused ? "继续" : "暂停";
             foreach (var (button, speed) in _speedButtons)
-                Ui.SetButtonFill(button, S.Time.Speed == speed ? Ui.ButtonHot : Ui.HudTile);
+                Ui.SetButtonFill(button, S.Time.Speed == speed ? Ui.SelectedButton(true) : Ui.HudTile);
         }
 
         private void BuildHudSystemControls(Transform parent)
         {
             _hudFunctionsCollapsed = PlayerPrefs.GetInt("petshop:hud-functions-collapsed", 0) != 0;
-            _hudFoldButton = Ui.Size(Ui.Button(parent, "收起功能栏 ▴  Tab", ToggleHudFunctions, 16), 166);
+            _hudFoldButton = Ui.Size(Ui.Button(parent, "收起功能栏 ▴  Tab", ToggleHudFunctions, 16, Ui.ChromeButton), 166);
             _hudFoldButton.name = "HudFoldFunctions";
             _hudFoldButton.Tip("Tab · 收起或展开功能栏");
             _noticeButtonText = Ui.Size(HudPanelButton(parent, "通知", NoticeHotkey, OpenNoticeHistory,

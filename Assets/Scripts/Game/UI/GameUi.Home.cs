@@ -252,7 +252,7 @@ namespace PCShopSell.Game.UI
                 {
                     S.TempDiscardAll();
                     w.Rebuild();
-                }), 15, Ui.Warn), 120);
+                }, danger: true), 15, Ui.ButtonDanger), 120);
             }
 
             var side = _boxSide == "temp" ? tempStacks : _boxSide == "box" ? boxStacks : bagStacks;
@@ -616,7 +616,7 @@ namespace PCShopSell.Game.UI
                     {
                         S.CancelRepair(targetId);
                         w.Rebuild();
-                    }, 15, Ui.Warn), 150);
+                    }, 15, Ui.ButtonDanger), 150);
                     continue;
                 }
 
@@ -643,7 +643,7 @@ namespace PCShopSell.Game.UI
                     {
                         S.BookRepair(targetId, start);
                         w.Rebuild();
-                    }, 16, night ? Ui.Warn : Ui.ButtonBg, ok), 120);
+                    }, 16, interactable: ok), 120);
                     col = (col + 1) % 6;
                 }
             }
@@ -692,7 +692,7 @@ namespace PCShopSell.Game.UI
                         {
                             if (target != null) S.CancelRepair(target);
                             w.Rebuild();
-                        }, 16, Ui.Warn), 100);
+                        }, 16, Ui.ButtonDanger), 100);
                     }
                 }
                 if (day == today) BuildScheduledEventFollowUps(w);
@@ -708,7 +708,7 @@ namespace PCShopSell.Game.UI
             bool walk = S.CityActivityService(activity)?.Id == "hike";
             string action = !here ? "一键前往" : walk ? activity.State == CityActivityPhase.Running ? "散步详情" : "选择路线" : "打开菜单";
             Ui.Size(Ui.Button(row,action,()=>GoToScheduledCityActivity(activityId),16,
-                early == null ? Ui.ButtonHot : Ui.ButtonBg,blocker==null),94,40)
+                early == null ? Ui.ButtonHot : Ui.ButtonSecondary,blocker==null),94,40)
                 .Tip(blocker ?? early ?? (here ? walk ? "查看散步详情或选择步道。" : "已到达约定场所，打开菜单或服务。"
                     : "沿实际路线前往约定场所；按 WASD 可随时接管。"));
         }
@@ -1090,7 +1090,7 @@ namespace PCShopSell.Game.UI
             Ui.VList(panel, gap, padding);
             var header = Ui.Row(panel, 32);
             Ui.Size(Ui.Label(header, "选鱼", 19), 0, 32, 1);
-            Ui.Size(Ui.Button(header, "关闭", () => { _cookFishPickerOpen = false; w.Rebuild(); }, 15), 64, 32);
+            Ui.Size(Ui.Button(header, "关闭", () => { _cookFishPickerOpen = false; w.Rebuild(); }, 15, Ui.ButtonSecondary), 64, 32);
             Line(panel, "背包和家中后仓 · 每锅用 1 条", 15, Ui.Dim);
 
             for (int first = 0; first < slots; first += columns)
@@ -1288,7 +1288,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(heading, label, 16, color: Ui.Dim), 0, 26, 1);
                 Ui.Size(Ui.Label(heading, $"{value:0} / {max:0}", 17, TextAnchor.MiddleRight, warn ? Ui.Warn : Ui.TextColor), 110, 26);
                 var rail = Ui.Panel(cell, "StatRail", Ui.PanelBg).rectTransform.Anchor(0, 0, 1, 0, 0, 4, 0, -12);
-                Color fill = warn ? Ui.Warn : value / max <= .45 && icon != UiIcon.Stress ? Ui.ChromeGold : Ui.ButtonSecondary;
+                Color fill = warn ? Ui.Warn : value / max <= .45 && icon != UiIcon.Stress ? Ui.ChromeGold : Ui.StatusGreen;
                 Ui.Panel(rail, "StatFill", fill).rectTransform.Anchor(0, 0, Mathf.Clamp01((float)(value / max)), 1);
             }
             var first = Ui.Row(condition, 43, 16);
@@ -1313,7 +1313,7 @@ namespace PCShopSell.Game.UI
             bool canOpenWorkbench = S.CanUseHomeWorkbench || CanStartWorkbenchSetup;
             string workbenchLabel = CanStartWorkbenchSetup ? "安装居家工作台" : "居家工作台" + (blocker == null ? "" : " · " + blocker);
             Ui.Size(Ui.Button(body, workbenchLabel, OpenHomeWorkbench, 17,
-                canOpenWorkbench ? Ui.ButtonHot : Ui.ButtonBg, canOpenWorkbench), -1, 38).name = "MyHomeWorkbench";
+                Ui.ButtonHot, canOpenWorkbench), -1, 38).name = "MyHomeWorkbench";
             if (blocker == "回家后可用")
                 Ui.Size(Ui.Button(body, "回家", () => { CloseModalWindows(); _ctrl.GoToPlace(S.Home); }, 17), -1, 36);
         }
@@ -1404,7 +1404,7 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, $"把{place.Name}设为主住处？{S.HomeTitle}{retained}", 19);
                 Para(w.Content, "各套住宅的家具和后仓留在原地址。底栏的回家目的地会随主住处更新。", 17, Ui.Dim);
                 var row = Ui.Row(w.Content, 44, 8);
-                Ui.Size(Ui.Button(row, "取消", w.Close, 17), 0, 42, 1);
+                Ui.Size(Ui.Button(row, "取消", w.Close, 17, Ui.ButtonSecondary), 0, 42, 1);
                 Ui.Size(Ui.Button(row, "确认切换", () =>
                 {
                     if (!S.SetPrimaryResidence(place)) return;
@@ -1476,13 +1476,13 @@ namespace PCShopSell.Game.UI
                     if (!S.BeginRenovation()) return;
                     w.Close();
                     Begin();
-                }, 19, Ui.Warn), 300);
+                }, 19, Ui.ButtonHot), 300);
                 if (guided)
                 {
                     _openingRenovationConfirmWindow = w;
                     _openingRenovationConfirmButton = confirm;
                 }
-                Ui.Size(Ui.Button(row, "再想想", w.Close, 19), 140);
+                Ui.Size(Ui.Button(row, "再想想", w.Close, 19, Ui.ButtonSecondary), 140);
             });
         }
 
@@ -1520,7 +1520,7 @@ namespace PCShopSell.Game.UI
                 var delivery = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(delivery, "送到", 17), 44);
                 Ui.Size(Ui.Choice(delivery, destinations.Select(S.CourierDestName), selected,
-                    index => { destination = destinations[index]; w.Rebuild(); }, bg: Ui.ButtonHot), 400, 40).name = "OnlineDeliveryDestination";
+                    index => { destination = destinations[index]; w.Rebuild(); }), 400, 40).name = "OnlineDeliveryDestination";
                 Ui.Size(Ui.Label(delivery, _onlineTab == 5 ? "次日 10:00 送达" : $"{GameSession.DeliveryDays} 天后送达",
                     16, color: Ui.Dim), -1, -1, 1);
                 if (_onlineTab == 5) { BuildOnline(w, destination); return; }
@@ -1848,9 +1848,9 @@ namespace PCShopSell.Game.UI
                 var actions = Ui.Row(_homePlacementContent, 36, 4);
                 Ui.Size(Ui.Button(actions, "旋转（R）", _ctrl.RotateGhost, 15), 86, 36);
                 _homePlacementConfirm = Ui.Size(Ui.Button(actions, _ctrl.PlaceHoldsPlaced ? "确认移动" : "确认摆放",
-                    _ctrl.ConfirmHomeFurniturePlacement, 16, Ui.ButtonBg), 0, 36, 1);
+                    _ctrl.ConfirmHomeFurniturePlacement, 16, Ui.ButtonHot), 0, 36, 1);
                 _homePlacementConfirm.name = "HomeDockConfirmPlacement";
-                Ui.Size(Ui.Button(actions, "取消", _ctrl.CancelPlacementSelection, 15), 60, 36).name = "HomeDockCancelPlacement";
+                Ui.Size(Ui.Button(actions, "取消", _ctrl.CancelPlacementSelection, 15, Ui.ButtonSecondary), 60, 36).name = "HomeDockCancelPlacement";
             }
             else
             {
@@ -1988,7 +1988,7 @@ namespace PCShopSell.Game.UI
             if (_ctrl.PlaceId != null)
             {
                 Ui.Size(Ui.Button(content, "旋转（R）", _ctrl.RotateGhost, 17), -1, 40);
-                if (_ctrl.PlaceHoldsPlaced) Ui.Size(Ui.Button(content, "收进后仓（X）", _ctrl.StoreSelected, 17, Ui.Warn), -1, 40);
+                if (_ctrl.PlaceHoldsPlaced) Ui.Size(Ui.Button(content, "收进后仓（X）", _ctrl.StoreSelected, 17, Ui.ButtonSecondary), -1, 40);
             }
             var history = Ui.Row(content, 36);
             Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 15, Ui.ButtonBg, S.CanUndoLayout), 0, 36, 1);

@@ -72,7 +72,7 @@ namespace PCShopSell.Game.UI
                         selection.Season = tag;
                         w.ResetScrollOnRebuild = true;
                         w.Rebuild();
-                    }, 16, selection.Season == tag ? Ui.ButtonHot : Ui.ButtonBg), 66, 40);
+                    }, 16, Ui.SelectedButton(selection.Season == tag)), 66, 40);
                 }
             }
 
@@ -141,7 +141,7 @@ namespace PCShopSell.Game.UI
             {
                 selection.PreviewId = null;
                 w.Rebuild();
-            }, 17), 0, 42, 1);
+            }, 17, Ui.ButtonSecondary), 0, 42, 1);
             bool canChange = S.CanChangeCityClothing;
             Ui.Size(Ui.Button(actions, "换上", () =>
             {
@@ -177,7 +177,7 @@ namespace PCShopSell.Game.UI
             DrawClothingPreview(portrait, o.Id);
             Ui.Size(Ui.Label(row,$"<b>{o.Name}</b> · {o.FictionalBrandId} / {o.TierName}\n适温 {o.ComfortMinC:0}—{o.ComfortMaxC:0}℃\n{o.Description}\n\n当前装备：{S.Outfit.Name}\n预览仅试穿；不会购买、换装或增加所有权。\n衣着魅力 +{o.CharmBonus}（总魅力只计算已装备一套）",17,TextAnchor.MiddleLeft),-1,234,1);
             var actions=Ui.Row(w.Content,40,8);
-            Ui.Size(Ui.Button(actions,"取消试穿 / 还原",()=>{_cityClothingPreview=S.EquippedOutfit;w.Rebuild();},17),-1,40,1);
+            Ui.Size(Ui.Button(actions,"取消试穿 / 还原",()=>{_cityClothingPreview=S.EquippedOutfit;w.Rebuild();},17, Ui.ButtonSecondary),-1,40,1);
             Ui.Size(Ui.Button(actions,"换上已拥有这套",()=>{S.Equip(o.Id);w.Rebuild();},17,Ui.ButtonHot,S.CanChangeCityClothing&&S.OwnedOutfits.Contains(o.Id)&&o.Id!=S.EquippedOutfit),-1,40,1);
             if(!S.CanChangeCityClothing)Line(w.Content,"查看和试穿不受位置限制；实际更衣请到家中衣柜或营业店试衣镜旁。",16,Ui.Warn);
         }

@@ -1,0 +1,12 @@
+画面	逻辑窗口尺寸	列表溢出与滚动条
+street-hud	-	-
+01-destination	(1120.00, 730.00)	3592:on
+10-destination-options	(1120.00, 730.00)	46:on,3592:on
+02-my	(1280.00, 960.00)	-394:off
+03-main-menu	-	-
+04-save	(1480.00, 758.00)	0:off
+05-employees	(1280.00, 960.00)	-242:off,-352:off
+06-shop-management	(1280.00, 960.00)	-242:off,-661:off
+07-shop-counter	-	-242:off
+08-wholesaler	(1620.00, 960.00)	-38:off,-701:off,631:on,-152:off,-206:off
+09-wholesale-app	(1500.00, 880.00)	-66:off,448:on,-370:off

@@ -31,7 +31,7 @@ namespace PCShopSell.Game.UI
                     Line(w.Content, $"已付代言费 {Money.FromCents(current.FeeCents)}", 18);
                     Para(w.Content, $"到期 {KolTimestamp(current.EndAt)} · 直播频率 {KolFrequency(current.FrequencyDays)}", 18);
                     Para(w.Content, "在品牌的代言人页管理品牌分配和排班。", 17, Ui.Dim);
-                    Ui.Size(Ui.Button(w.Content, "返回交谈", w.Close, 17), -1, 42);
+                    Ui.Size(Ui.Button(w.Content, "返回交谈", w.Close, 17, Ui.ButtonSecondary), -1, 42);
                     return;
                 }
 
@@ -55,7 +55,7 @@ namespace PCShopSell.Game.UI
                 string why = S.KolSigningBlocker(person, days, frequency, remote);
                 if (why != null) Line(w.Content, why, 16, Ui.Warn);
                 var actions = Ui.Row(w.Content, 42, 8);
-                Ui.Size(Ui.Button(actions, "返回交谈", w.Close, 17), -1, 42, 1);
+                Ui.Size(Ui.Button(actions, "返回交谈", w.Close, 17, Ui.ButtonSecondary), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "确认签约 · ¥" + fee.ToString("N0"), () =>
                 {
                     if (!S.SignKolAmbassador(person, days, frequency, remote)) { w.Rebuild(); return; }

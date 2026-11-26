@@ -307,7 +307,7 @@ namespace PCShopSell.Game.UI
             string reason = S.VenueServiceBlocker(def.Id, order.Choice, walkInCompanions: order.Guests, playerTreat: order.PlayerTreat);
             if (reason != null) Para(parent, reason, 15, Ui.Warn);
             var actions = Ui.Row(parent, 44, 8);
-            Ui.Size(Ui.Button(actions, "返回", () => { _venueWalkInOrder = null; w.RequestRebuild(); }, 17), 100, 42);
+            Ui.Size(Ui.Button(actions, "返回", () => { _venueWalkInOrder = null; w.RequestRebuild(); }, 17, Ui.ButtonSecondary), 100, 42);
             string start = bar ? (count == 1 ? "自己喝" : "一起喝") : count == 1 ? "自己开始" : "一起开始";
             Ui.Size(Ui.Button(actions, start, () =>
             {

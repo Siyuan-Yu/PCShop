@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
                     Line(card, "选一个座位", 24, Ui.Accent);
                     var choices = Ui.Row(card, 52, 8);
                     Ui.Size(Ui.Button(choices, ride == AmusementRide.RollerCoaster ? "坐前排" : "骑木马", () => Sit(0), 18, Ui.ButtonHot), 0, 48, 1);
-                    Ui.Size(Ui.Button(choices, ride == AmusementRide.RollerCoaster ? "坐后排" : "坐马车", () => Sit(1), 18), 0, 48, 1);
+                    Ui.Size(Ui.Button(choices, ride == AmusementRide.RollerCoaster ? "坐后排" : "坐马车", () => Sit(1), 18, Ui.ButtonSecondary), 0, 48, 1);
                     return;
                 }
 

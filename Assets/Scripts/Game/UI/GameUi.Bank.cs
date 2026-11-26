@@ -45,7 +45,7 @@ namespace PCShopSell.Game.UI
                     if (S.AtBank) OpenBank(S.CurrentPlace, BankPage.Borrow);
                     else _ctrl.GoToPlace(bank);
                 }, 18, Ui.ButtonHot), -1, 42, 1);
-                Ui.Size(Ui.Button(actions, "知道了", w.Close, 17), 112, 42);
+                Ui.Size(Ui.Button(actions, "知道了", w.Close, 17, Ui.ButtonHot), 112, 42);
             });
         }
 
@@ -129,7 +129,7 @@ namespace PCShopSell.Game.UI
             var amount = BankAmountInput(amountRow, "BankTransferAmount", draft.TransferAmount, 9);
             if (withdraw)
                 Ui.Size(Ui.Button(amountRow, "全部取出", () => { if (S.BankWithdrawAll()) w.Rebuild(); },
-                    17, Ui.ButtonBg, S.BankDeposit.IsPositive && S.BankBlocker() == null), 116, 42).name = "BankWithdrawAll";
+                    17, Ui.ButtonSecondary, S.BankDeposit.IsPositive && S.BankBlocker() == null), 116, 42).name = "BankWithdrawAll";
 
             var feedback = Para(w.Content, "", 15, Ui.FlatDown);
             const long maximum = 100000000;

@@ -188,14 +188,14 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(head, kinds == 0 ? "<b>购物车</b>　还是空的，在商品旁选择数量"
                 : $"<b>购物车</b>　{kinds} 样 · 共 {S.CartKg:0.##} 千克", 18, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (kinds == 0) return;
-            Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonBg), 70);
+            Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonSecondary), 70);
 
             foreach(var line in S.Cart.Where(l=>l.Registered).ToArray())
             {
                 var item=line;var asset=Ui.Row(parent,48,8);
                 ItemPortrait(asset, item.Key, 42);
                 Ui.Size(ProductText(asset,item.Name+" ×"+item.Amount+" · "+item.Price+"\n<size=14>结账后登记为已购资产，不占背包或货车空间</size>",16),-1,-1,1);
-                Ui.Size(Ui.Button(asset,"移除",()=>{S.RemoveFromCart(item.Key,item.Amount);w.Rebuild();},15),64,38);
+                Ui.Size(Ui.Button(asset,"移除",()=>{S.RemoveFromCart(item.Key,item.Amount);w.Rebuild();},15, Ui.ButtonSecondary),64,38);
             }
             var quote = S.QuoteCart(defaultToShop);
             var (fee, minutes, cars) = (quote.fee, quote.minutes, quote.cars);
@@ -252,11 +252,11 @@ namespace PCShopSell.Game.UI
             billText.rectTransform.Fill();
 
             RectTransform pay = Ui.Row(parent, 46, 8);
-            if(physical)Ui.Size(Ui.Button(pay, "背得动的都放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonBg), 170);
-            if(physical)Ui.Size(Ui.Button(pay, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonBg), 110);
+            if(physical)Ui.Size(Ui.Button(pay, "背得动的都放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonSecondary), 170);
+            if(physical)Ui.Size(Ui.Button(pay, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonSecondary), 110);
             string why = quote.blocker;
             var checkout = Ui.Button(pay, why ?? "结账（付合计）", () => CheckoutCart(w, defaultToShop),
-                why == null ? 18 : 14, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
+                why == null ? 18 : 14, Ui.ButtonHot, why == null);
             checkout.name = "CartCheckout";
             Ui.Size(checkout, -1, -1, 1);
         }
@@ -358,7 +358,7 @@ namespace PCShopSell.Game.UI
                 Option(null);
                 foreach (OwnedShop s in S.MyShops) Option(s);
                 if (!S.HasShop) Line(w.Content, "还没有店铺，去房产中介租一间才能送店里。", 15, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, "取消", w.Close, 18), -1, 44);
+                Ui.Size(Ui.Button(w.Content, "取消", w.Close, 18, Ui.ButtonSecondary), -1, 44);
             });
         }
 
@@ -463,7 +463,7 @@ namespace PCShopSell.Game.UI
                 }
 
                 RectTransform go = Ui.Row(w.Content, 48, 8);
-                Ui.Size(Ui.Button(go, "清空装货单", () => { S.ClearTruckLoad(); w.Rebuild(); }, 16, Ui.ButtonBg), 140);
+                Ui.Size(Ui.Button(go, "清空装货单", () => { S.ClearTruckLoad(); w.Rebuild(); }, 16, Ui.ButtonSecondary), 140);
                 string why = S.TruckBlocker;
                 var send = Ui.Button(go, why ?? $"出发（运费 {S.TruckFreight}）", () =>
                 {
@@ -473,7 +473,7 @@ namespace PCShopSell.Game.UI
                         w.Close();
                     }
                     else w.Rebuild();
-                }, why == null ? 18 : 15, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
+                }, why == null ? 18 : 15, Ui.ButtonHot, why == null);
                 send.name = "TruckDispatch";
                 Ui.Size(send, -1, -1, 1);
 
@@ -535,7 +535,7 @@ namespace PCShopSell.Game.UI
                     if (!finalReview) { confirm.Close(); return; }
                     finalReview = false;
                     confirm.Rebuild();
-                }, 18), -1, 46, 1);
+                }, 18, Ui.ButtonSecondary), -1, 46, 1);
                 var submit = Ui.Size(Ui.Button(row, finalReview ? "清空并" + action : "继续", () =>
                 {
                     if (S.CloseShopBlocker(shop) is string reason)
@@ -553,7 +553,7 @@ namespace PCShopSell.Game.UI
                     CloseAllWindows();
                     CloseDock();
                     if (!S.CloseShop(shop.Place.Id) && S.InPlayerShop) OpenDock();
-                }, 18, Ui.Warn, blocker == null), -1, 46, 1);
+                }, 18, finalReview ? Ui.ButtonDanger : Ui.ButtonHot, blocker == null), -1, 46, 1);
                 submit.name = finalReview ? "ConfirmCloseShop" : "ReviewCloseShop";
             }, fitContent: true);
         }

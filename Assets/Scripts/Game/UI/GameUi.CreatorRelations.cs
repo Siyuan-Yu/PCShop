@@ -19,7 +19,7 @@ namespace PCShopSell.Game.UI
             {
                 Line(c,$"工作室运营中 · 当前人员日薪 {Money.FromYuan(S.McnDailyWages)}",17);
                 Para(c,"广告收入受粉丝、资源与商务关系影响，分成进入总部账本；每日消耗资源 1。分成不是利润，还要扣人员、签约与赞助支出。",15,Ui.Dim);
-                Ui.Size(Ui.Button(c,"关闭工作室…",()=>ConfirmBusiness("关闭工作室","先结束所有创作者合约；设立费用不退。关闭后停止人员费用。",()=>{S.CloseMcn();w.Rebuild();}),16,Ui.Warn),-1,36);
+                Ui.Size(Ui.Button(c,"关闭工作室…",()=>ConfirmBusiness("关闭工作室","先结束所有创作者合约；设立费用不退。关闭后停止人员费用。",()=>{S.CloseMcn();w.Rebuild();}, danger:true),16,Ui.ButtonDanger),-1,36);
             }
         }
         private void OpenCreatorRelations(string id,Window parent)
@@ -33,7 +33,7 @@ namespace PCShopSell.Game.UI
                 if(c.McnUntilDay>S.Clock.Today.TotalDays)
                 {
                     Line(contract,$"剩余 {c.McnUntilDay-S.Clock.Today.TotalDays} 天 · 本期分成收入 {Money.FromCents(c.McnIncomeCents)}",17);
-                    Ui.Size(Ui.Button(contract,$"提前解约… 补偿 {S.CreatorFee(c)}",()=>ConfirmBusiness("提前解约","支付所示解约补偿，商务交情 −5。",()=>{S.EndMcnContract(id);w.Rebuild();parent.Rebuild();}),17,Ui.Warn),-1,40);
+                    Ui.Size(Ui.Button(contract,$"提前解约… 补偿 {S.CreatorFee(c)}",()=>ConfirmBusiness("提前解约","支付所示解约补偿，商务交情 −5。",()=>{S.EndMcnContract(id);w.Rebuild();parent.Rebuild();}, danger:true),17,Ui.ButtonDanger),-1,40);
                 }
                 else
                 {

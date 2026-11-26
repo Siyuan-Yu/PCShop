@@ -92,7 +92,7 @@ namespace PCShopSell.Game.UI
             _dockTitle.resizeTextMinSize = 16;
             _dockTitle.resizeTextMaxSize = 23;
             _dockTitle.verticalOverflow = VerticalWrapMode.Truncate;
-            var rename = Ui.Size(Ui.Button(titleRow, "改名", () => OpenShopRename(S.CurrentShop), 16), 76, 34);
+            var rename = Ui.Size(Ui.Button(titleRow, "改名", () => OpenShopRename(S.CurrentShop), 16, Ui.ButtonSecondary), 76, 34);
             rename.name = "RenameShop";
             rename.GetComponent<LayoutElement>().minWidth = 76;
             _dockStatusPlate = Ui.Panel(_dock, "ShopOpenStatus", Ui.SuccessSurface);
@@ -124,7 +124,6 @@ namespace PCShopSell.Game.UI
                     ShopTab.Counter => UiIcon.Counter, ShopTab.Stock => UiIcon.Stock, ShopTab.Pricing => UiIcon.Pricing,
                     ShopTab.Orders => UiIcon.Orders, ShopTab.Renovate => UiIcon.Renovate, _ => UiIcon.Employees
                 });
-                Ui.Trim((RectTransform)button.transform, "ActiveTabRule", Ui.ButtonHot, 0);
                 _tabButtons.Add((button, t));
                 if (t == ShopTab.Staff) _staffPurchaseAlert = AddPurchaseAlertDot(button.transform);
             }
@@ -133,7 +132,7 @@ namespace PCShopSell.Game.UI
             _dockContent = Ui.Scroll(_dock);
             ((RectTransform)_dockContent.parent.parent).Anchor(0, 0, 1, 1, 8, DockContentBottom, 5, 103);
 
-            Button leave = Ui.Button(_dock, "离开店铺", ConfirmLeaveShop, 16);
+            Button leave = Ui.Button(_dock, "离开店铺", ConfirmLeaveShop, 16, Ui.ButtonSecondary);
             ((RectTransform)leave.transform).Anchor(1, 0, 1, 0, -146, 8, 12, -44);
             BuildShopFitWarning();
 
@@ -165,12 +164,12 @@ namespace PCShopSell.Game.UI
                 if (waiting > 0)
                     Para(w.Content, $"还有 {waiting} 位顾客在排队。关门后他们会离开。", 17, Ui.Dim);
                 RectTransform row = Ui.Row(w.Content, 50, 12);
-                Ui.Size(Ui.Button(row, "再待会儿", w.Close, 19), -1, -1, 1);
+                Ui.Size(Ui.Button(row, "再待会儿", w.Close, 19, Ui.ButtonSecondary), -1, -1, 1);
                 Ui.Size(Ui.Button(row, "关门离开", () =>
                 {
                     w.Close();
                     _ctrl.LeaveShop();
-                }, 19, Ui.Warn), -1, -1, 1);
+                }, 19, Ui.ButtonHot), -1, -1, 1);
             }, onClosed: () => _leaveConfirm = null);
         }
 
@@ -204,7 +203,6 @@ namespace PCShopSell.Game.UI
             {
                 bool selected = t == tab;
                 Ui.SetButtonFill(b, Ui.TabFill(selected));
-                b.transform.Find("ActiveTabRule").gameObject.SetActive(selected);
             }
             RefreshDockHeader();
             RebuildDock();
@@ -435,7 +433,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(management, "?", OpenRestaurantHelp, 17), 38, 38).Tip("餐馆经营说明");
             BuildCompetitionEntry(management);
             Ui.Size(Ui.Button(management, ownedShop.OwnsProperty ? "结束自营" : "退租店铺",
-                () => ConfirmCloseShop(ownedShop), 16, specialBusiness ? Ui.Warn : Ui.ButtonBg), 110, 38)
+                () => ConfirmCloseShop(ownedShop), 16, Ui.ButtonDanger), 110, 38)
                 .name = "CloseShopCounter";
             var board = Ui.FlatPanel(C, "ShopLedgerBoard", Ui.Clipboard, Ui.FlatWellEdge).rectTransform;
             Ui.VList(board, 4, 6);
@@ -484,9 +482,9 @@ namespace PCShopSell.Game.UI
             if (shop.Queue.Count == 0) Line(list, "暂无顾客排队", 16, Ui.Dim);
 
             int orders = shop.Orders.Count;
-            if (orders > 0) Ui.Size(Ui.Button(C, $"处理 {orders} 个装机订单 →", () => SelectTab(ShopTab.Orders), 18, Ui.ButtonHot), -1, 38);
+            if (orders > 0) Ui.Size(Ui.Button(C, $"处理 {orders} 个装机订单 →", () => SelectTab(ShopTab.Orders), 18, Ui.ButtonSecondary), -1, 38);
 
-            Ui.Size(Ui.Button(C, "经营报表", OpenReportWindow, 17), -1, 38);
+            Ui.Size(Ui.Button(C, "经营报表", OpenReportWindow, 17, Ui.ButtonSecondary), -1, 38);
         }
 
         private void OpenShopRename(OwnedShop shop)
@@ -498,7 +496,7 @@ namespace PCShopSell.Game.UI
                 input.textComponent.supportRichText = false;
                 var error = Ui.Size(Ui.Label(w.Content, "", 15, TextAnchor.MiddleLeft, Ui.Warn), -1, 24);
                 var actions = Ui.Row(w.Content, 42, 8);
-                Ui.Size(Ui.Button(actions, "取消", w.Close, 17), -1, 42, 1);
+                Ui.Size(Ui.Button(actions, "取消", w.Close, 17, Ui.ButtonSecondary), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "保存店名", () =>
                 {
                     if (!S.TryRenameShop(shop, input.text, out string reason))
@@ -1178,7 +1176,7 @@ namespace PCShopSell.Game.UI
             {
                 OwnedShop shop = S.CurrentShop;
                 string why = S.CloseShopBlocker(shop);
-                var close = Ui.Button(C, shop.OwnsProperty?"结束这家店的自营…":$"退租这家店（押金 {shop.Lease.Deposit} 不退）…", () => ConfirmCloseShop(shop), 16, Ui.ButtonBg);
+                var close = Ui.Button(C, shop.OwnsProperty?"结束这家店的自营…":$"退租这家店（押金 {shop.Lease.Deposit} 不退）…", () => ConfirmCloseShop(shop), 16, Ui.ButtonDanger);
                 close.name = "CloseShop";
                 Ui.Size(close, -1, 40);
                 if(why!=null)Line(C,"退租前需处理："+why,15,Ui.Dim);

@@ -277,7 +277,7 @@ namespace PCShopSell.Game.UI
                         RebuildDock();
                     }
                 }, 20, Ui.ButtonHot, false), 360);
-                Ui.Size(Ui.Button(row, "先不装了", w.Close, 18), 160);
+                Ui.Size(Ui.Button(row, "先不装了", w.Close, 18, Ui.ButtonSecondary), 160);
                 UpdateStatus();
             });
         }

@@ -296,7 +296,7 @@ namespace PCShopSell.Game.UI
                 caption.text = cancel ? "取消本次操作" : ingredientBlocker != null ? "备料不足" : label;
                 bool ready = order?.Stage != DiningStage.Cooking || (now >= order.ReadyAt && now < order.BurnAt);
                 bool available = cancel || (job != RestaurantJob.None && assigned == null && !playerBusy && ready && ingredientBlocker == null);
-                Ui.SetButtonFill(action, cancel ? Ui.Warn : available ? Ui.ButtonHot : Ui.ButtonBg);
+                Ui.SetButtonFill(action, cancel ? Ui.ButtonDanger : Ui.ButtonHot);
                 action.interactable = available;
                 action.gameObject.SetActive(cancel || job != RestaurantJob.None);
             };
@@ -479,7 +479,7 @@ namespace PCShopSell.Game.UI
                         16, Ui.ButtonHot), -1, 36, 1);
                     break;
                 case DiningStage.Burnt:
-                    Ui.Size(Ui.Button(row, "焦糊 · 倒掉重做", () => Request(RestaurantJob.Clear), 16, Ui.ButtonBg, canWork), -1, 36, 1);
+                    Ui.Size(Ui.Button(row, "焦糊 · 倒掉重做", () => Request(RestaurantJob.Clear), 16, Ui.ButtonDanger, canWork), -1, 36, 1);
                     break;
             }
         }

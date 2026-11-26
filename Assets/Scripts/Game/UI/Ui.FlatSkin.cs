@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -17,12 +18,12 @@ namespace PCShopSell.Game.UI
         public static Color FlatDown => Warn;
         public static readonly Color FlatCardEdge = Tone("C2B8AB");
         public static readonly Color FlatButtonEdge = Tone("B2A696");
-        public static readonly Color FlatHotEdge = Tone("8D4834");
+        public static readonly Color FlatHotEdge = Tone("8A6120");
         public static readonly Color FlatWell = Tone("F7F3EC");
         public static readonly Color FlatWellEdge = Tone("ACA194");
         public static readonly Color FlatBand = Tone("E8E2D8");
         public static readonly Color FlatRow = Tone("E5EBDD");
-        public static readonly Color SelectionEdge = Tone("A8624B");
+        public static readonly Color SelectionEdge = Tone("B8812A");
         internal static readonly Color PaperStock = Tone("FCF8EE");
         internal static readonly Color NoteStock = Tone("F9F3E2");
         internal static readonly Color Clipboard = Tone("A79A86");
@@ -46,7 +47,7 @@ namespace PCShopSell.Game.UI
         public static readonly Color WorldShade = Tone("26221E7A");
 
         public static Color SelectedButton(bool selected) => selected ? FlatRow : ButtonBg;
-        internal static Color TabFill(bool selected) => selected ? Chrome : ButtonBg;
+        internal static Color TabFill(bool selected) => SelectedButton(selected);
 
         public static Button Tab(Transform parent, string title, System.Action select, bool selected, float width = 124)
             => Size(Button(parent, title, select, 17, TabFill(selected)), width, 34, 0);
@@ -71,8 +72,8 @@ namespace PCShopSell.Game.UI
 
         internal static Color ReadableInk(Color ink, Color surface)
         {
-            if (surface == ButtonHot && (ink == TextColor || ink == Dim)) return Color.white;
-            if (surface == ButtonSecondary && (ink == TextColor || ink == Dim)) return Tone("201C18");
+            if (IsActionSurface(surface) && (ink == TextColor || ink == Dim)) return Color.white;
+            if (surface == StatusGreen && (ink == TextColor || ink == Dim)) return Tone("201C18");
             if (!Dark(surface)) return ink;
             if (ink == TextColor) return ChromeInk;
             if (ink == Dim) return ChromeDim;
@@ -81,6 +82,9 @@ namespace PCShopSell.Game.UI
             if (ink == Warn) return ChromeWarn;
             return ink;
         }
+
+        private static bool IsActionSurface(Color surface) =>
+            surface == ButtonHot || surface == ButtonSecondary || surface == ButtonDanger;
 
         private static Color ControlFill(Color color, bool dark)
         {
@@ -121,7 +125,9 @@ namespace PCShopSell.Game.UI
             if (color.a <= .01f) return Color.clear;
             if (color == ButtonHot) return FlatHotEdge;
             if (color == FlatRow) return SelectionEdge;
-            if (color == ButtonSecondary) return Good;
+            if (color == ButtonSecondary) return Tone("665F56");
+            if (color == ButtonDanger) return Tone("8A2D27");
+            if (color == StatusGreen) return Good;
             if (color == WarningSurface || color == Warn) return Tone("C98569");
             if (Dark(color)) return ChromeEdge;
             if (name == "Choice" || name == "Input" || color == FlatWell) return FlatWellEdge;
@@ -138,6 +144,15 @@ namespace PCShopSell.Game.UI
             line.useGraphicAlpha = graphic is Image;
         }
 
+        internal static void StylePaperRow(Image image, bool selected = true)
+        {
+            image.color = ButtonBg;
+            image.raycastTarget = false;
+            Round(image);
+            if (selected) FlatBorder(image, SelectionEdge, 1.7f);
+            if (image.TryGetComponent<Outline>(out var edge)) edge.enabled = selected;
+        }
+
         /// <summary>平面卡片：底色 + 细描边。</summary>
         public static Image FlatPanel(Transform parent, string name, Color? fill = null, Color? edge = null)
         {
@@ -147,7 +162,34 @@ namespace PCShopSell.Game.UI
             return image;
         }
 
-        private static Sprite _paperSurface, _receiptSurface, _woodSurface;
+        private static Sprite _paperSurface, _receiptSurface, _woodSurface, _selectionFrame;
+
+        private static Sprite SelectionFrame
+        {
+            get
+            {
+                if (_selectionFrame != null) return _selectionFrame;
+                const int size = 8;
+                var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+                {
+                    name = "Selection frame",
+                    filterMode = FilterMode.Point,
+                    wrapMode = TextureWrapMode.Clamp,
+                    hideFlags = HideFlags.HideAndDontSave,
+                };
+                var pixels = new Color32[size * size];
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
+                        if (x < 2 || x >= size - 2 || y < 2 || y >= size - 2)
+                            pixels[y * size + x] = Color.white;
+                texture.SetPixels32(pixels);
+                texture.Apply(false, true);
+                _selectionFrame = Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * .5f,
+                    100, 0, SpriteMeshType.FullRect, Vector4.one * 2);
+                _selectionFrame.hideFlags = HideFlags.HideAndDontSave;
+                return _selectionFrame;
+            }
+        }
 
         internal static Image PaperPanel(Transform parent, string name, Color? fill = null, bool lifted = false, bool torn = false)
         {
@@ -237,17 +279,79 @@ namespace PCShopSell.Game.UI
             if (button is FlatStyledButton styled) styled.SetIcon(icon);
         }
 
+        private static readonly List<FlatStyledButton> MainActions = new();
+        private static Canvas _modalButtonCanvas;
+        private static FlatStyledButton _emphasizedButton;
+        private static readonly Vector3[] ButtonCorners = new Vector3[4];
+
+        internal static void SetModalButtonCanvas(Canvas canvas)
+        {
+            _modalButtonCanvas = canvas;
+            Canvas.willRenderCanvases -= ResolveButtonEmphasis;
+            Canvas.willRenderCanvases += ResolveButtonEmphasis;
+        }
+
+        private static void ResolveButtonEmphasis()
+        {
+            Transform foreground = null;
+            if (_modalButtonCanvas != null && _modalButtonCanvas.isActiveAndEnabled)
+            {
+                var root = _modalButtonCanvas.transform;
+                for (int i = root.childCount - 1; i >= 0; i--)
+                {
+                    var window = root.GetChild(i);
+                    if (!window.gameObject.activeSelf) continue;
+                    if (!window.name.StartsWith("Window_", System.StringComparison.Ordinal)
+                        && !window.name.StartsWith("Workspace_", System.StringComparison.Ordinal)) continue;
+                    foreground = window;
+                    break;
+                }
+            }
+
+            FlatStyledButton winner = null;
+            int priority = int.MinValue;
+            foreach (var button in MainActions)
+            {
+                if (!button.IsInteractable() || (foreground != null && !button.transform.IsChildOf(foreground)))
+                    continue;
+                var canvas = button.image.canvas;
+                if (canvas == null || !canvas.isActiveAndEnabled || canvas.sortingOrder <= priority
+                    || !VisibleInScroll(button.image.rectTransform)) continue;
+                winner = button;
+                priority = canvas.sortingOrder;
+            }
+            if (_emphasizedButton == winner) return;
+            if (_emphasizedButton != null) _emphasizedButton.SetEmphasis(false);
+            _emphasizedButton = winner;
+            if (winner != null) winner.SetEmphasis(true);
+        }
+
+        private static bool VisibleInScroll(RectTransform button)
+        {
+            for (var parent = button.parent; parent != null; parent = parent.parent)
+            {
+                if (!parent.TryGetComponent<RectMask2D>(out var mask) || !mask.isActiveAndEnabled) continue;
+                button.GetWorldCorners(ButtonCorners);
+                var min = parent.InverseTransformPoint(ButtonCorners[0]);
+                var max = parent.InverseTransformPoint(ButtonCorners[2]);
+                var bounds = UnityEngine.Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+                if (!mask.rectTransform.rect.Overlaps(bounds)) return false;
+            }
+            return true;
+        }
+
         private sealed class FlatStyledButton : Button
         {
             private Text _caption;
             private Image _icon;
             private Outline _edge;
             private bool _captionDimmed;
-            private bool _darkParent;
+            private bool _exclusiveEmphasis;
+            private bool _emphasized;
             private Color? _fixedInk;
             private Color _enabledInk;
-            private Color _disabledInk;
             private Color? _requestedFill;
+            private bool IsMainAction => _exclusiveEmphasis && _requestedFill == ButtonHot;
 
             public override void OnPointerClick(PointerEventData eventData)
             {
@@ -266,41 +370,80 @@ namespace PCShopSell.Game.UI
                 if (IsActive() && IsInteractable() && !TryGetComponent<HoldRepeat>(out _)) SoundFx.Play(Sfx.Click);
             }
 
-            public void SetCaption(Text caption, Color fill)
+            public void SetCaption(Text caption, Color fill, bool exclusiveEmphasis)
             {
                 _caption = caption;
-                _darkParent = Dark(SurfaceBehind(transform.parent));
+                _exclusiveEmphasis = exclusiveEmphasis;
                 ApplyFill(fill);
             }
 
             public void ApplyFill(Color fill)
             {
-                Color face = ControlFill(fill, _darkParent);
-                if (_requestedFill == fill && image.color == face) return;
+                if (_requestedFill == fill) return;
+                bool wasMainAction = IsMainAction;
                 _requestedFill = fill;
+                if (wasMainAction) UnregisterMainAction();
+                if (IsMainAction && isActiveAndEnabled) MainActions.Add(this);
+                RefreshStyle();
+            }
+
+            public void SetEmphasis(bool emphasized)
+            {
+                if (_emphasized == emphasized) return;
+                _emphasized = emphasized;
+                if (_caption != null) RefreshStyle();
+            }
+
+            protected override void OnEnable()
+            {
+                base.OnEnable();
+                if (IsMainAction) MainActions.Add(this);
+            }
+
+            protected override void OnDisable()
+            {
+                SetEmphasis(false);
+                UnregisterMainAction();
+                base.OnDisable();
+            }
+
+            private void UnregisterMainAction()
+            {
+                MainActions.Remove(this);
+                if (_emphasizedButton == this) _emphasizedButton = null;
+                _emphasized = false;
+            }
+
+            private void RefreshStyle()
+            {
+                if (!_requestedFill.HasValue) return;
+                Color fill = _requestedFill.Value;
+                bool action = IsActionSurface(fill);
+                bool selected = fill == FlatRow;
+                Color face = selected ? ButtonBg : fill;
+                if (fill == Warn) face = ControlFill(fill, Dark(SurfaceBehind(transform.parent)));
+                if (IsMainAction && !_emphasized) face = ButtonSecondary;
+                if (action && _captionDimmed) face = ButtonDisabled;
                 image.color = face;
-                if (fill == ButtonHot || fill == ButtonSecondary || fill == Accent || fill == FlatRow || fill == Warn || fill == Chrome)
+                if (action || selected || fill == Chrome || fill == Warn || fill == StatusGreen)
                 {
-                    var edge = _darkParent && fill == FlatRow ? ChromeGood : SurfaceEdge(face, "Button");
-                    FlatBorder(image, edge);
+                    Color edge = selected ? SelectionEdge : SurfaceEdge(face, "Button");
+                    FlatBorder(image, edge, selected ? 1.7f : 1f);
                     _edge = GetComponent<Outline>();
                     _edge.enabled = true;
                 }
                 else if (_edge != null) _edge.enabled = false;
-                Color under = face.a < .58f && _darkParent ? Chrome : face;
-                Color ink = fill == Warn ? Warn : fill == FlatRow ? Good : TextColor;
-                _enabledInk = _fixedInk ?? ReadableInk(ink, under);
-                _disabledInk = ReadableInk(Dim, under);
+                Color under = face.a < .58f ? SurfaceBehind(transform.parent) : face;
+                _enabledInk = action ? Color.white : _fixedInk ?? ReadableInk(fill == Warn ? Warn : TextColor, under);
                 UpdateInk();
-                _caption.fontStyle = fill == FlatRow || fill == ButtonHot || fill == Accent || fill == Chrome
+                _caption.fontStyle = selected || face == ButtonHot || fill == Chrome
                     ? FontStyle.Bold : FontStyle.Normal;
             }
 
             public void SetInk(Color ink)
             {
                 _fixedInk = ink;
-                _enabledInk = ink;
-                UpdateInk();
+                RefreshStyle();
             }
 
             public void SetIcon(Image icon)
@@ -311,19 +454,22 @@ namespace PCShopSell.Game.UI
 
             private void UpdateInk()
             {
-                _caption.color = _captionDimmed ? _disabledInk : _enabledInk;
+                _caption.color = _captionDimmed && !IsActionSurface(_requestedFill ?? ButtonBg)
+                    ? ReadableInk(Dim, image.color) : _enabledInk;
                 if (_icon != null) _icon.color = new Color(1, 1, 1, _captionDimmed ? .48f : 1f);
             }
 
             protected override void DoStateTransition(SelectionState state, bool instant)
             {
-                base.DoStateTransition(state, instant);
+                // Disabled fill and caption are applied here so the action color is exact and cards stay paper.
+                bool paper = _requestedFill == ButtonBg || _requestedFill == FlatRow || _requestedFill == FlatWell;
+                bool neutralState = state == SelectionState.Disabled || (paper && state == SelectionState.Selected);
+                base.DoStateTransition(neutralState ? SelectionState.Normal : state, instant);
                 if (_caption == null) return;
                 bool dimmed = state == SelectionState.Disabled;
                 if (dimmed == _captionDimmed) return;
-                if (dimmed) _enabledInk = _caption.color;
                 _captionDimmed = dimmed;
-                UpdateInk();
+                RefreshStyle();
             }
         }
     }

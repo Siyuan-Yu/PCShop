@@ -154,9 +154,8 @@ namespace PCShopSell.Game.UI
             bool emphasized = false, bool interactable = true, bool compact = false)
         {
             int size = compact ? 23 : 31;
-            Color fill = emphasized ? Ui.ButtonHot : Ui.ChromeButton;
+            Color fill = key == "quit" ? Ui.ButtonDanger : emphasized ? Ui.ButtonHot : Ui.ButtonSecondary;
             var button = Ui.Button(parent, L(key), click, size, fill, interactable);
-            Ui.FlatBorder(button.image, emphasized ? Ui.FlatHotEdge : Ui.ChromeEdge);
             var caption = button.GetComponentInChildren<Text>();
             caption.alignment = compact ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
             caption.resizeTextForBestFit = true;
@@ -240,8 +239,8 @@ namespace PCShopSell.Game.UI
                 MenuTitle(w, title);
                 Para(w.Content, bodyArgument == null ? L(body) : MenuLocalization.Format(body, bodyArgument), 20);
                 var buttons = Ui.Row(w.Content, 50);
-                Ui.Size(Ui.Button(buttons, L("cancel"), w.Close, 20), -1, -1, 1);
-                Ui.Size(Ui.Button(buttons, L(action), () => { w.Close(); confirmed(); }, 20, Ui.Warn), -1, -1, 1);
+                Ui.Size(Ui.Button(buttons, L("cancel"), w.Close, 20, Ui.ButtonSecondary), -1, -1, 1);
+                Ui.Size(Ui.Button(buttons, L(action), () => { w.Close(); confirmed(); }, 20, Ui.ButtonDanger), -1, -1, 1);
             }, allowDuringOpeningMeal: MainMenuOpen);
         }
 

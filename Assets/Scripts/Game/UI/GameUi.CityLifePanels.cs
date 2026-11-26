@@ -170,7 +170,7 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Button(nav, "下一页", () => { memoryPage++; w.Rebuild(); }, 16, Ui.ButtonBg, memoryPage + 1 < pages), 100);
                     }
                 }
-                Ui.Size(Ui.Button(w.Content, fromConversation ? "返回对话" : "关闭资料", w.Close, 19), -1, 44);
+                Ui.Size(Ui.Button(w.Content, fromConversation ? "返回对话" : "关闭资料", w.Close, 19, Ui.ButtonSecondary), -1, 44);
             }, !fromConversation, true, onClosed);
         }
 
@@ -332,7 +332,7 @@ namespace PCShopSell.Game.UI
                 if (choosingRace)
                 {
                     Ui.Size(Ui.Button(w.Content, "‹ 返回活动列表", () =>
-                    { choosingRace = false; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 17), -1, 38);
+                    { choosingRace = false; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 17, Ui.ButtonSecondary), -1, 38);
                     BuildRaceInvitationChoices(w, personId, raceTrack, track => raceTrack = track);
                     return;
                 }
@@ -457,7 +457,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content,"推荐可赴约时间",()=>{proposed=S.SuggestCityActivityStart(definitionId,personId);w.Rebuild();},17),-1,40);
                 PersonSummary(w.Content, personId, S.CityPerson(personId)?.Name ?? "朋友", "约定时间前后 1 小时内到场");
                 bool employee = S.Employees.Any(e => S.PersonIdOf(e.Person) == personId);
-                if (employee) Ui.Size(Ui.Button(w.Content, (approveEmployee ? "✓ 已批准" : "明确批准") + "所选员工在活动出发/参加期间离岗", () => { approveEmployee = !approveEmployee; w.Rebuild(); }, 18, approveEmployee ? Ui.Warn : Ui.ButtonBg), -1, 48);
+                if (employee) Ui.Size(Ui.Button(w.Content, (approveEmployee ? "✓ 已批准" : "明确批准") + "所选员工在活动出发/参加期间离岗", () => { approveEmployee = !approveEmployee; w.Rebuild(); }, 18, Ui.SelectedButton(approveEmployee)), -1, 48);
                 if (employee) Para(w.Content, "受邀员工出发后将暂时离岗。", 16, Ui.Warn);
                 string blocker = S.CityActivityInvitationBlocker(def.Id, personId, proposed, approveEmployee);
                 if (blocker != null) Ui.Notice(w.Content, blocker);
@@ -856,7 +856,7 @@ namespace PCShopSell.Game.UI
                     BuildExhibitionActivity(w, a);
                     BuildOutdoorBatchProcurement(w, a);
                     if (manual && !karaoke) BuildManualActivityFinish(w, a);
-                    Ui.Size(Ui.Button(w.Content, manual ? "收起活动面板" : parkWalk ? "继续散步" : "收起面板 / 继续活动", CloseAllWindows, 19, Ui.ButtonBg), -1, 46);
+                    Ui.Size(Ui.Button(w.Content, manual ? "收起活动面板" : parkWalk ? "继续散步" : "收起面板 / 继续活动", CloseAllWindows, 19, Ui.ButtonSecondary), -1, 46);
                 }
                 else if (a.Active)
                 {
@@ -872,14 +872,14 @@ namespace PCShopSell.Game.UI
                             ? "同行者到齐后直接开饭。" : "请在约定时间前后 1 小时到场。", 18);
                     else
                         Ui.Size(Ui.Button(w.Content, action, () => GoToScheduledCityActivity(activityId), 19,
-                            early == null ? Ui.ButtonHot : Ui.ButtonBg, why == null), -1, 46).Tip(early);
+                            early == null ? Ui.ButtonHot : Ui.ButtonSecondary, why == null), -1, 46).Tip(early);
                     if (why != null) Para(w.Content, why, 16, Ui.Dim);
                 }
                 if (a.Active)
                 {
                     bool runningNow = a.State == CityActivityPhase.Running;
                     string end = runningNow ? parkWalk ? "结束散步" : "提前离开" : "取消预约";
-                    Ui.Size(Ui.Button(w.Content, end, () => ConfirmEndCityActivity(a, freeWalk), 18, Ui.Warn), -1, 44);
+                    Ui.Size(Ui.Button(w.Content, end, () => ConfirmEndCityActivity(a, freeWalk), 18, freeWalk ? Ui.ButtonSecondary : Ui.ButtonDanger), -1, 44);
                 }
                 if(a.State==CityActivityPhase.Scheduled&&a.DefinitionId.StartsWith("expo_",StringComparison.Ordinal))
                     foreach(var participant in a.Participants)
@@ -917,7 +917,8 @@ namespace PCShopSell.Game.UI
                 : activity.EntryPaid ? "保留已发生费用和阶段效果。你仍留在当前场所。"
                 : "尚未发生的活动费不扣除。取消预约与中途离开分别记录。";
             if (running && activity.Participants.Length > 0) explanation += "基础好感按实际完成进度结算。";
-            ConfirmBusiness("结束本次安排", explanation, () => { CloseAllWindows(); S.CancelCityActivity(activity.Id, true); });
+            ConfirmBusiness("结束本次安排", explanation, () => { CloseAllWindows(); S.CancelCityActivity(activity.Id, true); },
+                danger: !freeWalk && activity.EntryPaid);
         }
 
         private static string CityParticipantText(CityParticipantPhase p) => p == CityParticipantPhase.NotDeparted ? "尚未出发" : p == CityParticipantPhase.Travelling ? "正在赴约" : p == CityParticipantPhase.Waiting ? "已到场等候" : p == CityParticipantPhase.Participating ? "正在参加" : "已离场";
@@ -945,13 +946,13 @@ namespace PCShopSell.Game.UI
             _cityActivityEnd = Ui.Size(Ui.Button(row, "取消邀约", () =>
             {
                 if (_cityHudActivityId != null) OpenCityActivityDetail(_cityHudActivityId);
-            }, 18, Ui.Warn), -1, 40, 1);
+            }, 18, Ui.ButtonDanger), -1, 40, 1);
             Ui.Size(Ui.Button(row, "收起", () =>
             {
                 if (_cityHudActivityId != null) _dismissedCityActivityHud.Add(_cityHudActivityId);
                 _cityActivityHud.gameObject.SetActive(false);
                 RefreshWorldHintVisibility();
-            }, 16), 72, 40).Tip("只隐藏这条提醒；导航和邀约保留，仍可从日程查看。");
+            }, 16, Ui.ButtonSecondary), 72, 40).Tip("只隐藏这条提醒；导航和邀约保留，仍可从日程查看。");
             _cityActivityHud.gameObject.SetActive(false);
         }
         public void UpdateCityLifeHud(float dt)
@@ -1008,7 +1009,7 @@ namespace PCShopSell.Game.UI
             _cityActivityGo.gameObject.SetActive(!(automaticMeal && here));
             _cityActivityEnd.gameObject.SetActive(!automaticMeal || !running);
             _cityActivityGo.interactable = !travelling && CityActivityMenuOrTravelBlocker(a.Id) == null && !_ctrl.Placing;
-            Ui.SetButtonFill(_cityActivityGo, early && !here ? Ui.ButtonBg : Ui.ButtonHot);
+            Ui.SetButtonFill(_cityActivityGo, early && !here ? Ui.ButtonSecondary : Ui.ButtonHot);
             _cityActivityGo.GetComponentInChildren<Text>().text = travelling ? "正在前往"
                 : running && GameSession.IsCookTasting(a) ? "继续新菜试吃"
                 : running && GameSession.IsManualPlayActivity(a) ? "继续活动"

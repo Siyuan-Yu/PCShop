@@ -92,8 +92,8 @@ namespace PCShopSell.Game.UI
             Line(w.Content, $"个人经营员工 {rows.Length} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
             Line(w.Content, "同店换岗当天生效，跨店调动次日生效。", 16, Ui.Dim);
             var bar = Ui.Row(w.Content, 40);
-            Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
-            Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); if(S.IsOwnedVenue(S.CurrentPlace))OpenVenueManagement(S.CurrentPlace);else{OpenDock();SelectTab(ShopTab.Staff);} }, 17, Ui.ButtonBg, S.InPlayerShop), 220);
+            Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17, Ui.ButtonSecondary), 240);
+            Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); if(S.IsOwnedVenue(S.CurrentPlace))OpenVenueManagement(S.CurrentPlace);else{OpenDock();SelectTab(ShopTab.Staff);} }, 17, Ui.ButtonHot, S.InPlayerShop), 220);
             if (rows.Length == 0) Para(w.Content, "暂无个人经营员工。公司员工在「公司 → 人事管理」查看。", 20);
             var roster = rows.ToLookup(row => row.Shop);
             foreach (var shop in S.MyShops.Where(shop => S.CompanyOfShop(shop) == null)) BuildGroup(shop);
@@ -166,13 +166,13 @@ namespace PCShopSell.Game.UI
             if (destination != null)
                 Line(card, $"明天调往 {S.ShopTitle(destination)} · {EmployeeRoleLabel(S.PlannedEmployeeRole(row), destination)}", 17, Ui.Good);
             var actions = Ui.Row(card, 40);
-            Ui.Size(Ui.Button(actions, "安排工作", () => OpenEmployeeWork(e.Id, w), 17, Ui.ButtonBg), 150);
-            if (destination != null) Ui.Size(Ui.Button(actions, "取消明日安排", () => { S.CancelEmployeeTransfer(e.Id); w.Rebuild(); }, 16), 150);
-            Ui.Size(Ui.Button(actions, "调整班次", () => OpenEmployeeShift(e.Id, w), 16), 140);
+            Ui.Size(Ui.Button(actions, "安排工作", () => OpenEmployeeWork(e.Id, w), 17, Ui.ButtonSecondary), 150);
+            if (destination != null) Ui.Size(Ui.Button(actions, "取消明日安排", () => { S.CancelEmployeeTransfer(e.Id); w.Rebuild(); }, 16, Ui.ButtonSecondary), 150);
+            Ui.Size(Ui.Button(actions, "调整班次", () => OpenEmployeeShift(e.Id, w), 16, Ui.ButtonSecondary), 140);
             if (row.Role == EmployeeRole.Buyer)
-                Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonBg), 150);
-            Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
-            Ui.Size(Ui.Button(actions, "交谈", () => OpenPersonDialogue(S.PersonIdOf(e)), 16), 140);
+                Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonSecondary), 150);
+            Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }, danger: true), 16, Ui.ButtonDanger), 110);
+            Ui.Size(Ui.Button(actions, "交谈", () => OpenPersonDialogue(S.PersonIdOf(e)), 16, Ui.ButtonSecondary), 140);
             if (row.Role != EmployeeRole.Buyer) return;
             Line(card, e.PurchasePlan.Daily ? "采购频率：" + e.PurchasePlan.FrequencyText
                 + " · " + S.EmployeePurchaseNextText(e.Id) : "定期采购：未启用或已暂停", 15, Ui.Dim);
@@ -229,7 +229,7 @@ namespace PCShopSell.Game.UI
                         occupant.Person.Name + "立即设为待安排，保留工资；" + row.Person.Name + (tomorrow ? "明天到岗。" : "今天到岗。"), "确认替换", () =>
                         {
                             if (S.ReplaceEmployeeWork(employeeId, destination, role)) { w.Close(); parent?.Rebuild(); RebuildDock(); }
-                        }), 18, Ui.Warn), 160, 48);
+                        }), 18, Ui.ButtonSecondary), 160, 48);
                 string label = role == EmployeeRole.Unassigned ? "确认设为待安排" : tomorrow ? "确认明天到新店做" + GameSession.RoleName(role) : "确认今天起做" + GameSession.RoleName(role);
                 Ui.Size(Ui.Button(actions, label, () =>
                 {
@@ -444,7 +444,7 @@ namespace PCShopSell.Game.UI
                         }
                         var line = Ui.Row(card, 66, 8);
                         line.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
-                        if (count > 0) line.gameObject.AddComponent<Image>().color = Ui.FlatRow;
+                        if (count > 0) Ui.StylePaperRow(line.gameObject.AddComponent<Image>());
                         string details = offer.SupplierName + (minimum > 1 ? " · 起订 " + minimum + " 件" : "");
                         if (offer.Kind == PurchaseGoodsKind.Part)
                             details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))}";
@@ -466,7 +466,7 @@ namespace PCShopSell.Game.UI
                 // ---- 右侧内容 ----
                 var head = Ui.Row(right, 34, 8);
                 Ui.Size(Ui.Label(head, "<b>采购清单</b>", 20, TextAnchor.MiddleLeft), -1, 32, 1);
-                if (!threshold) Ui.Size(Ui.Button(head, "清空", () => { selected.Clear(); Sync(); w.Rebuild(); }, 14), 64, 30);
+                if (!threshold) Ui.Size(Ui.Button(head, "清空", () => { selected.Clear(); Sync(); w.Rebuild(); }, 14, Ui.ButtonSecondary), 64, 30);
                 if (guided) Line(right, "教学 · 固定清单", 17, Ui.Accent);
                 else
                 {
@@ -549,7 +549,7 @@ namespace PCShopSell.Game.UI
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
                         Ui.Size(Ui.Label(row, offer == null ? "不可用" : (GameSession.EmployeePurchasePrice(worker.Person, offer) * choice.Count).ToString(), 15, TextAnchor.MiddleRight, offer == null ? Ui.Warn : Ui.Good), 84, 46);
-                        Ui.Size(Ui.Button(row, "移出", () => { selected.Remove(key); Sync(); w.Rebuild(); }, 14), 50, 34);
+                        Ui.Size(Ui.Button(row, "移出", () => { selected.Remove(key); Sync(); w.Rebuild(); }, 14, Ui.ButtonSecondary), 50, 34);
                     }
                     if (insertLine != null)
                     {
@@ -630,7 +630,7 @@ namespace PCShopSell.Game.UI
                             if (parent != null) { w.Close(); parent.Rebuild(); RebuildDock(); }
                             else CloseModalWindows();
                         }
-                    }, 15), 110, 48);
+                    }, 15, Ui.ButtonSecondary), 110, 48);
             }, closable: !guided, scrollContent: false);
         }
 

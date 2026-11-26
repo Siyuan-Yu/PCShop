@@ -258,7 +258,7 @@ namespace PCShopSell.Game.UI
                 var definitions = booking == null ? CityLifeCatalog.SportPasses(place.Id) : new[] { S.CityActivityService(booking) };
                 BuildVenuePasses(w, goods, definitions, booking, here, action, "SportPass_", OpenOnsitePlay);
                 if (here)
-                    Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18), -1, 46);
+                    Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonSecondary), -1, 46);
                 else
                     Ui.Size(Ui.Button(w.Content, "前往" + place.Name, () => { CloseAllWindows(); _ctrl.GoToPlace(place); }, 18, Ui.ButtonHot), -1, 46);
             }, scrollContent: false);
@@ -284,7 +284,7 @@ namespace PCShopSell.Game.UI
             if (BuildOnsiteAppointment(w, place, activityId))
             {
                 if (running?.VenueId != place.Id)
-                    Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18), -1, 42);
+                    Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonSecondary), -1, 42);
                 return;
             }
             string heading = amusement ? "售票接待处" : place.Id == GameSession.CommunityParkId ? "湖边步道与码头" : park ? "公园步道" : S.IsOwnedVenue(place) ? "老板自用 · 免费，不计营业收入" : "现场消费";
@@ -302,7 +302,7 @@ namespace PCShopSell.Game.UI
             if (pending?.ServiceConfirmed == true && running?.VenueId != place.Id && S.CityActivityService(pending) is CityActivityDefinition reserved)
             {
                 BuildConfirmedVenueAppointment(w, pending, reserved, here);
-                if (here) Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18), -1, 42);
+                if (here) Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonSecondary), -1, 42);
                 return;
             }
             if (running?.VenueId == place.Id)
@@ -399,7 +399,7 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 w.Close(); _ctrl.LeaveCurrentPlace();
-            }, 18), -1, 42);
+            }, 18, Ui.ButtonSecondary), -1, 42);
         }
         private void BuildConfirmedVenueAppointment(Window w, CityActivity booking, CityActivityDefinition definition, bool here,
             Transform parent = null)
@@ -484,7 +484,7 @@ namespace PCShopSell.Game.UI
                 {
                     S.CancelCityActivity(activity.Id, early: true);
                     w.Rebuild();
-                }, 16), -1, 36);
+                }, 16, Ui.ButtonSecondary), -1, 36);
                 return true;
             }
 

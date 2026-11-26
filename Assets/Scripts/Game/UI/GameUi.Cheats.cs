@@ -15,7 +15,7 @@ namespace PCShopSell.Game.UI
 
         partial void AddCheatButton(Transform row)
         {
-            Ui.Size(Ui.Button(row, "作弊", OpenCheatPanel, 16, Ui.Warn), 56).Tip("<b>作弊工具</b>（只在编辑器里有）\n验收用：加钱、跳过找铺子、完成任务、加交情、拨时间。");
+            Ui.Size(Ui.Button(row, "作弊", OpenCheatPanel, 16, Ui.ButtonSecondary), 56).Tip("<b>作弊工具</b>（只在编辑器里有）\n验收用：加钱、跳过找铺子、完成任务、加交情、拨时间。");
         }
 
         private void OpenCheatPanel()
@@ -44,12 +44,12 @@ namespace PCShopSell.Game.UI
                         else Toast("已开启大屏测试接入，回家后可打开居家工作台。");
                     }
                     else{_homeWorkbench?.Close();w.Rebuild();}
-                },18,S.DebugHomeWorkbenchEnabled?Ui.Warn:Ui.ButtonHot),-1,44).name="CheatHomeWorkbench";
+                },18,Ui.ButtonSecondary),-1,44).name="CheatHomeWorkbench";
                 Ui.Size(Ui.Button(w.Content,S.DebugInvitationPersonEnabled?"让小游消失（验收 NPC）":"让小游出现（满好感验收 NPC）",()=>
                 {
                     S.DebugSetInvitationPerson(!S.DebugInvitationPersonEnabled);
                     w.Rebuild();
-                },18,S.DebugInvitationPersonEnabled?Ui.Warn:Ui.ButtonHot),-1,48)
+                },18,Ui.ButtonSecondary),-1,48)
                     .Tip("小游仅用于验收。出现后在安居房产中介附近散步；隐藏会结束他的进行中邀约，保留历史记录。");
                 RectTransform money = Ui.Row(w.Content, 44, 8);
                 Ui.Size(Ui.Button(money, "现金 +1 万", () => S.DebugAddCash(10000), 17), -1, -1, 1);
@@ -65,7 +65,7 @@ namespace PCShopSell.Game.UI
                 {
                     S.SetSmartphone(!S.HasSmartphone);
                     w.Rebuild();
-                }, 17, S.HasSmartphone ? Ui.Warn : Ui.ButtonBg), -1, 44);
+                }, 17, Ui.SelectedButton(S.HasSmartphone)), -1, 44);
 
                 var q = S.CurrentQuest();
                 Ui.Size(Ui.Button(w.Content, q != null ? $"完成当前任务：{q.Title}" : "没有进行中的任务", () =>

@@ -149,14 +149,14 @@ namespace PCShopSell.Game.UI
                 }
 
                 var actions = EmployeeWorkFooter(w, ref footer, "RecruitFooter", why, Ui.Warn);
-                var back = guided ? Ui.Size(Ui.Button(actions, "返回选人", w.Close, 17), 140, 48) : null;
+                var back = guided ? Ui.Size(Ui.Button(actions, "返回选人", w.Close, 17, Ui.ButtonSecondary), 140, 48) : null;
                 var confirm = Ui.Size(Ui.Button(actions, "确认聘用并安排工作", () =>
                 {
                     if (!selected.HasValue || !S.RecruitAndAssign(candidate.Id, shopId, selected.Value)) return;
                     w.Close();
                     if (guided) S.RefreshQuestProgress();
                     RebuildDock();
-                }, 19, selected.HasValue ? Ui.ButtonHot : Ui.ButtonBg, why == null && selected.HasValue), -1, 48, 1);
+                }, 19, Ui.ButtonHot, why == null && selected.HasValue), -1, 48, 1);
                 if (guided)
                 {
                     if (confirm.IsInteractable()) _openingRecruitChoices.Add(confirm);

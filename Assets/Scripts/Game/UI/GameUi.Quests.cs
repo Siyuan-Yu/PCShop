@@ -496,7 +496,7 @@ namespace PCShopSell.Game.UI
                 int n = Quests.All.Count(x => S.QuestCompleted(x.Id));
                 if (!S.FirstChapterTrialCompleted)
                     Para(w.Content, $"暂时没有新任务（已完成 {n} 个）。继续经营，达到下一阶段的条件时会弹出新任务。", 20);
-                Ui.Size(Ui.Button(w.Content, "继续", w.Close, 18), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "继续", w.Close, 18, Ui.ButtonHot), -1, 42);
                 return;
             }
             var heading = Ui.Row(w.Content, 46, 14);

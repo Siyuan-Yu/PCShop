@@ -55,7 +55,7 @@ namespace PCShopSell.Game.UI
         private void BuildKolLobby(Window w)
         {
             var bar = Ui.Row(w.Content, 42, 10);
-            Ui.Size(Ui.Button(bar, "‹ 返回手机", () => { w.Close(); OpenPhone(); }, 17), 145, 40);
+            Ui.Size(Ui.Button(bar, "‹ 返回手机", () => { w.Close(); OpenPhone(); }, 17, Ui.ButtonSecondary), 145, 40);
             Ui.Size(Ui.Label(bar, "直播大厅", 23, color: Ui.Accent), -1, 40, 1);
             var rooms = KolMarket.All.Select(t => S.GetKolRoom(t.Id)).ToArray();
             int live = rooms.Count(r => r.IsLive);
@@ -203,7 +203,7 @@ namespace PCShopSell.Game.UI
             if (watch.Finished) w.LiveConversation = false;
 
             var bar = Ui.Row(w.Content, 60, 10);
-            Ui.Size(Ui.Button(bar, "‹ 返回", () => { w.Close(); back(); }, 17), 104, 40);
+            Ui.Size(Ui.Button(bar, "‹ 返回", () => { w.Close(); back(); }, 17, Ui.ButtonSecondary), 104, 40);
             KolAvatar(bar, person, 44, 58);
             var name = Ui.Rect(bar, "KolViewerHost"); Ui.Size(name, -1, 60, 1); Ui.VList(name, 2, 0);
             Line(name, S.CityPerson(person).Name + " · " + (watch.Finished ? "本场已结束" : KolRoomKind(room)), 21, Ui.Accent);
@@ -424,7 +424,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, $"预计效果 · 人气 +{heat} · 粉丝 +{followers} · 临时在线加成 +{audience}", 19, Ui.Accent);
                 Para(w.Content, "在线加成随时间衰减，每个直播间每15游戏分钟可送一次，效果受上限限制。", 16, Ui.Dim);
                 var actions = Ui.Row(w.Content, 45, 8);
-                Ui.Size(Ui.Button(actions, "取消", w.Close, 17), 180, 44);
+                Ui.Size(Ui.Button(actions, "取消", w.Close, 17, Ui.ButtonSecondary), 180, 44);
                 Ui.Size(Ui.Button(actions, $"确认送出 · 扣除 ¥{selection:N0}", () =>
                 {
                     if (!S.TipKolRoom(person, selection, sessionId)) return;

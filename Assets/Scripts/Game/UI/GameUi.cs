@@ -163,6 +163,7 @@ namespace PCShopSell.Game.UI
             _expoHudGate=_hudCanvas.gameObject.AddComponent<CanvasGroup>();
             _dockCanvas = Ui.CreateCanvas("UI_Dock", 20);
             _modalCanvas = Ui.CreateCanvas("UI_Modal", 30);
+            Ui.SetModalButtonCanvas(_modalCanvas);
             _toastCanvas = Ui.CreateCanvas("UI_Toast", 25);
             _invitationCanvas = Ui.CreateCanvas("UI_Invitation", 27);
             BuildHud();
@@ -337,7 +338,7 @@ namespace PCShopSell.Game.UI
                         S.Flags.Add(GameSession.ScooterGuideCompleted);
                         UpdateQuestTracker();
                     }
-                }, 16, Ui.HudTile), 74);
+                }, 16, Ui.HudTile, exclusiveEmphasis: false), 74);
                 if (kind == VehicleKind.Walk || kind == VehicleKind.Car)
                     Ui.ButtonArtwork(button, kind == VehicleKind.Walk ? UiIcon.Walk : UiIcon.Car);
                 button.Tip(() => VehicleTip(S.CommuteVehicle(kind)));
@@ -353,7 +354,8 @@ namespace PCShopSell.Game.UI
             RefreshShortcutMenus();
 
             Ui.Size(Ui.Rect(brow, "TravelBarSpace"), 0, -1, 1);
-            var truck = Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 16, Ui.ButtonSecondary), 108);
+            var truck = Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 16, Ui.ButtonHot,
+                exclusiveEmphasis: false), 108);
             Ui.ButtonArtwork(truck, UiIcon.Truck);
             truck.Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
             BuildCityLifeHud();
@@ -486,7 +488,7 @@ namespace PCShopSell.Game.UI
                 bool can = S.CanUse(kind);
                 b.interactable = can;
                 b.gameObject.SetActive(can || S.Vehicle == kind || kind <= VehicleKind.Taxi || S.ImpoundedVehicleCount(kind) > 0);
-                Ui.SetButtonFill(b, S.Vehicle == kind ? Ui.ButtonSecondary : Ui.HudTile);
+                Ui.SetButtonFill(b, S.Vehicle == kind ? Ui.ButtonHot : Ui.HudTile);
                 Text t = b.GetComponentInChildren<Text>();
                 string name = Vehicles.Get(kind).Name;
                 if (!can && (S.CommuteMotor(kind)?.Impounded == true
@@ -619,10 +621,12 @@ namespace PCShopSell.Game.UI
         {
             if (_playerMark == null)
             {
-                Button b = Ui.Button(_labelCanvas.transform, "我", null, 16, Ui.ButtonHot);
-                b.image.raycastTarget = false;
-                foreach (Text t in b.GetComponentsInChildren<Text>()) t.raycastTarget = false;
-                _playerMark = (RectTransform)b.transform;
+                var marker = Ui.Panel(_labelCanvas.transform, "PlayerMarker", Ui.ButtonHot);
+                Ui.Round(marker);
+                Ui.FlatBorder(marker, Ui.FlatHotEdge);
+                marker.raycastTarget = false;
+                Ui.Label(marker.transform, "我", 16, TextAnchor.MiddleCenter, Color.white).rectTransform.Fill(6);
+                _playerMark = marker.rectTransform;
                 _playerMark.anchorMin = _playerMark.anchorMax = Vector2.zero;
                 _playerMark.pivot = new Vector2(0.5f, 0);
                 _playerMark.sizeDelta = new Vector2(34, 24);
@@ -1088,7 +1092,7 @@ namespace PCShopSell.Game.UI
                 w.TimeStatusText.rectTransform.Anchor(1, 0, 1, 1, -statusRight - 108, 0, statusRight, 0);
                 if (closable)
                 {
-                    Button close = w.CloseButton = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 16);
+                    Button close = w.CloseButton = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 16, Ui.ButtonSecondary);
                     ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
                 }
             }

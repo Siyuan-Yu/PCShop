@@ -94,7 +94,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(label, 154, -1);
                 }
                 var actions = Ui.Row(w.Content, 42, 8);
-                Ui.Size(Ui.Button(actions, "知道了", w.Close, 17), -1, 42, 1);
+                Ui.Size(Ui.Button(actions, "知道了", w.Close, 17, Ui.ButtonSecondary), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "订阅物价信息", () => { w.Close(); OpenMarketPriceSubscriptions(); }, 16), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "查看物价", () => { w.Close(); OpenMarketPanel(); }, 17, Ui.ButtonHot), -1, 42, 1);
             });

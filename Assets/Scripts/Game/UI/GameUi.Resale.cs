@@ -267,9 +267,9 @@ namespace PCShopSell.Game.UI
                 button.image.rectTransform.Anchor(0, 0, 1, 1, 0, 0, 96);
                 if (guided) _openingUsedDeskAction = button;
             }
-            Button Secondary(string caption, Action action)
+            Button Secondary(string caption, Action action, bool danger = false)
             {
-                var button = Ui.Button(actions, caption, action, 16, Ui.Warn);
+                var button = Ui.Button(actions, caption, action, 16, danger ? Ui.ButtonDanger : Ui.ButtonSecondary);
                 button.image.rectTransform.Anchor(1, 0, 1, 1, -90);
                 return button;
             }
@@ -345,7 +345,7 @@ namespace PCShopSell.Game.UI
                 if (TryListUsedItem(id, price())) Complete(true, NextQueuedTab());
             });
             Secondary("丢弃", () => ConfirmBusiness("丢弃旧物", "将损失这件旧物及收购成本。",
-                () => Complete(S.DiscardUsed(id), 2)));
+                () => Complete(S.DiscardUsed(id), 2), danger: true), danger: true);
         }
 
         private bool TryListUsedItem(int id, long price)

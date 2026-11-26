@@ -8,8 +8,6 @@ namespace PCShopSell.Game.UI
     /// <summary>居家工作台的小组件：数值行、进度条行、状态标签、表格行、可点击分组条。</summary>
     public sealed partial class GameUi
     {
-        private static Color WbRowOpen => Ui.PendingSurface;
-
         private static Color WbKindFill(char kind)
         {
             return kind switch { 'r' => Ui.WarningSurface, 'y' => Ui.PendingSurface, 'g' => Ui.SuccessSurface, _ => Ui.InfoSurface };
@@ -134,10 +132,10 @@ namespace PCShopSell.Game.UI
             return bar;
         }
 
-        /// <summary>手风琴行：深蓝底、细边，展开时变金棕色；点击切换。内容由调用方往返回的行里加。</summary>
+        /// <summary>手风琴行用琥珀描边标记当前展开项。</summary>
         private static RectTransform WbAccordionRow(Transform parent, string name, bool open, Action click)
         {
-            var image = Ui.FlatPanel(parent, name, open ? WbRowOpen : Ui.FlatRow, open ? Ui.ButtonHot : Ui.FlatCardEdge); var row = image.rectTransform;
+            var image = Ui.FlatPanel(parent, name, Ui.ButtonBg, open ? Ui.SelectionEdge : Ui.FlatCardEdge); var row = image.rectTransform;
             var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 14; layout.padding = new RectOffset(14, 14, 5, 5);
             layout.childControlWidth = layout.childControlHeight = true; layout.childForceExpandWidth = false; layout.childForceExpandHeight = true; layout.childAlignment = TextAnchor.MiddleLeft;

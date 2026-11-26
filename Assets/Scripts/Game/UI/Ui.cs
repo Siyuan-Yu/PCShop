@@ -17,8 +17,11 @@ namespace PCShopSell.Game.UI
         public static readonly Color PanelBg2 = Tone("E2DED5");
         public static readonly Color Accent = Tone("79532B");
         public static readonly Color ButtonBg = Tone("F4EFE6");
-        public static readonly Color ButtonHot = Tone("AA5D43");
-        public static readonly Color ButtonSecondary = Tone("6F8B72");
+        public static readonly Color ButtonHot = Tone("B8812A");
+        public static readonly Color ButtonSecondary = Tone("7A7268");
+        public static readonly Color ButtonDanger = Tone("B23A32");
+        public static readonly Color ButtonDisabled = Tone("9B948A");
+        public static readonly Color StatusGreen = Tone("6F8B72");
         public static readonly Color Warn = Tone("934638");
         public static readonly Color Good = Tone("3F5F47");
         internal static Color ChangeColor(double change, double threshold = 0) =>
@@ -180,7 +183,8 @@ namespace PCShopSell.Game.UI
             return t;
         }
 
-        public static Button Button(Transform parent, string text, Action onClick, int size = 18, Color? bg = null, bool interactable = true)
+        public static Button Button(Transform parent, string text, Action onClick, int size = 18, Color? bg = null,
+            bool interactable = true, bool exclusiveEmphasis = true)
         {
             Image img = Panel(parent, "Button", bg ?? ButtonBg);
             var b = img.gameObject.AddComponent<FlatStyledButton>();
@@ -198,7 +202,7 @@ namespace PCShopSell.Game.UI
             }
             Text t = Label(img.transform, text, size, TextAnchor.MiddleCenter);
             t.rectTransform.Fill(6);
-            b.SetCaption(t, bg ?? ButtonBg);
+            b.SetCaption(t, bg ?? ButtonBg, exclusiveEmphasis);
             b.interactable = interactable;
             return b;
         }
@@ -268,7 +272,9 @@ namespace PCShopSell.Game.UI
             var content=Rect(viewport,"Content");content.anchorMin=new Vector2(0,1);content.anchorMax=Vector2.one;content.pivot=new Vector2(.5f,1);content.sizeDelta=new Vector2(0,38);
             var item=FlatPanel(content,"Item",ButtonBg,FlatButtonEdge);item.rectTransform.anchorMin=new Vector2(0,.5f);item.rectTransform.anchorMax=new Vector2(1,.5f);item.rectTransform.sizeDelta=new Vector2(0,38);
             var toggle=item.gameObject.AddComponent<Toggle>();toggle.targetGraphic=item;
-            var mark=Panel(item.transform,"Selected",Accent);mark.raycastTarget=false;mark.rectTransform.Anchor(0,0,0,1,2,2,-6,2);toggle.graphic=mark;
+            var mark=Panel(item.transform,"Selected",SelectionEdge);
+            mark.sprite=SelectionFrame;mark.type=Image.Type.Sliced;mark.raycastTarget=false;
+            mark.rectTransform.Fill(1);toggle.graphic=mark;
             var itemText=Label(item.transform,"",18,TextAnchor.MiddleLeft);itemText.rectTransform.Fill(10);itemText.raycastTarget=false;
             AddVerticalScroll(template, viewport, content, 38);
             dropdown.template=template;dropdown.captionText=caption;dropdown.itemText=itemText;
@@ -561,7 +567,7 @@ namespace PCShopSell.Game.UI
                 item.text.fontStyle = header ? FontStyle.Bold : itemText.fontStyle;
                 if (toggle.targetGraphic != null) toggle.targetGraphic.color = header ? Ui.FlatBand : available ? Ui.ButtonBg : Ui.PanelBg2;
                 toggle.Tip(blocker);
-                if (toggle.graphic != null) toggle.graphic.color = available ? Ui.Accent : Ui.Edge;
+                if (toggle.graphic != null) toggle.graphic.color = available ? Ui.SelectionEdge : Ui.Edge;
                 toggle.navigation = new Navigation { mode = available ? Navigation.Mode.Explicit : Navigation.Mode.None,
                     selectOnUp = available ? previous : null, selectOnLeft = available ? previous : null };
                 if (!available) continue;

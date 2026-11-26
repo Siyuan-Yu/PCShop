@@ -44,7 +44,7 @@ namespace PCShopSell.Game.UI
                     + (property.RecoverAtLeaseEnd ? " · 到期收回" : ""), 16, Ui.Dim);
                 var actions = Ui.Row(parent, 36, 6);
                 bool due = S.Clock.Today.TotalDays >= property.LeaseEndDay;
-                Ui.Size(Ui.Button(actions, "立即收回…", () => ConfirmRecovery(true), 16, interactable: due), 0, 36, 1);
+                Ui.Size(Ui.Button(actions, "立即收回…", () => ConfirmRecovery(true), 16, Ui.ButtonDanger, interactable: due), 0, 36, 1);
                 Ui.Size(Ui.Button(actions, property.RecoverAtLeaseEnd ? "取消到期收回" : "到期收回…", () =>
                 {
                     if (property.RecoverAtLeaseEnd)
@@ -57,7 +57,7 @@ namespace PCShopSell.Game.UI
 
                 void ConfirmRecovery(bool immediate) => CityAssetConfirm(immediate ? "收回房源" : "预约到期收回",
                     immediate ? "收回后可自用或重新挂牌。" : $"在 {new GameDate(property.LeaseEndDay)} 收回。到期前照常收租。",
-                    () => S.SetPropertyRecovery(place.Id, true), owner);
+                    () => S.SetPropertyRecovery(place.Id, true), owner, danger: immediate);
             }
 
             string blocker = S.PropertyListingBlocker(place);
@@ -139,7 +139,7 @@ namespace PCShopSell.Game.UI
             void BuildWithdraw(Transform container) => Ui.Size(Ui.Button(container, "撤牌", () =>
             {
                 if (S.UnlistProperty(place.Id)) owner.Rebuild();
-            }, 16), 72, 36);
+            }, 16, Ui.ButtonSecondary), 72, 36);
         }
 
         private void BuildResidencePropertyActions(Transform parent, Place place, Window owner, bool showTravel)

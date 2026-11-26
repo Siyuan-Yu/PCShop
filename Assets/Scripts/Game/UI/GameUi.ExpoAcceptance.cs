@@ -62,7 +62,7 @@ namespace PCShopSell.Game.UI
                     Line(body, "快进照常结算，补足身体状态并略过过程弹窗；不代做接待或交货。", 16, Ui.Dim);
                     Ui.Size(Ui.Button(body, "到场等待：推进30分钟", () => { S.AdvanceClock(30); w.Rebuild(); }, 18, Ui.ButtonBg,
                         !S.IsWorking && S.Trip == null && !S.CityActivityExclusive), -1, 42);
-                    Ui.Size(Ui.Button(body, "保存当前展会测试档", () => Toast(_ctrl.SaveGame() ? "测试档已保存。" : "请先处理当前事件。"), 18), -1, 42);
+                    Ui.Size(Ui.Button(body, "保存当前展会测试档", () => Toast(_ctrl.SaveGame() ? "测试档已保存。" : "请先处理当前事件。"), 18, Ui.ButtonSecondary), -1, 42);
                 }
                 if (S.IsCityLifeTest)
                     Ui.Size(Ui.Button(w.Content, "返回进入测试前的正式进度", () => { CloseAllWindows(); _ctrl.ReturnFromCityLifePreset(); }, 18, Ui.Warn), -1, 46).name = "ReturnFromBrandExpoAcceptance";

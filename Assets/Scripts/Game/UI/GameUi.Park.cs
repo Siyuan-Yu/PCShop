@@ -67,7 +67,7 @@ namespace PCShopSell.Game.UI
             {
                 var row=Ui.Row(w.Content,40);
                 BusinessAction(row,$"将 {_parkMoveFrom+1} 号铺搬到 {_parkSlot+1} 号铺 / 互换 · ¥1,000",()=>{bool ok=S.MoveParkUnit(_parkMoveFrom,_parkSlot);if(ok)_parkMoveFrom=-1;return ok;},w,ready && _parkMoveFrom!=_parkSlot && S.Ledger.Balance>=Money.FromYuan(1000));
-                Ui.Size(Ui.Button(row,"取消搬迁",()=>{_parkMoveFrom=-1;w.Rebuild();},17),180);
+                Ui.Size(Ui.Button(row,"取消搬迁",()=>{_parkMoveFrom=-1;w.Rebuild();},17, Ui.ButtonSecondary),180);
             }
             else if(selected!=null)
             {

@@ -344,7 +344,7 @@ namespace PCShopSell.Game.UI
                 string why = S.CloseShopBlocker(own);
                 if (why != null) Para(settlement, "办理前需处理：" + why, 16, Ui.Warn);
                 Ui.Size(Ui.Button(settlement, own.OwnsProperty ? "结束自营" : "退租店铺",
-                    () => ConfirmCloseShop(own), 18, Ui.Warn), -1, 44).name = "AgencyCloseShop_" + p.Id;
+                    () => ConfirmCloseShop(own), 18, Ui.ButtonDanger), -1, 44).name = "AgencyCloseShop_" + p.Id;
             }
             else if (pending)
             {

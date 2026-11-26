@@ -222,9 +222,9 @@ namespace PCShopSell.Game.UI
                     if(why!=null&&S.Clock.MinuteOfDay<600)Ui.Size(Ui.Button(body,"在会场等10分钟",()=>{S.AdvanceClock(10);w.Rebuild();},18),-1,42);
                 }
                 if(e!=null&&e.Journal.Length>0)HelpLink(body,"本届现场记录",string.Join("\n",e.Journal));
-                if(e?.Attending==true)Ui.Size(Ui.Button(body,"保存现场进度",OpenSaveMenu,18),-1,40);
-                else if(S.BrandExpoExclusive)Ui.Size(Ui.Button(body,"返回正在进行的品牌",()=>{S.SelectExpoBrand(S.ActiveBrandExpo.Id);w.Rebuild();},18),-1,42);
-                else Ui.Size(Ui.Button(body,"离开展馆",()=>{w.Close();_ctrl.LeaveCurrentPlace();},18,Ui.Warn),-1,42);
+                if(e?.Attending==true)Ui.Size(Ui.Button(body,"保存现场进度",OpenSaveMenu,18, Ui.ButtonSecondary),-1,40);
+                else if(S.BrandExpoExclusive)Ui.Size(Ui.Button(body,"返回正在进行的品牌",()=>{S.SelectExpoBrand(S.ActiveBrandExpo.Id);w.Rebuild();},18, Ui.ButtonSecondary),-1,42);
+                else Ui.Size(Ui.Button(body,"离开展馆",()=>{w.Close();_ctrl.LeaveCurrentPlace();},18,Ui.ButtonSecondary),-1,42);
             },holds:true,closable:false);
             _quarterlyExpoWindow.LiveConversation=true;
             _quarterlyExpoWindow.LiveKey=()=>S.Clock.Now.TotalMinutes+":"+S.ExpoAtVenue?.Id+":"+string.Join(",",S.ExpoAtVenue?.KolIds.Select(p=>S.CityPersonState(p)?.LocationPlaceId)??System.Array.Empty<string>());

@@ -36,7 +36,7 @@ namespace PCShopSell.Game.UI
                 Ui.Tab(toolbar, "买入", () => SelectMode(false), !selling, 110);
                 Ui.Tab(toolbar, "卖出", () => SelectMode(true), selling, 110);
                 var cash = Ui.Size(Ui.Label(toolbar, "", 17, TextAnchor.MiddleRight, Ui.Accent), 0, -1, 1);
-                var sellAll = selling ? Ui.Size(Ui.Button(toolbar, "全部卖出…", null, 16, Ui.Warn), 132, 38) : null;
+                var sellAll = selling ? Ui.Size(Ui.Button(toolbar, "全部卖出…", null, 16, Ui.ButtonDanger), 132, 38) : null;
                 var booking = board == null ? null : session.PendingVenueActivity(session.CurrentPlace);
                 string playBlocker = board == null ? null
                     : booking != null && CityLifeCatalog.LeisureService(booking) != LeisureGame.Pachinko ? "请先完成当前的预约。"
@@ -121,12 +121,12 @@ namespace PCShopSell.Game.UI
                         int count = Enumerable.Range(0, tiers.Length).Sum(session.PachinkoBeadCount);
                         Para(confirm.Content, $"卖出持有的全部 {count:N0} 珠，可收回 {session.PachinkoBeadValue}。", 18);
                         var buttons = Ui.Row(confirm.Content, 44, 8);
-                        Ui.Size(Ui.Button(buttons, "取消", confirm.Close, 17), 0, -1, 1);
+                        Ui.Size(Ui.Button(buttons, "取消", confirm.Close, 17, Ui.ButtonSecondary), 0, -1, 1);
                         Ui.Size(Ui.Button(buttons, "确认全部卖出", () =>
                         {
                             if (S == session && !w.Closed && session.SellPachinkoBeads(null)) RefreshTrade();
                             confirm.Close();
-                        }, 17, Ui.Warn), 0, -1, 1);
+                        }, 17, Ui.ButtonDanger), 0, -1, 1);
                     }, fitContent: true);
                 }
             }, fitContent: true);
@@ -220,7 +220,7 @@ namespace PCShopSell.Game.UI
                 }
 
                 if (here)
-                    Ui.Size(Ui.Button(goods, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17), -1, 39);
+                    Ui.Size(Ui.Button(goods, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17, Ui.ButtonSecondary), -1, 39);
                 else
                     Ui.Size(Ui.Button(w.Content, "前往" + place.Name, () =>
                     {
@@ -537,7 +537,7 @@ namespace PCShopSell.Game.UI
             var status = Ui.Size(Ui.Label(controls, "", 24, color: Ui.Accent), -1, 70);
             var count = Ui.Size(Ui.Label(controls, "", 22), -1, 63);
             var row = Ui.Row(controls, 50, 8);
-            var fold = Ui.Size(Ui.Button(row, "弃牌", () => S.PokerMove(PokerAction.Fold), 18), 0, 47, 1);
+            var fold = Ui.Size(Ui.Button(row, "弃牌", () => S.PokerMove(PokerAction.Fold), 18, Ui.ButtonSecondary), 0, 47, 1);
             var call = Ui.Size(Ui.Button(row, "", () => S.PokerMove(PokerAction.Call), 18, Ui.ButtonHot), 0, 47, 1);
             bool editingRaise = false;
             var raise = Ui.Size(Ui.Button(controls, "加注…", () => editingRaise = true, 18), -1, 43);
@@ -549,7 +549,7 @@ namespace PCShopSell.Game.UI
             var slider = Ui.Size(Ui.Slider(raisePanel, 20, 400, 40, value => amount = Mathf.RoundToInt(value)), -1, 36);
             slider.wholeNumbers = true;
             var raiseActions = Ui.Row(raisePanel, 47, 7);
-            Ui.Size(Ui.Button(raiseActions, "取消", () => editingRaise = false, 17), 0, 41, 1);
+            Ui.Size(Ui.Button(raiseActions, "取消", () => editingRaise = false, 17, Ui.ButtonSecondary), 0, 41, 1);
             Ui.Size(Ui.Button(raiseActions, "确认加注", () =>
             {
                 if (S.PokerMove(PokerAction.Raise, amount)) editingRaise = false;

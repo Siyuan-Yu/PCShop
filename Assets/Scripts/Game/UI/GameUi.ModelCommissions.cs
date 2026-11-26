@@ -17,9 +17,9 @@ namespace PCShopSell.Game.UI
             {
                 var tabs = Ui.Row(w.Content, 36, 8);
                 Ui.Size(Ui.Button(tabs, "在店订单", () => { history = false; w.Rebuild(); },
-                    16, history ? Ui.ButtonBg : Ui.ButtonHot), 128);
+                    16, Ui.TabFill(!history)), 128);
                 Ui.Size(Ui.Button(tabs, "交付记录", () => { history = true; w.Rebuild(); },
-                    16, history ? Ui.ButtonHot : Ui.ButtonBg), 128);
+                    16, Ui.TabFill(history)), 128);
 
                 var orders = S.ModelCommissions(shop).Where(order => history ==
                     (order.Stage == ModelCommissionStage.Delivered || order.Stage == ModelCommissionStage.Returned)).ToArray();

@@ -35,8 +35,8 @@ namespace PCShopSell.Game.UI
                     ? $"门店口碑最多降低 {ShopSimulation.CustomerBuildCancellationReputationLoss:0.#}。"
                     : "这台整机计入合同的未交付数量。";
                 Para(w.Content, "取消后会释放预留配件。" + consequence);
-                Ui.Size(Ui.Button(w.Content, "确认取消", () => { shop.CancelBuild(order.Id); w.Close(); refresh(); }, 17, Ui.Warn), -1, 40);
-            }), 15), 140);
+                Ui.Size(Ui.Button(w.Content, "确认取消", () => { shop.CancelBuild(order.Id); w.Close(); refresh(); }, 17, Ui.ButtonDanger), -1, 40);
+            }), 15, Ui.ButtonSecondary), 140);
         }
 
         private void OpenOrderShopping(BuildOrder order)

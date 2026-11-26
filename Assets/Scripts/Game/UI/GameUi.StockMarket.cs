@@ -53,7 +53,7 @@ namespace PCShopSell.Game.UI
                 Para(confirmation.Content, $"现金净变动 {StockSignedMoney(quote.Net)}（手续费 {quote.Fees}），成交后现金 {quote.CashAfter}。", 17);
                 Para(confirmation.Content, $"未来账单及资金保护额 {quote.Reserve}，成交后低于预留额 {quote.Reserve - quote.CashAfter}。", 17, Ui.Warn);
                 var actions = Ui.Row(confirmation.Content, 44, 8);
-                Ui.Size(Ui.Button(actions, "取消", confirmation.Close, 18), -1, -1, 1);
+                Ui.Size(Ui.Button(actions, "取消", confirmation.Close, 18, Ui.ButtonSecondary), -1, -1, 1);
                 Ui.Size(Ui.Button(actions, "仍然成交", () =>
                 {
                     if (confirmation.Closed || w.Closed || S != session) return;
@@ -70,7 +70,7 @@ namespace PCShopSell.Game.UI
                         SetStockTradeFeedback(label, blocker);
                         w.Rebuild();
                     }
-                }, 18, Ui.Warn), -1, -1, 1).name = "StockReserveConfirm";
+                }, 18, Ui.ButtonDanger), -1, -1, 1).name = "StockReserveConfirm";
             });
         }
 
@@ -124,7 +124,7 @@ namespace PCShopSell.Game.UI
                 }
                 if (id != "hardware")
                     Ui.Size(Ui.Button(manual, "待" + open, () => Manual(true), 16, Ui.ButtonHot, CanOpenStockPosition(id, shortMode)), -1, 36, 1);
-                Ui.Size(Ui.Button(manual, "待" + close, () => Manual(false), 16, Ui.ButtonBg, held > 0), -1, 36, 1);
+                Ui.Size(Ui.Button(manual, "待" + close, () => Manual(false), 16, Ui.ButtonSecondary, held > 0), -1, 36, 1);
                 error = Ui.Label(tools.Content, "", 15, color: Ui.Warn);
                 Ui.Size(error, -1, 25);
             }, holds: false);

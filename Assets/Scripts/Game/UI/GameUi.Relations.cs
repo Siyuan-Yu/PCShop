@@ -236,7 +236,7 @@ namespace PCShopSell.Game.UI
             {
                 _contactSel = null;
                 w.Rebuild();
-            }, 16), -1, 36);
+            }, 16, Ui.ButtonSecondary), -1, 36);
         }
     }
 }

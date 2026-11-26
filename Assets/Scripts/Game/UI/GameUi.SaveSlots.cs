@@ -70,14 +70,14 @@ namespace PCShopSell.Game.UI
                     SaveIntoSlot(window, slot, number);
                 else
                     LoadSaveVersion(slot, latest, confirmProgress);
-            }, bg: active ? Ui.SelectedButton(true) : occupied ? Ui.ButtonBg : Ui.FlatWell,
+            }, bg: Ui.SelectedButton(active),
                 interactable: automatic ? !saving && occupied : saving || occupied);
 
             var name = SlotLabel(card.transform, title, 21, 1, -35, 7, Ui.TextColor);
             name.fontStyle = FontStyle.Bold;
             if (active)
                 SlotLabel(card.transform, L("current_save_slot"), 14, 1, -35, 7, Ui.Accent, TextAnchor.MiddleRight);
-            Ui.Panel(card.transform, "SlotDivider", active ? Ui.FlatHotEdge : Ui.FlatButtonEdge)
+            Ui.Panel(card.transform, "SlotDivider", Ui.FlatButtonEdge)
                 .rectTransform.Anchor(0, 1, 1, 1, 12, -39, 12, 38);
 
             if (!latest.Readable)

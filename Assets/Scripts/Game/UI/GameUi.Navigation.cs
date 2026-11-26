@@ -47,7 +47,7 @@ namespace PCShopSell.Game.UI
             save = Ui.Size(Ui.Button(row, "确认" + title, () => { apply(draft); ClearDraft(); }, 17, Ui.ButtonHot, false), -1, 36, 1);
             save.name = "Save_" + key;
             saveLabel = save.GetComponentInChildren<Text>();
-            Ui.Size(Ui.Button(row, "还原", ClearDraft, 16), 90, 36);
+            Ui.Size(Ui.Button(row, "还原", ClearDraft, 16, Ui.ButtonSecondary), 90, 36);
             Preview();
             return Sync;
 
@@ -99,7 +99,7 @@ namespace PCShopSell.Game.UI
             void Render(Window w)
             {
                 if (state.Back.Count > 0)
-                    Ui.Size(Ui.Button(w.Content, "‹ 返回上一页", () => BackWorkspace(state), 16), -1, 30).name = "WorkspaceBack";
+                    Ui.Size(Ui.Button(w.Content, "‹ 返回上一页", () => BackWorkspace(state), 16, Ui.ButtonSecondary), -1, 30).name = "WorkspaceBack";
                 build(w);
             }
             if (state.Window == null || state.Window.Closed)
@@ -125,7 +125,7 @@ namespace PCShopSell.Game.UI
             ((RectTransform)w.Root.Find("Panel")).sizeDelta = new Vector2(page.Width, page.Height);
             w.Builder = win =>
             {
-                if (state.Back.Count > 0) Ui.Size(Ui.Button(win.Content, "‹ 返回上一页", () => BackWorkspace(state), 16), -1, 30).name = "WorkspaceBack";
+                if (state.Back.Count > 0) Ui.Size(Ui.Button(win.Content, "‹ 返回上一页", () => BackWorkspace(state), 16, Ui.ButtonSecondary), -1, 30).name = "WorkspaceBack";
                 page.Build(win);
             };
             w.Rebuild(); w.Fitter.Fit(); Ui.RestoreScroll(w.Root, w.Root, page.Scroll);

@@ -209,7 +209,7 @@ namespace PCShopSell.Game.UI
                     w.Close();
                     if (atBank) { if (S.AtBank) OpenBank(S.CurrentPlace); }
                     else OpenPhone();
-                }, 16), 124, 36);
+                }, 16, Ui.ButtonSecondary), 124, 36);
             }
             if (!_stockEmbedded && _stockAtBank && S.AtBank && S.CurrentQuest()?.Id == "bank_securities")
             {
@@ -363,7 +363,7 @@ namespace PCShopSell.Game.UI
                 _stockTradeFeedback = null;
                 if (_stockWatchOnly) w.Rebuild();
                 else Refresh();
-            }, 16), 82, 42);
+            }, 16, Ui.ButtonSecondary), 82, 42);
             clear.name = "StockDraftClear";
             execute = Ui.Size(Ui.Button(footer, "成交！", () => ExecuteStockDraft(w, shortMode, shownQuote), 20, Ui.ButtonHot), 124, 46);
             execute.name = "StockBatchExecute";

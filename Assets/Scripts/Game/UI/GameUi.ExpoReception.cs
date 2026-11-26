@@ -81,7 +81,7 @@ namespace PCShopSell.Game.UI
             if (comicOpen && S.CurrentPlace?.Id == "life_expo" && S.Clock.MinuteOfDay >= 540 && S.Clock.MinuteOfDay < 1020)
                 Ui.Size(Ui.Button(comic, "进入原创模型展位", () => { w.Close(); OpenCityModelExpo(); }, 18), -1, 40);
             if (S.CurrentPlace?.Id == "life_expo")
-                Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonSecondary), -1, 42);
             else ExpoTravelButton(w.Content);
         }
     }

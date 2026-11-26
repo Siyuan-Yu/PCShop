@@ -41,7 +41,7 @@ namespace PCShopSell.Game.UI
                 autoTab.interactable = !locked;
                 Ui.Size(Ui.Rect(tabs, "MealDeliveryTabSpacing"), 0, -1, 1);
                 Ui.Size(Ui.Button(tabs, "返回手机", () => { w.Close(); _phoneStoreWindow?.Close(); OpenPhone(); },
-                    16, interactable: !locked), 124, 36);
+                    16, Ui.ButtonSecondary, interactable: !locked), 124, 36);
 
                 var columns = Ui.Row(w.Content, -1, 16);
                 columns.GetComponent<LayoutElement>().flexibleHeight = 1;

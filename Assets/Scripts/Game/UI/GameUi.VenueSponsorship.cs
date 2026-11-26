@@ -95,7 +95,7 @@ namespace PCShopSell.Game.UI
                 view.Page = VenueSponsorPage.Services;
                 w.ResetScrollOnRebuild = true;
                 w.Rebuild();
-            }, 17), -1, 38);
+            }, 17, Ui.ButtonSecondary), -1, 38);
             return true;
         }
 

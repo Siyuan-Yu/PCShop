@@ -43,7 +43,7 @@ namespace PCShopSell.Game.UI
 
         private void CompanyButton(Transform parent, string label, Action action, string blocker = null, bool primary = false)
         {
-            Ui.Size(Ui.Button(parent, label, action, 16, primary ? Ui.ButtonHot : Ui.ButtonBg, blocker == null)
+            Ui.Size(Ui.Button(parent, label, action, 16, primary ? Ui.ButtonHot : Ui.ButtonSecondary, blocker == null)
                 .Tip(blocker), -1, 36);
         }
 

@@ -77,7 +77,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(label, -1, -1, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
             if (!line.HomeDeliveryOnly)
                 HoldButton(w, row, moveText, Ui.ButtonBg, moveMax, line.ByWeight ? "千克" : "件", move, 78);
-            Ui.Size(Ui.Button(row, "移除", () => { remove(amount); w.Rebuild(); }, 15, Ui.ButtonBg), 58, 34);
+            Ui.Size(Ui.Button(row, "移除", () => { remove(amount); w.Rebuild(); }, 15, Ui.ButtonSecondary), 58, 34);
         }
 
         private void CartSidebar(Window w, RectTransform side, bool defaultToShop)
@@ -86,7 +86,7 @@ namespace PCShopSell.Game.UI
             int kinds = S.Cart.Count;
             Ui.Size(Ui.Label(head, kinds == 0 ? "<b>购物车</b>　还是空的"
                 : $"<b>购物车</b>　{kinds} 样 · {S.CartKg:0.##} 千克", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
-            if (kinds > 0) Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonBg), 64, 30);
+            if (kinds > 0) Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonSecondary), 64, 30);
 
             bool physical = S.Cart.Any(l => !l.Registered);
             double truckKg = S.CartTruckKg;
@@ -109,7 +109,7 @@ namespace PCShopSell.Game.UI
                         var label = Ui.Label(row, $"{line.Name} <color=#80551F>×{line.Amount:0.##}</color>\n<size=14><color=#655E52>{line.Price}</color></size>", 17, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, -1, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
-                        Ui.Size(Ui.Button(row, "移除", () => { S.RemoveFromCart(line.Key, line.Amount); w.Rebuild(); }, 15, Ui.ButtonBg), 58, 34);
+                        Ui.Size(Ui.Button(row, "移除", () => { S.RemoveFromCart(line.Key, line.Amount); w.Rebuild(); }, 15, Ui.ButtonSecondary), 58, 34);
                     }
                 }
                 if (physical)
@@ -140,8 +140,8 @@ namespace PCShopSell.Game.UI
                     }
                     else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
                     var quick = Ui.Row(side, 32, 8);
-                    Ui.Size(Ui.Button(quick, "背得动的放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonBg), -1, 32, 1);
-                    Ui.Size(Ui.Button(quick, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonBg), -1, 32, 1);
+                    Ui.Size(Ui.Button(quick, "背得动的放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonSecondary), -1, 32, 1);
+                    Ui.Size(Ui.Button(quick, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonSecondary), -1, 32, 1);
                 }
             }
 
@@ -157,7 +157,7 @@ namespace PCShopSell.Game.UI
 
             string why = quote.blocker;
             var checkout = Ui.Button(side, why ?? $"结账 · {goods + freight}", () => CheckoutCart(w, defaultToShop),
-                why == null ? 22 : 15, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
+                why == null ? 22 : 15, Ui.ButtonHot, why == null);
             checkout.name = "CartCheckout";
             Ui.Size(checkout, -1, 54);
         }

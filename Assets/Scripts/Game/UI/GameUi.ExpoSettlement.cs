@@ -76,9 +76,9 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(body, "查看本届采购订单", () => { w.Close(); OpenExpoOrders(id); }, 18, Ui.ButtonBg), -1, 42);
                 }
                 var actions = Ui.Row(w.Content, 44, 10);
-                Ui.Size(Ui.Button(actions, "关闭结算", w.Close, 18), -1, 44, 1);
+                Ui.Size(Ui.Button(actions, "关闭结算", w.Close, 18, Ui.ButtonSecondary), -1, 44, 1);
                 if (S.CurrentPlace?.Id == "life_expo")
-                    Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonBg), -1, 44, 1);
+                    Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonSecondary), -1, 44, 1);
                 PlayUiReveal(reveal);
             }, fitContent: true);
         }
@@ -116,7 +116,7 @@ namespace PCShopSell.Game.UI
                         { S.FulfilBrandOrder(orderId); w.Rebuild(); }, 18, Ui.ButtonHot, enough), -1, 42);
                     }
                 }
-                Ui.Size(Ui.Button(w.Content, "返回本届结算", () => { w.Close(); OpenExpoSettlement(id); }, 18), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "返回本届结算", () => { w.Close(); OpenExpoSettlement(id); }, 18, Ui.ButtonSecondary), -1, 42);
             }, fitContent: true);
         }
     }

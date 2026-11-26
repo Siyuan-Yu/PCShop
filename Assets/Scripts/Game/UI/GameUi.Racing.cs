@@ -113,7 +113,7 @@ namespace PCShopSell.Game.UI
                         if (batteryBlocker != null) Line(card, batteryBlocker, 15, Ui.Dim);
                     }
                     long sale=(long)(model.Price*.6*v.Condition/100);
-                    Ui.Size(Ui.Button(actions,"回收出售 · ¥"+sale.ToString("N0"),()=>ConfirmBusiness("出售车辆",model.Name+"将从车库移除，收到 ¥"+sale.ToString("N0"),()=>{S.SellMotor(v.Id);w.Rebuild();}),16,Ui.Warn,S.CurrentPlace?.Kind==PlaceKind.Dealer&&S.MotorAvailable(v)),-1,36,1);
+                    Ui.Size(Ui.Button(actions,"回收出售 · ¥"+sale.ToString("N0"),()=>ConfirmBusiness("出售车辆",model.Name+"将从车库移除，收到 ¥"+sale.ToString("N0"),()=>{S.SellMotor(v.Id);w.Rebuild();}, danger:true),16,Ui.ButtonDanger,S.CurrentPlace?.Kind==PlaceKind.Dealer&&S.MotorAvailable(v)),-1,36,1);
                 }
                 if(S.Garage.Count==0)Para(w.Content,"还没有车辆，先到顺丰车行购买第一辆小电驴。",19);
                 foreach (var vehicle in Vehicles.All)
@@ -397,7 +397,7 @@ namespace PCShopSell.Game.UI
             {
                 if (S.CancelRaceRegistration(track.Id, date)) _upcomingScheduleDirty = true;
                 w.Rebuild();
-            }, 16), 100, 36);
+            }, 16, Ui.ButtonSecondary), 100, 36);
             if (canStart)
                 Ui.Size(Ui.Button(actions, "选车并开赛", () =>
                 {
@@ -461,7 +461,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(actions, "取消邀请", () =>
                     {
                         if (S.CancelRaceInvitation(id, track.Id, date.TotalDays)) { w.Close(); parent.Rebuild(); }
-                    }, 17), 108, 38);
+                    }, 17, Ui.ButtonSecondary), 108, 38);
             });
         }
 
@@ -473,7 +473,7 @@ namespace PCShopSell.Game.UI
             var garage = RegionalGarages.ForTrack(track.Id);
             var heading = Ui.Row(parent, 38, 8);
             if (view.ChoosingVehicle)
-                Ui.Size(Ui.Button(heading, "‹ 返回赛程", () => { view.ChoosingVehicle = false; w.Rebuild(); }, 16), 117, 36);
+                Ui.Size(Ui.Button(heading, "‹ 返回赛程", () => { view.ChoosingVehicle = false; w.Rebuild(); }, 16, Ui.ButtonSecondary), 117, 36);
             Ui.Size(Ui.Label(heading, garage.Name, 19, TextAnchor.MiddleLeft, Ui.Accent), 0, 38, 1);
             Ui.Size(Ui.Button(heading, "从其他车库调入", () => OpenWindow("调入" + MotorCatalog.ClassName(_raceMotorClass), 680, 575, transfer =>
                 BuildMotorTransferPanel(transfer, garage, _raceMotorClass, "race:" + track.Id, () => { transfer.Close(); w.Rebuild(); })), 16), 144, 36);
@@ -521,7 +521,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(list, title, () =>
                     { if (S.StartEventRace(kind, _raceSelection)) CloseWindowSilently(w); }, 18, Ui.ButtonBg, reason == null), -1, 44);
                     if (reason != null) Line(list, reason, 15, Ui.Dim);
-                    Ui.Size(Ui.Button(list, "取消这项专属预约", () => { S.CancelEventRaceBooking(kind, booking.TrackId, booking.Day); w.Rebuild(); }, 16), -1, 34);
+                    Ui.Size(Ui.Button(list, "取消这项专属预约", () => { S.CancelEventRaceBooking(kind, booking.TrackId, booking.Day); w.Rebuild(); }, 16, Ui.ButtonSecondary), -1, 34);
                 }
                 return;
             }
@@ -585,7 +585,7 @@ namespace PCShopSell.Game.UI
                 if (booked)
                 {
                     Ui.Size(Ui.Button(card, "已接受 · 取消邀请", () =>
-                    { S.CancelRaceInvitation(person.Id, track.Id, date.TotalDays); w.Rebuild(); }, 16), -1, 36);
+                    { S.CancelRaceInvitation(person.Id, track.Id, date.TotalDays); w.Rebuild(); }, 16, Ui.ButtonSecondary), -1, 36);
                 }
                 else
                 {
@@ -632,8 +632,8 @@ namespace PCShopSell.Game.UI
             var actions = Ui.Rect(_drivingHud, "RaceActions").Anchor(1, 1, 1, 1, -426, -64, 24, 24);
             var row = Ui.Row(actions, 40, 6).Fill();
             Ui.Size(Ui.Button(row, "暂停 / 继续", () => race.Paused = !race.Paused, 16), 124, 40);
-            Ui.Size(Ui.Button(row, "复位 +5秒", () => { if (!race.Paused) race.Recover(); }, 16), 106, 40);
-            Ui.Size(Ui.Button(row, race.Practice ? "结束练习" : "退赛", race.Abandon, 16, Ui.Warn), 0, 40, 1);
+            Ui.Size(Ui.Button(row, "复位 +5秒", () => { if (!race.Paused) race.Recover(); }, 16, Ui.ButtonSecondary), 106, 40);
+            Ui.Size(Ui.Button(row, race.Practice ? "结束练习" : "退赛", race.Abandon, 16, race.Practice ? Ui.ButtonSecondary : Ui.ButtonDanger), 0, 40, 1);
 
             var controls = RaceHudSurface(_drivingHud, "RaceControls", surface).Anchor(0, 0, 0, 0, 24, 24, -602, -86);
             Ui.Label(controls, "W 油门　S 刹车 / 倒车　A/D 转向　Shift 手刹", 17)

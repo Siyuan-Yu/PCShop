@@ -160,7 +160,7 @@ namespace PCShopSell.Game.UI
             if (outing?.VenueId == place.Id && !marketVisit)
                 Ui.Size(Ui.Button(footer, "同行活动", () => { w.Close(); OpenCityActivityDetail(outing.Id); }, 17), 0, 37, 1);
             else if (outing?.VenueId != place.Id)
-                Ui.Size(Ui.Button(footer, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17), 0, 37, 1);
+                Ui.Size(Ui.Button(footer, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17, Ui.ButtonSecondary), 0, 37, 1);
         }
 
         private void OpenOldMarketServices()
@@ -211,7 +211,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(actions, "卖掉 · " + S.OldMarketBuybackPrice(key),
                         () => { S.SellOldMarketGoods(key); w.Rebuild(); }, 18, Ui.ButtonBg, !busy), -1, 44, 1);
                 }
-                Ui.Size(Ui.Button(w.Content, "返回柜台", w.Close, 17), -1, 40);
+                Ui.Size(Ui.Button(w.Content, "返回柜台", w.Close, 17, Ui.ButtonSecondary), -1, 40);
             }, fitContent: true);
         }
     }

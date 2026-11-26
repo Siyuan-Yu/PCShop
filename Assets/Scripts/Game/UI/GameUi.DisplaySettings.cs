@@ -36,7 +36,7 @@ namespace PCShopSell.Game.UI
                 _displayCountdown=Ui.Label(w.Content,MenuLocalization.Format("display_countdown",GameDisplaySettings.SecondsLeft),19);Ui.Size(_displayCountdown,-1,65);
                 var actions=Ui.Row(w.Content,48);
                 var keep=Ui.Button(actions,L("display_keep"),GameDisplaySettings.ConfirmPreview,19,Ui.ButtonHot);keep.name="KeepDisplay";Ui.Size(keep,-1,48,1);
-                var undo=Ui.Button(actions,L("display_restore"),GameDisplaySettings.CancelPreview,19);undo.name="RestoreDisplay";Ui.Size(undo,-1,48,1);
+                var undo=Ui.Button(actions,L("display_restore"),GameDisplaySettings.CancelPreview,19, Ui.ButtonSecondary);undo.name="RestoreDisplay";Ui.Size(undo,-1,48,1);
             },true,true,()=>{if(!finished)GameDisplaySettings.CancelPreview();});
             _displayPreview=preview;
         }

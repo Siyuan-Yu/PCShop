@@ -238,7 +238,7 @@ namespace PCShopSell.Game.UI
                     if(panel.Find("LeavePlaceFooter")==null)
                     {
                         var footer=Ui.Rect(panel,"LeavePlaceFooter").Anchor(0,0,1,0,16,10,16,-50);
-                        Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();_ctrl.LeaveCurrentPlace();}},17).GetComponent<RectTransform>().Fill().name="LeavePlace";
+                        Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();_ctrl.LeaveCurrentPlace();}},17, Ui.ButtonSecondary).GetComponent<RectTransform>().Fill().name="LeavePlace";
                     }
                     var contentFrame = fixedLayout ? win.Content : (RectTransform)win.Content.parent.parent;
                     contentFrame.offsetMin = new Vector2(0, 58);
@@ -299,7 +299,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content,(locked==null?"前往 ":"未开放 · ")+target.Name+" · "+S.City.StreetName(target.StreetId),()=>
                 {
                     if(S.TakeMetro(target.Id)){CloseWindowSilently(w);if(S.CurrentPlace!=null)OnEnteredPlace(S.CurrentPlace);}
-                },19,locked==null?Ui.ButtonHot:Ui.ButtonBg,locked==null),-1,44).Tip(locked??"乘地铁前往此站");
+                },19,Ui.ButtonBg,locked==null),-1,44).Tip(locked??"乘地铁前往此站");
             }
         }
 
@@ -319,7 +319,7 @@ namespace PCShopSell.Game.UI
             status.name = "WalletWaitStatus";
             var actions = Ui.Row(w.Content, 38, 6);
             string owner = S.WalletReturnOwnerName;
-            var resume = Ui.Size(Ui.Button(w.Content, "继续等候", () => S.Time.SetPaused(false), 16), -1, 34);
+            var resume = Ui.Size(Ui.Button(w.Content, "继续等候", () => S.Time.SetPaused(false), 16, Ui.ButtonSecondary), -1, 34);
             resume.name = "WalletResumeWait";
             Button toOwner = null;
             if (owner != null)
@@ -441,13 +441,13 @@ namespace PCShopSell.Game.UI
             {
                 MenuTitle(w, "game_menu");
                 Ui.Size(Ui.Button(w.Content, L("resume"), w.Close, 21, Ui.ButtonHot), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L(S.CanSave ? "save" : "cannot_save"), OpenSaveMenu, 20, Ui.ButtonBg, S.CanSave), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(), 20, Ui.ButtonBg, SaveStore.Exists), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("settings"), OpenSettingsMenu, 20), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("help"), OpenHelpMenu, 20), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("about"), OpenAboutMenu, 20), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("return_title"), () => ShowMainMenu(true), 20), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("quit"), OpenQuitMenu, 20, Ui.Warn), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L(S.CanSave ? "save" : "cannot_save"), OpenSaveMenu, 20, Ui.ButtonSecondary, S.CanSave), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(), 20, Ui.ButtonSecondary, SaveStore.Exists), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("settings"), OpenSettingsMenu, 20, Ui.ButtonSecondary), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("help"), OpenHelpMenu, 20, Ui.ButtonSecondary), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("about"), OpenAboutMenu, 20, Ui.ButtonSecondary), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("return_title"), () => ShowMainMenu(true), 20, Ui.ButtonSecondary), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("quit"), OpenQuitMenu, 20, Ui.ButtonDanger), -1, 50);
             }, systemWindow: true);
         }
 
@@ -545,7 +545,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, S.GameOverReason, 21);
                 Line(w.Content, $"坚持到了 {S.Clock.Today}。", 18, Ui.Dim);
                 Ui.Size(Ui.Button(w.Content, "重新开始", () => _ctrl.NewGame(), 20, Ui.ButtonHot), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(false), 20, Ui.ButtonBg, SaveStore.Exists), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(false), 20, Ui.ButtonSecondary, SaveStore.Exists), -1, 50);
             }, true, false);
         }
 

@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
 
             var go = Ui.Size(Ui.Button(detail.transform, "立即前往", null, 20, Ui.ButtonHot), -1, 46);
             go.name = "DestinationGo";
-            var save = Ui.Size(Ui.Button(detail.transform, "保存到底栏", null, 18), -1, 42);
+            var save = Ui.Size(Ui.Button(detail.transform, "保存到底栏", null, 18, Ui.ButtonSecondary), -1, 42);
             save.name = "DestinationSave";
             var saveLabel = save.GetComponentInChildren<Text>();
             var buttons = new Dictionary<DestinationEntry, Button>();
@@ -128,7 +128,7 @@ namespace PCShopSell.Game.UI
                         type.SetValueWithoutNotify(0);
                         street.SetValueWithoutNotify(0);
                         RefreshResults();
-                    }, 17), -1, 40).name = "DestinationClearFilters";
+                    }, 17, Ui.ButtonSecondary), -1, 40).name = "DestinationClearFilters";
                 }
                 else if (filtered) AddGroup($"匹配地点 · {visible.Length}", visible);
                 else

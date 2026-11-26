@@ -95,7 +95,7 @@ namespace PCShopSell.Game.UI
             Tab("contacts", "通讯录", OpenContactsPanel);
             Tab("relations", "关系图", OpenRelationsPanel);
             if (_peopleReturnPhone != null && !_peopleReturnPhone.Closed)
-                Ui.Size(Ui.Button(header, "‹ 返回手机", w.Close, 16), 132, 38).name = "PeopleReturnPhone";
+                Ui.Size(Ui.Button(header, "‹ 返回手机", w.Close, 16, Ui.ButtonSecondary), 132, 38).name = "PeopleReturnPhone";
         }
     }
 }

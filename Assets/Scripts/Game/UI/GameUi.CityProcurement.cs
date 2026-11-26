@@ -89,7 +89,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(actions, "清除补货目标", () =>
                 {
                     draft.Target = 0; draft.Lower = 0; Save();
-                }, 16, Ui.ButtonBg), -1, -1, 1);
+                }, 16, Ui.ButtonSecondary), -1, -1, 1);
                 Ui.Size(Ui.Button(actions, "保存补货设置", Save, 18, Ui.ButtonHot, draft.Primary == ProcurementMethod.Online1788 || workers.Length > 0), -1, -1, 1);
                 DraftQuantityHints(w.Content);
             });
@@ -115,7 +115,7 @@ namespace PCShopSell.Game.UI
                         S.CancelProcurementClaim(claim.Id);
                         w.Close();
                         parent.Rebuild();
-                    }, 16), 124, 36);
+                    }, 16, Ui.ButtonSecondary), 124, 36);
                 }
 
                 foreach (var order in orders)

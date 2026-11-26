@@ -15,7 +15,7 @@ namespace PCShopSell.Game.UI
         {
             if (_expoPage != "overview")
             {
-                Ui.Size(Ui.Button(body, "返回展会总览", () => { _expoPage = "overview"; w.Rebuild(); }, 17), -1, 36);
+                Ui.Size(Ui.Button(body, "返回展会总览", () => { _expoPage = "overview"; w.Rebuild(); }, 17, Ui.ButtonSecondary), -1, 36);
                 if (_expoPage == "booking") { BuildQuarterlyExpoBooking(body, w, brand, state); return; }
                 if (_expoPage == "history")
                 {

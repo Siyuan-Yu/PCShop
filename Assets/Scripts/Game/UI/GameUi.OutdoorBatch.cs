@@ -32,7 +32,7 @@ namespace PCShopSell.Game.UI
                 BuildMarketVisitChoices(w, activity, definition, state);
                 if (state.Pending == null && state.Visited > 0) BuildOutdoorBatchProcurement(w, activity);
                 BuildManualActivityFinish(w, activity);
-                Ui.Size(Ui.Button(w.Content, "提前离开", () => ConfirmEndCityActivity(activity, false), 18, Ui.Warn), -1, 44);
+                Ui.Size(Ui.Button(w.Content, "提前离开", () => ConfirmEndCityActivity(activity, false), 18, Ui.ButtonDanger), -1, 44);
             }, fitContent: true);
             if (window == null) return;
             window.LiveConversation = true;

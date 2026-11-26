@@ -435,7 +435,10 @@ namespace PCShopSell.Game.UI
                     var line = WbTable(list, new[] { (open ? "▾  " : "▸  ") + S.ShopTitle(shop) + (shop.Sim.IsOpen ? "" : " · 休息"), result.Sales.ToString(), result.OperatingOut.ToString(), result.OperatingNet.ToString() }, widths, false,
                         new[] { default(Color), default(Color), default(Color), result.OperatingNet.IsNegative ? Ui.FlatDown : Ui.FlatUp }, 32);
                     line.name = "WorkbenchReportShop_" + shopId;
-                    var lineImage = line.gameObject.AddComponent<Image>(); lineImage.color = open ? WbRowOpen : new Color(0, 0, 0, 0);
+                    var lineImage = line.gameObject.AddComponent<Image>();
+                    lineImage.color = Ui.ButtonBg;
+                    Ui.Round(lineImage);
+                    if (open) Ui.FlatBorder(lineImage, Ui.SelectionEdge, 1.7f);
                     var click = line.gameObject.AddComponent<Button>(); click.targetGraphic = lineImage;
                     click.onClick.AddListener(() => { _workbenchReportShop = open ? "" : shopId; w.RequestRebuild(); });
                     if (open) BuildWorkbenchShopLedger(list, shop, range.from, range.to);

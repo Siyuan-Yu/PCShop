@@ -123,15 +123,15 @@ namespace PCShopSell.Game.UI
             return true;
         }
 
-        /// <summary>危险操作的二次确认：说清后果，确认按钮写动作本身（不是“确定”）。</summary>
-        private void ConfirmAction(string title, string text, string confirmLabel, System.Action action)
+        private void ConfirmAction(string title, string text, string confirmLabel, System.Action action, bool danger = false)
         {
             OpenWindow(title, 560, 300, w =>
             {
                 Para(w.Content, text, 18);
                 RectTransform row = Ui.Row(w.Content, 46, 8);
-                Ui.Size(Ui.Button(row, "取消", w.Close, 18), -1, -1, 1);
-                Ui.Size(Ui.Button(row, confirmLabel, () => { CloseAllWindows(); action(); }, 18, Ui.Warn), -1, -1, 1);
+                Ui.Size(Ui.Button(row, "取消", w.Close, 18, Ui.ButtonSecondary), -1, -1, 1);
+                Ui.Size(Ui.Button(row, confirmLabel, () => { CloseAllWindows(); action(); }, 18,
+                    danger ? Ui.ButtonDanger : Ui.ButtonHot), -1, -1, 1);
             }, fitContent: true);
         }
 

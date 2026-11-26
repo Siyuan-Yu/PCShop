@@ -143,7 +143,7 @@ namespace PCShopSell.Game.UI
             Para(w.Content, "先完成这一顿饭，再做其他事情。", 22, Ui.Accent);
             Para(w.Content, OpeningMealNextAction, 19);
             Para(w.Content, "可以继续走路、调整镜头；Esc 仍可保存、设置或退出。", 16, Ui.Dim);
-            Ui.Size(Ui.Button(w.Content, "知道了，先做饭", w.Close, 19), -1, 46);
+            Ui.Size(Ui.Button(w.Content, "知道了，先做饭", w.Close, 19, Ui.ButtonHot), -1, 46);
         }
 
         private void OpeningMealOverlayClick()

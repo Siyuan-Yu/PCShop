@@ -180,7 +180,7 @@ namespace PCShopSell.Game.UI
             string title = selfOwned ? "出售自住房" : "出售住宅产权";
             string terms = selfOwned ? "按当前估值九折出售，出售后继续租住，满七天起逢周日扣租。" : "原住户保留。";
             Ui.Size(Ui.Button(row, "出售产权…", () => ConfirmHousing(owner, place, title, -proceeds, terms,
-                () => selfOwned ? S.SellHome() : S.SellResidentialInvestment(place.Id)), 15, Ui.Warn), 111, 33)
+                () => selfOwned ? S.SellHome() : S.SellResidentialInvestment(place.Id), danger: true), 15, Ui.ButtonDanger), 111, 33)
                 .Tip($"出售到手 {proceeds}");
             BuildResidencePropertyActions(parent, place, owner, showTravel: false);
             if (property != null) BuildPropertyRentalControls(parent, place, owner);
@@ -231,7 +231,7 @@ namespace PCShopSell.Game.UI
                     S.ResidentialTradeBlocker(p.Id, true, false, selfUse, keepCurrentResidence: true)), selfUse ? "ResidenceBuyCash" : null,
                 S.ResidentialTradeBlocker(p.Id,true,false,selfUse,keepCurrentResidence:true));
         }
-        private void ConfirmHousing(Window parent,Place p,string title,Money due,string terms,Func<bool> action)
+        private void ConfirmHousing(Window parent,Place p,string title,Money due,string terms,Func<bool> action,bool danger=false)
         {
             bool submitted=false;
             OpenWindow(title,760,560,confirm=>
@@ -239,8 +239,9 @@ namespace PCShopSell.Game.UI
                 Line(confirm.Content,p.Name,24,Ui.Accent);Para(confirm.Content,terms,19);
                 string payment=due.IsNegative?"本次收回 "+due.Abs():due.IsPositive?"本次支付 "+due:"无需付费";
                 Line(confirm.Content,payment+" · 办理后现金 "+(S.Ledger.Balance-due),21,Ui.Accent);
-                Ui.Size(Ui.Button(confirm.Content,"确认办理",()=>{if(submitted)return;submitted=true;if(action()){confirm.Close();parent.Rebuild();}else{submitted=false;confirm.Rebuild();}},20,Ui.ButtonHot,!due.IsPositive||S.Ledger.Balance>=due),-1,48).name="ResidenceConfirm";
-                Ui.Size(Ui.Button(confirm.Content,"取消",confirm.Close,19),-1,44);
+                Ui.Size(Ui.Button(confirm.Content,"确认办理",()=>{if(submitted)return;submitted=true;if(action()){confirm.Close();parent.Rebuild();}else{submitted=false;confirm.Rebuild();}},20,
+                    danger ? Ui.ButtonDanger : Ui.ButtonHot,!due.IsPositive||S.Ledger.Balance>=due),-1,48).name="ResidenceConfirm";
+                Ui.Size(Ui.Button(confirm.Content,"取消",confirm.Close,19, Ui.ButtonSecondary),-1,44);
             });
         }
     }

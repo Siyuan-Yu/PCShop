@@ -172,7 +172,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, new GameDate((int)(item.Entry.Minute / 1440)).ToString(), 20, Ui.Accent);
                 BuildCalendarDayItem(w.Content, item, w);
                 var actions = Ui.Row(w.Content, 42, 10);
-                Ui.Size(Ui.Button(actions, "返回", w.Close, 18), -1, 42, 1);
+                Ui.Size(Ui.Button(actions, "返回", w.Close, 18, Ui.ButtonSecondary), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "查看当天日程", () =>
                 {
                     w.Close();

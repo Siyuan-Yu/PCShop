@@ -101,11 +101,11 @@ namespace PCShopSell.Game.UI
                 }, 16), 116, 38);
             }
             else if (S.ShopAt(place) is OwnedShop shop)
-                Ui.Size(Ui.Button(actions, "结束自营…", () => ConfirmCloseShop(shop), 16), 116, 38);
+                Ui.Size(Ui.Button(actions, "结束自营…", () => ConfirmCloseShop(shop), 16, Ui.ButtonDanger), 116, 38);
             string blocker = S.CityPropertySaleBlocker(id);
             Money net = S.PropertySaleNet(property);
             Ui.Size(Ui.Button(actions, "出售产权…", () => CityAssetConfirm("出售商铺产权",
-                $"到手 {net}，原租户保留。", () => S.SellProperty(id), w), 16, Ui.Warn, blocker == null), 111, 38)
+                $"到手 {net}，原租户保留。", () => S.SellProperty(id), w, danger: true), 16, Ui.ButtonDanger, blocker == null), 111, 38)
                 .Tip(blocker ?? $"出售到手 {net}");
         }
 
@@ -137,14 +137,15 @@ namespace PCShopSell.Game.UI
                 referral: atAgency ? null : content =>
                     Ui.Size(Ui.Button(content, "前往房源所属中介", () => GoToPropertyAgency(place), 17), -1, 38).name = "PropertyAgency");
         }
-        private void CityAssetConfirm(string title, string terms, Func<bool> action, Window parent, bool enabled = true)
+        private void CityAssetConfirm(string title, string terms, Func<bool> action, Window parent, bool enabled = true, bool danger = false)
         {
             bool submitted = false;
             OpenWindow(title, 780, 530, confirmation =>
             {
                 Para(confirmation.Content, terms, 19);
-                Ui.Size(Ui.Button(confirmation.Content, "确认办理", () => { if (submitted) return; submitted = true; if (action()) { confirmation.Close(); parent?.Rebuild(); } else submitted = false; }, 19, Ui.Warn, enabled), -1, 48);
-                Ui.Size(Ui.Button(confirmation.Content, "返回", confirmation.Close, 19), -1, 44);
+                Ui.Size(Ui.Button(confirmation.Content, "确认办理", () => { if (submitted) return; submitted = true; if (action()) { confirmation.Close(); parent?.Rebuild(); } else submitted = false; }, 19,
+                    danger ? Ui.ButtonDanger : Ui.ButtonHot, enabled), -1, 48);
+                Ui.Size(Ui.Button(confirmation.Content, "返回", confirmation.Close, 19, Ui.ButtonSecondary), -1, 44);
             }, fitContent: true);
         }
     }

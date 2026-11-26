@@ -158,13 +158,13 @@ namespace PCShopSell.Game.UI
                 var input = Ui.TextInput(w.Content, brand.Name, "输入新品牌名（2—16字）", null);
                 Ui.Size(input, -1, 40);
                 var actions = Ui.Row(w.Content, 40, 8);
-                Ui.Size(Ui.Button(actions, "取消", w.Close, 17), -1, 40, 1);
+                Ui.Size(Ui.Button(actions, "取消", w.Close, 17, Ui.ButtonSecondary), -1, 40, 1);
                 Ui.Size(Ui.Button(actions, "确认改名", () =>
                 {
                     if (!S.RenameBrand(brand.Id, input.text)) return;
                     w.Close();
                     overview.Rebuild();
-                }, 17, Ui.Warn), -1, 40, 1);
+                }, 17, Ui.ButtonHot), -1, 40, 1);
             });
         }
 

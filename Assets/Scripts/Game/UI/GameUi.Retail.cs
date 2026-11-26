@@ -311,12 +311,10 @@ namespace PCShopSell.Game.UI
                 bool canAdd = storeOpen && max > 0 && blocker == null;
                 var row=Ui.Row(list,68,10);row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight=false;
                 var highlight = row.gameObject.AddComponent<Image>();
-                highlight.raycastTarget = false;
-                Ui.Round(highlight);
                 Button maximum = null;
                 void UpdateRow(double value)
                 {
-                    highlight.color = value > 0 ? Ui.PendingSurface : Ui.PanelBg;
+                    Ui.StylePaperRow(highlight, value > 0);
                     if (maximum != null) maximum.interactable = canAdd && value < max;
                 }
                 string detail=item.Season==null?item.Detail:item.Season+" · "+item.Detail;
@@ -367,7 +365,7 @@ namespace PCShopSell.Game.UI
                 {
                     var item=vehicle;
                     Line(w.Content,item.Name+" · "+S.VehicleUsage(item.Kind),19);
-                    Ui.Size(Ui.Button(w.Content,"出售一台（购价六折）",()=>ConfirmBusiness("出售载具",item.Name+"按购价六折回收。",()=>{S.SellVehicle(item.Kind);w.Rebuild();}),17,Ui.Warn),-1,40);
+                    Ui.Size(Ui.Button(w.Content,"出售一台（购价六折）",()=>ConfirmBusiness("出售载具",item.Name+"按购价六折回收。",()=>{S.SellVehicle(item.Kind);w.Rebuild();}, danger:true),17,Ui.ButtonDanger),-1,40);
                 }
                 foreach (var vehicle in Vehicles.All)
                 {

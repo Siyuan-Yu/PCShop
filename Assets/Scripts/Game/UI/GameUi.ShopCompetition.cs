@@ -91,7 +91,7 @@ namespace PCShopSell.Game.UI
                     view.Changed = () => { Ui.Clear(overlay); AddCompetitionRing(overlay, view, place); AddCompetitionMarkers(overlay, view, place); };
                     view.Changed();
                 }
-                Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 18), -1, 40);
+                Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 18, Ui.ButtonSecondary), -1, 40);
             });
         }
 

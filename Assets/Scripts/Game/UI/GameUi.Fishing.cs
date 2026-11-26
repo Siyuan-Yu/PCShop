@@ -60,7 +60,7 @@ namespace PCShopSell.Game.UI
 
                 int count = FishingCatalog.Fish.Sum(fish => S.Backpack.Food.IngredientCount(fish.Id));
                 Ui.Size(Ui.Button(footer, $"鱼获回收 · 背包 {count} 条", () => OpenFishBuyback(w), 17), 0, 46, 1);
-                Ui.Size(Ui.Button(footer, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17), 180, 46);
+                Ui.Size(Ui.Button(footer, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17, Ui.ButtonSecondary), 180, 46);
             }, scrollContent: false);
         }
 

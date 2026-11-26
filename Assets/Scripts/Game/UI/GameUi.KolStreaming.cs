@@ -185,7 +185,7 @@ namespace PCShopSell.Game.UI
                 {
                     if (S.EndKolLive(contract.Id)) _kolScheduleDrafts.Remove(contract.Id);
                     w.Rebuild();
-                }), 16, Ui.Warn), 124, 40);
+                }, danger: true), 16, Ui.ButtonDanger), 124, 40);
         }
 
         private void BuildKolReports(Transform parent, BrandRecord brand)

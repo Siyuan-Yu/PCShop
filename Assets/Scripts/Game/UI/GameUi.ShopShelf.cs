@@ -162,7 +162,7 @@ namespace PCShopSell.Game.UI
                         string info=$"在库 {count} 件 · {(shelves==0?"尚未陈列":shelves+" 个货架")}";
                         bool highlighted = guidedKind == kind;
                         var button=Ui.Size(Ui.Button(row,kind.Name+(current?.Id==kind.Id?" ✓":"")+"\n<size=13>"+info+"</size>",()=>Pick(option.Id),17,
-                            highlighted || current?.Id==kind.Id ? Ui.ButtonHot : Ui.ButtonBg, guidedKind == null || highlighted),0,-1,1);
+                            Ui.SelectedButton(guidedKind != null ? highlighted : current?.Id == kind.Id), guidedKind == null || highlighted),0,-1,1);
                         button.name="ShelfKind_"+kind.Id;
                         if (highlighted) _openingShelfKindOption = button;
                     }
@@ -170,8 +170,8 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Rect(row, "Pad"), 0, -1, 1);
                 }
                 var actions=Ui.Row(w.Content,46,8);
-                Ui.Size(Ui.Button(actions,"清空这个货架",()=>Pick(null),17,Ui.ButtonBg,current!=null && guidedKind == null),-1,46,1);
-                Ui.Size(Ui.Button(actions,"取消",w.Close,17),160,46);
+                Ui.Size(Ui.Button(actions,"清空这个货架",()=>Pick(null),17,Ui.ButtonSecondary,current!=null && guidedKind == null),-1,46,1);
+                Ui.Size(Ui.Button(actions,"取消",w.Close,17, Ui.ButtonSecondary),160,46);
             });
         }
 
@@ -284,7 +284,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(selector, $"展示台 {current + 1}/{indexes.Count} · {name}", 17, TextAnchor.MiddleCenter), 0, -1, 1);
                     Ui.Size(Ui.Button(selector, "下一张", () => Select(current + 1), 16, interactable: current + 1 < indexes.Count), 106);
                 }
-                Ui.Size(Ui.Button(w.Content,"更换这张展示台的品类",()=>OpenDisplayKindPicker(selected,w),18,Ui.ButtonBg),-1,42);
+                Ui.Size(Ui.Button(w.Content,"更换这张展示台的品类",()=>OpenDisplayKindPicker(selected,w),18,Ui.ButtonSecondary),-1,42);
                 if(!S.IsComputerDisplay(selected)){BuildGoodsDisplay(w,selected);return;}
                 ShopSimulation shop = S.PlayerShop;
                 int shown = shop.DisplayPcs.Count;
@@ -311,13 +311,13 @@ namespace PCShopSell.Game.UI
                     {
                         if (S.AssembleDisplayPc(t)) Toast($"{PartCatalog.TierName(t)}整机摆上展示台了");
                         RebuildWindows();
-                    }, 17, canAdd ? Ui.ButtonHot : Ui.ButtonBg, canAdd), 196);
+                    }, 17, Ui.ButtonHot, canAdd), 196);
                     bool has = shop.DisplayCount(t) > 0;
                     Ui.Size(Ui.Button(acts, "拆回配件", () =>
                     {
                         S.DisassembleDisplayPc(t);
                         RebuildWindows();
-                    }, 15, Ui.ButtonBg, has), 92);
+                    }, 15, Ui.ButtonSecondary, has), 92);
                 }
 
                 int orders = shop.Orders.Count;
@@ -329,8 +329,8 @@ namespace PCShopSell.Game.UI
                         w.Close();
                         OpenDock();
                         SelectTab(ShopTab.Orders);
-                    }, 19, Ui.ButtonBg), 300);
-                Ui.Size(Ui.Button(bar, "关闭", w.Close, 19), 200);
+                    }, 19, Ui.ButtonSecondary), 300);
+                Ui.Size(Ui.Button(bar, "关闭", w.Close, 19, Ui.ButtonSecondary), 200);
             });
         }
 

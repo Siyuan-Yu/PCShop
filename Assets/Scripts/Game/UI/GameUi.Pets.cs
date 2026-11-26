@@ -322,7 +322,7 @@ namespace PCShopSell.Game.UI
             var title = Ui.Row(_petFocusHud,36,8);
             _petFocusTitle = Ui.Size(Ui.Label(title,"",23,color:Ui.Accent),-1,36,1);
             _petFocusCoverage = Ui.Size(Ui.Label(title,"",19,TextAnchor.MiddleCenter),-1,36,2);
-            Ui.Size(Ui.Button(title,"返回店铺 · Esc",_ctrl.ExitPetFocus,17),148,36);
+            Ui.Size(Ui.Button(title,"返回店铺 · Esc",_ctrl.ExitPetFocus,17, Ui.ButtonSecondary),148,36);
             _petFocusChoices = Ui.Row(_petFocusHud,36,6);
             var body = Ui.Row(_petFocusHud,144,10);
             BuildSharedPetCare(body);

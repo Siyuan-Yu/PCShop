@@ -74,7 +74,7 @@ namespace PCShopSell.Game.UI
                 {
                     int index = i;
                     Ui.Button(scene, OldMarketHuntCatalog.Stalls[i], () => MoveTo(index), 18,
-                        i == stall ? Ui.ButtonHot : Ui.ChromeButton, browsing)
+                        Ui.TabFill(i == stall), browsing)
                         .GetComponent<RectTransform>().Anchor(.025f + i * .135f, .848f, .152f + i * .135f, .904f);
                 }
                 var controls = Ui.Panel(scene, "StallMoveHint", Ui.Chrome);
@@ -112,7 +112,7 @@ namespace PCShopSell.Game.UI
                         }
                         hit.onClick.AddListener(Pick);
                         var tag = Ui.Button(scene, OldMarketHuntCatalog.Spots[i].Label, Pick, 16,
-                            selected == i ? Ui.ButtonHot : Ui.ChromeButton);
+                            Ui.SelectedButton(selected == i));
                         tag.GetComponent<RectTransform>().Anchor(bounds.center.x - .055f, bounds.yMax + .012f,
                             bounds.center.x + .055f, bounds.yMax + .054f);
                     }
@@ -129,7 +129,7 @@ namespace PCShopSell.Game.UI
                         string blocker = S.MarketHuntSearchBlocker(spot);
                         if (blocker != null) Para(box, blocker, 17, Ui.Warn);
                         var confirmationButtons = Ui.Row(box, 47, 8);
-                        Ui.Size(Ui.Button(confirmationButtons, "先逛逛", () => { selected = -1; w.RequestRebuild(); }, 17), 0, 44, 1);
+                        Ui.Size(Ui.Button(confirmationButtons, "先逛逛", () => { selected = -1; w.RequestRebuild(); }, 17, Ui.ButtonSecondary), 0, 44, 1);
                         Ui.Size(Ui.Button(confirmationButtons, "开始淘", () =>
                         {
                             if (S.BeginMarketHunt(spot.Id)) animationLeft = HuntSearchSeconds;
@@ -211,7 +211,7 @@ namespace PCShopSell.Game.UI
                 {
                     string name = S.CityPerson(personId)?.Name ?? "同行者";
                     Ui.Size(Ui.Button(row, "送给" + name, () => ResolveFind(() => S.GiftMarketFindToCompanion(personId)),
-                        18, Ui.ButtonHot), 0, 46, 1).name = "MarketHuntGift_" + personId;
+                        18, Ui.ButtonBg), 0, 46, 1).name = "MarketHuntGift_" + personId;
                 }
 
                 if (recipients.Length > 1)
@@ -223,7 +223,7 @@ namespace PCShopSell.Game.UI
                 var actions = Ui.Row(content, 48, 8);
                 if (recipients.Length == 1) GiftButton(actions, recipients[0]);
                 Ui.Size(Ui.Button(actions, "收进背包", () => ResolveFind(S.ClaimMarketFind),
-                    18, recipients.Length > 0 ? Ui.ButtonBg : Ui.ButtonHot, canCarry), 0, 46, 1);
+                    18, Ui.ButtonHot, canCarry), 0, 46, 1);
             }, onClosed: () => _marketHuntWindow = null, scrollContent: false, showTitleBar: false, fullScreen: true);
         }
 

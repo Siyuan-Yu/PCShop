@@ -81,7 +81,7 @@ namespace PCShopSell.Game.UI
                 int n = NumberOf(e);
                 var row = Ui.Row(list, 62, 10);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
-                if (n > 0) row.gameObject.AddComponent<Image>().color = Ui.FlatRow;
+                if (n > 0) Ui.StylePaperRow(row.gameObject.AddComponent<Image>());
                 CompactProduct(row, e.Key, e.Name, e.Kg, e.Detail, false, e.Single ? "穿戴物品，不计背包负重" : null);
                 Ui.Size(Ui.Label(row, e.Price.ToString(), 18, TextAnchor.MiddleLeft, Ui.Good), 100);
                 if (e.Single)
@@ -105,7 +105,7 @@ namespace PCShopSell.Game.UI
             foreach (var e in picked) total += e.Price * NumberOf(e);
             var head = Ui.Row(side, 34, 8);
             Ui.Size(Ui.Label(head, picked.Length == 0 ? "<b>待下单</b>　还是空的" : $"<b>待下单</b>　{picked.Length} 样", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
-            if (picked.Length > 0) Ui.Size(Ui.Button(head, "清空", () => { foreach (var e in entries) _parcelCart.Remove(e.Key); w.Rebuild(); }, 15, Ui.ButtonBg), 64, 30);
+            if (picked.Length > 0) Ui.Size(Ui.Button(head, "清空", () => { foreach (var e in entries) _parcelCart.Remove(e.Key); w.Rebuild(); }, 15, Ui.ButtonSecondary), 64, 30);
             var picks = GoodsList(side, 120);
             if (picked.Length == 0) Para(picks, "拖动滑杆或输入数量。\n下单后几天送到所选地点。", 16, Ui.Dim);
             foreach (var item in picked)
@@ -117,7 +117,7 @@ namespace PCShopSell.Game.UI
                 var label = Ui.Label(row, $"{e.Name} <color=#80551F>×{count}</color>\n<size=14><color=#655E52>{e.Price * count}</color></size>", 17, TextAnchor.MiddleLeft);
                 label.verticalOverflow = VerticalWrapMode.Truncate;
                 Ui.Size(label, -1, -1, 1);
-                Ui.Size(Ui.Button(row, "移除", () => { _parcelCart.Remove(e.Key); w.Rebuild(); }, 15, Ui.ButtonBg), 58, 34);
+                Ui.Size(Ui.Button(row, "移除", () => { _parcelCart.Remove(e.Key); w.Rebuild(); }, 15, Ui.ButtonSecondary), 58, 34);
             }
             Ui.Size(Ui.Label(side, $"送到 {S.CourierDestName(destination)} · {GameSession.DeliveryDays} 天后送达", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
             Ui.Size(Ui.Label(side, $"合计 <b><color=#80551F>{total}</color></b>", 28, TextAnchor.MiddleRight), -1, 40);

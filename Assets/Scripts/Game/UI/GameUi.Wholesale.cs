@@ -46,7 +46,7 @@ namespace PCShopSell.Game.UI
                 if (n > 0) picked.Add((part, n, price));
                 RectTransform row = Ui.Row(list, 56, 10);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
-                if (n > 0) row.gameObject.AddComponent<Image>().color = Ui.FlatRow;
+                if (n > 0) Ui.StylePaperRow(row.gameObject.AddComponent<Image>());
                 int available = destination == null ? S.HomeBoxParts.CountAll(p) : destination.Sim.Stock.CountAll(p);
                 CompactProduct(row, p.Id, p.Name, PartUnitKg(p), $"市价 {S.Market.PriceOf(p)} · 收货点有 {available}", false);
                 Ui.Size(Ui.Label(row, $"{price}", 18, TextAnchor.MiddleLeft, Ui.Good), 90);
@@ -55,7 +55,7 @@ namespace PCShopSell.Game.UI
 
             var head = Ui.Row(side, 34, 8);
             Ui.Size(Ui.Label(head, picked.Count == 0 ? "<b>待下单</b>　还是空的" : $"<b>待下单</b>　{picked.Count} 样 · {space:0.#} 格", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
-            if (picked.Count > 0) Ui.Size(Ui.Button(head, "清空", () => { _cart.Clear(); w.Rebuild(); }, 15, Ui.ButtonBg), 64, 30);
+            if (picked.Count > 0) Ui.Size(Ui.Button(head, "清空", () => { _cart.Clear(); w.Rebuild(); }, 15, Ui.ButtonSecondary), 64, 30);
             RectTransform picks = GoodsList(side, 120);
             if (picked.Count == 0) Para(picks, "拖动滑杆或输入数量。\n次日 10:00 统一送到收货点。", 16, Ui.Dim);
             foreach (var item in picked)
@@ -66,7 +66,7 @@ namespace PCShopSell.Game.UI
                 var label = Ui.Label(row, $"{part.Name} <color=#80551F>×{item.count}</color>\n<size=14><color=#655E52>{item.price * item.count}</color></size>", 17, TextAnchor.MiddleLeft);
                 label.verticalOverflow = VerticalWrapMode.Truncate;
                 Ui.Size(label, -1, -1, 1);
-                Ui.Size(Ui.Button(row, "移除", () => { _cart.Remove(part.Id); w.Rebuild(); }, 15, Ui.ButtonBg), 58, 34);
+                Ui.Size(Ui.Button(row, "移除", () => { _cart.Remove(part.Id); w.Rebuild(); }, 15, Ui.ButtonSecondary), 58, 34);
             }
             Ui.Size(Ui.Label(side, $"送到 {S.CourierDestName(destination)}　运费 {Online1788.ShippingFee}", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
             var couponDiscount = S.EventProcurementCouponQuote(total - Online1788.ShippingFee, destination == null);

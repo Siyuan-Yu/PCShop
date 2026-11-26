@@ -32,7 +32,7 @@ namespace PCShopSell.Game.UI
                 if (S.FinishOnsiteSport()) ReturnFromOnsitePlay();
             }
 
-            _footballExit = Ui.Button(header, "提前结算", Finish, 21, Ui.ButtonBg);
+            _footballExit = Ui.Button(header, "提前结算", Finish, 21, Ui.ButtonSecondary);
             ((RectTransform)_footballExit.transform).Anchor(.904f, .18f, .988f, .82f);
 
             var score = Ui.Panel(window.Content, "FootballScore", Ui.Chrome).rectTransform;

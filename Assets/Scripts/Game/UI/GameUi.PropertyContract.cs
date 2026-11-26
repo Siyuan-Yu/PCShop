@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
                 stamp.gameObject.SetActive(false);
 
                 var actions = Ui.Row(contract.Content, 44, 10);
-                var back = Ui.Size(Ui.Button(actions, "再看看", contract.Close, 18), 176, 44);
+                var back = Ui.Size(Ui.Button(actions, "再看看", contract.Close, 18, Ui.ButtonSecondary), 176, 44);
                 Button confirm = null;
                 confirm = Ui.Size(Ui.Button(actions, due.IsPositive ? "确认签约并付款" : "确认签约并结算", () =>
                 {

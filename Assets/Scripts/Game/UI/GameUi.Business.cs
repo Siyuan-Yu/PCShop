@@ -93,14 +93,14 @@ namespace PCShopSell.Game.UI
         }
         private void BusinessAction(Transform parent,string label,Func<bool> action,Window w,bool enabled=true)
         { Ui.Size(Ui.Button(parent,label,()=>{action();w.Rebuild();},17,Ui.ButtonHot,enabled),-1,40,1); }
-        private void ConfirmBusiness(string title,string terms,Action action)
+        private void ConfirmBusiness(string title,string terms,Action action,bool danger=false)
         {
             OpenWindow(title,720,420,confirm=>
             {
                 Para(confirm.Content,terms,18);
                 var row=Ui.Row(confirm.Content,44);
-                Ui.Size(Ui.Button(row,"确定办理",()=>{confirm.Close();action();},18,Ui.Warn),-1,-1,1);
-                Ui.Size(Ui.Button(row,"返回",confirm.Close,18),-1,-1,1);
+                Ui.Size(Ui.Button(row,"确定办理",()=>{confirm.Close();action();},18,danger ? Ui.ButtonDanger : Ui.ButtonHot),-1,-1,1);
+                Ui.Size(Ui.Button(row,"返回",confirm.Close,18, Ui.ButtonSecondary),-1,-1,1);
             }, fitContent: true);
         }
         private void AgencyLink(Window w,Place property=null)
@@ -202,7 +202,7 @@ namespace PCShopSell.Game.UI
                 if(c.Accepted)
                 {
                     Line(card,$"交付 {c.Completed}/{c.Count}    失败 {c.Failed}    {(c.Settled ? "已结案" : S.Clock.OrderDeadlineText(c.DueMinute))}",17,c.Settled ? Ui.Dim : Ui.Good);
-                    if(!c.Settled) Ui.Size(Ui.Button(card,"终止剩余订单…",()=>ConfirmBusiness("终止企业订单", "尚未交付的订单会取消，已领用配件返回散件库存，未履约部分保证金不退。",()=>{S.CancelEnterprise(c.Id);w.Rebuild();}),16,Ui.Warn),-1,36);
+                    if(!c.Settled) Ui.Size(Ui.Button(card,"终止剩余订单…",()=>ConfirmBusiness("终止企业订单", "尚未交付的订单会取消，已领用配件返回散件库存，未履约部分保证金不退。",()=>{S.CancelEnterprise(c.Id);w.Rebuild();}, danger:true),16,Ui.ButtonDanger),-1,36);
                 }
                 else
                 {
@@ -233,7 +233,7 @@ namespace PCShopSell.Game.UI
                 BusinessAction(controls,"定价 +10%",()=>S.SetVenturePrice(v.PlaceId,Math.Min(1.3,v.PriceFactor+.1)),w,v.PriceFactor<1.3);
                 BusinessAction(controls,$"维护 · {S.VentureRepairCost(v)}",()=>S.MaintainVenture(v.PlaceId),w,v.Condition<.999 && S.Ledger.Balance>=S.VentureRepairCost(v));
                 }
-                Ui.Size(Ui.Button(c,$"关闭并清算…  预计回收 {S.VentureExitValue(v)}",()=>ConfirmBusiness("关闭门店", "清退员工，设备与装修按 30% × 维护状态回收，退还押金与周转金。自有物业保留并交由中介出租。",()=>{S.CloseVenture(v.PlaceId);w.Rebuild();}),16,Ui.Warn),-1,36);
+                Ui.Size(Ui.Button(c,$"关闭并清算…  预计回收 {S.VentureExitValue(v)}",()=>ConfirmBusiness("关闭门店", "清退员工，设备与装修按 30% × 维护状态回收，退还押金与周转金。自有物业保留并交由中介出租。",()=>{S.CloseVenture(v.PlaceId);w.Rebuild();}, danger:true),16,Ui.ButtonDanger),-1,36);
             }
             if(_businessAssetId!=null){AgencyLink(w,S.City.GetPlace(_businessAssetId));return;}
             AgencyLink(w);

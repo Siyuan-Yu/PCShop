@@ -97,7 +97,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(bar, "5G　电量 100%", 16, TextAnchor.MiddleRight, Ui.Dim), -1, -1, 1);
 
             BuildPhoneDesktop(w);
-            Ui.Size(Ui.Button(w.Content, "收起", w.Close, 15), -1, 36);
+            Ui.Size(Ui.Button(w.Content, "收起", w.Close, 15, Ui.ButtonSecondary), -1, 36);
         }
 
         private void BuildPhoneDesktop(Window w)
@@ -155,7 +155,7 @@ namespace PCShopSell.Game.UI
             {
                 var heading = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(heading, "NPC 主动邀约", 22, color: Ui.Accent), 0, 42, 1);
-                Ui.Size(Ui.Button(heading, "返回手机", () => { w.Close(); _phoneStoreWindow?.Close(); }, 16), 124, 36);
+                Ui.Size(Ui.Button(heading, "返回手机", () => { w.Close(); _phoneStoreWindow?.Close(); }, 16, Ui.ButtonSecondary), 124, 36);
                 var row = Ui.Row(w.Content, 76, 8);
                 AddMode(InvitationMode.More, "更多邀约", "随机邀约出现机会 ×2");
                 AddMode(InvitationMode.Standard, "标准", "按原有频率接收邀约");
@@ -176,7 +176,7 @@ namespace PCShopSell.Game.UI
         {
             var top = Ui.Row(w.Content, 42, 10);
             Ui.Size(Ui.Label(top, "免费下载", 17, TextAnchor.MiddleLeft, Ui.Dim), 0, 42, 1);
-            Ui.Size(Ui.Button(top, "‹ 返回手机", w.Close, 17), 130, 40);
+            Ui.Size(Ui.Button(top, "‹ 返回手机", w.Close, 17, Ui.ButtonSecondary), 130, 40);
 
             var list = PhoneFlexibleScroll(w.Content, "PhoneStoreList");
             var apps = PhoneApps.All.Where(app => app.Id != PhoneApps.Store).ToArray();
