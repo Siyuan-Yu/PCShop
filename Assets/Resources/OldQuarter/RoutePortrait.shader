@@ -1,6 +1,10 @@
 Shader "PCShop/Old Quarter Street Surfaces"
 {
-    Properties { [MainTexture] _BaseMap("Painted surface sheet",2D)="white" {} }
+    Properties
+    {
+        [MainTexture] _BaseMap("Painted surface sheet",2D)="white" {}
+        [Toggle] _StationMasonry("Station stone and canopy",Float)=0
+    }
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" }
@@ -14,7 +18,11 @@ Shader "PCShop/Old Quarter Street Surfaces"
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile_fog
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "QuarterBrush.hlsl"
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            CBUFFER_START(UnityPerMaterial)
+                float _StationMasonry;
+            CBUFFER_END
             struct A { float4 position:POSITION; float3 normal:NORMAL; float2 uv:TEXCOORD0; };
             struct V { float4 position:SV_POSITION; float3 world:TEXCOORD0; half3 normal:TEXCOORD1; float2 uv:TEXCOORD2; half fog:TEXCOORD3; };
             V Vert(A a)
@@ -38,6 +46,16 @@ Shader "PCShop/Old Quarter Street Surfaces"
                 // Small moving highlights belong to glass and iron, leaving limewash and canvas matte.
                 int2 cell=int2(floor(texcoord.x*4),floor((1-texcoord.y)*8));
                 int slot=cell.y*4+cell.x;
+                if (_StationMasonry>.5 && (slot==14 || slot==17))
+                {
+                    half daylight=smoothstep(.45,.98,power);
+                    half3 pigment=slot==14 ? half3(1.04,.945,.85) : half3(1.095,.86,.73);
+                    float2 stone=v.world.xz;
+                    half body=BrushField(stone*float2(2.6,1.9))-.5;
+                    half grain=BrushField(stone*float2(7.1,10.3))-.5;
+                    half relief=slot==17 ? .34*body+.24*grain : .12*body;
+                    result*=lerp(half3(1,1,1),pigment*(1+relief),daylight);
+                }
                 half vertical=frac(texcoord.y*8);
                 if(slot<=3 || (slot>=18 && slot<=20))
                     result*=1-.17h*smoothstep(.86h,.97h,vertical);

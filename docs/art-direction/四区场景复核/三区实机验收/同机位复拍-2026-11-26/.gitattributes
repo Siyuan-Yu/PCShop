@@ -1,0 +1,3 @@
+# 原始实机取样和清单与现场文件逐字节校验。
+*.tsv -text
+SHA256SUMS.txt -text

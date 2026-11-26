@@ -32,6 +32,7 @@ Material:
     - _Cull: 2
     - _PaintGrouping: 1
     - _PaintedCrown: 1
+    - _PetalLift: 0.064
     - _Ink: 0.8
     - _Patch: 0
     m_Colors: []

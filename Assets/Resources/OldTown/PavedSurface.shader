@@ -6,6 +6,7 @@ Shader "PCShop/Painted street paving"
         [MainColor] _BaseColor("Tint",Color)=(1,1,1,1)
         _Variation("Weathering",2D)="gray"{}
         _Asphalt("Asphalt",Float)=0
+        _PatinaStrength("Dust variation",Range(0,1))=1
         _Smoothness("Roughness input",Range(0,1))=.13
     }
     SubShader
@@ -37,12 +38,12 @@ Shader "PCShop/Painted street paving"
                 Output o;o.world=TransformObjectToWorld(v.pos.xyz);o.pos=TransformWorldToHClip(o.world);o.normal=TransformObjectToWorldNormal(v.normal);
                 o.uv=TRANSFORM_TEX(v.uv,_BaseMap);o.fog=ComputeFogFactor(o.pos.z);return o;
             }
-            half _DistrictDaylight;
+            half _DistrictDaylight, _PatinaStrength;
             half4 Frag(Output i):SV_Target
             {
                 half3 pigment=SAMPLE_TEXTURE2D(_BaseMap,sampler_BaseMap,i.uv).rgb*_BaseColor.rgb;
                 half2 patina=SAMPLE_TEXTURE2D(_Variation,sampler_Variation,i.world.xz/14.6).rg;
-                half dust=smoothstep(.24,.77,patina.x*.70+patina.y*.30);
+                half dust=lerp(.22,smoothstep(.24,.77,patina.x*.70+patina.y*.30),_PatinaStrength);
                 pigment*=lerp(half3(.84,.84,.90),half3(1.08,1.00,.93),dust);
                 pigment*=lerp(half3(.79,.79,.78),half3(1.37,1.35,1.29),_Asphalt);
                 pigment+=_Asphalt*dust*half3(.037,.023,.017);

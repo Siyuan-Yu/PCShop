@@ -77,6 +77,8 @@ namespace PCShopSell.Game.Runtime
             BuildPlannedProps();
             yield return BuildReferenceLandscape();
             BuildStarterTrees();
+            _streetPavementEnvelopes = null;
+            _streetPlotEnvelopes = null;
             ReportBuildProgress(.96f);
         }
         private void BuildResidentialPlot(Transform root,LayoutBlockData block)
@@ -162,8 +164,8 @@ namespace PCShopSell.Game.Runtime
                 }
                 else
                 {
-                    CityArchitecture.Venue(shell,p,w,d);
                     int district = ArtDistrict(p.StreetId);
+                    CityArchitecture.Venue(shell,p,w,d,district>0);
                     if (district > 0) DistrictVenueEntrance(shell,p,w,d,district);
                     foreach(var collider in shell.GetComponentsInChildren<Collider>())collider.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
                 }
@@ -176,19 +178,30 @@ namespace PCShopSell.Game.Runtime
             else PlannedBuilding(root,p.Model,p.Tier,w,d,p,(float)(block?.height ?? 0),block?.variant ?? 0);
             if (p.Model=="villa" && ArtDistrict(p.StreetId)==3)
             {
-                float apron=Mathf.Min(3.4f,(door-node).magnitude-6.1f);
+                var curbWidth=_city.Map.NeighborsOf(p.NodeId).Where(e=>BuildsRoad(p.NodeId,e.To))
+                    .Select(e=>PlannedRoadWidth(node,NodeWorld(e.To))*.5f+(float)GameSession.CityPavingWidth)
+                    .DefaultIfEmpty(0).Max();
+                float apron=(door-node).magnitude-curbWidth;
                 if(apron>.65f)
                 {
-                    Prims.Box(root,"庭院入口铺地",new Vector3(0,.062f,-apron*.5f),new Vector3(w*.97f,.072f,apron),
-                        DistrictFinishes.Tile("graniteWalk",new Vector2(w*.30f,apron*.32f)));
+                    // The through path below already reaches the kerb. Widen only the threshold;
+                    // keep the adjoining verge planted instead of covering the entire frontage.
+                    float landing=Mathf.Min(1.15f,apron);
+                    Prims.Box(root,"庭院入口铺地",new Vector3(0,.066f,-landing*.50f),new Vector3(2.75f,.075f,landing),
+                        DistrictFinishes.Tile("graniteWalk",new Vector2(.9f,.45f)));
                     var strip=new StreetPlanting(maintained:true);
                     for(int side=-1;side<=1;side+=2)
                     {
-                        var light=new Vector3(side*w*.46f,.41f,-apron*.64f);
+                        var light=new Vector3(side*1.49f,.41f,-landing*.64f);
                         Prims.Box(root,"庭院短灯",light,new Vector3(.18f,.76f,.2f),Mats.Lit(ArtDirection.Hex("8AA5A6")));
                         Prims.Box(root,"短灯导光面",light+new Vector3(0,.15f,-.108f),new Vector3(.11f,.25f,.03f),
                             Mats.Glow(ArtDirection.Hex("BCE6E1"),new Color(.42f,1,1)));
-                        strip.Add(PlantSpecies.SilverGrass,new Vector3(side*w*.42f,.11f,-.40f),1.16f,.65f,side+6);
+                        for(float x=2.12f;x<w*.48f;x+=1.04f)
+                        {
+                            int seed=Mathf.RoundToInt(x*9)+side;
+                            strip.Add(seed%4==0?PlantSpecies.Hydrangea:PlantSpecies.SilverGrass,
+                                new Vector3(side*x,.045f,-.46f-.34f*Mathf.Sin(x)),1.14f,.63f,seed);
+                        }
                     }
                     strip.Build(root,"入口观赏草");
                 }

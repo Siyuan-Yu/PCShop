@@ -7,6 +7,21 @@ namespace PCShopSell.Game.Runtime
     {
         private const float WalkupHeight = 10.06f;
         private readonly System.Collections.Generic.List<Vector3> _quarterTrees = new System.Collections.Generic.List<Vector3>();
+        // Coordinates in the surveyed garden frame. Street, reverse-yard and overhead paintings
+        // agree on the two rear trees, the lower road bend and the tree beside the kitchen garden.
+        private static readonly (float x,float z,float scale,float clearing)[] QuarterBlossoms =
+        {
+            (10.65f,-16.80f,1.12f,5.75f), (5.55f,-29.30f,1.78f,7.75f),
+            (50.55f,69.95f,1.68f,8.10f), (6.45f,34.45f,1.65f,3.25f)
+        };
+        private readonly Vector2[] _blossomRoots=new Vector2[QuarterBlossoms.Length];
+        // Mown hillside behind the allotments. The indented south edge follows the shared gardens.
+        private static readonly Vector3[] QuarterMeadowEdge =
+        {
+            new(-18.29f,0,-108.04f),new(-91.18f,0,-57.06f),new(-81.06f,0,-33.26f),
+            new(-70.30f,0,-22.78f),new(-52.33f,0,-32.32f),new(-41.32f,0,-40.32f),
+            new(-24.59f,0,-57.22f),new(-13.98f,0,-51.03f),new(4.97f,0,-56.88f),new(8.37f,0,-71.89f)
+        };
         private Rect? _quarterBounds;
         private Rect _mainlandLawn, _starterCircuit;
         private Vector2 _quarterAlong, _quarterAcross, _quarterOrigin;
@@ -23,6 +38,13 @@ namespace PCShopSell.Game.Runtime
         {
             var home = _city.GetPlace(StarterHome);
             _quarterOrigin = DoorXZ(home);
+            var garden=Quaternion.Euler(0,OldQuarterLanes.Heading,0);
+            for(int i=0;i<QuarterBlossoms.Length;i++)
+            {
+                var tree=QuarterBlossoms[i];
+                var offset=garden*new Vector3(tree.x,0,tree.z);
+                _blossomRoots[i]=_quarterOrigin+new Vector2(offset.x,offset.z);
+            }
             float angle = (float)home.Heading * Mathf.Deg2Rad;
             _quarterAlong = new Vector2(Mathf.Cos(angle), -Mathf.Sin(angle));
             _quarterAcross = new Vector2(-_quarterAlong.y, _quarterAlong.x);
@@ -132,6 +154,7 @@ namespace PCShopSell.Game.Runtime
             MarkQuarterBuilding(root, place, width, depth, tall ? WalkupHeight : 3.95f);
             if (!tall)
             {
+                FitLaneRearWall(model,place.Id==StarterHome?0:variation);
                 var rim = Mats.Lit(ArtDirection.Hex("A88D6A"), .12f);
                 foreach (float side in new[]{-1f,1f})
                 {
@@ -162,6 +185,46 @@ namespace PCShopSell.Game.Runtime
                     PlaceClayPot(model,new Vector3(side * 2.08f,0,-.42f));
                 }
             }
+        }
+
+        private static void FitLaneRearWall(Transform model,int variant)
+        {
+            const float wallZ=9.65f;
+            var detail=new MiniatureDetailMesh();
+            var walnut=Mats.Lit(ArtDirection.Hex("6E5842"),.12f);
+            var limestone=Mats.Lit(ArtDirection.Hex("B1A085"),.12f);
+            var leaves=new StreetPlanting();
+
+            // The annex mesh already has two painted panes on the back at x=-2.90 and +2.25.
+            // Seat the existing window joinery on those openings. Its reveal faces the yard (+Z).
+            void Casement(float x,float scale)
+            {
+                QuarterModules.Add(model,"SideWindow",new Vector3(x,1.095f,wallZ+.073f),new Vector3(scale,1.11f,.68f),180);
+                float span=1.53f*scale;
+                detail.Box(new Vector3(x,1.066f,wallZ+.123f),new Vector3(span+.19f,.095f,.29f),limestone);
+                detail.Box(new Vector3(x,2.44f,wallZ+.111f),new Vector3(span+.16f,.095f,.23f),walnut);
+            }
+            Casement(-2.90f,1.20f);
+            Casement(2.25f,variant==1?1.48f:1.20f);
+            if(variant==1)
+            {
+                float x=2.25f;
+                detail.Box(new Vector3(x,.92f,wallZ+.18f),new Vector3(1.81f,.20f,.30f),walnut);
+                for(int i=0;i<3;i++)
+                    leaves.Add(i==1?PlantSpecies.Spirea:PlantSpecies.Broadleaf,new Vector3(x+(i-1)*.53f,1.03f,wallZ+.18f),.51f,.32f,11+i);
+            }
+            else if(variant==2)
+            {
+                // A shallow timber trellis lives between the two windows and leaves the ground aisle open.
+                foreach(int side in new[]{-1,1})
+                    detail.Box(new Vector3(side*.71f,1.14f,wallZ+.126f),new Vector3(.075f,2.06f,.088f),walnut);
+                for(int slat=0;slat<5;slat++)
+                    detail.Box(new Vector3(0,.39f+slat*.39f,wallZ+.16f),new Vector3(1.64f,.061f,.079f),walnut);
+                for(int i=0;i<5;i++)
+                    leaves.Add(PlantSpecies.Broadleaf,new Vector3(-.44f+i*.20f,.18f+i*.29f,wallZ+.20f),.53f,.48f,17+i);
+            }
+            if(variant!=0)leaves.Build(model,"院后窗下植栽");
+            detail.Build(model,"院后窗台与木作");
         }
 
         private static void FitDoorAwning(Transform door, Color canvas)
@@ -206,7 +269,7 @@ namespace PCShopSell.Game.Runtime
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
         }
 
-        private void QuarterTree(Transform parent, Vector3 world, float scale, float angle,bool blossom=false)
+        private void QuarterTree(Transform parent, Vector3 world, float scale, float angle,bool blossom=false,bool grove=false)
         {
             _quarterTrees.Add(world);
             var tree = QuarterModel(parent, "CourtyardTree").transform;
@@ -217,11 +280,19 @@ namespace PCShopSell.Game.Runtime
             // overlaps the fork in depth as the camera moves around the trunk.
             int form = Mathf.Abs(Mathf.RoundToInt(angle / 17f)) % 3;
             bool round = form == 0;
-            string paint=blossom ? "RouteBlossom" : "RouteLeaves";
-            QuarterLeafCluster(tree,round ? "CrownA" : "CrownB",new Vector3(.10f,3.38f,.08f),
-                round ? new Vector2(4.05f,3.23f) : new Vector2(3.68f,3.03f),paint);
+            string paint=blossom ? "RouteBlossom" : grove ? "GroveLeaves" : "RouteLeaves";
+            var crown=round ? new Vector2(4.05f,3.23f) : new Vector2(3.68f,3.03f);
+            if(grove)crown=Vector2.Scale(crown,new Vector2(1.20f,1.10f));
+            QuarterLeafCluster(tree,round ? "CrownA" : "CrownB",new Vector3(.10f,grove?3.57f:3.38f,.08f),crown,paint);
             float lateral = form == 2 ? .85f : -.78f;
             QuarterLeafCluster(tree,round ? "CrownB" : "CrownA",new Vector3(lateral,3.02f,.49f),new Vector2(1.86f,1.53f),paint);
+            if(grove)
+            {
+                // The open-grown grove has room for broad forks on either side of the leader.
+                // Keep the offset in depth so these lobes overlap differently around the tree.
+                QuarterLeafCluster(tree,"CrownA",new Vector3(-lateral*1.67f,3.10f,-.68f),new Vector2(2.53f,1.98f),paint);
+                QuarterLeafCluster(tree,"CrownB",new Vector3(lateral*1.60f,3.31f,.71f),new Vector2(2.34f,2.10f),paint);
+            }
         }
 
         private static void QuarterLaneHouse(Transform root,Place place,float width,float depth,float plotHeight)
@@ -230,6 +301,11 @@ namespace PCShopSell.Game.Runtime
             var house = QuarterModel(root,upstairs ? "YardWalkup" : "LaneHouse");
             float height = upstairs ? plotHeight : 3.7f;
             house.transform.localScale = new Vector3(width / 9.65f,upstairs ? height/7.63f : 1,depth / 9.65f);
+            if(!upstairs)
+            {
+                int variant=place==null?Mathf.Abs(Mathf.RoundToInt(root.position.x+root.position.z))%3:StableCityHash(place.Id)%3;
+                FitLaneRearWall(house.transform,variant);
+            }
             QuarterLeafCluster(root,"CrownB",new Vector3(-width*.46f,.39f,depth+.29f),new Vector2(1.37f,.79f));
             QuarterLeafCluster(root,"CrownA",new Vector3(width*.49f,.31f,depth+.32f),new Vector2(.90f,.63f));
             var collider = root.gameObject.AddComponent<BoxCollider>();

@@ -49,29 +49,52 @@ namespace PCShopSell.Game.Runtime
             {
                 _meadow=new Material(Resources.Load<Shader>("OldTown/Meadow")){name="草甸与裸土"};
                 _meadow.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/livingMeadow"));
-                _meadow.SetTexture("_Lawn",Resources.Load<Texture2D>("OldTown/Surfaces/tendedLawn"));
+                _meadow.SetTexture("_Lawn",Resources.Load<Texture2D>("OldTown/Surfaces/parkBrushLawn"));
                 _meadow.SetTexture("_Soil",Resources.Load<Texture2D>("OldTown/Surfaces/cultivatedSoil"));
                 _meadow.SetTexture("_Variation",Resources.Load<Texture2D>("OldTown/Surfaces/meadowVariation"));
                 _meadow.SetTexture("_LandUse",LandUse);_meadow.SetVector("_LandBounds",LandBounds);
+                _meadow.SetTexture("_PlantingZones",Resources.Load<Texture2D>("OldTown/Surfaces/parkGroundZones"));
                 _meadow.SetTexture("_SoilPigment",Resources.Load<Texture2D>("OldTown/Surfaces/soilPigment"));
             }
             return _meadow;
         }
 
-        private static Material _glass,_villaGlass;
-        internal static Material WindowGlass(bool livingRoom=false)
+        private static Material _glass,_villaPane,_balconyPane,_shelteredPane;
+        private static readonly Material[] VillaRooms=new Material[3];
+        internal static Material VillaPane(bool balustrade=false,bool sheltered=false)
         {
-            if(livingRoom)
+            if(_villaPane==null)
+                _villaPane=new Material(Resources.Load<Shader>("OldTown/VillaGlass")){name="街区 / 别墅低铁玻璃"};
+            if(sheltered)
             {
-                if(_villaGlass==null)
+                if(_shelteredPane==null)
                 {
-                    _villaGlass=new Material(Tile("villaRooms",Vector2.one)){name="街区 / 窗内起居室"};
-                    _villaGlass.EnableKeyword("_EMISSION");
-                    _villaGlass.SetTexture("_EmissionMap",_villaGlass.GetTexture("_BaseMap"));
+                    _shelteredPane=new Material(_villaPane){name="街区 / 檐下低反射玻璃"};
+                    _shelteredPane.SetFloat("_Sheltered",1);
                 }
-                Mats.RestoreBakedGlow(_villaGlass,new Color(1.45f,.84f,.42f),.11f);
-                return _villaGlass;
+                return _shelteredPane;
             }
+            if(!balustrade)return _villaPane;
+            if(_balconyPane==null)
+            {
+                _balconyPane=new Material(_villaPane){name="街区 / 透明露台栏板"};
+                _balconyPane.SetFloat("_GuardRail",1);
+            }
+            return _balconyPane;
+        }
+        internal static Material VillaRoom(int arrangement)
+        {
+            var mat=VillaRooms[arrangement];
+            if(mat==null)
+            {
+                mat=new Material(Resources.Load<Shader>("OldTown/VillaInterior")){name="街区 / 窗内起居室 "+arrangement};
+                mat.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/villaRooms"));
+                mat.SetFloat("_RoomView",arrangement);VillaRooms[arrangement]=mat;
+            }
+            return mat;
+        }
+        internal static Material WindowGlass()
+        {
             if (_glass == null)
             {
                 _glass = new Material(Tile("celadonGlass",Vector2.one)) { name="街区 / 暖窗" };
@@ -113,6 +136,8 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
+        private static readonly Material[] TailorDisplay=new Material[3];
+
         internal static void ShopDisplay(Transform front,PCShopSell.Core.World.Place place)
         {
             string business=place.Business??"";
@@ -120,6 +145,33 @@ namespace PCShopSell.Game.Runtime
                 business.Contains("烘")||business.Contains("面包")?"Bread":business.Contains("书")||business.Contains("文具")?"Books":
                 business.Contains("手作")||business.Contains("模型")||business.Contains("画材")||business.Contains("潮玩")?"Models":
                 business.Contains("家饰")||business.Contains("陶")||business.Contains("杂货")?"Ceramics":null;
+            if(place.Id=="expansion_shop_s_market_03")
+            {
+                for(int bay=0;bay<3;bay++)
+                {
+                    if(TailorDisplay[bay]==null)
+                    {
+                        var material=new Material(OldTownSurfaces.PanelMaterial("displayTailorAtelier")){name="街区 / 锦线橱窗 "+bay};
+                        // The glazed entrance looks past the timber frame into the far cutting-room shelves.
+                        var repeat=new Vector2(bay==2?.20f:.50f,bay==2?.86f:1);
+                        var offset=new Vector2(bay==2?.72f:bay*.50f,bay==2?.045f:0);
+                        material.SetTextureScale("_BaseMap",repeat);material.SetTextureOffset("_BaseMap",offset);
+                        material.SetTextureScale("_EmissionMap",repeat);material.SetTextureOffset("_EmissionMap",offset);
+                        TailorDisplay[bay]=material;
+                    }
+                    Mats.RestoreBakedGlow(TailorDisplay[bay],new Color(1.32f,.92f,.58f),.34f);
+                    bool door=bay==2;
+                    float x=door?0:bay==0?-2.78f:2.78f;
+                    float y=door?1.53f:1.32f;
+                    var size=door?new Vector3(1.42f,1.54f,1):new Vector3(2.36f,1.66f,1);
+                    var background=Prims.Shape(PrimitiveType.Quad,front,"作坊内墙与裁剪台",new Vector3(x,y,-.024f),size,TailorDisplay[bay]);
+                    background.GetComponent<MeshRenderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+                    var pane=Prims.Shape(PrimitiveType.Quad,front,door?"木门玻璃":"营业橱窗玻璃",new Vector3(x,y,door?-.379f:-.33f),
+                        new Vector3(size.x-.12f,size.y-.07f,1),VillaPane(sheltered:true));
+                    pane.GetComponent<MeshRenderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+                return;
+            }
             if(business=="裁缝")kind="Tailor";
             if(kind==null)return;
             for(int side=0;side<2;side++)

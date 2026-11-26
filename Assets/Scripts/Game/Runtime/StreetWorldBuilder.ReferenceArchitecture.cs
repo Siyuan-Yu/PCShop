@@ -84,7 +84,7 @@ namespace PCShopSell.Game.Runtime
             {
                 detail.FlowerBed(new Vector3(side*w*.28f,.02f,.75f),w*.28f,.85f,seed+side);
                 detail.FlowerBed(new Vector3(side*w*.32f,.02f,front*.72f),w*.20f,.70f,seed+side+3,false);
-                PaintedWoodland.Plant(root,new Vector3(side*w*.36f,0,front*.43f),5+seed%2,side<0 && seed%5==0?2:0,seed+side+4);
+                PaintedWoodland.Plant(root,new Vector3(side*w*.36f,0,front*.43f),5+seed%2,side<0 && seed%5==0?2:0,seed+side+4,district:tier);
                 // Knee-high garden wall with an open central route to the original door.
                 detail.Box(new Vector3(side*(w*.27f+.5f),.26f,.10f),new Vector3(w*.46f-1,.52f,.22f),stone);
             }

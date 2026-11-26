@@ -1,6 +1,7 @@
 Shader "PCShop/Layered town canopy"
 {
-    Properties { [MainTexture] _BaseMap("Leaf and bark pigment",2D)="white"{} _Cutoff("Leaf edge",Range(0,1))=.32 }
+    Properties { [MainTexture] _BaseMap("Leaf and bark pigment",2D)="white"{} _Cutoff("Leaf edge",Range(0,1))=.32
+        _LeafTone("District foliage",Vector)=(1,1,1,1) _PaintedBough("Painted leaf fans",Float)=0 }
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "Queue"="AlphaTest" "RenderType"="TransparentCutout" "DisableBatching"="True" }
@@ -10,7 +11,8 @@ Shader "PCShop/Layered town canopy"
         #include "CrownFacing.hlsl"
         TEXTURE2D(_BaseMap);SAMPLER(sampler_BaseMap);
         CBUFFER_START(UnityPerMaterial)
-            half _Cutoff;
+            half4 _LeafTone;
+            half _Cutoff,_PaintedBough;
         CBUFFER_END
         half _OldTownNightFactor;
         struct Input {float4 pos:POSITION;half3 n:NORMAL;float4 tangent:TANGENT;float2 uv:TEXCOORD0;float2 offset:TEXCOORD2;half4 color:COLOR;};
@@ -48,10 +50,21 @@ Shader "PCShop/Layered town canopy"
                 half3 raw=Albedo(i).rgb;
                 half3 paint=raw*half3(1.02,.91,1.03);
                 paint=lerp(paint,raw*half3(.98,1.06,.91),_DistrictDaylight);
+                paint*=lerp(half3(1,1,1),_LeafTone.rgb,step(.097,i.uv.y));
                 Light sun=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));
                 half diffuse=.22+.78*saturate(dot(normalize(i.n),sun.direction)*.85+.18);
                 half3 sky=lerp(half3(.43,.50,.54),half3(.13,.18,.24),_OldTownNightFactor);
-                return half4(MixFog(paint*(sky*i.shade+sun.color*diffuse*lerp(.12,1.,sun.shadowAttenuation))*i.shade,i.fog),1);
+                half3 lit=paint*(sky*i.shade+sun.color*diffuse*lerp(.12,1.,sun.shadowAttenuation))*i.shade;
+                if (_PaintedBough>.5 && i.uv.y>.097)
+                {
+                    // Leave the leaf tips in sunlight while grouping the middle tones into deeper fans.
+                    half value=Luminance(lit);
+                    half body=smoothstep(.032,.12,value)*(1-smoothstep(.32,.57,value));
+                    half tips=smoothstep(.36,.63,value);
+                    half day=saturate(1-_OldTownNightFactor);
+                    lit*=lerp(half3(1,1,1),(1-.31*body)*half3(1+.04*tips,1,.92-.13*tips),day);
+                }
+                return half4(MixFog(lit,i.fog),1);
             }
             ENDHLSL
         }

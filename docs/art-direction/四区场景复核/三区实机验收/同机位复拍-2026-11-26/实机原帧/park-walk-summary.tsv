@@ -1,0 +1,12 @@
+park	check	result	measure
+life_park	street-to-ring	PASS	distance_from_gate=4.8831
+life_park	water-block	PASS	input_m=5.9400 travel_m=0.9798 continued_inward_m=0.0060 bank_slide_m=0.1072 ellipse_squared=1.0037
+life_park	outer-edge-6	PASS	y=0.2900
+life_park	continuous-ring	PASS	points=64 min_avatar_y=0.2900
+life_park	street-return	PASS	position_error=0.0000 elevation=0.0000
+life_park	overall	PASS	input_ticks=460
+life_community_park	street-to-ring	PASS	distance_from_gate=5.0900
+life_community_park	water-block	PASS	input_m=5.9400 travel_m=0.9460 continued_inward_m=0.0032 bank_slide_m=0.0785 ellipse_squared=1.0049
+life_community_park	continuous-ring	PASS	points=64 min_avatar_y=0.2900
+life_community_park	street-return	PASS	position_error=0.0000 elevation=0.0000
+life_community_park	overall	PASS	input_ticks=548

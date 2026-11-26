@@ -10,12 +10,14 @@ namespace PCShopSell.Game.Runtime
     {
         private readonly Transform _root;
         private readonly Matrix4x4 _mirror;
+        private readonly bool _parkPond;
         private readonly Dictionary<(Vector2Int,Material),List<CombineInstance>> _parts=new();
-        private static readonly Dictionary<Material,Material> Inks=new();
+        private static readonly Dictionary<(Material,bool),Material> Inks=new();
 
-        internal LakesideReflections(Transform root,float level)
+        internal LakesideReflections(Transform root,float level,bool parkPond=false)
         {
             _root=root;
+            _parkPond=parkPond;
             _mirror=Matrix4x4.TRS(Vector3.up*(2*level),Quaternion.identity,new Vector3(1,-1,1))*root.worldToLocalMatrix;
         }
 
@@ -34,7 +36,8 @@ namespace PCShopSell.Game.Runtime
             foreach(var entry in _parts)
             {
                 var source=entry.Key.Item2;
-                if(!Inks.TryGetValue(source,out var ink) || ink==null)
+                var key=(source,_parkPond);
+                if(!Inks.TryGetValue(key,out var ink) || ink==null)
                 {
                     ink=new Material(Resources.Load<Shader>("OldTown/ShoreReflection")){name="岸边倒影 "+source.name};
                     if(source.HasProperty("_BaseMap") && source.GetTexture("_BaseMap")!=null)
@@ -43,7 +46,8 @@ namespace PCShopSell.Game.Runtime
                         source.HasProperty("_BaseColor")?source.GetColor("_BaseColor"):Color.white);
                     ink.SetFloat("_Cutoff",source.HasProperty("_Cutoff")?source.GetFloat("_Cutoff"):.01f);
                     ink.SetFloat("_LayeredCrown",source.shader.name=="PCShop/Layered town canopy"?1:0);
-                    Inks[source]=ink;
+                    ink.SetFloat("_ParkPond",_parkPond?1:0);
+                    Inks[key]=ink;
                 }
                 var mesh=new Mesh{name="岸边倒影",indexFormat=IndexFormat.UInt32};
                 mesh.CombineMeshes(entry.Value.ToArray(),true,true,false);owner.Owned.Add(mesh);

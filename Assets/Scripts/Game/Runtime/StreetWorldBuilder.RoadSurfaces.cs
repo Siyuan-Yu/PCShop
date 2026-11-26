@@ -12,8 +12,10 @@ namespace PCShopSell.Game.Runtime
     {
         private readonly List<StreetSegment> _lakeAccessSurfaces = new List<StreetSegment>();
         private RoadSurfaceGeometry.Index _streetPavementEnvelopes;
+        private RoadSurfaceGeometry.Index _streetPlotEnvelopes;
         private RoadSurfaceGeometry.Index _streetRoadEnvelopes;
         private const float GroundStreetY = .025f;
+        private ParkPondWalk[] _parkWalks;
 
         internal static bool IsLakeAccessNode(string id) => id.StartsWith("race_", System.StringComparison.Ordinal)
             || id.StartsWith("motor_", System.StringComparison.Ordinal);
@@ -34,6 +36,13 @@ namespace PCShopSell.Game.Runtime
                     if (surface > GroundStreetY) height = Mathf.Max(height, surface);
                 }
             }
+            if(_parkWalks==null)
+                _parkWalks=_city.PublicPlaces.Where(p=>ParkPondWalk.Applies(p)&&BuildsPlace(p)).Select(p=>
+                {
+                    var door=DoorXZ(p);
+                    return new ParkPondWalk(p.Width,p.Depth,p.Heading,new MapPoint(door.x,door.y));
+                }).ToArray();
+            foreach(var park in _parkWalks)height=Mathf.Max(height,park.HeightAt(x,z));
             return height;
         }
 
@@ -41,7 +50,7 @@ namespace PCShopSell.Game.Runtime
         {
             public Vector2 A, B;
             public float Width, PavedWidth, Deck, DryStart, DryEnd, RampLength;
-            public bool Raised, GroundAtA, GroundAtB;
+            public bool Raised, GroundAtA, GroundAtB, GardenFrontage;
             public int PavingIndex;
             public Vector2 Direction => (B - A).normalized;
             public float Length => (B - A).magnitude;
@@ -123,6 +132,8 @@ namespace PCShopSell.Game.Runtime
             _lakeAccessSurfaces.Clear();
             _streetPavementEnvelopes = new RoadSurfaceGeometry.Index();
             float deck = LakeAccessHeight(_city);
+            var gardenDoors = new HashSet<string>(_city.PublicPlaces.Where(p => ArtDistrict(p.StreetId) == 3)
+                .Select(p => p.NodeId));
             float deadline = Time.realtimeSinceStartup + .008f;
             var segments=new List<StreetSegment>();var seen=new HashSet<string>();
             foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))
@@ -134,7 +145,8 @@ namespace PCShopSell.Game.Runtime
                 float width = PlannedRoadWidth(a, b);
                 segments.Add(new StreetSegment { A = new Vector2(a.x, a.z), B = new Vector2(b.x, b.z), Width = width,
                     PavedWidth = width + (float)GameSession.CityPavingWidth * 2, Deck = deck,
-                    Raised = raisedA || raisedB, GroundAtA = !raisedA, GroundAtB = !raisedB });
+                    Raised = raisedA || raisedB, GroundAtA = !raisedA, GroundAtB = !raisedB,
+                    GardenFrontage = gardenDoors.Contains(n.Id) || gardenDoors.Contains(e.To) });
             }
             // A raised access road owns its junction; the ground road terminates at that boundary.
             segments=segments.OrderByDescending(s=>s.Raised).ThenByDescending(s=>(s.B-s.A).sqrMagnitude).ToList();
@@ -146,6 +158,7 @@ namespace PCShopSell.Game.Runtime
             var quarterPaving = new SurfaceMesh();
             var quarterEdges = new SurfaceMesh();
             var quarterDashes = new SurfaceMesh();
+            var gardenArrows = new SurfaceMesh();
             var roads=new SurfaceMesh();var paving=new SurfaceMesh();var white=new SurfaceMesh();var yellow=new SurfaceMesh();
             foreach (var s in segments)
             {
@@ -227,10 +240,12 @@ namespace PCShopSell.Game.Runtime
                     PavingIndex = _streetPavementEnvelopes.Polygons.Count };
                 _streetPavementEnvelopes.Add(outline);
                 Pavement(outline, approach);
-                if (p.Id == StarterHome || p.Id == "expansion_shop_s_oldhomes_02")
+                float shopFront=(float)GameSession.ShopForecourtWidth(p);
+                if (p.Id == StarterHome || p.Id == "expansion_shop_s_oldhomes_02" || shopFront>0)
                 {
-                    var frontage = RoadSurfaceGeometry.Strip(from,to,(float)p.Width+.4f);
+                    var frontage = RoadSurfaceGeometry.Strip(from,to,shopFront>0?shopFront:(float)p.Width+.4f);
                     Pavement(frontage,approach);
+                    _streetPavementEnvelopes.Add(frontage);
                 }
                 if (raised) _lakeAccessSurfaces.Add(approach);
             }
@@ -316,7 +331,31 @@ namespace PCShopSell.Game.Runtime
                 for(float at=Mathf.Floor(projection/spacing)*spacing-projection;at<length;at+=spacing)
                 {
                     float start=Mathf.Max(from,at),end=Mathf.Min(at+(paint ? 1.47f : 2f),to);
-                    if(end>start+.05f)Mark(RoadSurfaceGeometry.Strip(s.A+d*start,s.A+d*end,paint ? .145f : .12f),paint ? quarterDashes : yellow);
+                    if(end>start+.05f)Mark(RoadSurfaceGeometry.Strip(s.A+d*start,s.A+d*end,paint ? .17f : .12f),paint ? quarterDashes : yellow);
+                }
+                if (s.GardenFrontage && !s.Raised && to-from>2.2f)
+                {
+                    // Anchor spacing to the map, so subdivision at a doorway never restarts the paint pattern.
+                    bool alongX = Mathf.Abs(d.x) >= Mathf.Abs(d.y);
+                    float coordinate = alongX ? s.A.x : s.A.y;
+                    float slope = alongX ? d.x : d.y;
+                    const float interval = 13f;
+                    const float phase = 5.35f;
+                    float lo = coordinate + slope*(from+1.1f) - phase, hi = coordinate + slope*(to-1.1f) - phase;
+                    for (int slot=Mathf.CeilToInt(Mathf.Min(lo,hi)/interval);slot*interval<=Mathf.Max(lo,hi);slot++)
+                    {
+                        float at = (slot*interval+phase-coordinate)/slope;
+                        float side = (slot%2==0 ? 1 : -1) * Mathf.Sign(slope);
+                        var ahead = d*side;
+                        var center = s.A + d*at - normal*side*(s.Width*.28f);
+                        for (int head=-1;head<=1;head++)
+                        {
+                            var tip = center + ahead*(head*.43f);
+                            var back = tip - ahead*.29f;
+                            Mark(RoadSurfaceGeometry.Strip(back+normal*.22f,tip,.094f), gardenArrows);
+                            Mark(RoadSurfaceGeometry.Strip(back-normal*.22f,tip,.094f), gardenArrows);
+                        }
+                    }
                 }
             }
             quarterRoads.Build(root, "Old quarter asphalt", QuarterMaterial("Road"), resources);
@@ -340,7 +379,32 @@ namespace PCShopSell.Game.Runtime
             paving.Build(root,"PavementSurface",IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(1.25f,1.25f)),resources);
             white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Cream),resources);
             yellow.Build(root,"LaneMarkings",Mats.Lit(ArtDirection.Brass),resources);
+            gardenArrows.Build(root,"花园路面导向嵌线",Mats.Lit(ArtDirection.Hex("84AAA6"),.18f),resources,castsShadows:false);
+            if (HasStarterArt && BuildsPlace(_city.GetPlace(StarterHome)) && BuildsPlace(_city.GetPlace(StarterShop))
+                && BuildsPlace(_city.GetPlace(StarterStation)))
+                BuildQuarterFootpaths(root, resources, pavingIndex);
             yield return BuildStreetVerge(root,segments,pavingIndex);
+        }
+
+        private void BuildQuarterFootpaths(Transform root, CityLandscapeResources resources, RoadSurfaceGeometry.Index paving)
+        {
+            var door = DoorXZ(_city.GetPlace(StarterHome));
+            var origin = new MapPoint(door.x, door.y);
+            var mesh = new SurfaceMesh();
+            foreach (var path in OldQuarterLanes.Paths)
+            {
+                var start = OldQuarterLanes.ToWorld(origin, path.x1, path.z1);
+                var end = OldQuarterLanes.ToWorld(origin, path.x2, path.z2);
+                var a = new Vector2((float)start.X, (float)start.Y);
+                var b = new Vector2((float)end.X, (float)end.Y);
+                var outline = RoadSurfaceGeometry.Strip(a, b, path.width);
+                // Walking routes meet inside the street. Courtyard tiles stop at the existing pavement.
+                var exposed = paving.Cut(new List<Vector2[]> { outline }, outline);
+                mesh.Add(exposed, point => path.top, (b - a).normalized);
+                paving.Add(outline);
+            }
+            var material = IndustrialMaterials.Surface("paving", ArtDirection.Hex("A99E88"), Vector2.one);
+            mesh.Build(root, "Old quarter courtyard footpaths", material, resources, castsShadows: false);
         }
 
         private Matrix4x4 FrontageProjection(string placeId)
@@ -354,6 +418,7 @@ namespace PCShopSell.Game.Runtime
         private IEnumerator BuildStreetVerge(Transform parent,List<StreetSegment> streets,RoadSurfaceGeometry.Index paving)
         {
             var reserved=new RoadSurfaceGeometry.Index();
+            _streetPlotEnvelopes=reserved;
             void Reserve(Vector2 at,float heading,float width,float depth)
             {
                 var angle=heading*Mathf.Deg2Rad;
@@ -373,6 +438,14 @@ namespace PCShopSell.Game.Runtime
             var planted=new RoadSurfaceGeometry.Index();
             var details=new Dictionary<Vector2Int,ForestChunk>();
             var gardens=new Dictionary<Vector2Int,MiniatureDetailMesh>();
+            var tailor=_city.PublicPlaces.FirstOrDefault(place=>place.Business=="裁缝" && ArtDistrict(place.StreetId)==1);
+            Vector2? tailorSeatBed=null;
+            if(tailor!=null)
+            {
+                // The kerb bed directly in front of the seated courtyard group has low planting.
+                Vector3 bed=Quaternion.Euler(0,(float)tailor.Heading,0)*new Vector3(-18.95f,0,.45f);
+                tailorSeatBed=DoorXZ(tailor)+new Vector2(bed.x,bed.z);
+            }
             bool Overlaps(RoadSurfaceGeometry.Index index,Vector2[] probe) =>
                 index.Nearby(probe).Any(id=>RoadSurfaceGeometry.Intersect(probe,index.Polygons[id]).Length>=3);
             // Segments without a street id inherit the palette of the nearest occupied frontage.
@@ -420,7 +493,14 @@ namespace PCShopSell.Game.Runtime
                         QuarterTree(parent, world, 1f + seed%3 * .075f, seed%360);
                     else
                     {
-                        PaintedWoodland.Plant(parent,world,6+seed%3,seed%9==0?2:0,seed);
+                        if(tailorSeatBed.HasValue && (pos-tailorSeatBed.Value).sqrMagnitude<2.25f)
+                        {
+                            var flowers=new StreetPlanting(maintained:true);
+                            flowers.Add(PlantSpecies.Spirea,world+new Vector3(.36f,.06f,.34f),1.42f,.58f,seed);
+                            flowers.Add(PlantSpecies.Boxwood,world+new Vector3(-.21f,.06f,.27f),.92f,.53f,seed+1);
+                            flowers.Build(parent,"裁缝铺长椅前低花池");
+                        }
+                        else PaintedWoodland.Plant(parent,world,6+seed%3,seed%9==0?2:0,seed,district:district);
                         garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
                     }
                     var pole=Mats.Lit(ArtDirection.Hex("46515A"),.25f);
@@ -515,7 +595,7 @@ namespace PCShopSell.Game.Runtime
                     int treeSeed=(hash%323)+side+row*47;
                     if(row==0 || (treeSeed&1)==0)
                         PaintedWoodland.Plant(island,new Vector3(0,0,.64f),5+(hash%3)+row,
-                            (treeSeed%5==0)?2:0,treeSeed);
+                            (treeSeed%5==0)?2:0,treeSeed,district:district);
                     for(int k=0;k<7;k++)
                     {
                         var at=new Vector3((k%2-.5f)*.95f,.04f,(k-3)*.48f);
@@ -523,6 +603,52 @@ namespace PCShopSell.Game.Runtime
                             at,1.27f,.65f+(k%3)*.12f,treeSeed+k);
                     }
                     bed.Build(island,"阔叶与花灌木");
+                }
+                if(district!=3 || (place.Model!="shop" && place.Model!="villa")) continue;
+                var planting=new StreetPlanting(maintained:true);
+                var driftBounds=new List<Vector2[]>();
+                var mulch=new MiniatureDetailMesh();
+                var earth=DistrictFinishes.Tile("cultivatedSoil",Vector2.one,ArtDirection.Hex("A4987C"));
+                void BorderClump(float x,float z,int sample)
+                {
+                    var direction=rotation*new Vector3(x,0,z);
+                    var pos=door+new Vector2(direction.x,direction.z);
+                    float size=1.44f+.27f*Mathf.Sin(sample*.7f);
+                    var footprint=RoadSurfaceGeometry.Strip(pos-along*size*.61f,pos+along*size*.61f,size*1.22f);
+                    if(Overlaps(paving,footprint) || Overlaps(reserved,footprint) || Overlaps(planted,footprint))return;
+                    var point=new Vector3(pos.x,.06f,pos.y);
+                    var terrain=point/LakeScale;
+                    if(WithinLake(terrain,shore) || MountainHeight(terrain.x,terrain.z)>.04f)return;
+                    driftBounds.Add(footprint);
+                    int patch=(sample/3+hash%9)%11;
+                    var species=patch<2?PlantSpecies.Hydrangea:patch==2?PlantSpecies.Spirea:
+                        patch==3?PlantSpecies.SilverGrass:patch<7?PlantSpecies.Broadleaf:PlantSpecies.Boxwood;
+                    mulch.Lobe(point,new Vector3(size*.52f,.055f,size*.55f),earth,sample);
+                    planting.Add(species,point+Vector3.up*.029f,size,.43f+size*.27f,hash%997+sample);
+                }
+                // Along the gate and the sides, leave a clear opening to each registered entrance.
+                for(int side=-1;side<=1;side+=2)
+                {
+                    for(int k=0;k<width*.48f-1.5f;k++)
+                    {
+                        float x=2.22f+k*.93f;
+                        float z=-2.08f-.34f*Mathf.Cos(k*.86f+side);
+                        BorderClump(side*x,z,17+k);
+                        if(k%4!=0) BorderClump(side*(x+.43f),z-1.42f,38+k);
+                    }
+                    for(int k=0;k<Mathf.Min(depth+1,18);k++)
+                    {
+                        float x=width*.5f+2.05f+.39f*Mathf.Sin(k*.48f);
+                        BorderClump(side*x,k*.96f,62+k);
+                        if(k%5<3)BorderClump(side*(x+1.13f),k*.96f+.42f,91+k);
+                    }
+                }
+                if(driftBounds.Count>0)
+                {
+                    // Neighboring sprouts overlap within a bed. Reserve its full footprint for the next site.
+                    foreach(var polygon in driftBounds)planted.Add(polygon);
+                    mulch.Build(parent,"灌木下的覆土");
+                    planting.Build(parent,"临街常绿花境");
                 }
             }
             foreach(var pair in gardens)

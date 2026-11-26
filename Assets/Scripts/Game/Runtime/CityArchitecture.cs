@@ -23,7 +23,7 @@ namespace PCShopSell.Game.Runtime
         }
         public static float VenueHeight(Place p)=>p.Business=="venue_expo"?9:p.Business=="服装"?5.5f:p.Business=="venue_ktv"?7+p.Tier*2:p.Business=="venue_bar"?5+p.Tier*1.5f:5.5f+p.Tier*1.7f;
         public static bool HasExterior(Place p)=>p.Business=="服装"||p.Business=="venue_restaurant"||p.Business=="venue_ktv"||p.Business=="venue_bar"||p.Business=="venue_expo"||CityLifeCatalog.LeisureAt(p.Id)!=LeisureGame.None;
-        public static void Venue(Transform root,Place p,float w,float d)
+        public static void Venue(Transform root,Place p,float w,float d,bool plantedRoof=false)
         {
             float h=VenueHeight(p);string kind=p.Business??"";
             StreetLife(root,w,d,h,p.Name.Length,true);
@@ -69,7 +69,7 @@ namespace PCShopSell.Game.Runtime
             {
                 foreach(int side in new[]{-1,1})
                 {
-                    Box(root,"RoofTerracePlanter",new Vector3(side*w*.33f,h+.45f,d*.48f),new Vector3(w*.18f,.55f,d*.50f),Hedge);
+                    if(!plantedRoof) Box(root,"RoofTerracePlanter",new Vector3(side*w*.33f,h+.45f,d*.48f),new Vector3(w*.18f,.55f,d*.50f),Hedge);
                     Box(root,"EntrancePlanter",new Vector3(side*(w/2-1),.4f,-.6f),new Vector3(1.2f,.8f,1),Limestone);
                     Prims.Shape(PrimitiveType.Sphere,root,"EntranceTopiary",new Vector3(side*(w/2-1),1.1f,-.6f),Vector3.one*1.1f,Mats.Lit(Hedge));
                 }

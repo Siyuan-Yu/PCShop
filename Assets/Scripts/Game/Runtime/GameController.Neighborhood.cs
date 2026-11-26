@@ -35,9 +35,47 @@ namespace PCShopSell.Game
             }
             NeighborhoodFigure(id,worker.Name,parent,pos);
         }
+        private void SyncTailorGarden()
+        {
+            const string key="TailorGardenNeighbors";
+            if(InRoom || Session.CityIsRaining || Session.Clock.MinuteOfDay<510 || Session.Clock.MinuteOfDay>=1065 ||
+                !World.Places.TryGetValue("expansion_shop_s_market_03",out var shop) ||
+                (FocusPoint()-shop.Entrance).sqrMagnitude>110*110)
+            {
+                HideNeighborhood(key);
+                return;
+            }
+            if(_neighborhoodViews.TryGetValue(key,out var existing) && existing!=null && existing.transform.parent==World.Root.transform)
+            {
+                if(!existing.activeSelf) existing.SetActive(true);
+                return;
+            }
+            // Use the existing bench nearest to the shop. Read the courtyard dimensions
+            // so moving a plaza keeps the locals on its seats through both baked and procedural loads.
+            var closest=StreetWorldBuilder.TailorBenchPlot(City,out float side);
+            if(closest==null) return;
+            var group=NeighborhoodView(key,World.Root.transform).transform;
+            group.rotation=Quaternion.Euler(0,(float)closest.heading,0);
+            float scale=City.LakeSceneScale;
+            var anchor=new Vector3((float)closest.x,0,(float)closest.y);
+            group.position=anchor+group.rotation*new Vector3(side*(float)closest.width*.25f,.46f*scale,(float)closest.depth*.22f);
+            group.Rotate(0,180,0,Space.Self);
+            if(group.childCount>0)return;
+            for(int seat=-1;seat<=1;seat++)
+            {
+                var jacket=ArtDirection.Hex(seat<0?"8F6972":seat==0?"4E6D80":"8B8770");
+                var visitor=Prims.FigureForPerson(group,"街坊",jacket,ArtDirection.Cream,1,"tailor_garden_"+(seat+1));
+                visitor.transform.localPosition=new Vector3(seat*.62f*scale,0,.035f);
+                visitor.transform.localRotation=Quaternion.Euler(0,seat*-7,0);
+                visitor.GetComponent<FigureMotion>().SetFurnitureSeatPose(.492f*scale,1f);
+            }
+        }
+
         private void SyncNeighborhoodViews()
         {
             if(Session==null||World==null)return;
+            SyncTailorGarden();
+            SyncDaytimeStreetLife();
             var blood=Session.BloodDonation;
             bool bloodVisible=blood!=null&&blood.Stage!="done"&&(Session.Clock.MinuteOfDay>=540&&Session.Clock.MinuteOfDay<1020||blood.Stage is "donating" or "observing");
             if(bloodVisible&&World.Places.TryGetValue(GameSession.LifeServicePlace,out var service))
@@ -121,6 +159,59 @@ namespace PCShopSell.Game
                 NeighborhoodFigure("CommunityLanternHost","灯谜与挂灯摊主",venue.Root.transform,new Vector3(4,0,-4.5f));
             }
             else {HideNeighborhood("CommunityLanternFestival");HideNeighborhood("CommunityLanternHost");}
+        }
+
+        private void SyncDaytimeStreetLife()
+        {
+            bool outside=!InRoom && !Session.CityIsRaining && Session.Clock.MinuteOfDay>=495 && Session.Clock.MinuteOfDay<1065;
+            var focus=FocusPoint();
+            // These people belong to their public street or landing. Place them off the doorway centre.
+            Transform StreetGroup(string key,string placeId)
+            {
+                if(!outside || !World.Places.TryGetValue(placeId,out var place) ||
+                    (focus-place.Entrance).sqrMagnitude>110*110)
+                {
+                    HideNeighborhood(key);return null;
+                }
+                if(_neighborhoodViews.TryGetValue(key,out var current) && current!=null && current.transform.parent==place.Root.transform)
+                {
+                    if(!current.activeSelf) current.SetActive(true);
+                    return null;
+                }
+                return NeighborhoodView(key,place.Root.transform).transform;
+            }
+            void Person(Transform group,string name,Vector3 at,float heading,string coat)
+            {
+                var figure=Prims.FigureForPerson(group,"街坊",ArtDirection.Hex(coat),ArtDirection.Cream,1,name).transform;
+                figure.localPosition=at;figure.localRotation=Quaternion.Euler(0,heading,0);
+            }
+            var neighbors=StreetGroup("旧居晨间街坊","home");
+            if(neighbors!=null)
+            {
+                Person(neighbors,"quarter_entry_neighbor",new Vector3(-1.70f,.07f,-1.08f),51,"617675");
+                Person(neighbors,"quarter_entry_visitor",new Vector3(-.95f,.07f,-1.55f),-44,"B19178");
+            }
+            var shop=StreetGroup("旧街店前住户","expansion_shop_s_oldhomes_02");
+            if(shop!=null)Person(shop,"quarter_shop_customer",new Vector3(2.08f,.07f,-1.50f),-27,"566D78");
+            var stop=StreetGroup("城郊站候车街坊","metro_a");
+            if(stop!=null)
+            {
+                float side=(float)World.Places["metro_a"].Place.Width*.50f;
+                Person(stop,"quarter_stop_commuter",new Vector3(side-.34f,.083f,-2.90f),-42,"726F55");
+            }
+            var walkers=StreetGroup("河岸公园晨游","life_park");
+            if(walkers!=null)
+            {
+                var plot=World.Places["life_park"].Place;
+                var pond=new PCShopSell.Core.World.ParkPondWalk(plot.Width,plot.Depth);
+                for(int i=0;i<2;i++)
+                {
+                    float angle=.24f+i*.12f;
+                    var edge=pond.Edge(angle,pond.WidthAt(angle)-.31f);
+                    Person(walkers,"pond_walk_"+i,new Vector3((float)edge.X,PCShopSell.Core.World.ParkPondWalk.Top,(float)edge.Y),
+                        -97+i*19,i==0?"BEAA8A":"806A65");
+                }
+            }
         }
     }
 }

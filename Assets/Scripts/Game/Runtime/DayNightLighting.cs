@@ -11,6 +11,8 @@ namespace PCShopSell.Game.Runtime
     /// </summary>
     public sealed class DayNightLighting
     {
+        internal static readonly Quaternion TownDaylightRotation =
+            Quaternion.Euler(0,158,0) * Quaternion.LookRotation(new Vector3(-1.20f,-.92f,.54f));
         private readonly CityLookProfile _day = CityLookProfile.Day();
         private readonly CityLookProfile _dusk = CityLookProfile.Dusk();
         private readonly CityLookProfile _night = CityLookProfile.Night();
@@ -169,14 +171,13 @@ namespace PCShopSell.Game.Runtime
             if (!interior && townWeight > 0)
             {
                 float daylight = townWeight * (1 - night);
-                var direction = Quaternion.Euler(0,158,0) * Quaternion.LookRotation(new Vector3(-1.20f,-.92f,.54f));
-                _sun.transform.rotation = Quaternion.Slerp(_sun.transform.rotation, direction, daylight);
+                _sun.transform.rotation = Quaternion.Slerp(_sun.transform.rotation, TownDaylightRotation, daylight);
                 _sun.color = Color.Lerp(_sun.color, new Color(1,.985f,.947f), daylight);
                 _sun.intensity = Mathf.Lerp(_sun.intensity, 1.76f, daylight);
-                _sun.shadowStrength = Mathf.Lerp(_sun.shadowStrength, .76f, daylight);
-                _skyFill.intensity = Mathf.Lerp(_skyFill.intensity, .58f, daylight);
+                _sun.shadowStrength = Mathf.Lerp(_sun.shadowStrength, .83f, daylight);
+                _skyFill.intensity = Mathf.Lerp(_skyFill.intensity, .45f, daylight);
                 _bounceFill.color = Color.Lerp(_bounceFill.color, new Color(.92f,.96f,1f), daylight);
-                _bounceFill.intensity = Mathf.Lerp(_bounceFill.intensity, .42f, daylight);
+                _bounceFill.intensity = Mathf.Lerp(_bounceFill.intensity, .30f, daylight);
             }
             if (raining)
             {

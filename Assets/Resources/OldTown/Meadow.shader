@@ -8,6 +8,7 @@ Shader "PCShop/Painted meadow"
         _Variation("Patch distribution",2D)="gray"{}
         _LandUse("District soil and grove weights",2D)="gray"{}
         _SoilPigment("Regional soil pigment balance",2D)="gray"{}
+        _PlantingZones("Lawns by district",2D)="black"{}
         _LandBounds("World origin and inverse extent",Vector)=(0,0,1,1)
     }
     SubShader
@@ -31,6 +32,7 @@ Shader "PCShop/Painted meadow"
             TEXTURE2D(_Variation); SAMPLER(sampler_Variation);
             TEXTURE2D(_LandUse); SAMPLER(sampler_LandUse);
             TEXTURE2D(_SoilPigment); SAMPLER(sampler_SoilPigment);
+            TEXTURE2D(_PlantingZones); SAMPLER(sampler_PlantingZones);
             float4 _LandBounds;
             half _DistrictLandscape;
             struct Attributes {float4 positionOS:POSITION;half3 normalOS:NORMAL;};
@@ -65,18 +67,38 @@ Shader "PCShop/Painted meadow"
                 // blades shift together, while exposed earth keeps its own hue.
                 if (_DistrictLandscape>.001)
                 {
-                    half3 nearGrass=SAMPLE_TEXTURE2D(_Lawn,sampler_Lawn,p/6.25+patch.rg*.11).rgb;
-                    half3 broadGrass=SAMPLE_TEXTURE2D(_Lawn,sampler_Lawn,rotated/15.7).rgb;
-                    half3 turf=lerp(nearGrass,broadGrass,.26)*half3(.91,.84,1.12);
+                    half3 nearGrass=SAMPLE_TEXTURE2D(_Lawn,sampler_Lawn,p/9.2+patch.rg*.11).rgb;
+                    half3 broadGrass=SAMPLE_TEXTURE2D(_Lawn,sampler_Lawn,rotated/19.5).rgb;
+                    half3 turf=lerp(nearGrass,broadGrass,.17)*half3(.97,.95,1.05);
                     half painterly=SAMPLE_TEXTURE2D(_Variation,sampler_Variation,rotated/4.8+patch.rg*.29).g;
                     half mow=smoothstep(.19,.69,patch.g*.72+painterly*.28);
                     turf*=lerp(half3(.59,.66,.74),half3(1.35,1.18,.99),mow);
+                    half3 zones=SAMPLE_TEXTURE2D(_PlantingZones,sampler_PlantingZones,saturate(fieldUV)).rgb;
+                    half grove=smoothstep(.38,.89,field.b)*coverage;
+                    // Exposed lawns keep warm broken blades. Sheltered turf reads deeper and cooler.
+                    turf*=exp2((balance-.5)*1.20*coverage);
+                    turf*=lerp(half3(1,1,1),half3(.78,.93,.93),zones.r);
+                    turf*=lerp(half3(1,1,1),half3(.39,.59,.68),zones.g);
+                    turf*=lerp(half3(1,1,1),half3(.74,.84,.89),grove*(.38+.62*max(zones.r,zones.g)));
+                    // The painted tufts have narrow value variation around .27 in the
+                    // source's linear green channel. Recover the shape at both world
+                    // scales, so the street-level and wider cameras retain the same hand.
+                    half managed=saturate(zones.r+zones.g+zones.b)*coverage;
+                    half dab=clamp((nearGrass.g-.270)*3.6+(broadGrass.g-.270)*4.9,-.34,.55);
+                    half exposed=smoothstep(.25,.96,sun.shadowAttenuation);
+                    half3 lawnLight=lerp(half3(1.06,1.13,1.15),half3(1.31,1.45,1.40),exposed);
+                    lawnLight+=zones.g*exposed*half3(.13,0.,.05);
+                    half3 paintedBlades=lawnLight*exp2(dab*half3(1.83,1.36,.77));
+                    // Only the villa lawns have gold blades among deeper olive cover.
+                    half goldTips=smoothstep(-.08,.30,dab+(painterly-.5)*.45);
+                    paintedBlades*=exp2(zones.g*exposed*(goldTips*.85-.13)*half3(1.20,.96,.87));
+                    turf*=lerp(half3(1,1,1),paintedBlades,managed);
                     pigment=lerp(pigment,lerp(turf,soil*1.12,dry*.13),_DistrictLandscape*.80);
                 }
                 half3 normal=normalize(i.n);
                 AmbientOcclusionFactor ao=GetScreenSpaceAmbientOcclusion(GetNormalizedScreenSpaceUV(i.pos));
                 half3 light=SampleSH(normal)*ao.indirectAmbientOcclusion+
-                    sun.color*saturate(dot(normal,sun.direction))*lerp(.16,1.,sun.shadowAttenuation)*ao.directAmbientOcclusion;
+                    sun.color*saturate(dot(normal,sun.direction))*lerp(.085,1.,sun.shadowAttenuation)*ao.directAmbientOcclusion;
                 return half4(MixFog(pigment*light,i.fog),1);
             }
             ENDHLSL

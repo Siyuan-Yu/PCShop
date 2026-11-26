@@ -25,6 +25,17 @@ namespace PCShopSell.Game.Runtime
             }
             void Clump(Vector3 at, bool flowering)
             {
+                var world = site.TransformPoint(at);
+                var center = new Vector2(world.x, world.z);
+                const float reach = .32f;
+                var probe = RoadSurfaceGeometry.Strip(center - Vector2.right * reach, center + Vector2.right * reach, reach * 2);
+                bool paved = false;
+                foreach (int id in _streetPavementEnvelopes.Nearby(probe))
+                    if (RoadSurfaceGeometry.Area(RoadSurfaceGeometry.Intersect(probe, _streetPavementEnvelopes.Polygons[id])) > .0001f)
+                    {
+                        paved = true;
+                        break;
+                    }
                 int stems=rng.Next(5,11);
                 for(int k=0;k<stems;k++)
                 {
@@ -33,7 +44,10 @@ namespace PCShopSell.Game.Runtime
                     var width=new Vector3(-lean.z,0,lean.x)*Range(.024f,.056f);
                     var foot=at+lean*Range(0,.15f);
                     var tip=foot+lean*Range(.055f,.19f)+Vector3.up*Range(.11f,.31f);
-                    Stroke(foot-width,foot+width,tip,palette[rng.Next(4)]);
+                    // Keep the planted verge pattern deterministic when a clump lands on public paving.
+                    var tint = palette[rng.Next(4)];
+                    if (paved) continue;
+                    Stroke(foot-width,foot+width,tip,tint);
                     if(flowering && k%3==0)
                     {
                         var r=Vector3.right*.051f;var f=Vector3.forward*.051f;
@@ -59,6 +73,18 @@ namespace PCShopSell.Game.Runtime
                 {
                     float a=Range(0,6.283f),r=Range(.43f,1.14f);
                     Clump(at+new Vector3(Mathf.Cos(a)*r,.07f,Mathf.Sin(a)*r),i%5==0);
+                }
+            }
+            // Scattered groups of pale seed heads carry the transition from the blossom understorey
+            // out into the open lawn. Leave the intervening ground quiet.
+            foreach(var tree in QuarterBlossoms)
+            {
+                for(int group=0;group<5;group++)
+                {
+                    float angle=Range(0,Mathf.PI*2),radius=Range(.95f,2.65f);
+                    var center=new Vector3(tree.x+Mathf.Cos(angle)*radius,.063f,tree.z+Mathf.Sin(angle)*radius);
+                    for(int tuft=0;tuft<7;tuft++)
+                        Clump(center+new Vector3(Range(-.52f,.52f),0,Range(-.28f,.28f)),tuft%3==0);
                 }
             }
             var patch=new GameObject("Grass and wildflowers",typeof(MeshFilter),typeof(MeshRenderer));

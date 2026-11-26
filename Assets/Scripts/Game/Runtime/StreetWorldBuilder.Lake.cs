@@ -59,7 +59,6 @@ namespace PCShopSell.Game.Runtime
             yield return null;
             BuildRaceCauseways();
             _streetRoadEnvelopes = null;
-            _streetPavementEnvelopes = null;
         }
 
         private List<Vector3> SmoothShore()
@@ -123,11 +122,12 @@ namespace PCShopSell.Game.Runtime
                 LandscapeMesh(root,"GraniteOutcrop",flat,Enumerable.Range(0,flat.Count).ToList(),Mats.Lit(ArtDirection.Hex(i%2==0?"8C938D":"A8ABA0")));
             }
         }
-        private static bool WithinLake(Vector3 p,List<Vector3> shore)
+        private static bool WithinLake(Vector3 p,List<Vector3> shore) => ContainsGroundPoint(p,shore);
+        private static bool ContainsGroundPoint(Vector3 p,IReadOnlyList<Vector3> boundary)
         {
             bool inside=false;
-            for(int i=0,j=shore.Count-1;i<shore.Count;j=i++)
-            {var a=shore[i];var b=shore[j];if((a.z>p.z)!=(b.z>p.z)&&p.x<(b.x-a.x)*(p.z-a.z)/(b.z-a.z)+a.x)inside=!inside;}
+            for(int i=0,j=boundary.Count-1;i<boundary.Count;j=i++)
+            {var a=boundary[i];var b=boundary[j];if((a.z>p.z)!=(b.z>p.z)&&p.x<(b.x-a.x)*(p.z-a.z)/(b.z-a.z)+a.x)inside=!inside;}
             return inside;
         }
         private static float SegmentDistance(Vector3 p,Vector3 a,Vector3 b)
@@ -219,6 +219,31 @@ namespace PCShopSell.Game.Runtime
                     float sizeInQuarter = urban ? 7+hash%4 : height<1 ? 10+hash%6 : 12+hash%9;
                     bool blossom=urban && hash%4==0;
                     var fromHome=new Vector2(worldPosition.x,worldPosition.z)-_quarterOrigin;
+                    if(fromHome.sqrMagnitude<114f*114f)
+                    {
+                        // Across both close views the rear lawn is open, and the low kitchen beds
+                        // are visible behind the flowering tree. Keep the forest scatter off them.
+                        var local=Quaternion.Euler(0,-PCShopSell.Core.World.OldQuarterLanes.Heading,0)*
+                            new Vector3(fromHome.x,0,fromHome.y);
+                        var ground=new Vector2(local.x,local.z);
+                        if(ContainsGroundPoint(local,QuarterMeadowEdge))continue;
+                        if((ground-new Vector2(-1.23f,-24.61f)).sqrMagnitude<3.2f*3.2f ||
+                           (ground-new Vector2(-2.75f,31.01f)).sqrMagnitude<3.2f*3.2f)continue;
+                        // Leave the mature tree beside the station vegetable patch its authored spot.
+                        // A scattered sapling within this radius would cancel that courtyard tree.
+                        if((ground-new Vector2(-9.3f,-22.6f)).sqrMagnitude<21f)continue;
+                    }
+                    if(fromHome.sqrMagnitude<95f*95f)
+                    {
+                        bool inClearing=false;
+                        for(int i=0;i<QuarterBlossoms.Length;i++)
+                        {
+                            float radius=QuarterBlossoms[i].clearing;
+                            var relative=new Vector2(worldPosition.x,worldPosition.z)-_blossomRoots[i];
+                            if(relative.sqrMagnitude<radius*radius){inClearing=true;break;}
+                        }
+                        if(inClearing)continue;
+                    }
                     float scale=fromHome.sqrMagnitude<26f*26f ? 1.1f+hash%4*.13f : sizeInQuarter*.255f;
                     QuarterTree(_root,worldPosition,scale,hash%360,blossom);
                     if (fromHome.sqrMagnitude>=26f*26f)
@@ -649,9 +674,36 @@ namespace PCShopSell.Game.Runtime
             reflections.Build();
             BatchStatic(islands.gameObject);
         }
+        internal static PCShopSell.Core.World.LayoutLakeParcel TailorBenchPlot(PCShopSell.Core.World.CityLayout city,out float side)
+        {
+            side=0;
+            const string shopId="expansion_shop_s_market_03";
+            if(!city.HasPlace(shopId))return null;
+            var shop=city.GetPlace(shopId);
+            var node=ToWorld(city.ViewPosition(shop.NodeId));
+            var door=node+new Vector3((float)shop.EntranceX,0,(float)shop.EntranceY);
+            PCShopSell.Core.World.LayoutLakeParcel selected=null;
+            float distance=32f*32f;
+            foreach(var plot in city.LakeParcels)
+            {
+                if(plot.kind!="plaza")continue;
+                var offset=door-new Vector3((float)plot.x,0,(float)plot.y);
+                if(offset.sqrMagnitude>=distance)continue;
+                selected=plot;distance=offset.sqrMagnitude;
+                side=Mathf.Sign(Vector3.Dot(offset,Quaternion.Euler(0,(float)plot.heading,0)*Vector3.right));
+            }
+            return selected;
+        }
+
         private void BuildLakeCourtyards(Transform parent)
         {
+            var tailorBench=TailorBenchPlot(_city,out float benchSide);
             var gardens=new GameObject("AuthoredCourtyardGardens").transform;gardens.SetParent(parent,false);int index=0;
+            var frontages=_city.PublicPlaces.Where(place=>!IsLakeAccessNode(place.NodeId))
+                .Select(place=>(door:DoorXZ(place),district:ArtDistrict(place.StreetId))).ToArray();
+            Vector3 rays=DayNightLighting.TownDaylightRotation*Vector3.forward;
+            Vector3 groundRays=Vector3.ProjectOnPlane(rays,Vector3.up);
+            float shadowReach=groundRays.magnitude/Mathf.Max(.001f,-rays.y);
             foreach(var parcel in _city.LakeParcels)
             {
                 var position = new Vector3((float)parcel.x, 0, (float)parcel.y) / LakeScale;
@@ -660,6 +712,8 @@ namespace PCShopSell.Game.Runtime
                 root.localPosition=position;root.localRotation=Quaternion.Euler(0,(float)parcel.heading,0);
                 float w=(float)parcel.width/LakeScale,d=(float)parcel.depth/LakeScale;
                 bool painted=OnOutskirtsLawn(root.position);
+                var courtyard=new Vector2(root.position.x,root.position.z);
+                int district=painted ? 0 : frontages.OrderBy(place=>(place.door-courtyard).sqrMagnitude).FirstOrDefault().district;
                 var lawn = painted ? QuarterMaterial("DistrictGrass") : DistrictFinishes.Meadow();
                 var stone=Mats.Lit(ArtDirection.Hex("D8CEB3"));var leaf=Mats.Lit(ArtDirection.Hex("6D9545"));
                 if(parcel.kind=="park")
@@ -673,7 +727,7 @@ namespace PCShopSell.Game.Runtime
                         float angle=j*Mathf.PI/6;var tree=new GameObject("ParkGrove").transform;tree.SetParent(root,false);
                         tree.localPosition=new Vector3(Mathf.Cos(angle)*w*.43f,.2f,d*.52f+Mathf.Sin(angle)*d*.39f);tree.localScale=Vector3.one*2;
                         if(painted) QuarterModules.Tree(tree,Vector3.zero,1,j*37);
-                        else PaintedWoodland.Plant(tree,Vector3.zero,4+j%2,j%7==0?2:0,index*31+j);
+                        else PaintedWoodland.Plant(tree,Vector3.zero,4+j%2,j%7==0?2:0,index*31+j,district:district);
                     }
                     index++;continue;
                 }
@@ -695,6 +749,8 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(root,"GardenPath",new Vector3(0,.46f,d/2),new Vector3(1.4f,.08f,d),
                     DistrictFinishes.Tile("limestoneWalk",new Vector2(1,d/3.5f),ArtDirection.Hex("E7DEC9")));
                 var planting=new StreetPlanting(maintained:!painted);
+                Vector3 upSun=root.InverseTransformDirection(-groundRays.normalized);
+                bool wideCourt=w>14 && d>14;
                 foreach(int side in new[]{-1,1})
                 {
                     for(float along=1.25f;along<d-1;along+=1.30f)
@@ -704,11 +760,35 @@ namespace PCShopSell.Game.Runtime
                         if(seed%5<3)planting.Add(PlantSpecies.Hydrangea,new Vector3(side*(w/2-1.64f),.43f,along+.15f),1.60f,.96f+seed%3*.12f,seed+3);
                     }
                     var foot=new Vector3(side*w*(side<0?.24f:.31f),.44f,d*(side<0?.60f:.75f));
-                    PaintedWoodland.Plant(root,foot,side<0?8:6,index%7==0 && side<0?2:0,index*41+side*23,!painted);
-                    if (!painted && w > 14 && d > 14)
+                    int mainHeight=side<0?8:6;
+                    if(district==1 && !wideCourt && w>8 && d>5 && side*upSun.x>.55f)
+                    {
+                        // Small plazas have only these two trees. A mature tree on the sunward
+                        // side shades the opposite seat across the path without blocking either.
+                        Vector3 farSeat=new Vector3(-side*w*.25f,.44f,d*.22f);
+                        foot=farSeat+upSun*((mainHeight*.71f-.65f)*shadowReach);
+                        foot.x=side*Mathf.Clamp(side*foot.x,1.65f,w*.5f-1f);
+                        foot.z=Mathf.Clamp(foot.z,1.35f,d-1.25f);
+                    }
+                    PaintedWoodland.Plant(root,foot,mainHeight,index%7==0 && side<0?2:0,index*41+side*23,!painted,district);
+                    if (!painted && wideCourt)
                     {
                         var edge=new Vector3(side*w*.34f,.44f,d*(side<0?.23f:.41f));
-                        PaintedWoodland.Plant(root,edge,5+(index&1),index%5==0?2:0,index+side*37);
+                        int height=5+(index&1);
+                        if(district==1)
+                        {
+                            // The afternoon-lit side of each seat has a canopy overhead. Keep its
+                            // trunk in the lawn strip with clearance to the stone walk and edging.
+                            Vector3 seat=new Vector3(side*w*.25f,.44f,d*.22f);
+                            edge=seat+upSun*((height*.75f-.65f)*shadowReach)+Vector3.forward*.66f;
+                            edge.x=side*Mathf.Clamp(side*edge.x,1.85f,w*.5f-1.25f);
+                            edge.z=Mathf.Clamp(edge.z,1.45f,d-1.45f);
+                            // In a narrow bed a smaller ornamental tree keeps the crown over the
+                            // seat instead of casting its shadow beyond the opposite retaining wall.
+                            float available=Vector3.Dot(edge-seat,upSun);
+                            height=Mathf.Clamp(Mathf.RoundToInt((available/Mathf.Max(.001f,shadowReach)+.65f)/.75f),4,height);
+                        }
+                        PaintedWoodland.Plant(root,edge,height,index%5==0?2:0,index+side*37,district:district);
                         for(int cluster=0;cluster<6;cluster++)
                         {
                             var at=edge+new Vector3(Mathf.Cos(cluster)*1.7f,0,Mathf.Sin(cluster)*1.05f);
@@ -721,7 +801,8 @@ namespace PCShopSell.Game.Runtime
                         var at=foot+new Vector3(side*(1.05f+Mathf.Cos(angle)*.80f),0,Mathf.Sin(angle)*1.40f);
                         planting.Add(group%3==0?PlantSpecies.Boxwood:PlantSpecies.Hydrangea,at,1.45f,1.04f+group*.055f,index+group);
                     }
-                    QuarterModules.Add(root,"Bench",new Vector3(side*w*.25f,.46f,d*.22f),Vector3.one,180);
+                    QuarterModules.Add(root,"Bench",new Vector3(side*w*.25f,.46f,d*.22f),Vector3.one,
+                        parcel==tailorBench && side==benchSide ? 0 : 180);
                 }
                 planting.Build(root,"Garden flowering borders");
                 if(index%5==0&&d>12)

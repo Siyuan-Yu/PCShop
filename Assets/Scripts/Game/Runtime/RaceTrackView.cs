@@ -24,12 +24,18 @@ namespace PCShopSell.Game.Runtime
             BuildIslandShore(scenery,resources,districtLawn);
 
             Ribbon(scenery,(float)track.HalfRoad+1.3f,.14f,Mats.Lit(ArtDirection.Cream),resources);
-            Ribbon(scenery,(float)track.HalfRoad,.18f,OldTownSurfaces.PanelMaterial("streetAsphalt"),resources);
+            var asphalt=OldTownSurfaces.PanelMaterial("streetAsphalt");
+            if(!starter)
+            {
+                asphalt=DistrictFinishes.Tile("streetAsphalt",Vector2.one,new Color(.79f,.77f,.76f));
+                asphalt.SetFloat("_PatinaStrength",.32f);
+            }
+            Ribbon(scenery,(float)track.HalfRoad,.18f,asphalt,resources);
             BuildBarriers(scenery, resources);
             BuildStartingGantry(scenery);
-            var stand = starter ? new Vector3(-35, 0, -19) : new Vector3(-10, 0, 0);
+            var stand = starter ? new Vector3(-35, 0, -19) : new Vector3(-10, 0, track.Tier==2?-4:0);
             var pit = starter ? new Vector3(-11.5f, 0, -14) : new Vector3(15, 0, 8);
-            for (int i = 0; i < 4; i++)
+            if (starter) for (int i = 0; i < 4; i++)
                 Prims.Box(scenery, "Grandstand", stand + new Vector3(0, .6f + i * .6f, i * 2),
                     new Vector3(24, .7f, 2), Mats.Lit(i % 2 == 0 ? ArtDirection.Wood : ArtDirection.Cream));
             if (track.Tier == 3)
@@ -37,7 +43,13 @@ namespace PCShopSell.Game.Runtime
             else
             {
                 Prims.Box(scenery,"PitOffice",pit+Vector3.up*2.2f,new Vector3(12,4.3f,6),DistrictFinishes.Tile(track.Tier==1?"buffBrick":"ivoryPlaster",new Vector2(2,1)));
-                Prims.Box(scenery,"PitRoof",pit+Vector3.up*4.5f,new Vector3(14,.5f,8),CircuitRoof());
+                if (starter)
+                    Prims.Box(scenery,"PitRoof",pit+Vector3.up*4.5f,new Vector3(14,.5f,8),CircuitRoof());
+                else
+                {
+                    var zinc=Mats.Lit(ArtDirection.Hex(track.Tier==1?"9CA8A8":"BAC3C0"),.21f);
+                    Prims.Box(scenery,"值班室薄钢屋面",pit+Vector3.up*4.44f,new Vector3(12.66f,.20f,6.75f),zinc);
+                }
             }
             BuildCircuitGarden(scenery,stand,pit);
             if (starter) BuildStarterLandmarks(scenery, resources);
@@ -50,8 +62,8 @@ namespace PCShopSell.Game.Runtime
             }
             else if(track.Tier==1)
             {
-                QuarterModules.Add(scenery,"CycleShelter",pit+new Vector3(-8f,.12f,0),Vector3.one);
-                for(int i=0;i<3;i++)QuarterModules.Add(scenery,"Cycle",pit+new Vector3(-9+i*.74f,.15f,0),Vector3.one,12);
+                QuarterModules.Add(scenery,"CycleShelter",pit+new Vector3(-8f,.24f,2.1f),Vector3.one);
+                for(int i=0;i<3;i++)QuarterModules.Add(scenery,"Cycle",pit+new Vector3(-9+i*.74f,.25f,2.1f),Vector3.one,12);
             }
             if (track.Kerbs.Length > 0) BuildKerbs(scenery, resources);
             for(int i=0;i<4;i++){Prims.Box(scenery,"FloodlightPole",new Vector3((i%2==0?-1:1)*(float)track.Width*.43f,4,(i<2?-1:1)*(float)track.Depth*.43f),new Vector3(.3f,8,.3f),Mats.Lit(ArtDirection.Ink));}
@@ -142,7 +154,7 @@ namespace PCShopSell.Game.Runtime
             var seatPaint=Track.Tier switch {
                 1 => Mats.Lit(ArtDirection.Hex("51836A")), 2 => Mats.Lit(ArtDirection.Hex("E0E4DF")),
                 3 => Mats.Lit(ArtDirection.Hex("416A83")), _ => timber };
-            for(int row=0;row<4;row++)for(int seat=-5;seat<=5;seat++)
+            if(Track.Tier==0) for(int row=0;row<4;row++)for(int seat=-5;seat<=5;seat++)
             {
                 var at=stand+new Vector3(seat*2,1.1f+row*.6f,row*2);
                 details.Box(at,new Vector3(1.5f,.12f,.65f),seatPaint);
@@ -151,7 +163,7 @@ namespace PCShopSell.Game.Runtime
             foreach(int side in new[]{-1,1})
             {
                 if (Track.Tier==0) details.Box(stand+new Vector3(side*12,3,3),new Vector3(.18f,6,.18f),metal);
-                details.FlowerBed(pit+new Vector3(side*4.3f,.12f,-3.7f),2.5f,.8f,side+9);
+                details.FlowerBed(pit+new Vector3(side*4.3f,.12f,Track.Tier==0?-3.7f:-4.85f),2.5f,.8f,side+9);
             }
             if(Track.Tier==0)
             {
@@ -169,14 +181,34 @@ namespace PCShopSell.Game.Runtime
                 details.Box(stand+new Vector3(0,2.9f,6.58f),new Vector3(24.2f,.9f,.15f),
                     DistrictFinishes.Tile(Track.Tier==1?"buffBrick":"walnut",new Vector2(6,1)));
             }
-            else BuildDistrictGrandstand(scenery,details,stand);
+            else
+            {
+                // Seats look across the racing line. All seating, stairs and roof share this physical orientation.
+                var pavilion=new GameObject("临赛道观众席").transform;
+                pavilion.SetParent(scenery,false);
+                pavilion.localPosition=stand+Vector3.forward*5.7f;
+                pavilion.localRotation=Quaternion.Euler(0,180,0);
+                pavilion.localScale=new Vector3(1.12f,1.04f,1.06f);
+                var seats=new MiniatureDetailMesh();
+                BuildDistrictGrandstand(pavilion,seats,Vector3.zero);
+                BuildSeatingBays(seats,seatPaint);
+                seats.Build(pavilion,"看台座椅、屋面与踏步");
+            }
             if(Track.Tier<3)
             {
-                for(int i=-5;i<=5;i++)
-                    details.Box(pit+new Vector3(i,4.81f,0),new Vector3(.055f,.09f,7.9f),metal);
+                if (Track.Tier==0)
+                    for(int i=-5;i<=5;i++)
+                        details.Box(pit+new Vector3(i,4.81f,0),new Vector3(.055f,.09f,7.9f),metal);
+                else
+                {
+                    var seam=Mats.Lit(ArtDirection.Hex("949F9F"),.22f);
+                    for(int joint=-2;joint<=2;joint++)
+                        details.Box(pit+new Vector3(joint*2.1f,4.56f,0),new Vector3(.048f,.045f,6.67f),seam);
+                }
                 details.Window(pit+new Vector3(-3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
                 details.Window(pit+new Vector3(3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
             }
+            if (Track.Tier > 0) BuildPitApproach(scenery, pit);
             var border = new StreetPlanting(maintained:Track.Tier>0);
             // Only decorate clear infield: the driving ribbon and runoff stay empty.
             for(float x=-(float)Track.Width*.33f;x<(float)Track.Width*.34f;x+=13)
@@ -184,28 +216,98 @@ namespace PCShopSell.Game.Runtime
             {
                 var at=new Vector3(x,.10f,z);
                 if(Mathf.Abs(x-stand.x)<16&&Mathf.Abs(z-stand.z-3)<10 || Mathf.Abs(x-pit.x)<10&&Mathf.Abs(z-pit.z)<8)continue;
-                float clearance=float.MaxValue;
-                for(int i=0;i<Track.Points.Length;i++)
-                {
-                    var a=Point(i);var direction=Point(i+1)-a;
-                    var closest=a+direction*Mathf.Clamp01(Vector3.Dot(at-a,direction)/Mathf.Max(.001f,direction.sqrMagnitude));
-                    clearance=Mathf.Min(clearance,Vector3.Distance(at,closest));
-                }
+                float clearance=DistanceFromRacingLine(at);
                 if(clearance<(float)Track.HalfRoad+7)continue;
                 int seed=Mathf.RoundToInt(x*7+z*13);
                 if(Track.Tier>0)
                 {
                     // Stagger the orchard; the offset stays inside the checked runoff clearance.
-                    at+=new Vector3(Mathf.Sin(x*.42f+z)*1.6f,0,Mathf.Cos(z*.37f+x)*1.4f);
+                    var shift=new Vector3(Mathf.Sin(x*.42f+z)*3.3f,0,Mathf.Cos(z*.37f+x)*2.6f);
+                    if(clearance-Track.HalfRoad<12 || Mathf.Abs(x-stand.x)<20&&Mathf.Abs(z-stand.z-3)<15) shift*=.25f;
+                    at+=shift;
                     border.Add(PlantSpecies.Grass,at+Vector3.right*1.2f,2.8f,1.16f,seed+1);
                     border.Add(Track.Tier==3?PlantSpecies.SilverGrass:PlantSpecies.Hydrangea,at+Vector3.forward*1.38f,2.15f,.97f,seed+7);
                 }
-                PaintedWoodland.Plant(scenery,at,5+Mathf.Abs(seed%3),Track.Tier>0 && seed%4==0 ? 2 : seed%3==0?3:0,seed,Track.Tier>0);
+                // Leave a clear sightline between the seats, pit office and the racing line.
+                if(Track.Tier>0 && at.x>stand.x-16 && at.x<pit.x+7 && at.z>stand.z-2 && at.z<stand.z+39)
+                    continue;
+                if(Track.Tier>0 && Mathf.Abs(at.x-stand.x)<22 && at.z<stand.z-4 && at.z>stand.z-18)
+                    continue;
+                float height=Track.Tier==0 ? 5+Mathf.Abs(seed%3) : 6.4f+Mathf.Abs(seed%6)*.82f;
+                PaintedWoodland.Plant(scenery,at,Mathf.RoundToInt(height),Track.Tier>0 && seed%4==0 ? 2 : seed%3==0?3:0,seed,Track.Tier>0,Track.Tier);
                 border.Add(PlantSpecies.Spirea, at + Vector3.left * 2, 1.6f, .85f, seed);
-                details.FlowerBed(at+Vector3.forward*1.5f,2.8f,1.3f,seed,false);
+                if(Track.Tier==0) details.FlowerBed(at+Vector3.forward*1.5f,2.8f,1.3f,seed,false);
             }
+            if(Track.Tier>0) SpectatorPlanting(scenery,border,stand);
             border.Build(scenery,"看台草地与花境");
             details.Build(scenery,"Circuit seating, windows and gardens");
+        }
+
+        private float DistanceFromRacingLine(Vector3 at)
+        {
+            float nearest=float.MaxValue;
+            for(int i=0;i<Track.Points.Length;i++)
+            {
+                var a=Point(i);var direction=Point(i+1)-a;
+                var closest=a+direction*Mathf.Clamp01(Vector3.Dot(at-a,direction)/Mathf.Max(.001f,direction.sqrMagnitude));
+                nearest=Mathf.Min(nearest,(closest-at).sqrMagnitude);
+            }
+            return Mathf.Sqrt(nearest);
+        }
+
+        private void SpectatorPlanting(Transform root,StreetPlanting bed,Vector3 stand)
+        {
+            // Plant the rear buffer and the two sides of the forecourt as continuous borders.
+            // Keep access from the pit office and the strip next to the guardrail clear.
+            for(int i=0;i<7;i++)
+            {
+                float x=(i-3)*7.1f;
+                var tree=stand+new Vector3(x+Mathf.Sin(i*1.7f)*1.1f,.1f,-10.5f-1.5f*Mathf.Cos(i*1.22f));
+                if(DistanceFromRacingLine(tree)<Track.HalfRoad+10)continue;
+                int height=Track.Tier==2?8+i%3:9+i%4;
+                PaintedWoodland.Plant(root,tree,height,0,48+i*31,true,Track.Tier);
+                for(int j=0;j<5;j++)
+                {
+                    float angle=(i+j*2.4f);
+                    var shrub=tree+new Vector3(Mathf.Cos(angle)*2.5f,0,Mathf.Sin(angle)*1.8f);
+                    bed.Add(j==1?PlantSpecies.Spirea:PlantSpecies.Boxwood,shrub,1.65f+j*.1f,.78f+j*.052f,i*19+j);
+                }
+            }
+            for(int side=-1;side<=1;side+=2)
+            for(int i=0;i<27;i++)
+            {
+                float t=i/26f;
+                float x=side*Mathf.Lerp(3.8f,16.5f,t);
+                var at=stand+new Vector3(x,.12f,14.1f-.92f*Mathf.Cos(t*5.3f)+.48f*Mathf.Sin(i*2.40f));
+                if(DistanceFromRacingLine(at)<Track.HalfRoad+5.8)continue;
+                PlantSpecies flower=Track.Tier==3?PlantSpecies.SilverGrass:PlantSpecies.Hydrangea;
+                bed.Add(i%6<2?flower:i%3==0?PlantSpecies.Spirea:PlantSpecies.Boxwood,at,
+                    1.24f+.25f*Mathf.Sin(i*.65f),.69f+.22f*Mathf.Cos(i*.53f),side*61+i+21);
+            }
+        }
+
+        private static void BuildSeatingBays(MiniatureDetailMesh detail, Material seatPaint)
+        {
+            var stone=DistrictFinishes.Tile("cutStone",new Vector2(4,1));
+            var steel=Mats.Lit(ArtDirection.Hex("435456"));
+            for(int row=0;row<5;row++)
+            {
+                float z=.05f+row*1.43f, top=.45f+row*.49f;
+                detail.Box(new Vector3(0,top*.5f,z),new Vector3(23.9f,top,1.43f),stone);
+                for(int bay=-1;bay<=1;bay++)
+                {
+                    float x=bay*7.95f;
+                    detail.Box(new Vector3(x,top+.28f,z+.13f),new Vector3(6.45f,.10f,.14f),steel);
+                    for(int chair=0;chair<8;chair++)
+                    {
+                        var at=new Vector3(x+(chair-3.5f)*.82f,top+.44f,z);
+                        detail.Box(at,new Vector3(.65f,.12f,.56f),seatPaint);
+                        detail.Box(at+new Vector3(0,.24f,.27f),new Vector3(.61f,.46f,.105f),seatPaint,Quaternion.Euler(9,0,0));
+                    }
+                }
+                if(row>0) foreach(int side in new[]{-1,1})
+                    detail.Box(new Vector3(side*3.97f,top-.34f,z-.94f),new Vector3(.9f,.20f,.48f),stone);
+            }
         }
 
         private void BuildDistrictGrandstand(Transform root, MiniatureDetailMesh detail, Vector3 stand)
@@ -216,7 +318,7 @@ namespace PCShopSell.Game.Runtime
             var roof=stand+new Vector3(0,6.6f,2.8f);
             var paving=DistrictFinishes.Tile("limestoneWalk",new Vector2(.44f,.44f));
             var bed=new StreetPlanting(maintained:true);
-            detail.Box(stand+new Vector3(0,.16f,1.35f),new Vector3(27.4f,.19f,12.6f),paving);
+            detail.Box(stand+new Vector3(0,.16f,1.35f),new Vector3(29.6f,.19f,15.9f),paving);
             for(int step=0;step<3;step++)
                 detail.Box(stand+new Vector3(0,.23f+step*.13f,-1.82f+step*.46f),new Vector3(22f,.14f,.54f),white);
             foreach(int side in new[]{-1,1})
@@ -231,7 +333,7 @@ namespace PCShopSell.Game.Runtime
             bed.Build(root,"看台入口花境");
             if(Track.Tier==1)
             {
-                var green=Mats.Lit(ArtDirection.Hex("427361"),.27f);
+                var green=Mats.Lit(ArtDirection.Hex("344E40"),.18f);
                 var wood=Mats.Lit(ArtDirection.Hex("A78155"));
                 var tilt=Quaternion.Euler(-6,0,0);
                 detail.Box(roof,new Vector3(25.8f,.28f,9.3f),green,tilt);
@@ -243,16 +345,99 @@ namespace PCShopSell.Game.Runtime
                         detail.Box(stand+new Vector3(side*12.25f,3.1f,-.8f+i*.98f),new Vector3(.21f,5.9f,.23f),wood);
                     detail.FlowerBed(stand+new Vector3(side*10.5f,.1f,-2.45f),3.1f,1.0f,side+13);
                 }
-                detail.Box(stand+new Vector3(0,3.6f,6.8f),new Vector3(24,3.35f,.18f),wood);
+                detail.Box(stand+new Vector3(0,2.41f,6.8f),new Vector3(24,.91f,.18f),wood);
+                for(int post=-2;post<=2;post++)
+                {
+                    float x=post*5.8f;
+                    detail.Box(stand+new Vector3(x,3.52f,6.8f),new Vector3(.16f,5.94f,.18f),wood);
+                    detail.Box(stand+new Vector3(x,5.98f,2.7f),new Vector3(.16f,.24f,8.8f),wood);
+                }
                 return;
             }
             bool garden=Track.Tier==3;
-            GardenStructures.Plate(root,"看台悬挑翼",roof,new Vector3(garden?28.1f:26.7f,garden?.43f:.24f,10.1f),white);
+            // Sections rise towards the end supports. The soffit traces the same curve as the skin.
+            var steel=Mats.Lit(ArtDirection.Hex(garden?"7B929D":"B1B3AA"));
+            var cell=DistrictFinishes.Tile("solarCells",Vector2.one*.40f);
+            const int sections=24;
+            float half=garden?14.2f:13.37f;
+            Vector3 Skin(float u,float v)
+            {
+                float end=u*u, depth=(garden?10.3f:9.9f)-end*.95f;
+                float z=v*depth*.5f;
+                float crown=(1-v*v)*(garden?.24f:.17f);
+                float y=end*(garden?.91f:.55f)+z*(garden?.076f:.103f)+crown;
+                return roof+new Vector3(u*half,y,z+end*.27f);
+            }
+            var vertices=new List<Vector3>();
+            var uv=new List<Vector2>();
+            var topFaces=new List<int>();
+            var rimFaces=new List<int>();
+            void Quad(Vector3 a,Vector3 b,Vector3 c,Vector3 d,List<int> faces)
+            {
+                int index=vertices.Count;
+                foreach(var v in new[]{a,b,c,d})
+                {
+                    vertices.Add(v);uv.Add(new Vector2(v.x*.16f,v.z*.16f));
+                }
+                faces.AddRange(new[]{index,index+1,index+2,index,index+2,index+3});
+            }
+            var lip=Vector3.down*(garden?.32f:.17f);
+            const int lanes=6;
+            for(int i=0;i<sections;i++)
+            {
+                float l=2f*i/sections-1,r=2f*(i+1)/sections-1;
+                for(int j=0;j<lanes;j++)
+                {
+                    float a=2f*j/lanes-1,b=2f*(j+1)/lanes-1;
+                    var p0=Skin(l,a);var p1=Skin(l,b);var p2=Skin(r,b);var p3=Skin(r,a);
+                    Quad(p0,p1,p2,p3,topFaces);Quad(p3+lip,p2+lip,p1+lip,p0+lip,rimFaces);
+                    if(j==0) Quad(p0,p3,p3+lip,p0+lip,rimFaces);
+                    if(j==lanes-1) Quad(p2,p1,p1+lip,p2+lip,rimFaces);
+                    if(i==0) Quad(p1,p0,p0+lip,p1+lip,rimFaces);
+                    if(i==sections-1) Quad(p3,p2,p2+lip,p3+lip,rimFaces);
+                }
+            }
+            var skin=new Mesh{name="弧形看台顶棚",subMeshCount=2};
+            skin.SetVertices(vertices);skin.SetUVs(0,uv);
+            skin.SetTriangles(topFaces,0);skin.SetTriangles(rimFaces,1);skin.RecalculateNormals();skin.RecalculateBounds();
+            var membrane=DistrictFinishes.Tile("pearlCeramic",new Vector2(1.7f,1.4f),
+                garden?ArtDirection.Hex("CBD7DC"):ArtDirection.Hex("D3D2CA"));
+            var owner=root.GetComponentInParent<CityLandscapeResources>();
+            owner.Owned.Add(skin);
+            var cover=new GameObject("顶棚与金属封边",typeof(MeshFilter),typeof(MeshRenderer));
+            cover.transform.SetParent(root,false);cover.GetComponent<MeshFilter>().sharedMesh=skin;
+            cover.GetComponent<MeshRenderer>().sharedMaterials=new[]{membrane,steel};
+            for(int rib=-4;rib<=4;rib++)
+            {
+                float u=rib/4.5f;
+                GardenStructures.Strut(detail,Skin(u,-1)+lip,Skin(u,1)+lip,garden?.11f:.062f,.093f,steel);
+                if(!garden || Mathf.Abs(rib)>3)continue;
+                var pos=Skin(u,.04f)+Vector3.up*.16f;
+                var slope=Quaternion.LookRotation((Skin(u,1)-Skin(u,-1)).normalized,
+                    Vector3.Cross(Skin(u,1)-Skin(u,-1),Skin(u+.035f,0)-Skin(u-.035f,0)).normalized);
+                detail.Box(pos,new Vector3(half*.206f,.10f,7.15f),cell,slope);
+                for(int line=-1;line<=1;line++)
+                    detail.Box(pos+slope*new Vector3(0,.057f,line*1.78f),new Vector3(half*.205f,.018f,.032f),alloy,slope);
+            }
             if(garden)
             {
-                GardenStructures.Plate(root,"翼板下缘",roof-Vector3.up*.24f,new Vector3(27.6f,.15f,9.8f),alloy);
-                GardenStructures.SolarFins(detail,roof+Vector3.up*.23f,22,7.35f,8);
-                detail.Box(stand+new Vector3(0,4.25f,6.78f),new Vector3(24.6f,3.9f,.15f),glass);
+                // Terraced glazed windscreen below the rear edge, with clear views through the open ends.
+                for(int bay=-4;bay<=4;bay++)
+                {
+                    var at=stand+new Vector3(bay*2.59f,4.36f,6.81f);
+                    detail.Box(at,new Vector3(2.50f,2.83f,.12f),glass);
+                    detail.Box(at+Vector3.right*1.29f,new Vector3(.095f,3.28f,.16f),alloy);
+                }
+                foreach(int side in new[]{-1,1})
+                {
+                    var foot=stand+new Vector3(side*11.24f,.45f,-.80f);
+                    var knee=foot+new Vector3(side*.24f,3.24f,.38f);
+                    var neck=knee+new Vector3(side*1.18f,2.13f,.10f);
+                    var tip=stand+new Vector3(side*13.96f,7.03f,-.86f);
+                    GardenStructures.Strut(detail,foot,knee,.48f,1.18f,white);
+                    GardenStructures.Strut(detail,knee,neck,.63f,1.26f,white);
+                    GardenStructures.Strut(detail,neck,tip,.75f,1.30f,white);
+                }
             }
             for(int bay=-1;bay<=1;bay++)
             {
@@ -281,23 +466,127 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
+        private void BuildPitApproach(Transform scenery, Vector3 pit)
+        {
+            var paving = DistrictFinishes.Tile("limestoneWalk", Vector2.one * .44f);
+            // Join the apron to the actual west face of the clubhouse or the narrower timing cabin.
+            const float west = 6.576f;
+            float halfWidth = Track.Tier == 3 ? 5.54f : 6f;
+            float east = pit.x-halfWidth;
+            float front = pit.z-4.2f;
+            float end = pit.z+(Track.Tier<3?4.2f:.3f);
+            Prims.Box(scenery, "看台至辅房步道", new Vector3((west+east)*.5f,.16f,(front+end)*.5f),
+                new Vector3(east-west,.16f,end-front), paving);
+            Prims.Box(scenery, "辅房门前铺地", pit + new Vector3(0,.16f,-3.6f),
+                new Vector3(halfWidth*2,.16f,1.2f), paving);
+            var side = new GameObject("临看台的辅房入口").transform;
+            side.SetParent(scenery, false);
+            side.localPosition = pit + Vector3.left * (Track.Tier == 3 ? 5.57f : 6.03f);
+            side.localRotation = Quaternion.Euler(0,90,0);
+            var trim = Mats.Lit(ArtDirection.Hex(Track.Tier == 1 ? "59685B" : "69787B"),.26f);
+            var glass = DistrictFinishes.Tile("civicGlazing", Vector2.one * .28f);
+            var panels = new MiniatureDetailMesh();
+            panels.Box(new Vector3(.64f,1.40f,-.045f),new Vector3(1.49f,2.55f,.12f),trim);
+            panels.Box(new Vector3(.64f,1.86f,-.122f),new Vector3(1.20f,1.13f,.035f),glass);
+            panels.Box(new Vector3(.12f,1.25f,-.18f),new Vector3(.045f,.36f,.065f),Mats.Lit(ArtDirection.Cream));
+            panels.Box(new Vector3(-1.42f,2.27f,-.056f),new Vector3(1.48f,1.13f,.14f),trim);
+            panels.Box(new Vector3(-1.42f,2.27f,-.14f),new Vector3(1.31f,.95f,.038f),glass);
+            panels.Box(new Vector3(-1.42f,2.27f,-.18f),new Vector3(.055f,.97f,.046f),trim);
+            panels.Box(new Vector3(.32f,2.88f,-.37f),new Vector3(2.63f,.10f,.75f),trim);
+            panels.Build(side,"值班门窗、门把与雨眉");
+            if (Track.Tier == 3) return;
+            Prims.Box(scenery, "器材门卸货踏步", pit+new Vector3(0,.16f,3.6f),
+                new Vector3(halfWidth*2,.16f,1.2f),paving);
+            var rear = new GameObject("场务辅房器材立面").transform;
+            rear.SetParent(scenery,false);
+            rear.localPosition = pit + Vector3.forward * 3.03f;
+            rear.localRotation = Quaternion.Euler(0,180,0);
+            var sash = new MiniatureDetailMesh();
+            var shutter=Mats.Lit(ArtDirection.Hex(Track.Tier==1?"A5A9A1":"B0BAB9"),.19f);
+            if (Track.Tier==1)
+            {
+                foreach(int bay in new[]{-1,1})
+                {
+                    float x=bay*2.46f;
+                    sash.Box(new Vector3(x,1.62f,-.054f),new Vector3(3.68f,2.76f,.14f),trim);
+                    sash.Box(new Vector3(x,1.59f,-.14f),new Vector3(3.49f,2.59f,.045f),shutter);
+                    for(int rib=0;rib<8;rib++)
+                        sash.Box(new Vector3(x,.59f+rib*.29f,-.178f),new Vector3(3.44f,.033f,.046f),shutter);
+                }
+            }
+            else
+            {
+                sash.Box(new Vector3(-2.47f,2.66f,-.04f),new Vector3(3.0f,.93f,.11f),trim);
+                sash.Box(new Vector3(-2.47f,2.66f,-.12f),new Vector3(2.81f,.78f,.052f),glass);
+                sash.Box(new Vector3(-2.47f,2.66f,-.16f),new Vector3(.07f,.81f,.057f),trim);
+                sash.Box(new Vector3(2.84f,1.61f,-.04f),new Vector3(1.65f,2.76f,.12f),trim);
+                sash.Box(new Vector3(2.84f,1.60f,-.13f),new Vector3(1.44f,2.57f,.052f),shutter);
+                sash.Box(new Vector3(3.33f,1.47f,-.20f),new Vector3(.2f,.056f,.11f),trim);
+            }
+            sash.Build(rear,"器材门与采光窗");
+        }
+
         private static void BuildTimingCabin(Transform root, Vector3 pit)
         {
             var white=DistrictFinishes.Tile("pearlCeramic",new Vector2(3,2));
-            var glass=DistrictFinishes.Tile("civicGlazing",new Vector2(8,1));
+            var glass=DistrictFinishes.VillaPane();
+            var alloy=Mats.Lit(ArtDirection.Hex("A7B6BD"),.37f);
             var ink=Mats.Lit(ArtDirection.Hex("324D5A"),.33f);
             GardenStructures.Plate(root,"计时舱基座",pit+Vector3.up*.35f,new Vector3(11.8f,.54f,6.6f),white);
-            GardenStructures.Plate(root,"计时舱环窗",pit+Vector3.up*2.25f,new Vector3(11.1f,3.46f,5.86f),glass);
-            GardenStructures.Plate(root,"计时舱顶",pit+Vector3.up*4.06f,new Vector3(11.75f,.35f,6.4f),white);
+            GardenStructures.Plate(root,"舱内防滑地台",pit+Vector3.up*.64f,new Vector3(11.08f,.04f,5.84f),
+                Mats.Lit(ArtDirection.Hex("A5B1AA"),.13f));
+            var envelope=GardenStructures.Plate(root,"计时舱半透明环窗",pit+Vector3.up*2.25f,
+                new Vector3(11.1f,3.46f,5.86f),glass);
+            envelope.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;
             var detail=new MiniatureDetailMesh();
-            for(int i=-2;i<=2;i++)
-                detail.Box(pit+new Vector3(i*1.92f,2.27f,-2.95f),new Vector3(.105f,3.57f,.18f),white);
-            var clock=pit+new Vector3(-6.8f,0,-.54f);
-            detail.Box(clock+Vector3.up*2.8f,new Vector3(.35f,5.6f,.46f),white);
+            const float roofHalf = 3.08f;
+            Vector3 RoofEdge(float z) => pit+new Vector3(0,3.96f+.73f*(1-z*z/(roofHalf*roofHalf)),z);
+            for(int section=0;section<6;section++)
+            {
+                var a=RoofEdge(Mathf.Lerp(-roofHalf,roofHalf,section/6f));
+                var b=RoofEdge(Mathf.Lerp(-roofHalf,roofHalf,(section+1)/6f));
+                var across=(b-a).normalized;
+                var pane=Prims.Shape(PrimitiveType.Quad,root,"计时舱弧形天窗",(a+b)*.5f,
+                    new Vector3(11.32f,Vector3.Distance(a,b),1),glass);
+                pane.transform.localRotation=Quaternion.LookRotation(Vector3.Cross(Vector3.right,across),across);
+                pane.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;
+                for (int rib=-3;rib<=3;rib++)
+                {
+                    var x=Vector3.right*(rib*1.90f);
+                    GardenStructures.Strut(detail,a+x,b+x,.13f,.13f,alloy);
+                }
+            }
+            foreach (int side in new[] {-1,1})
+            {
+                detail.Box(pit+new Vector3(0,3.96f,side*2.99f),new Vector3(11.36f,.15f,.19f),white);
+                detail.Box(pit+new Vector3(0,.72f,side*2.89f),new Vector3(10.45f,.12f,.15f),alloy);
+                for(int bay=-2;bay<=2;bay++)
+                    detail.Box(pit+new Vector3(bay*1.9f,2.26f,side*2.91f),new Vector3(.095f,3.42f,.14f),alloy);
+                foreach(int corner in new[]{-1,1})
+                {
+                    float z=corner*1.5f;
+                    var foot=pit+new Vector3(side*5.49f,.62f,z);
+                    GardenStructures.Strut(detail,foot,RoofEdge(z)+Vector3.right*(side*5.70f),.12f,.13f,alloy);
+                }
+            }
+            detail.Box(pit+new Vector3(0,1.46f,.38f),new Vector3(6.8f,.16f,1.27f),white);
+            for(int desk=-1;desk<=1;desk++)
+            {
+                float x=desk*2.28f;
+                detail.Box(pit+new Vector3(x,.99f,.38f),new Vector3(.14f,.83f,.72f),alloy);
+                detail.Box(pit+new Vector3(x,1.91f,.50f),new Vector3(1.03f,.56f,.085f),ink);
+                detail.Box(pit+new Vector3(x,1.14f,-.74f),new Vector3(.62f,.16f,.65f),ink);
+                detail.Box(pit+new Vector3(x,.86f,-.74f),new Vector3(.17f,.49f,.17f),alloy);
+            }
+            var clock=pit+new Vector3(-6.8f,0,2.62f);
+            detail.Box(clock+Vector3.up*1.44f,new Vector3(.35f,2.88f,.38f),white);
             detail.Box(clock+Vector3.up*4.08f,new Vector3(1.45f,2.5f,.42f),ink);
-            for(int i=0;i<4;i++)
-                detail.Box(clock+new Vector3(0,4.82f-i*.43f,-.225f),new Vector3(.94f-i*.10f,.105f,.045f),Mats.Lit(ArtDirection.Hex("8ACCD3")));
-            detail.Build(root,"计时舱窗框与电子计时牌");
+            var readout=Mats.Lit(ArtDirection.Hex("A3D2CA"));
+            foreach (int face in new[] {-1,1})
+                for(int i=0;i<4;i++)
+                    detail.Box(clock+new Vector3(0,4.82f-i*.43f,face*.225f),
+                        new Vector3(.94f-i*.10f,.105f,.045f),readout);
+            detail.Build(root,"计时舱钢肋、操作台与双面计时牌");
         }
 
         private void BuildStartingGantry(Transform scenery)
@@ -486,10 +775,12 @@ namespace PCShopSell.Game.Runtime
         {
             int count = Track.Points.Length;
             var joins = new Vector3[count];
+            float circumference = 0;
             for (int i = 0; i < count; i++)
             {
                 var incoming = (Point(i) - Point((i + count - 1) % count)).normalized;
                 var outgoing = (Point(i + 1) - Point(i)).normalized;
+                circumference += Vector3.Distance(Point(i), Point(i+1));
                 var nextNormal = Vector3.Cross(Vector3.up, outgoing);
                 var bisector = (Vector3.Cross(Vector3.up, incoming) + nextNormal).normalized;
                 // Both neighbouring segments use the same miter joint, with no overlapping end faces.
@@ -497,8 +788,23 @@ namespace PCShopSell.Game.Runtime
             }
             foreach (int side in new[] { -1, 1 })
             {
+                bool garden = Track.Tier == 3;
+                var materials = garden
+                    ? new[] { Mats.Lit(ArtDirection.Hex("A7B3B4"),.39f), Mats.Lit(ArtDirection.Hex("CFD5D0"),.32f) }
+                    : Track.Tier == 0 ? new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) }
+                    : new[] { Mats.Lit(ArtDirection.Hex("B75E4D"),.16f), Mats.Lit(ArtDirection.Hex("E1DBCA"),.15f),
+                              Mats.Lit(ArtDirection.Hex("A69F8F"),.15f) };
+                // Uniform lengths close around the loop even where the centreline has uneven chords.
+                int pairs = Mathf.Max(1, Mathf.RoundToInt(circumference / 12f));
+                float panelLength = circumference / (2*pairs);
+                int postCount = Mathf.Max(1, Mathf.RoundToInt(circumference/3.4f));
+                float postSpacing = circumference / postCount;
+                float traveled = 0;
+                int nextPost = 0;
+                var fittings = new MiniatureDetailMesh();
                 var vertices = new List<Vector3>();
-                var triangles = new[] { new List<int>(), new List<int>() };
+                var triangles = new List<int>[materials.Length];
+                for (int m=0;m<triangles.Length;m++) triangles[m]=new List<int>();
                 void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 outward, int material)
                 {
                     int start = vertices.Count;
@@ -510,30 +816,72 @@ namespace PCShopSell.Game.Runtime
                 for (int i = 0; i < count; i++)
                 {
                     int j = (i + 1) % count;
+                    float length = Vector3.Distance(Point(i),Point(j));
                     float offset = side * ((float)Track.HalfRoad + 3.8f);
-                    var a = Point(i) + joins[i] * (offset - .325f) + Vector3.up * .05f;
-                    var b = Point(j) + joins[j] * (offset - .325f) + Vector3.up * .05f;
-                    var c = Point(j) + joins[j] * (offset + .325f) + Vector3.up * .05f;
-                    var d = Point(i) + joins[i] * (offset + .325f) + Vector3.up * .05f;
-                    var height = Vector3.up * 1.1f;
                     var normal = Vector3.Cross(Vector3.up, (Point(j) - Point(i)).normalized);
-                    Quad(a, b, b + height, a + height, -normal, i % 2);
-                    Quad(d, c, c + height, d + height, normal, i % 2);
-                    Quad(a + height, b + height, c + height, d + height, Vector3.up, i % 2);
-                    Quad(a, b, c, d, Vector3.down, i % 2);
+                    Vector3 At(float t, float lateral, float y) => Vector3.Lerp(Point(i)+joins[i]*(offset+lateral),
+                        Point(j)+joins[j]*(offset+lateral),t)+Vector3.up*y;
+                    void Beam(float from, float to, float lateral, float width, float y, float height, int mat)
+                    {
+                        var a=At(from,lateral-width*.5f,y);var b=At(to,lateral-width*.5f,y);
+                        var c=At(to,lateral+width*.5f,y);var d=At(from,lateral+width*.5f,y);
+                        var rise=Vector3.up*height;
+                        Quad(a,b,b+rise,a+rise,-normal,mat); Quad(d,c,c+rise,d+rise,normal,mat);
+                        Quad(a+rise,b+rise,c+rise,d+rise,Vector3.up,mat); Quad(a,b,c,d,Vector3.down,mat);
+                    }
+                    if (Track.Tier == 0) Beam(0,1,0,.65f,.05f,1.1f,i%2);
+                    else if (!garden)
+                    {
+                        Beam(0,1,0,.65f,.05f,.16f,2);
+                        int first=Mathf.FloorToInt(traveled/panelLength);
+                        int last=Mathf.CeilToInt((traveled+length)/panelLength)-1;
+                        for (int band=first;band<=last;band++)
+                        {
+                            float from=Mathf.Clamp01((band*panelLength-traveled)/length);
+                            float to=Mathf.Clamp01(((band+1)*panelLength-traveled)/length);
+                            if (to>from) Beam(from,to,0,.56f,.21f,.51f,band%2);
+                        }
+                    }
+                    else
+                    {
+                        for (int rail=0;rail<3;rail++)
+                            Beam(0,1,-side*.11f,.16f,.31f+rail*.37f,.145f,rail==2?1:0);
+                        var facing = Quaternion.LookRotation(-normal*side);
+                        while(nextPost<postCount && nextPost*postSpacing<traveled+length)
+                        {
+                            float at=(nextPost*postSpacing-traveled)/length;
+                            var post=At(at,side*.08f,.615f);
+                            fittings.Box(post,new Vector3(.15f,1.14f,.16f),materials[0],facing);
+                            if (nextPost%19==11) AddBarrierChevrons(fittings,At(at,-side*.25f,.68f),facing,side);
+                            nextPost++;
+                        }
+                    }
+                    traveled+=length;
                 }
                 var mesh = new Mesh { name = "ContinuousRaceBarrier" };
                 mesh.SetVertices(vertices);
-                mesh.subMeshCount = 2;
-                mesh.SetTriangles(triangles[0], 0); mesh.SetTriangles(triangles[1], 1);
+                mesh.subMeshCount = materials.Length;
+                for (int m=0;m<triangles.Length;m++) mesh.SetTriangles(triangles[m],m);
                 mesh.RecalculateNormals(); mesh.RecalculateBounds();
                 resources.Owned.Add(mesh);
                 var go = new GameObject("Barrier", typeof(MeshFilter), typeof(MeshRenderer));
                 go.transform.SetParent(parent, false);
                 go.GetComponent<MeshFilter>().sharedMesh = mesh;
-                go.GetComponent<MeshRenderer>().sharedMaterials = Track.Tier == 3
-                    ? new[] { Mats.Lit(ArtDirection.Hex("4E9391")), Mats.Lit(ArtDirection.Hex("C7D1CC")) }
-                    : new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) };
+                go.GetComponent<MeshRenderer>().sharedMaterials = materials;
+                if (garden) fittings.Build(parent,"赛道钢护栏立柱及导向标");
+            }
+        }
+
+        private static void AddBarrierChevrons(MiniatureDetailMesh fittings, Vector3 center, Quaternion facing, int raceDirection)
+        {
+            var enamel=Mats.Lit(ArtDirection.Hex("428A87"),.30f);
+            var stripe=Mats.Lit(ArtDirection.Hex("ECE9D9"),.20f);
+            fittings.Box(center,new Vector3(1.38f,.49f,.055f),enamel,facing);
+            foreach (float x in new[] {-.4f,.14f})
+            {
+                Vector3 P(float u,float h) => center+facing*new Vector3((x+u)*raceDirection,h,.036f);
+                GardenStructures.Strut(fittings,P(0,.17f),P(.20f,0),.064f,.064f,stripe);
+                GardenStructures.Strut(fittings,P(.20f,0),P(0,-.17f),.064f,.064f,stripe);
             }
         }
         private Vector3 RoadNormal(int index)

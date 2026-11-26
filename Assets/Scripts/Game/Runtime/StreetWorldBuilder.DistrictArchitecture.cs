@@ -45,8 +45,31 @@ namespace PCShopSell.Game.Runtime
                 foreach(int side in new[]{-1,1})
                 {
                     if(p.Model!="warehouse")
-                        for(float along=d*.27f;along<d*.74f;along+=1.25f)
-                            hedge.Add(PlantSpecies.Hedge,new Vector3(side*w*.33f,h+.64f,along),w*.16f,1.09f,Mathf.RoundToInt(along*7+side));
+                    {
+                        float x0=side*w*.33f, z0=d*.48f, width=w*.18f, depth=d*.50f;
+                        var soil=DistrictFinishes.Tile("cultivatedSoil",new Vector2(2,4));
+                        var coping=DistrictFinishes.Tile("cutStone",new Vector2(1,3),ArtDirection.Hex("D6CCB9"));
+                        var mid=new Vector3(x0,h+.41f,z0);
+                        detail.Box(mid,new Vector3(width,.28f,depth),coping);
+                        detail.Box(mid+Vector3.up*.15f,new Vector3(width-.16f,.048f,depth-.16f),soil);
+                        foreach(int edge in new[]{-1,1})
+                        {
+                            detail.Box(mid+new Vector3(edge*(width-.13f)*.5f,.21f,0),new Vector3(.13f,.22f,depth),coping);
+                            detail.Box(mid+new Vector3(0,.21f,edge*(depth-.13f)*.5f),new Vector3(width,.22f,.13f),coping);
+                        }
+                        int cols=Mathf.Max(1,Mathf.FloorToInt(width/.87f));
+                        int rows=Mathf.Max(1,Mathf.FloorToInt(depth/1.05f));
+                        for(int row=0;row<rows;row++)
+                        for(int col=0;col<cols;col++)
+                        {
+                            int seed=col*11+row*3+side+2;
+                            var foot=mid+new Vector3(((col+.5f)/cols-.5f)*(width-.22f),.18f,
+                                ((row+.5f)/rows-.5f)*(depth-.25f));
+                            var species=seed%11==0?PlantSpecies.Spirea:seed%7==0?PlantSpecies.SilverGrass:
+                                seed%5==0?PlantSpecies.GoldenBush:PlantSpecies.Broadleaf;
+                            hedge.Add(species,foot,.84f+(seed%4)*.084f,.46f+(seed%5)*.102f,seed);
+                        }
+                    }
                     float x=side*w*.37f;
                     QuarterModules.Add(shell,"SideWindow",new Vector3(side*w*.5f,h*.4f,d*.65f),new Vector3(1.65f,1.34f,1),side<0?90:270);
                     QuarterModules.Add(shell,"PlantPot",new Vector3(x,-.04f,-1.12f),Vector3.one*1.28f);
@@ -64,22 +87,41 @@ namespace PCShopSell.Game.Runtime
         // All elevations use the original pavement-level front door as their origin.
         private void DistrictBusiness(Transform root, Place p, float w, float d, float h, int district, int seed)
         {
+            bool tailor = p.Id=="expansion_shop_s_market_03";
             bool retail = p.Model == "shop", market = p.Model == "market" || p.Model == "warehouse";
+            bool glassPavilion = district==3 && retail && w<=15 && d<=14 && h>4.4f;
             string roof = DistrictFinishes.Roof(district);
             var trim = ArtDirection.Hex(district == 1 ? "E5DBCB" : district == 2 ? "E9EBE3" : "E0E8EC");
             var frame = Mats.Lit(ArtDirection.Hex(district == 1 ? "655842" : district == 2 ? "516D67" : "504C44"));
             Color accent = ArtDirection.Hex(district == 1 ? (seed%2==0?"327476":"46767C") : district == 2 ? "558498":"467789");
-            var shell = Prims.Box(root,"Street masonry",new Vector3(0,h*.5f,d*.5f),new Vector3(w,h,d),
+            float wallHeight=glassPavilion?3.48f:h;
+            var shell = Prims.Box(root,"Street masonry",new Vector3(0,wallHeight*.5f,d*.5f),new Vector3(w,wallHeight,d),
                 DistrictFinishes.Tile(DistrictFinishes.Masonry(district),new Vector2(Mathf.Max(1,w/4),Mathf.Max(1,h/3.5f))),true);
             shell.AddComponent<PlaceMarker>().PlaceId=p.Id;
+            if(glassPavilion)
+            {
+                // Keep the original selectable envelope while opening a recessed continuous glazed gallery above the shop.
+                var collider=shell.GetComponent<BoxCollider>();
+                collider.center=new Vector3(0,(h-wallHeight)/(2*wallHeight),0);
+                collider.size=new Vector3(1,h/wallHeight,1);
+                Prims.Box(root,"展廊后墙",new Vector3(0,(h+wallHeight)*.5f,d*.5f+.37f),
+                    new Vector3(w-1.32f,h-wallHeight,d-.74f),DistrictFinishes.Tile("brushedAlloy",Vector2.one,ArtDirection.Hex("657678")));
+            }
             ForestFloorShade.Footprint(root,new Vector3(0,.115f,d*.48f),w+3.6f,d+3,true);
             var detail = new MiniatureDetailMesh();
             var stone = DistrictFinishes.Tile("cutStone",Vector2.one*.36f);
             var wood = DistrictFinishes.Tile("walnut",Vector2.one*.55f);
             detail.Box(new Vector3(0,.22f,d*.5f),new Vector3(w+.20f,.44f,d+.20f),stone);
             detail.Box(new Vector3(0,h+.15f,d*.5f),new Vector3(w+.39f,.30f,d+.39f),stone);
+            if(tailor)
+            {
+                float transom=3.64f;
+                var lime=DistrictFinishes.Tile("ivoryPlaster",new Vector2(w*.26f,(h-transom)*.32f),ArtDirection.Hex("F2DDD0"));
+                Prims.Box(root,"楼上石灰抹面",new Vector3(0,(h+transom)*.5f,d*.5f),new Vector3(w+.03f,h-transom,d+.03f),lime);
+                detail.Box(new Vector3(0,transom-.08f,d*.5f),new Vector3(w+.11f,.14f,d+.13f),stone);
+            }
             Prims.Box(root,"Roof covering",new Vector3(0,h+.333f,d*.5f),new Vector3(w+.14f,.10f,d+.14f),
-                DistrictFinishes.Tile(roof,new Vector2(w/4,d/4),Color.white));
+                DistrictFinishes.Tile(roof,new Vector2(w/4,d/4),tailor?new Color(.91f,.92f,1.0f):Color.white));
             foreach(int side in new[]{-1,1})
             {
                 detail.Box(new Vector3(side*w*.49f,h+.58f,d*.5f),new Vector3(.18f,.48f,d+.20f),stone);
@@ -96,12 +138,45 @@ namespace PCShopSell.Game.Runtime
                 int bays=Mathf.Clamp(Mathf.RoundToInt(width/3.2f),2,8);
                 for(int level=face==0?1:0;level<=floors;level++)
                 {
+                    if(glassPavilion && level>0 && face!=2)continue;
                     float y=level==0?.65f:3.65f+(level-.76f)*(h-3.65f)/floors;
                     for(int bay=0;bay<bays;bay++)
                     {
                         float x=((bay+.5f)/bays-.5f)*width;
                         var at=new Vector3(x,y,-depth*.5f-.025f);
-                        if (!retail && (district==1 || level==0))
+                        if(tailor)
+                        {
+                            float span=Mathf.Min(1.67f,width/bays*.66f);
+                            var center=at+Vector3.up*.77f;
+                            var reveal=new Vector3(.12f,.13f,.12f);
+                            var size=new Vector3(span,1.62f,.14f);
+                            Prims.Box(elevation,"窗洞外沿",center,size+reveal,stone);
+                            Prims.Box(elevation,"窗框",center+Vector3.back*.086f,size,frame);
+                            var panes=Mats.Lit(ArtDirection.Hex((bay+face)%2==0?"788784":"859390"),.34f);
+                            Prims.Box(elevation,"住家玻璃",center+Vector3.back*.159f,new Vector3(span-.14f,1.47f,.035f),panes);
+                            var curtain=DistrictFinishes.Tile("ivoryPlaster",Vector2.one,ArtDirection.Hex("A7A89A"));
+                            for(int fold=0;fold<3;fold++)
+                            {
+                                float inset=(bay%2==0?-1:1)*(span*.43f-fold*.077f);
+                                Prims.Box(elevation,"折帘",center+new Vector3(inset,-.10f,-.184f),
+                                    new Vector3(.077f,1.15f,.024f),curtain);
+                            }
+                            Prims.Box(elevation,"中梃",center+Vector3.back*.19f,new Vector3(.054f,1.51f,.052f),frame);
+                            Prims.Box(elevation,"上亮横档",center+new Vector3(0,.44f,-.19f),new Vector3(span-.095f,.048f,.05f),frame);
+                            Prims.Box(elevation,"石质窗台",at+Vector3.back*.12f,new Vector3(span+.27f,.12f,.39f),stone);
+                            if(face==0 && bay==bays-1 && level==1)
+                            {
+                                var box=at+new Vector3(.16f,.035f,-.37f);
+                                var enamel=Mats.Lit(ArtDirection.Hex("D7D5C2"));
+                                var screen=Mats.Lit(ArtDirection.Hex("646C66"));
+                                Prims.Box(elevation,"窗下空调外壳",box,new Vector3(.87f,.49f,.39f),enamel);
+                                var fan=Prims.Shape(PrimitiveType.Cylinder,elevation,"风扇护网",box+new Vector3(-.105f,0,-.203f),new Vector3(.39f,.014f,.39f),screen);
+                                fan.transform.localRotation=Quaternion.Euler(90,0,0);
+                                for(int slit=-2;slit<=2;slit++)
+                                    Prims.Box(elevation,"风扇横栅",box+new Vector3(-.105f,slit*.060f,-.222f),new Vector3(.32f,.016f,.015f),enamel);
+                            }
+                        }
+                        else if (!retail && (district==1 || level==0))
                             QuarterModules.Add(elevation,"SideWindow",at,new Vector3(Mathf.Min(1.45f,width/bays*.44f),1.03f,.8f));
                         else
                         {
@@ -112,7 +187,7 @@ namespace PCShopSell.Game.Runtime
                             Prims.Box(elevation,"Slender mullion",at+new Vector3(0,.68f,-.18f),new Vector3(.07f,1.42f,.08f),frame);
                             Prims.Box(elevation,"Projecting sill",at+Vector3.back*.10f,new Vector3(ww+.24f,.11f,.38f),stone);
                         }
-                        if(face==0 && level>0 && district==1 && (bay+level+seed)%3==0)
+                        if(!tailor && face==0 && level>0 && district==1 && (bay+level+seed)%3==0)
                             QuarterModules.Add(elevation,"BalconyRail",at,Vector3.one*.88f);
                     }
                 }
@@ -122,12 +197,22 @@ namespace PCShopSell.Game.Runtime
             var scale = new Vector3(w/8.70f,1,1);
             if (retail)
             {
-                var front=QuarterModules.Add(root,"DisplayFront",Vector3.back*.035f,scale);
+                Transform front;
+                if(tailor)
+                {
+                    // This shop has its own fitted open frontage; the generic module includes opaque stock and a solid door.
+                    front=new GameObject("DisplayFront").transform;front.SetParent(root,false);
+                    front.localPosition=Vector3.back*.035f;front.localScale=scale;
+                }
+                else front=QuarterModules.Add(root,"DisplayFront",Vector3.back*.035f,scale);
                 DistrictFinishes.ShopDisplay(front,p);
+                if(glassPavilion) GardenStructures.ShopDisplayWindows(front,string.IsNullOrEmpty(p.Business)||p.Business=="空铺");
                 if(p.Business=="裁缝")
                 {
                     var rack=new GameObject("收摊时移入店内的布架").transform;rack.SetParent(root,false);
-                    rack.localPosition=new Vector3(-w*.34f,.12f,-.68f);_cur.OpenOnly.Add(rack.gameObject);
+                    rack.localPosition=new Vector3(-w*(tailor?.398f:.34f),.12f,-.68f);
+                    if(tailor)rack.localScale=new Vector3(.75f,.88f,.80f);
+                    _cur.OpenOnly.Add(rack.gameObject);
                     var display=new MiniatureDetailMesh();
                     display.Box(new Vector3(0,.41f,0),new Vector3(1.03f,.09f,.53f),wood);
                     foreach(int leg in new[]{-1,1})display.Box(new Vector3(leg*.43f,.19f,0),new Vector3(.09f,.39f,.42f),wood);
@@ -140,7 +225,7 @@ namespace PCShopSell.Game.Runtime
                     display.Build(rack,"布架");
                     // The shop keeps its original entrance; the mannequin sits in the outer display bay.
                     var dummy=new MiniatureDetailMesh();
-                    var foot=new Vector3(w*.33f,.12f,-.52f);
+                    var foot=new Vector3(w*(tailor?.264f:.33f),.12f,-.52f);
                     var linen=Mats.Lit(ArtDirection.Hex("CFB695"));
                     dummy.Box(foot+Vector3.up*.05f,new Vector3(.49f,.10f,.44f),frame);
                     dummy.Box(foot+Vector3.up*.49f,new Vector3(.075f,.86f,.075f),frame);
@@ -151,7 +236,31 @@ namespace PCShopSell.Game.Runtime
                     dummyDisplay.SetParent(root,false);
                     dummy.Build(dummyDisplay,"橱窗布样人台");
                     _cur.OpenOnly.Add(dummyDisplay.gameObject);
-                    QuarterModules.Add(root,"Cycle",new Vector3(-w*.5f-.26f,.07f,d*.25f),Vector3.one,8);
+                    if(tailor)
+                    {
+                        var shelter=new Vector3(-w*.5f-1.15f,0,d-1.40f);
+                        var honey=Mats.Lit(ArtDirection.Hex("B99162"));
+                        var cedar=Mats.Lit(ArtDirection.Hex("A78257"));
+                        var rail=Mats.Lit(ArtDirection.Hex("767D73"),.26f);
+                        var slope=Quaternion.Euler(0,0,-4);
+                        for(int side=-1;side<=1;side+=2)
+                        {
+                            float x=side*.76f, eave=2.14f-x*.07f;
+                            detail.Box(shelter+new Vector3(x,eave,0),new Vector3(.080f,.095f,3.03f),honey);
+                            foreach(int end in new[]{-1,1})
+                                detail.Box(shelter+new Vector3(x,eave*.5f,end*1.31f),new Vector3(.081f,eave,.083f),cedar);
+                            float rackX=side*.37f+.20f;
+                            foreach(int end in new[]{-1,1})
+                                detail.Box(shelter+new Vector3(rackX,.41f,end*.34f),new Vector3(.053f,.74f,.053f),rail);
+                            detail.Box(shelter+new Vector3(rackX,.78f,0),new Vector3(.053f,.055f,.73f),rail);
+                            QuarterModules.Add(root,"Cycle",shelter+new Vector3(side*.37f,.07f,side*.16f),Vector3.one,side<0?3:176);
+                        }
+                        // Short cedar boards span the two long purlins. The warm cut ends and fine seams read from above.
+                        for(int board=0;board<12;board++)
+                            detail.Box(shelter+new Vector3(0,2.218f,(board-5.5f)*3.10f/12),new Vector3(1.80f,.068f,.253f),
+                                board%4==1?cedar:honey,slope);
+                    }
+                    else QuarterModules.Add(root,"Cycle",new Vector3(-w*.5f-.26f,.07f,d*.25f),Vector3.one,8);
                     var pots=new StreetPlanting(maintained:true);
                     pots.Add(PlantSpecies.Broadleaf,new Vector3(w*.44f,.48f,-.74f),.88f,.87f,seed);
                     pots.Build(root,"门边盆栽");
@@ -167,6 +276,31 @@ namespace PCShopSell.Game.Runtime
                         joinery.Box(bay+Vector3.up*.83f,new Vector3(w*.26f,.10f,.19f),timber);
                         for(int edge=-1;edge<=1;edge+=2)
                             joinery.Box(bay+Vector3.right*edge*w*.124f,new Vector3(.085f,1.65f,.14f),timber);
+                    }
+                    if(tailor)
+                    {
+                        // Folded stock occupies the outer third of one bay. The opposite bay is the dress-form display.
+                        var bolts=new[]{"8F644E","6A8085","BDAC86"};
+                        var stand=new Vector3(-w*.388f,.78f,-.35f);
+                        joinery.Box(stand,new Vector3(w*.097f,.070f,.24f),wood);
+                        for(int pile=0;pile<2;pile++)for(int layer=0;layer<2+pile;layer++)
+                            joinery.Box(stand+new Vector3((pile-.5f)*.32f,.070f+layer*.065f,-.02f),
+                                new Vector3(.29f,.062f,.20f),Mats.Lit(ArtDirection.Hex(bolts[(pile+layer)%bolts.Length])));
+                        var oak=DistrictFinishes.Tile("walnut",Vector2.one*.62f,new Color(1.38f,1.18f,.92f));
+                        var brass=Mats.Lit(ArtDirection.Hex("AA8B5D"),.27f);
+                        var door=new Vector3(0,1.19f,-.42f);
+                        joinery.Box(door+Vector3.up*1.05f,new Vector3(1.36f,.12f,.12f),oak);
+                        joinery.Box(door+Vector3.down*1.05f,new Vector3(1.36f,.12f,.12f),oak);
+                        joinery.Box(door+Vector3.down*.65f,new Vector3(1.21f,.65f,.095f),oak);
+                        joinery.Box(door+Vector3.down*.33f,new Vector3(1.28f,.082f,.14f),oak);
+                        foreach(int side in new[]{-1,1})
+                        {
+                            joinery.Box(door+Vector3.right*side*.62f,new Vector3(.105f,2.11f,.13f),oak);
+                            joinery.Box(door+new Vector3(side*.24f,-.61f,-.076f),new Vector3(.39f,.43f,.054f),wood);
+                        }
+                        joinery.Box(door+new Vector3(0,.27f,-.12f),new Vector3(.047f,1.40f,.055f),oak);
+                        joinery.Box(door+new Vector3(0,.61f,-.12f),new Vector3(1.13f,.045f,.055f),oak);
+                        joinery.Box(door+new Vector3(.42f,-.07f,-.17f),new Vector3(.048f,.28f,.072f),brass);
                     }
                     var frames=new GameObject("营业窗框").transform;frames.SetParent(root,false);
                     joinery.Build(frames,"暖木橱窗压条");_cur.OpenOnly.Add(frames.gameObject);
@@ -189,10 +323,30 @@ namespace PCShopSell.Game.Runtime
                 }
             }
             float canopyWidth=Mathf.Max(2,w*(retail || market ? .95f : .52f));
-            if(market && district < 3)
+            if(tailor)
+            {
+                float pitch=-17f;
+                var pose=Quaternion.Euler(pitch,0,0);
+                var canvas=DistrictFinishes.Tile("sageCloth",new Vector2(2,1),new Color(.50f,.79f,.90f));
+                var piping=Mats.Lit(ArtDirection.Hex("A1A494"));
+                var at=new Vector3(0,3.02f,-.55f);
+                detail.Box(at,new Vector3(canopyWidth,.10f,1.21f),canvas,pose);
+                var lip=at+pose*new Vector3(0,-.09f,-.58f);
+                detail.Box(lip,new Vector3(canopyWidth,.195f,.072f),canvas);
+                detail.Box(lip+new Vector3(0,-.082f,-.04f),new Vector3(canopyWidth,.024f,.027f),piping);
+                foreach(int side in new[]{-1,1})
+                    GardenStructures.Strut(detail,new Vector3(side*w*.42f,2.30f,-.08f),lip+new Vector3(side*w*.42f,0,.05f),.045f,.045f,frame);
+            }
+            else if(market && district < 3)
             {
                 var awning=QuarterModules.Add(root,"TinCanopy",new Vector3(0,2.88f,-.12f),new Vector3(canopyWidth/7.8f,.9f,.90f));
                 if (seed%3==0) QuarterModules.Tint(awning,ArtDirection.Hex("E2CBB3"));
+            }
+            else if(district==3 && retail)
+            {
+                // The upper silver screen shades the window. A narrow reveal keeps the full display visible.
+                var reveal=DistrictFinishes.Tile("brushedAlloy",Vector2.one);
+                detail.Box(new Vector3(0,2.95f,-.30f),new Vector3(canopyWidth,.13f,.56f),reveal);
             }
             else
             {
@@ -201,9 +355,14 @@ namespace PCShopSell.Game.Runtime
                 for(int i=0;i<4;i++)
                     detail.Box(new Vector3((i-1.5f)*canopyWidth/4,2.61f,-.50f),new Vector3(.09f,.11f,1.03f),frame,Quaternion.Euler(-23,0,0));
             }
+            bool gardenRetail=district==3 && retail;
+            if(gardenRetail)accent=ArtDirection.Hex("535E60");
             var fascia=Mats.Lit(p.Kind==PlaceKind.Agency?AgencyColor(p):accent);
-            detail.Box(new Vector3(0,3.34f,-.15f),new Vector3(w*.96f,.76f,.22f),fascia);
-            Prims.SignText(root,p.Name,new Vector3(0,3.34f,-.27f),w*.90f,.54f,ArtDirection.Cream);
+            float signY=tailor?3.46f:3.34f;
+            float signWidth=w*(tailor||gardenRetail?.65f:.96f);
+            float signHeight=gardenRetail?.39f:tailor?.33f:.76f;
+            detail.Box(new Vector3(0,signY,-.15f),new Vector3(signWidth,signHeight,.22f),tailor?wood:fascia);
+            Prims.SignText(root,p.Name,new Vector3(0,signY,-.27f),signWidth*.94f,tailor||gardenRetail?.29f:.54f,ArtDirection.Cream);
             if(p.Kind==PlaceKind.Agency)
                 Prims.SignText(root,_city.AgencyCoverageName(p)+" · 租售办理",new Vector3(0,2.19f,-.29f),w*.6f,.32f,ArtDirection.Cream);
             if(p.Business==GameSession.HospitalBusiness)
@@ -226,7 +385,7 @@ namespace PCShopSell.Game.Runtime
             var open=Prims.Box(root,"Open lamp",new Vector3(w*.40f,2.56f,-.31f),new Vector3(.23f,.13f,.04f),Mats.Unlit(UiGreen));
             var closed=Prims.Box(root,"Closed lamp",open.transform.localPosition,open.transform.localScale,Mats.Lit(ArtDirection.Clay));
             _cur.OpenOnly.Add(open);_cur.ClosedOnly.Add(closed);
-            if(district==3) GardenStructures.StreetFront(root,w,d,h);
+            if(district==3) GardenStructures.StreetFront(root,w,d,h,glassPavilion);
             else QuarterModules.Add(root,"Condenser",new Vector3(w*.26f,h+.39f,d*.61f),Vector3.one,90);
             if(district<3) QuarterModules.Add(root,"ServiceStack",new Vector3(-w*.48f,0,-.04f),new Vector3(1,h/3.05f,.8f));
             QuarterModules.Add(root,"PlantPot",new Vector3(w*.42f,-.06f,-.73f),Vector3.one);

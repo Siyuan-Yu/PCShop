@@ -5,6 +5,8 @@ Shader "PCShop/Old Quarter Canopy"
         [MainTexture] _BaseMap("Hand-painted canopy",2D)="white"{}
         _PaintedCrown("Crown with authored light and shadow", Range(0,1)) = 0
         _PaintGrouping("Leaf colour masses", Range(0,1)) = 0
+        _PetalLift("Sunlit petal pigment", Range(0,.12)) = 0
+        _GroveContrast("Open-grown summer foliage", Range(0,1)) = 0
     }
     SubShader
     {
@@ -22,7 +24,7 @@ Shader "PCShop/Old Quarter Canopy"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             CBUFFER_START(UnityPerMaterial)
-                float _PaintGrouping, _PaintedCrown;
+                float _PaintGrouping, _PaintedCrown, _PetalLift, _GroveContrast;
             CBUFFER_END
             struct A { float4 pos:POSITION;float2 uv:TEXCOORD0; };
             struct V { float4 pos:SV_POSITION;float2 uv:TEXCOORD0;float3 world:TEXCOORD1;float fog:TEXCOORD2; };
@@ -54,6 +56,17 @@ Shader "PCShop/Old Quarter Canopy"
                     half3 sky = lerp(half3(.72h,.78h,.87h),half3(1,1,1),light.shadowAttenuation);
                     half3 hue = lerp(half3(1,1,1),light.color/max(power,.001h),.30h);
                     c.rgb *= illumination * sky * hue * clamp(.23h+power*.78h,.20h,1.13h);
+                    if (_GroveContrast > 0)
+                    {
+                        half warm=smoothstep(.13h,.50h,Luminance(c.rgb));
+                        half3 pigment=lerp(half3(.79h,.85h,.85h),half3(1.17h,1.08h,.92h),warm);
+                        c.rgb*=lerp(half3(1,1,1),pigment,_GroveContrast);
+                    }
+                    if (_PetalLift > 0)
+                    {
+                        half petal = smoothstep(.035h,.16h,Luminance(c.rgb)) * smoothstep(.35h,.80h,power);
+                        c.rgb = saturate(c.rgb + _PetalLift * petal * sqrt(saturate(c.rgb)));
+                    }
                     return half4(MixFog(c.rgb,v.fog),1);
                 }
                 if (_PaintGrouping > 0)

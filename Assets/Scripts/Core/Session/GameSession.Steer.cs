@@ -74,6 +74,8 @@ namespace PCShopSell.Core.Session
 
         // One continuous street surface: lane and paving share the same movement area.
         public const double CityPavingWidth = 1.4;
+        public static double ShopForecourtWidth(Place place) =>
+            place.Id is "expansion_shop_s_market_03" or "expansion_shop_s_newtown_03" ? place.Width+1.1 : 0;
         public static double CityRoadWidth(MapPoint a, MapPoint b)
         {
             bool horizontal=Math.Abs(a.Y-b.Y)<.01;
@@ -85,6 +87,7 @@ namespace PCShopSell.Core.Session
             public MapPoint A, B;
             public double HalfWidth;
             public bool Footpath;
+            public MapPoint Side; // Unit across a rectangular shop forecourt. Zero for rounded corridors.
             public double Scale; // 游戏米 / 画面米
         }
 
@@ -221,7 +224,27 @@ namespace PCShopSell.Core.Session
                 }
             }
             foreach(var place in City.PublicPlaces)
-                if(place.ExplicitEntrance)_corridors.Add(new Corridor { A=City.ViewPosition(place.NodeId), B=DoorOf(place), HalfWidth=1.6, Scale=City.TravelDistanceScale });
+            {
+                if(!place.ExplicitEntrance)continue;
+                var a=City.ViewPosition(place.NodeId);var b=DoorOf(place);double span=ShopForecourtWidth(place);
+                double length=Dist(a,b);
+                var cross=span>0 && length>.01 ? new MapPoint((a.Y-b.Y)/length,(b.X-a.X)/length) : default;
+                _corridors.Add(new Corridor { A=a, B=b, HalfWidth=1.6, Scale=City.TravelDistanceScale,Side=cross });
+                if(span>0 && length>.01)
+                    _corridors.Add(new Corridor { A=a,B=b,HalfWidth=span*.5,Scale=City.TravelDistanceScale,Footpath=true,
+                        Side=cross });
+            }
+            foreach(var place in City.PublicPlaces)
+            {
+                if(!ParkPondWalk.Applies(place))continue;
+                var park=new ParkPondWalk(place.Width,place.Depth,place.Heading,DoorOf(place));
+                _corridors.Add(new Corridor { A=DoorOf(place), B=park.World(park.Centerline(3*ParkPondWalk.Segments/4)),
+                    HalfWidth=ParkPondWalk.EntranceWidth*.5, Scale=City.TravelDistanceScale, Footpath=true });
+                for(int i=0;i<ParkPondWalk.Segments;i++)
+                    _corridors.Add(new Corridor { A=park.World(park.Centerline(i)), B=park.World(park.Centerline(i+1)),
+                        HalfWidth=park.WidthAt((i+.5)*2*Math.PI/ParkPondWalk.Segments)*.5-.05,
+                        Scale=City.TravelDistanceScale, Footpath=true });
+            }
             if (City.IsLakeCity && City.HasPlace("home") && City.GetPlace("home").HousingForm == ResidenceForm.LaneHouse)
             {
                 var origin = DoorOf(City.GetPlace("home"));
@@ -276,6 +299,15 @@ namespace PCShopSell.Core.Session
                 if (c.Footpath && Vehicle != VehicleKind.Walk && Vehicle != VehicleKind.EBike) continue;
                 MapPoint q = ClosestOnSegment(c.A, c.B, want);
                 double dx = want.X - q.X, dy = want.Y - q.Y;
+                if(c.Side.X!=0 || c.Side.Y!=0)
+                {
+                    double side=Math.Max(-c.HalfWidth,Math.Min(c.HalfWidth,dx*c.Side.X+dy*c.Side.Y));
+                    var nearest=new MapPoint(q.X+c.Side.X*side,q.Y+c.Side.Y*side);
+                    double remaining=Dist(want,nearest);
+                    if(remaining<1e-7)return want;
+                    if(remaining<bestOver){clamped=nearest;bestOver=remaining;}
+                    continue;
+                }
                 double distanceSquared = dx * dx + dy * dy;
                 if (distanceSquared <= c.HalfWidth * c.HalfWidth) return want;
                 double d = Math.Sqrt(distanceSquared);

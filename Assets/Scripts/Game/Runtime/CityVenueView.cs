@@ -56,7 +56,7 @@ namespace PCShopSell.Game.Runtime
             float postSize = walkingPark ? .32f : .18f;
             if(civicPark)
             {
-                var wall=DistrictFinishes.Tile("pearlCeramic",new Vector2(4,1));
+                var wall=DistrictFinishes.Tile("pearlCeramic",new Vector2(4,1),ArtDirection.Hex("ECEAE0"));
                 float wing=width*.5f-1.8f;
                 foreach(int side in new[]{-1,1})
                     Prims.Box(root,"池岸景墙",new Vector3(side*(1.65f+wing*.5f),.72f,0),new Vector3(wing,1.28f,.30f),wall);
@@ -135,9 +135,13 @@ namespace PCShopSell.Game.Runtime
         }
         private static void FishingPark(Transform root, float width, float depth)
         {
-            Prims.Box(root,"FishingPondBank",new Vector3(width*.14f,.12f,depth*.63f),new Vector3(width*.63f,.18f,depth*.61f),Mats.Lit(ArtDirection.Cream));
+            var bankStone=DistrictFinishes.Tile("cutStone",new Vector2(width*.63f/7f,depth*.61f/4.9f),ArtDirection.Hex("BAB8B5"));
+            Prims.Box(root,"FishingPondBank",new Vector3(width*.14f,.12f,depth*.63f),new Vector3(width*.63f,.18f,depth*.61f),bankStone);
+            var wetStone=DistrictFinishes.Tile("cutStone",new Vector2(width*.58f/7f,depth*.55f/4.9f),ArtDirection.Hex("757F76"));
+            Prims.Box(root,"FishingWaterline",new Vector3(width*.14f,.214f,depth*.63f),new Vector3(width*.58f+.34f,.012f,depth*.55f+.34f),wetStone);
             Prims.Box(root,"FishingPondWater",new Vector3(width*.14f,.225f,depth*.63f),new Vector3(width*.58f,.025f,depth*.55f),IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.FishingPond));
-            Prims.Box(root,"ParkWalkingTrail",new Vector3(-width*.36f,.12f,depth*.5f),new Vector3(2,.12f,depth*.88f),IndustrialMaterials.Surface("paving",ArtDirection.Cream,new Vector2(.5f,depth/4)));
+            Prims.Box(root,"ParkWalkingTrail",new Vector3(-width*.36f,.12f,depth*.5f),new Vector3(2,.12f,depth*.88f),
+                DistrictFinishes.Tile("cutStone",new Vector2(.40f,depth*.88f/6.8f),ArtDirection.Hex("C3BDB4")));
             Prims.Box(root,"FishingReception",new Vector3(-width*.32f,.6f,depth*.3f),new Vector3(2,1.2f,1.2f),Mats.Lit(ArtDirection.Wood));
             Prims.SignText(root,"青湾垂钓场 · 租杆 / 鱼获回收",new Vector3(-width*.29f,2,depth*.28f),width*.38f,.48f,ArtDirection.Cream);
             for (int i = 0; i < 3; i++)
@@ -155,9 +159,20 @@ namespace PCShopSell.Game.Runtime
                 garden.FlowerBed(new Vector3(-width*.12f+i*width*.13f,.10f,depth*.96f),width*.11f,.65f,i,false);
             var reflections = new LakesideReflections(root,.2375f);
             foreach(float z in new[]{depth*.12f,depth*.69f,depth*.91f})
-                reflections.Add(PaintedWoodland.Plant(root,new Vector3(-width*.46f,.10f,z),6,0,(int)z,false));
+                reflections.Add(PaintedWoodland.Plant(root,new Vector3(-width*.46f,.10f,z),6,0,(int)z,district:1));
             var margin = new StreetPlanting();
             float right = width*.43f, back = depth*.905f;
+            // Keep water beside the three fishing floats clear. Low clumps gather
+            // in the shallow corners and in just one gap between the timber decks.
+            foreach(var fringe in new[]{new Vector2(-.143f,.428f),new Vector2(.025f,.365f),new Vector2(.422f,.614f)})
+            {
+                for(int stem=0;stem<4;stem++)
+                {
+                    float angle=stem*2.4f+fringe.y*8f;
+                    var at=new Vector3(width*fringe.x+.36f*Mathf.Cos(angle),.227f,depth*fringe.y+.28f*Mathf.Sin(angle));
+                    margin.Add(PlantSpecies.Reeds,at,.35f+.10f*(stem%3),.25f+.13f*(stem%2),stem+Mathf.RoundToInt(fringe.y*130));
+                }
+            }
             for (int i=0;i<12;i++)
             {
                 float t=(i+.5f)/12;
@@ -166,7 +181,7 @@ namespace PCShopSell.Game.Runtime
                 var stone=bank+new Vector3(.13f,-.034f,-.20f-i%2*.19f);
                 garden.Lobe(stone,new Vector3(.26f,.073f,.16f),Mats.Lit(ArtDirection.Hex("848777")),i);
             }
-            reflections.Add(PaintedWoodland.Plant(root,new Vector3(right+.46f,.11f,back+.50f),6,0,89,false));
+            reflections.Add(PaintedWoodland.Plant(root,new Vector3(right+.46f,.11f,back+.50f),6,0,89,district:1));
             margin.Build(root,"钓池岸边的蒲草");reflections.Build();
             var wood=IndustrialMaterials.Surface("wood",ArtDirection.Hex("A78052"),Vector2.one);
             var shelter=new Vector3(-width*.29f,0,depth*.28f);
@@ -339,38 +354,118 @@ namespace PCShopSell.Game.Runtime
             Prims.SignText(root, "步道 · 观景平台", new Vector3(0, 2, depth - .13f), width - 1, .65f, ArtDirection.Cream);
         }
 
-        private static void PondWalk(Transform root, Vector3 center, Vector2 radii, float pathWidth, Material paving)
+        private static void PondWalk(Transform root, ParkPondWalk park, Material paving)
         {
-            const int sectors = 64;
-            var vertices = new Vector3[(sectors+1)*2];
+            const int sectors = ParkPondWalk.Segments;
+            const int stride=6;
+            var vertices = new Vector3[(sectors+1)*stride];
             var uv = new Vector2[vertices.Length];
-            var triangles = new int[sectors*6];
+            var triangles = new System.Collections.Generic.List<int>[4];
+            for(int i=0;i<triangles.Length;i++) triangles[i]=new System.Collections.Generic.List<int>();
+            void Strip(int layer,int v)
+            {
+                var t=triangles[layer];
+                t.Add(v);t.Add(v+stride);t.Add(v+1);
+                t.Add(v+1);t.Add(v+stride);t.Add(v+stride+1);
+            }
             float distance = 0;
             for (int i=0;i<=sectors;i++)
             {
-                float angle = i*2*Mathf.PI/sectors;
-                var radial = new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle));
-                var bank = center+new Vector3(radial.x*radii.x,0,radial.z*radii.y);
-                var outward = new Vector3(radial.x/radii.x,0,radial.z/radii.y).normalized;
-                int v = 2*i;
-                vertices[v] = bank;
-                vertices[v+1] = bank+outward*(pathWidth+.16f*Mathf.Sin(angle*3));
-                if(i>0) distance+=Vector3.Distance(bank,vertices[v-2]);
-                uv[v]=new Vector2(distance/2.5f,0);
-                uv[v+1]=new Vector2(distance/2.5f,.7f);
+                var bank=park.Inner(i);var outer=park.Outer(i);
+                int v = stride*i;
+                var inner=new Vector3((float)bank.X,ParkPondWalk.Top,(float)bank.Y);
+                var outside=new Vector3((float)outer.X,ParkPondWalk.Top,(float)outer.Y);
+                var normal=(outside-inner).normalized;
+                // The dry footway follows the exact navigation polygon. Only its bevel
+                // projects over the water, within the old coping's 13 cm overhang.
+                vertices[v]=inner-.13f*normal-.080f*Vector3.up;
+                vertices[v+1]=inner-.070f*normal+.009f*Vector3.up;
+                vertices[v+2]=vertices[v+1];
+                vertices[v+3]=inner+.16f*normal+.006f*Vector3.up;
+                vertices[v+4]=vertices[v+3];
+                vertices[v+5]=outside;
+                if(i>0) distance+=Vector3.Distance(outside,vertices[v-stride+5]);
+                float u=distance/7f;
+                uv[v]=new Vector2(u,.13f);uv[v+1]=new Vector2(u,.17f);
+                uv[v+2]=new Vector2(u,.34f);uv[v+3]=new Vector2(u,.39f);
+                uv[v+4]=new Vector2(u,.09f);
+                uv[v+5]=new Vector2(u,.09f+Vector3.Distance(vertices[v+4],outside)/4.9f);
                 if(i==sectors) continue;
-                int t = i*6;
-                triangles[t]=v; triangles[t+1]=v+2; triangles[t+2]=v+1;
-                triangles[t+3]=v+1; triangles[t+4]=v+2; triangles[t+5]=v+3;
+                // Moss is confined to intermittent stretches of the damp face by reed beds.
+                float angle=i*2*Mathf.PI/sectors;
+                bool moss=(angle>1.01f && angle<1.33f)||(angle>3.72f && angle<4.10f)||(angle>5.61f && angle<5.84f);
+                Strip(moss?3:2,v);Strip(1,v+2);Strip(0,v+4);
             }
-            var mesh = new Mesh { name="河岸公园石板环道", vertices=vertices, triangles=triangles, uv=uv };
+            var mesh = new Mesh { name="河岸公园石板环道", vertices=vertices, uv=uv, subMeshCount=4 };
+            for(int i=0;i<triangles.Length;i++)mesh.SetTriangles(triangles[i],i);
             mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();
             var owner=root.GetComponent<CityLandscapeResources>() ?? root.gameObject.AddComponent<CityLandscapeResources>();
             owner.Owned.Add(mesh);
             var walk = new GameObject("池畔环道",typeof(MeshFilter),typeof(MeshRenderer));
             walk.transform.SetParent(root,false);
             walk.GetComponent<MeshFilter>().sharedMesh=mesh;
-            walk.GetComponent<MeshRenderer>().sharedMaterial=paving;
+            walk.GetComponent<MeshRenderer>().sharedMaterials=new[]{
+                paving, DistrictFinishes.Tile("cutStone",Vector2.one,ArtDirection.Hex("D4D7D2")),
+                DistrictFinishes.Tile("cutStone",Vector2.one,ArtDirection.Hex("748583")),
+                DistrictFinishes.Tile("cutStone",Vector2.one,ArtDirection.Hex("747F64"))};
+        }
+
+        private static void PondSurface(Transform root, Vector3 center, Vector2 radius)
+        {
+            // Use the same vertices as the coping and the traversable stone path.
+            const int sectors=ParkPondWalk.Segments;
+            var vertices=new Vector3[sectors+1];
+            var coordinates=new Vector2[sectors+1];
+            var triangles=new int[sectors*3];
+            vertices[0]=center;
+            coordinates[0]=Vector2.one*.5f;
+            for(int i=0;i<sectors;i++)
+            {
+                float angle=i*2*Mathf.PI/sectors;
+                var ray=new Vector2(Mathf.Cos(angle),Mathf.Sin(angle));
+                coordinates[i+1]=ray*.5f+Vector2.one*.5f;
+                vertices[i+1]=center+new Vector3(ray.x*radius.x,0,ray.y*radius.y);
+                triangles[i*3]=0;
+                triangles[i*3+1]=(i+1)%sectors+1;
+                triangles[i*3+2]=i+1;
+            }
+            var mesh=new Mesh { name="公园椭圆池面", vertices=vertices, uv=coordinates, triangles=triangles };
+            mesh.RecalculateNormals();
+            var owner=root.GetComponent<CityLandscapeResources>() ?? root.gameObject.AddComponent<CityLandscapeResources>();
+            owner.Owned.Add(mesh);
+            var surface=new GameObject("GardenLake",typeof(MeshFilter),typeof(MeshRenderer));
+            surface.transform.SetParent(root,false);
+            surface.GetComponent<MeshFilter>().sharedMesh=mesh;
+            var renderer=surface.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial=IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.Pond);
+            renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+
+            // Floating pads follow two sheltered banks and leave the boat landing and open water free.
+            var pads=new MiniatureDetailMesh();
+            var colors=new[]{Mats.Lit(ArtDirection.Hex("789E65")),Mats.Lit(ArtDirection.Hex("A5B776")),Mats.Lit(ArtDirection.Hex("608B68"))};
+            for(int patch=0;patch<3;patch++)
+            {
+                int count=patch==1?14:9;
+                float clusterAngle=patch==0?.58f:patch==1?2.8f:4.56f;
+                for(int leaf=0;leaf<count;leaf++)
+                {
+                    float angle=clusterAngle+.32f*Mathf.Sin(leaf*2.40f)*Mathf.Sqrt((leaf+.5f)/count);
+                    float radial=.77f+.16f*(.5f+.5f*Mathf.Cos(leaf*1.77f+patch));
+                    var at=center+new Vector3(Mathf.Cos(angle)*radius.x*radial,.025f+.002f*(leaf%4),Mathf.Sin(angle)*radius.y*radial);
+                    float size=.17f+.14f*(.5f+.5f*Mathf.Sin(leaf*8.3f+patch));
+                    var part=pads.Part(colors[(leaf+patch)%colors.Length]);
+                    int first=part.V.Count;
+                    part.V.Add(at);
+                    for(int k=0;k<=10;k++)
+                    {
+                        float a=leaf*2.4f+k*.57f;
+                        part.V.Add(at+new Vector3(Mathf.Cos(a)*size,.012f,Mathf.Sin(a)*size*.84f));
+                        if(k==0)continue;
+                        part.T.Add(first);part.T.Add(first+k+1);part.T.Add(first+k);
+                    }
+                }
+            }
+            pads.Build(root,"岸边睡莲浮叶");
         }
 
         private static void Park(Transform root, float width, float depth, bool rowing)
@@ -378,30 +473,27 @@ namespace PCShopSell.Game.Runtime
             if(width>=30)
             {
                 var stone=DistrictFinishes.Tile("cutStone",new Vector2(width/4,depth/4));
-                var center=new Vector3(0,.29f,depth*.55f);
-                var radius=new Vector2(width*.336f,depth*.306f);
-                PondWalk(root,center,radius,1.55f,DistrictFinishes.Tile("limestoneWalk",Vector2.one,new Color(1.19f,1.23f,1.26f)));
-                var edging=new MiniatureDetailMesh();
-                var coping=Mats.Lit(ArtDirection.Hex("DFE4D9"));
-                var joint=Mats.Lit(ArtDirection.Hex("ABB9AF"));
-                Vector3 Rim(float angle) => center+new Vector3(Mathf.Cos(angle)*radius.x,.045f,Mathf.Sin(angle)*radius.y);
-                for(int i=0;i<80;i++)
-                {
-                    Vector3 a=Rim(i*2*Mathf.PI/80), b=Rim((i+1)*2*Mathf.PI/80);
-                    var direction=b-a;
-                    var orientation=Quaternion.LookRotation(direction,Vector3.up);
-                    edging.Box((a+b)*.5f,new Vector3(.26f,.19f,direction.magnitude+.02f),coping,orientation);
-                    edging.Box(a+Vector3.up*.099f,new Vector3(.24f,.011f,.022f),joint,orientation);
-                }
-                edging.Build(root,"分段浅石驳岸");
-                // A horizontal disk just below the inner paving edge, open underneath to avoid depth fighting.
-                Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.196f,center.z),
-                    new Vector3(2*radius.x+.13f,.045f,2*radius.y+.13f),IndustrialMaterials.GardenWater(IndustrialMaterials.WaterBasin.Pond));
-                var reflections=new LakesideReflections(root,.241f);
+                var park=new ParkPondWalk(width,depth);
+                var center=new Vector3(0,ParkPondWalk.Top,(float)park.CenterZ);
+                var radius=new Vector2((float)park.RadiusX,(float)park.RadiusZ);
+                var pavingTint=ArtDirection.Hex("BAC4DF");
+                PondWalk(root,park,DistrictFinishes.Tile("cutStone",Vector2.one,pavingTint));
+                var footpath=DistrictFinishes.Tile("cutStone",new Vector2(.44f,1.12f),pavingTint);
+                PondSurface(root,new Vector3(0,.241f,center.z),radius+Vector2.one*.06f);
+                var reflections=new LakesideReflections(root,.241f,parkPond:true);
                 var planting=new StreetPlanting(maintained:true);
+                // The entrance spur joins the ring on its near side; a second straight white strip
+                // running the length of the front wall used to read as a gap through the masonry.
+                float gateToRing=(float)park.Centerline(3*ParkPondWalk.Segments/4).Y;
+                Prims.Box(root,"池畔入口步径",new Vector3(0,ParkPondWalk.Top-.026f,gateToRing*.5f),
+                    new Vector3(ParkPondWalk.EntranceWidth,.05f,gateToRing),footpath);
+                float rise=ParkPondWalk.Top-.027f;
+                float rampLength=Mathf.Sqrt(ParkPondWalk.EntranceStart*ParkPondWalk.EntranceStart+rise*rise);
+                var ramp=Prims.Box(root,"入园缓坡",new Vector3(0,(ParkPondWalk.Top+.027f)*.5f-.025f,ParkPondWalk.EntranceStart*.5f),
+                    new Vector3(ParkPondWalk.EntranceWidth,.05f,rampLength),footpath);
+                ramp.transform.localRotation=Quaternion.Euler(-Mathf.Atan2(rise,-ParkPondWalk.EntranceStart)*Mathf.Rad2Deg,0,0);
                 foreach(int side in new[]{-1,1})
                 {
-                    Prims.Box(root,"LakesideWalk",new Vector3(0,.16f,depth*(side<0?.13f:.91f)),new Vector3(width*.9f,.08f,1.8f),stone);
                     QuarterModules.Add(root,"Bench",new Vector3(side*width*.25f,.16f,depth*.86f),Vector3.one,side*18);
                     QuarterModules.Add(root,"Bench",new Vector3(side*width*.33f,.16f,depth*.20f),Vector3.one,180-side*14);
                 }
@@ -420,44 +512,45 @@ namespace PCShopSell.Game.Runtime
                     Prims.Box(boat, "RowboatSeat", new Vector3(0, .17f, .06f), new Vector3(1.1f, .10f, .37f), stone);
                     Prims.Box(boat, "RowboatOar", new Vector3(0, .20f, -.28f), new Vector3(2.3f, .06f, .10f), wood);
                 }
-                for(int i=0;i<16;i++)
+                Vector3 BankAt(float angle,float offset,float y=.09f)
                 {
-                    float angle=i*Mathf.PI/8;
-                    Vector3 bank=new Vector3(Mathf.Cos(angle)*(radius.x+2.15f),0,center.z+Mathf.Sin(angle)*(radius.y+2.10f));
-                    if(i==0 || i==2 || i==3 || i==6 || i==8 || i==10 || i==14)
-                    {
-                        bool willow=i==6;
-                        var foot=willow?bank+new Vector3(-.6f,0,.6f):bank;
-                        var canopy=PaintedWoodland.Plant(root,foot,willow?10:i==3?7:6+i%3,willow?1:0,i+21);
-                        reflections.Add(canopy);
-                    }
-                    for(int j=-1;j<=1;j++)
-                    {
-                        var tangent=new Vector3(-Mathf.Sin(angle),0,Mathf.Cos(angle));
-                        var plant=bank+tangent*j*.91f;
-                        planting.Add(i%3==0?PlantSpecies.Hydrangea:PlantSpecies.SilverGrass,plant,1.6f+j*.13f,.84f,i*9+j);
-                    }
-                    if(i==3 || i==11)
-                        for(int j=0;j<5;j++)
-                        {
-                            float a=angle+j*.045f;
-                            var reed=new Vector3(Mathf.Cos(a)*(radius.x-.35f),.18f,center.z+Mathf.Sin(a)*(radius.y-.35f));
-                            planting.Add(PlantSpecies.Cattail,reed,.77f,1.06f+.16f*(j%2),i*8+j);
-                        }
+                    var point=park.Edge(angle,offset);
+                    return new Vector3((float)point.X,y,(float)point.Y);
                 }
-                // Repeat flower beds along the outer arc. The stone circuit and both entries remain clear.
-                for(int i=0;i<74;i++)
+                var trees=new[]{(angle:.03f,height:6),(angle:.81f,height:5),(angle:1.24f,height:7),
+                    (angle:2.37f,height:9),(angle:3.16f,height:6),(angle:3.86f,height:5),(angle:5.63f,height:6)};
+                for(int i=0;i<trees.Length;i++)
                 {
-                    float angle=(i+.32f)*2*Mathf.PI/74;
-                    float ca=Mathf.Cos(angle), sa=Mathf.Sin(angle);
-                    if(Mathf.Abs(sa)<.16f || Mathf.Abs(ca)<.17f)continue;
-                    var normal=new Vector3(ca/radius.x,0,sa/radius.y).normalized;
-                    var bank=new Vector3(ca*radius.x,.12f,center.z+sa*radius.y);
-                    var foot=bank+normal*(2.5f+.42f*Mathf.Sin(angle*4));
-                    if(foot.z>depth*.91f || foot.z<depth*.12f)continue;
-                    planting.Add(i%9<5?PlantSpecies.Spirea:PlantSpecies.Hydrangea,foot,1.9f,1.05f,i);
-                    planting.Add(i%5==0?PlantSpecies.Boxwood:PlantSpecies.Broadleaf,foot+normal*.9f,1.85f,.83f,i+12);
+                    var tree=trees[i];
+                    var foot=BankAt(tree.angle,(float)park.WidthAt(tree.angle)+1.0f+(i%3)*.26f);
+                    var canopy=PaintedWoodland.Plant(root,foot,tree.height,i==3?1:0,i+21,district:2);
+                    reflections.Add(canopy);
                 }
+                // Gaps between drifts expose the stone circuit. The long axis of each bed follows its local bank.
+                float[] beds={.12f,.63f,1.04f,1.91f,2.28f,2.85f,3.38f,3.99f,4.31f,5.12f,5.57f,6.06f};
+                for(int i=0;i<beds.Length;i++)
+                {
+                    int count=4+(i*3)%7;
+                    for(int j=0;j<count;j++)
+                    {
+                        float spread=Mathf.Sqrt((j+.5f)/count);
+                        float a=beds[i]+.18f*spread*Mathf.Cos(j*2.40f+i);
+                        float outward=(float)park.WidthAt(a)+.85f+.94f*(.5f+.5f*spread*Mathf.Sin(j*2.40f+i));
+                        var foot=BankAt(a,outward);
+                        if(foot.z>depth-.55f || foot.z<.75f || (Mathf.Abs(foot.x)<1.85f && foot.z<center.z))continue;
+                        var species=(i+j)%6==0?PlantSpecies.SilverGrass:i%3==1?PlantSpecies.Hydrangea:
+                            j%3==0?PlantSpecies.Broadleaf:PlantSpecies.Spirea;
+                        float size=1.12f+.52f*(.5f+.5f*Mathf.Sin(i*1.7f+j*3.2f));
+                        planting.Add(species,foot,size,.59f+.33f*spread,i*13+j);
+                    }
+                }
+                foreach(float cluster in new[]{1.17f,3.95f,5.73f})
+                    for(int stem=0;stem<5;stem++)
+                    {
+                        float a=cluster+.085f*Mathf.Sin(stem*2.4f);
+                        var foot=BankAt(a,-.23f-.39f*(.5f+.5f*Mathf.Cos(stem*2.4f)),.18f);
+                        planting.Add(stem==1?PlantSpecies.Reeds:PlantSpecies.Cattail,foot,.60f,.65f+.16f*(stem%3),stem+48);
+                    }
                 planting.Build(root,"池畔花丛与浅水芦苇");reflections.Build();
                 var pergola=new GameObject("LakesidePergola").transform;pergola.SetParent(root,false);pergola.localPosition=new Vector3(-width*.27f,0,depth*.20f);
                 foreach(int x in new[]{-1,1})foreach(int z in new[]{-1,1})

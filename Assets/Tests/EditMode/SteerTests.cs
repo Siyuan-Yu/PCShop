@@ -48,6 +48,37 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void RiverParkFootpathReachesTheWholeRingAndLeavesTheWaterClosed()
+        {
+            using(var session=DistrictProgressionTests.Make())
+            {
+                var place=session.City.GetPlace("life_park");
+                var walk=new ParkPondWalk(place.Width,place.Depth,place.Heading,session.DoorOf(place));
+                var constrain=typeof(GameSession).GetMethod("Constrain",BindingFlags.Instance|BindingFlags.NonPublic);
+                double Deviation(MapPoint desired)
+                {
+                    var actual=(MapPoint)constrain.Invoke(session,new object[]{desired});
+                    return Math.Abs(actual.X-desired.X)+Math.Abs(actual.Y-desired.Y);
+                }
+                var entry=walk.Centerline(3*ParkPondWalk.Segments/4);
+                Assert.That(Deviation(walk.World(new MapPoint(0,entry.Y*.5))),Is.LessThan(.001));
+                for(int i=0;i<ParkPondWalk.Segments;i++)
+                {
+                    var point=walk.World(walk.Centerline(i));
+                    Assert.That(Deviation(point),Is.LessThan(.001));
+                    Assert.That(walk.HeightAt(point.X,point.Y),Is.EqualTo(ParkPondWalk.Top).Within(.001));
+                }
+                var water=walk.World(new MapPoint(0,walk.CenterZ));
+                Assert.That(Deviation(water),Is.GreaterThan(1));
+                Assert.That(walk.HeightAt(water.X,water.Y),Is.Zero);
+                var outerBend=walk.World(new MapPoint(12.208,19.405));
+                Assert.That(walk.HeightAt(outerBend.X,outerBend.Y),Is.EqualTo(ParkPondWalk.Top).Within(.001));
+                Assert.That(session.SetVehicle(VehicleKind.Taxi),Is.True);
+                Assert.That(Deviation(walk.World(walk.Centerline(ParkPondWalk.Segments/4))),Is.GreaterThan(1));
+            }
+        }
+
+        [Test]
         public void Steer_FreeDirection_MovesDiagonally()
         {
             GameSession s = AtStreet("s1");

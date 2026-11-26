@@ -41,8 +41,20 @@ namespace PCShopSell.Game.Runtime
             {
                 case StarterStation:
                     Prims.Box(root,"Station paving",new Vector3(0,.057f,1.9f),new Vector3(width+.25f,.04f,depth+3.3f),QuarterMaterial("Pavement"));
-                    var canopy = QuarterModel(root,"RouteStation","Route");
+                    var canopy = QuarterModel(root,"RouteStation","Station");
                     canopy.transform.localScale = new Vector3(width/7.7f,1,depth/7.7f);
+                    // The paving mesh has nine by twelve stone flags separated by a narrow cut.
+                    // The underlay is nearly flush, so give those real joints a legible mortar tone.
+                    var joints=new MiniatureDetailMesh();
+                    var mortar=Mats.Lit(ArtDirection.Hex("A89078"),.06f);
+                    const float stationWidth=7.86f, front=-3.45f, rear=7.32f;
+                    for(int column=1;column<9;column++)
+                        joints.Box(new Vector3((column/9f-.5f)*stationWidth,.083f,(front+rear)*.5f),
+                            new Vector3(.027f,.003f,rear-front),mortar);
+                    for(int row=1;row<12;row++)
+                        joints.Box(new Vector3(0,.084f,Mathf.Lerp(front,rear,row/12f)),
+                            new Vector3(stationWidth,.003f,.027f),mortar);
+                    joints.Build(canopy.transform,"站台石板勾缝");
                     var hit = root.gameObject.AddComponent<BoxCollider>();
                     hit.center = new Vector3(0,1.4f,depth/2);
                     hit.size = new Vector3(width,2.8f,depth);

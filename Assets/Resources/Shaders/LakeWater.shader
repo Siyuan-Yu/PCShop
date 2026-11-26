@@ -97,6 +97,24 @@ Shader "PCShop/LakeWater"
                 return lerp(.019,crest*(1.-smoothstep(.45,1.,span))*smoothstep(.29,.81,seed),resolved);
             }
 
+            // A bright reflected sky patch is carried by a handful of broad facets.
+            // Each has a soft shoulder and a smaller silver core. At distant zoom the
+            // area naturally dissolves into the broader water colour.
+            half SkyCrests(float2 p,float time)
+            {
+                float2 grid=p*float2(1.14,2.82);
+                float2 id=floor(grid);
+                float seed=RippleSeed(id+19.2);
+                float2 middle=.32+.36*float2(RippleSeed(id+7.8),RippleSeed(id+36.4));
+                middle.y+=.047*sin(time*.65+seed*17.);
+                float2 delta=(frac(grid)-middle)*float2(3.12,4.22);
+                float radius=length(delta),aa=clamp(fwidth(radius),.055,.84);
+                half shoulder=1.-smoothstep(.80-aa*.5,.80+aa*.5,radius);
+                half core=1.-smoothstep(.38-aa*.5,.38+aa*.5,radius);
+                half resolved=1.-smoothstep(.50,1.35,max(fwidth(grid.x),fwidth(grid.y)));
+                return lerp(.018,(shoulder*.82+core*.71)*smoothstep(.38,.63,seed),resolved);
+            }
+
             half4 frag(Varyings i):SV_Target
             {
                 float2 p=i.world.xz;float time=_PCShopWorldVisualTime;
@@ -166,6 +184,78 @@ Shader "PCShop/LakeWater"
                 color+=sun.color*(.004*glint+.013*brokenLight+.12*spec)*sun.shadowAttenuation;
                 color+=day*sun.shadowAttenuation*(scatter*(half3(.016,.023,.023)+lightPatch*half3(.38,.28,.155))
                     +_LakeShore*silver*half3(.032,.027,.017));
+                if(_Basin>.5 && _Basin<1.5)
+                {
+                    float2 pond=i.uv*2.-1.;
+                    half bank=smoothstep(.55,.98,length(pond)+.05*(b.g-.5));
+                    half canopy=bank*(.34+.66*smoothstep(-.35,.63,pond.y-.45*pond.x));
+                    half3 teal=lerp(half3(.026,.194,.222),half3(.077,.287,.306),
+                        smoothstep(-.39,.56,pond.x*.5-pond.y+gust.g*.34));
+                    teal=lerp(teal,half3(.074,.175,.110)*(.80+.38*b.g),canopy);
+                    color=lerp(color,teal*dusk*lerp(.62,1.,sun.shadowAttenuation),.79*(1.-reflection.a*.71));
+                    // Tree shadows come from the park's real sun and foliage. Ripples
+                    // break up their reflected colour, especially at the sheltered bank.
+                    half inShade=1.-sun.shadowAttenuation;
+                    half reflectedLeaf=reflection.a*smoothstep(.003,.068,
+                        reflection.g-max(.91*reflection.r,1.04*reflection.b));
+                    half leafInk=saturate(inShade*.78+reflectedLeaf*.70)*(.42+.58*bank);
+                    half dappling=smoothstep(.30,.69,b.g*.54+a.r*.46);
+                    color=lerp(color,color*half3(.56,.77,.64)+half3(.003,.010,.002)*day,
+                        leafInk*(.56+.44*dappling));
+
+                    // The broad patch breaks into short, screen-horizontal strokes at the regular play zoom.
+                    // Coarse ripples survive minification; the finer layer dissolves into them as we zoom out.
+                    float2 vertical=ddy(pond);
+                    float2 across=float2(vertical.y,-vertical.x)*rsqrt(max(dot(vertical,vertical),.00000001));
+                    half column=dot(pond,across)+.08*sin(pond.y*4.4+gust.r);
+                    half openSky=exp2(-34.*column*column)
+                        *(1.-smoothstep(.62,.96,length(pond)));
+                    float2 mirror=rippleSpace+float2(eddy.y*.76,eddy.x*.29);
+                    half coarse=SurfaceFlecks(mirror+float2(1.7,3.4),time,.61);
+                    half fine=SurfaceFlecks(mirror+float2(4.4,1.8),time,1.12);
+                    half wideFleck=SurfaceFlecks(mirror+float2(6.2,-1.9),time,.32);
+                    half wave=.5+.5*sin(rippleSpace.y*2.7+.36*sin(rippleSpace.x*.87)+3.4*gust.g+time*.29);
+                    half lane=pow(wave,5)*(.28+.72*smoothstep(.29,.73,patch));
+                    // Smaller open-sky gaps interrupt the main highlight. The broad
+                    // flecks remain visible when the pond occupies only a few dozen pixels.
+                    half skyGaps=(1.-smoothstep(.65,.96,length(pond)))
+                        *smoothstep(.60,.91,patch)*(.33+.67*windBreak);
+                    half skyWindow=saturate(openSky+skyGaps*.52)*(1.-reflectedLeaf*.65);
+                    color+=day*(1.-_CityRain*.74)*sun.shadowAttenuation*skyWindow
+                        *((coarse*1.12+fine*.42+wideFleck*.84)*(.48+.52*wave)+.076*lane)*half3(.73,.88,.85);
+                    // Only a fraction of the wavelets catch the brightest patch of open sky.
+                    // Keep a small, separately antialiased core inside those short crests.
+                    half shine=day*(1.-_CityRain*.84)*sun.shadowAttenuation*skyWindow;
+                    color+=shine*SkyCrests(mirror,time)*half3(1.20,1.12,.93);
+                }
+                if (_Basin>2.5)
+                {
+                    float2 edgeUV=abs(i.uv*2.-1.);
+                    half rim=smoothstep(.69,.99,max(edgeUV.x,edgeUV.y));
+                    half windPool=smoothstep(.23,.78,patch*.58+gust.g*.42);
+                    half3 blueGreen=lerp(half3(.019,.063,.070),half3(.086,.206,.196),windPool);
+                    half shelf=smoothstep(.32,.75,a.r*.6+b.g*.4);
+                    blueGreen=lerp(blueGreen,half3(.087,.140,.092)*(.76+.40*shelf),rim*(.45+.36*shelf));
+                    half daylight=day*(1.-_CityRain*.58);
+                    half reflectedTrees=reflection.a*smoothstep(.004,.074,reflection.g-max(.89*reflection.r,reflection.b));
+                    color=lerp(color,blueGreen*dusk*lerp(.58,1.,sun.shadowAttenuation),
+                        .84*(1.-.64*reflectedTrees));
+                    half shade=saturate((1.-sun.shadowAttenuation)*.78+reflectedTrees*.90);
+                    color*=lerp(half3(1.,1.,1.),half3(.52,.64,.56),shade*(.73+.27*shelf));
+                    float2 basin=i.uv*2.-1.;
+                    float2 vertical=ddy(basin);
+                    float2 across=float2(vertical.y,-vertical.x)*rsqrt(max(dot(vertical,vertical),1.e-8));
+                    half axis=dot(basin,across)-.13+.065*sin(basin.y*5.7+gust.r);
+                    half glintPath=exp2(-27.*axis*axis)*(1.-smoothstep(.68,1.,max(edgeUV.x,edgeUV.y)));
+                    half crest=SurfaceFlecks(rippleSpace+float2(2.9,4.1)+eddy*.40,time,.38);
+                    half fineCrest=SurfaceFlecks(rippleSpace+float2(-3.9,7.2),time,.72);
+                    half wavePeak=pow(.5+.5*sin(rippleSpace.y*2.4+gust.g*5.+.36*time),5);
+                    color+=daylight*sun.shadowAttenuation*(1.-.76*reflectedTrees)
+                        *((.025+.060*windPool)*fineCrest+glintPath*((1.02*crest+.48*fineCrest)*(.26+.74*wavePeak)+.038*wavePeak))
+                        *half3(1.00,.89,.61);
+                    color+=daylight*sun.shadowAttenuation*(1.-.82*reflectedTrees)*glintPath
+                        *SkyCrests(rippleSpace+eddy*.46+float2(7.7,-3.1),time)*half3(1.27,1.08,.70);
+                }
                 // In a district overview individual ripples are subpixel. Broader wind lanes
                 // carry the reflected sky between the tree-lined bank and open water.
                 if(_LakeShore>.5 && clearDay>.001)

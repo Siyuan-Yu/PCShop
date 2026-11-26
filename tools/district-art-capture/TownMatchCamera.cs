@@ -11,8 +11,9 @@ using UnityEngine;
 
 // Install in Assets/Editor in the review copy only.
 [InitializeOnLoad]
-public static class TownMatchCamera
+public static partial class TownMatchCamera
 {
+    static partial void CaptureWalking(GameController game,string folder);
     private const string Pending = "PCShop.DistrictArtCapture";
     private static readonly string[] Regions = { "outskirts", "community", "park", "garden" };
     private static readonly (string id, float size)[] Sites =
@@ -62,7 +63,7 @@ public static class TownMatchCamera
                 {
                     var session = controller.GetMethod("NewSession",flags).Invoke(game,new object[] { (ulong?)914 });
                     controller.GetMethod("StartSession",flags).Invoke(game,new object[] { session,0,null });
-                    EditorApplication.delayCall += () => Capture(game,true);
+                    game.StartCoroutine(CaptureAfterLoadingScreen(game));
                 }
                 catch (Exception ex) { Fail(ex); }
             };
@@ -75,6 +76,16 @@ public static class TownMatchCamera
     {
         Debug.LogException(ex);
         EditorApplication.Exit(1);
+    }
+
+    private static System.Collections.IEnumerator CaptureAfterLoadingScreen(GameController game)
+    {
+        // EnterFirstSession closes its loading window one player frame after the ready callback.
+        // Wait for its finally block, then let Unity release the dismissed window and lay out the HUD.
+        var entering = typeof(GameController).GetField("_enteringWorld", BindingFlags.Instance | BindingFlags.NonPublic);
+        while ((bool)entering.GetValue(game)) yield return null;
+        yield return null;
+        Capture(game,true);
     }
 
     private static void Capture(GameController game, bool baked)
@@ -92,6 +103,8 @@ public static class TownMatchCamera
             session.Leave();
             session.Clock.Restore(session.Clock.Today,630);
             game.Step(0);
+            var playHud=game.Ui.Canvases.Where(c=>c.gameObject.activeInHierarchy && c.isRootCanvas &&
+                c.renderMode==RenderMode.ScreenSpaceOverlay).ToArray();
             foreach (var canvas in game.Ui.Canvases) canvas.gameObject.SetActive(false);
             game.World.Root.SetActive(true);
             var cam = game.Cam;
@@ -106,10 +119,24 @@ public static class TownMatchCamera
                 session.ArriveAtNode(site.Place.NodeId);
                 game.Step(.03f);
                 game.SnapCamera();
+                // Prime the first offscreen render before recording either version of the entrance.
+                SaveWithHud(game,cam,"hud"+tag,playHud,warmup:i==0);
                 Save(cam,"play"+tag);
                 var center = site.Root.transform.TransformPoint(new Vector3(0,2.2f,(float)site.Place.Depth*.25f));
                 Shot(cam,tag+"A",center,(float)site.Place.Heading+34,36,Sites[i].size);
                 Shot(cam,tag+"B",center,(float)site.Place.Heading-37,31,Sites[i].size*.91f);
+                if(i>0)
+                {
+                    // Supplemental closer views keep the subject large enough to inspect painted material.
+                    // The fixed street and survey views above/below remain the baseline for layout checks.
+                    Shot(cam,tag+"DetailA",center,(float)site.Place.Heading+34,36,Sites[i].size*.81f);
+                    Shot(cam,tag+"DetailB",center,(float)site.Place.Heading-37,31,Sites[i].size*.76f);
+                    if(i==1)
+                    {
+                        var yard=site.Root.transform.TransformPoint(new Vector3(-(float)site.Place.Width*.5f-1.15f,1.18f,(float)site.Place.Depth*.70f));
+                        Shot(cam,"02Cycle",yard,(float)site.Place.Heading+101,15,2.25f,standOff:3.7f);
+                    }
+                }
                 var sites = game.World.Places.Values.Where(v=>game.City.AgencyDistrictFor(v.Place.StreetId)?.id==Regions[i]).ToArray();
                 var corners = sites.SelectMany(v=>new[] {
                     v.Root.transform.TransformPoint(new Vector3(-(float)v.Place.Width*.5f,0,0)),
@@ -123,7 +150,43 @@ public static class TownMatchCamera
                     float size = corners.Select(p=>inverse*(p-origin)).Max(p=>Mathf.Max(Mathf.Abs(p.x)*9/16,Mathf.Abs(p.y)));
                     Shot(cam,"wide"+tag+(j==0?"A":"B"),origin,yaw,pitch,size*1.04f+6);
                 }
-                if(i==0) continue;
+                if(i==0)
+                {
+                    Shot(cam,"road-west",new Vector3(-577.39f,.10f,-544.19f),193,50,11);
+                    Shot(cam,"road-east",new Vector3(-422.34f,.10f,-482.10f),193,50,11);
+                    session.Clock.Restore(session.Clock.Today,554);
+                    game.Step(.03f);
+                    Shot(cam,"oldtown-home",new Vector3(-438.23760f,2.50000f,-527.19120f),210.72770f,34,16);
+                    Shot(cam,"oldtown-yard",new Vector3(-445.28160f,1.60000f,-539.53550f),34,36,17);
+                    Shot(cam,"oldtown-wide",new Vector3(-493.78710f,6.00005f,-517.48000f),193,45,69.94250f);
+                    // Small registration corrections from the common corners of the approved paintings.
+                    // Keep the three original survey shots above as the cross-revision comparison.
+                    void Registered(string name,Vector3 point,float yaw,float pitch,float size,float shiftX,float shiftY)
+                    {
+                        var frame=Quaternion.Euler(pitch,yaw,0);
+                        var offset=frame*new Vector3(-shiftX,shiftY,0)*(2*size/675f);
+                        Shot(cam,"matched-"+name,point+offset,yaw,pitch,size);
+                    }
+                    Registered("home",new Vector3(-438.23760f,2.50000f,-527.19120f),210.72770f,34.40f,16,1.9f,4.95f);
+                    Registered("yard",new Vector3(-445.28160f,1.60000f,-539.53550f),34,36.50f,17,.89f,8.04f);
+                    Registered("wide",new Vector3(-493.78710f,6.00005f,-517.48000f),194.10f,44.0f,68.90f,-5.15f,-6.51f);
+                    if(Environment.GetEnvironmentVariable("PCSHOP_TOWN_ORBIT")=="1")
+                    {
+                        var pivot=new Vector3(-438.23760f,2.50000f,-527.19120f);
+                        for(int frame=0;frame<64;frame++)
+                        {
+                            float turn=Mathf.Sin(frame*2*Mathf.PI/64);
+                            Shot(cam,"orbit/home-"+frame.ToString("D2"),pivot,210.72770f+turn*18,34.4f+turn*1.1f,16,1024);
+                        }
+                    }
+                    var fishing=game.World.Places["life_fishing"];
+                    var fishingCenter=fishing.Root.transform.TransformPoint(new Vector3(0,1,(float)fishing.Place.Depth*.48f));
+                    Shot(cam,"fishing-a",fishingCenter,(float)fishing.Place.Heading+34,36,16);
+                    Shot(cam,"fishing-b",fishingCenter,(float)fishing.Place.Heading-37,33,16);
+                    session.Clock.Restore(session.Clock.Today,630);
+                    game.Step(.03f);
+                    continue;
+                }
                 if(i==1 || i==3)
                 {
                     string id=i==1?"life_community_ferris":"life_garden_amusement";
@@ -159,28 +222,65 @@ public static class TownMatchCamera
                 var stand=track.Tier==0?new Vector3(-35,1,-19):new Vector3(-10,1,0);
                 Shot(cam,track.Id+"A",race.transform.TransformPoint(stand),154,36,26);
                 if(track.Tier>0)
+                {
+                    // Same lens and anchor for each revision of its concept panel. A and Front are kept for continuity.
+                    float halfHeight=track.Tier==1?19.7f:track.Tier==2?18f:15.2f;
+                    Shot(cam,track.Id+"Stand",race.transform.TransformPoint(stand+new Vector3(5,1,2.6f)),154,24,halfHeight);
+                }
+                if(track.Tier>0)
                     Shot(cam,track.Id+"Front",race.transform.TransformPoint(stand+new Vector3(6,2.3f,2)),race.transform.eulerAngles.y-26,25,14.8f);
                 Shot(cam,track.Id+"B",race.transform.position,210,48,(float)Math.Max(track.Width*.38,track.Depth*.65));
                 Shot(cam,track.Id+"C",entrance.Entrance+Vector3.up*2,32,34,16);
                 var bend=track.Points[track.Points.Length/3];
                 Shot(cam,track.Id+"D",race.transform.TransformPoint(new Vector3((float)bend.X,1,(float)bend.Y)),205,38,22);
             }
+            if(baked && game.World.Root.TryGetComponent<BakedCityMap>(out var map))
+                Debug.Log($"CAPTURE_MAP version={map.Version} trial={map.Trial} source={map.SourceHash}");
+            CaptureWalking(game,Output);
             Debug.Log($"CONCEPT_CAMERA_CAPTURED baked={baked} sites={manifest.Count}");
             EditorApplication.Exit(0);
         }
         catch (Exception ex) { Fail(ex); }
     }
 
-    private static void Shot(Camera cam, string name, Vector3 point, float yaw, float pitch, float size, int width=1600)
+    private static void Shot(Camera cam, string name, Vector3 point, float yaw, float pitch, float size, int width=1600,float? standOff=null)
     {
         cam.orthographic=true;
         cam.orthographicSize=size;
         cam.transform.rotation=Quaternion.Euler(pitch,yaw,0);
-        cam.transform.position=point-cam.transform.forward*Mathf.Max(30,size*2.6f);
+        cam.transform.position=point-cam.transform.forward*(standOff??Mathf.Max(30,size*2.6f));
         Save(cam,name,width);
     }
 
-    private static void Save(Camera cam, string name, int width=1600)
+    private static void SaveWithHud(GameController game, Camera cam,string name,Canvas[] layers, bool warmup)
+    {
+        var prior=layers.Select(c=>(camera:c.worldCamera,distance:c.planeDistance)).ToArray();
+        try
+        {
+            foreach(var layer in layers)
+            {
+                layer.gameObject.SetActive(true);
+                layer.renderMode=RenderMode.ScreenSpaceCamera;
+                layer.worldCamera=cam;
+                layer.planeDistance=2f;
+            }
+            game.Ui.Update(0);
+            Canvas.ForceUpdateCanvases();
+            Save(cam,name,warmup:warmup);
+        }
+        finally
+        {
+            for(int i=0;i<layers.Length;i++)
+            {
+                layers[i].worldCamera=prior[i].camera;
+                layers[i].planeDistance=prior[i].distance;
+                layers[i].renderMode=RenderMode.ScreenSpaceOverlay;
+                layers[i].gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private static void Save(Camera cam, string name, int width=1600, bool warmup=false)
     {
         int height=width*9/16;
         var target=RenderTexture.GetTemporary(width,height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB,4);
@@ -190,6 +290,7 @@ public static class TownMatchCamera
         try
         {
             cam.targetTexture=target;
+            if (warmup) cam.Render();
             cam.Render();
             RenderTexture.active=target;
             image.ReadPixels(new Rect(0,0,width,height),0,0);

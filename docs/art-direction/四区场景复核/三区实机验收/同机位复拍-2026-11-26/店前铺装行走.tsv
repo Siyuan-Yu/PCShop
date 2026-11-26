@@ -1,0 +1,25 @@
+shop	vehicle	check	result	measure
+expansion_shop_s_market_03	Walk	visit--3.4000	PASS	local_z=-1.1000 error_m=0.0000
+expansion_shop_s_market_03	Walk	facade-stop--3.4000	PASS	maximum_local_z=0.0000
+expansion_shop_s_market_03	Walk	apron-bound--3.4000	PASS	max_abs_local_x=4.5500 edge=4.5500
+expansion_shop_s_market_03	Walk	visit-0.0000	PASS	local_z=-1.1000 error_m=0.0000
+expansion_shop_s_market_03	Walk	facade-stop-0.0000	PASS	maximum_local_z=0.0000
+expansion_shop_s_market_03	Walk	visit-3.4000	PASS	local_z=-1.1000 error_m=0.0000
+expansion_shop_s_market_03	Walk	facade-stop-3.4000	PASS	maximum_local_z=0.0000
+expansion_shop_s_market_03	Walk	apron-bound-3.4000	PASS	max_abs_local_x=4.5500 edge=4.5500
+expansion_shop_s_market_03	Walk	overall	PASS	ticks=197 return_error_m=0.0000
+expansion_shop_s_newtown_03	Walk	visit--3.4000	PASS	local_z=-1.1001 error_m=0.0000
+expansion_shop_s_newtown_03	Walk	facade-stop--3.4000	PASS	maximum_local_z=0.0000
+expansion_shop_s_newtown_03	Walk	apron-bound--3.4000	PASS	max_abs_local_x=4.5500 edge=4.5500
+expansion_shop_s_newtown_03	Walk	visit-0.0000	PASS	local_z=-1.1000 error_m=0.0000
+expansion_shop_s_newtown_03	Walk	facade-stop-0.0000	PASS	maximum_local_z=0.0000
+expansion_shop_s_newtown_03	Walk	visit-3.4000	PASS	local_z=-1.1000 error_m=0.0000
+expansion_shop_s_newtown_03	Walk	facade-stop-3.4000	PASS	maximum_local_z=0.0000
+expansion_shop_s_newtown_03	Walk	apron-bound-3.4000	PASS	max_abs_local_x=4.5500 edge=4.5500
+expansion_shop_s_newtown_03	Walk	overall	PASS	ticks=198 return_error_m=0.0000
+expansion_shop_s_market_03	Car	drive-street	PASS	out_and_back_m=12.0000
+expansion_shop_s_market_03	Car	pedestrian-only-wing	PASS	gap_m=2.0000 local_x=3.4000 local_z=-3.1000
+expansion_shop_s_market_03	Car	overall	PASS	ticks=127 return_error_m=0.0240
+expansion_shop_s_newtown_03	Car	drive-street	PASS	out_and_back_m=12.0000
+expansion_shop_s_newtown_03	Car	pedestrian-only-wing	PASS	gap_m=2.0405 local_x=3.3758 local_z=-3.1403
+expansion_shop_s_newtown_03	Car	overall	PASS	ticks=127 return_error_m=0.0000
