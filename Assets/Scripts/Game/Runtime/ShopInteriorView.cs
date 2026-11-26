@@ -420,7 +420,7 @@ namespace PCShopSell.Game.Runtime
         private void BuildStreet(float w, float d, float doorX)
         {
             float x0 = -StreetExtent, x1 = w + StreetExtent, len = x1 - x0, cx = (x0 + x1) / 2;
-            Prims.Box(_root, "Outside", new Vector3(cx, -0.12f, d / 2 - 6f), new Vector3(len + 20f, 0.05f, d + 40f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f)));
+            Prims.Box(_root, "Outside", new Vector3(cx, -0.12f, d / 2 - 6f), new Vector3(len + 20f, 0.05f, d + 40f), Mats.Lit(ArtDirection.Hex("A69D90"),.08f));
             Prims.Box(_root, "Sidewalk", new Vector3(cx, -0.03f, CurbZ / 2), new Vector3(len, 0.06f, -CurbZ), Mats.Lit(new Color(0.55f, 0.54f, 0.52f), 0.15f));
             Material seam = Mats.Lit(new Color(0.45f, 0.44f, 0.43f), 0.1f);
             for (float x = x0 + 1.5f; x < x1; x += 1.5f)
@@ -454,20 +454,10 @@ namespace PCShopSell.Game.Runtime
                 _streetLamps.Add(light);
             }
 
-            // 右边隔壁：一家奶茶店的门面（在店的右后方，不挡视线）
-            float nx0 = w + 0.15f, nw = StreetExtent - 0.15f;
-            Prims.Box(_root, "NeighborR", new Vector3(nx0 + nw / 2, 1.7f, d / 2), new Vector3(nw, 3.4f, d), Mats.Lit(new Color(0.78f, 0.7f, 0.6f), 0.1f));
-            Prims.Box(_root, "NeighborRWindow", new Vector3(nx0 + 2.6f, 1.2f, -0.02f), new Vector3(3.2f, 1.6f, 0.04f), Mats.Glow(new Color(0.35f, 0.42f, 0.48f), new Color(1.4f, 1.2f, 0.8f), false));
-            Prims.Box(_root, "NeighborRDoor", new Vector3(nx0 + 5.0f, 1.0f, -0.02f), new Vector3(1.1f, 2.0f, 0.04f), Mats.Lit(new Color(0.3f, 0.22f, 0.18f), 0.3f));
-            Prims.Box(_root, "NeighborRSign", new Vector3(nx0 + 3.6f, 2.75f, -0.05f), new Vector3(5.2f, 0.55f, 0.08f), Mats.Glow(new Color(0.85f, 0.35f, 0.5f), new Color(2.6f, 0.8f, 1.3f), false));
-            Prims.Box(_root, "NeighborRAwning", new Vector3(nx0 + 3.6f, 2.35f, -0.45f), new Vector3(5.4f, 0.08f, 0.9f), Mats.Lit(new Color(0.75f, 0.2f, 0.25f), 0.2f));
-            Prims.Box(_root, "NeighborR2", new Vector3(nx0 + 9.6f, 1.6f, -0.02f), new Vector3(3.6f, 1.4f, 0.04f), Mats.Glow(new Color(0.3f, 0.35f, 0.3f), new Color(0.6f, 1.3f, 0.7f), false));
-
-            // 左边：矮花坛 + 共享单车，不挡柜台
-            Material planter = Mats.Lit(new Color(0.5f, 0.48f, 0.45f), 0.1f);
-            Material bush = Mats.Lit(new Color(0.24f, 0.46f, 0.26f), 0.2f);
-            Prims.Box(_root, "PlanterL", new Vector3(-1.6f, 0.2f, d / 2), new Vector3(2.4f, 0.4f, d - 0.6f), planter);
-            Prims.Box(_root, "BushL", new Vector3(-1.6f, 0.5f, d / 2), new Vector3(2.1f, 0.3f, d - 0.9f), bush);
+            // Keep the active sidewalk and its passers-by visible from the shop entrance.
+            // The cutaway's open side needs a low silhouette even when the camera is rotated.
+            foreach (float px in new[]{-2.0f,w+1.9f})
+                DistrictRoomArt.Plant(_root,new Vector3(px,0,-1.0f),.92f);
             Material bike = Mats.Lit(new Color(0.95f, 0.75f, 0.1f), 0.3f);
             for (int i = 0; i < 3; i++)
             {
@@ -593,9 +583,12 @@ namespace PCShopSell.Game.Runtime
             _cars.Add(new Walker { Go = root, Target = Origin + new Vector3(eastbound ? xb : xa, 0, z), Speed = 6f + (float)_rng.NextDouble() * 4f });
         }
 
-        public ShopInteriorView(Transform parent, ShopSize size)
+        public int District { get; }
+
+        public ShopInteriorView(Transform parent, ShopSize size, int district = 0)
         {
             _moveAlongRoute = MoveOwner;
+            District = district;
             Size = size;
             _root = new GameObject("ShopInterior").transform;
             _root.SetParent(parent, false);
@@ -607,34 +600,24 @@ namespace PCShopSell.Game.Runtime
             Depth = (float)room.Depth;
             float w = Width, d = Depth;
 
-            Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(ArtDirection.Hex("B4AA95"), 0.12f), true);
-            Material tileMat = IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B6B1A4"), Vector2.one);
-            const float tile = 0.8f;
-            for (int tx = 0; tx * tile < w; tx++)
-            for (int tz = 0; tz * tile < d; tz++)
-            {
-                float sx = Mathf.Min(tile, w - tx * tile), sz = Mathf.Min(tile, d - tz * tile);
-                Prims.Box(_root, "Tile", new Vector3(tx * tile + sx / 2, 0.005f, tz * tile + sz / 2), new Vector3(sx - 0.012f, 0.012f, sz - 0.012f), tileMat);
-            }
+            DistrictRoomArt.Build(_root,w,d,district,false);
+            // Unpowered rooms keep their natural window light, while cove diffusers lose emission.
+            foreach(var renderer in _root.GetComponentsInChildren<Renderer>())
+                if(renderer.sharedMaterial==DistrictRoomArt.Warm) _ceilingDiffusers.Add(renderer);
+            foreach(var lamp in _root.GetComponentsInChildren<Light>())
+                if(lamp.type==LightType.Spot && lamp.GetComponent<InteriorWindowLight>()==null) _ceilingLights.Add(lamp);
             BuildStreet(w, d, w - 3.0f);
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("brick", ArtDirection.Hex("B5AA96"), new Vector2(w / 3, 1.5f)));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B2B4AC"), new Vector2(d / 3, 1.5f)));
-            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));
-            Prims.Box(_root, "WallDadoBack", new Vector3(w / 2, 0.38f, d - 0.015f), new Vector3(w, 0.76f, 0.025f), Mats.Lit(ArtDirection.Ink, .25f, .2f));
-            Prims.Box(_root, "WallDadoRight", new Vector3(w - 0.015f, 0.38f, d / 2), new Vector3(0.025f, 0.76f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));
-            Prims.Box(_root, "BrassRailBack", new Vector3(w / 2, 0.78f, d - 0.035f), new Vector3(w, 0.035f, 0.035f), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
-            Prims.Box(_root, "BrassRailRight", new Vector3(w - 0.035f, 0.78f, d / 2), new Vector3(0.035f, 0.035f, d), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
             // 大门开在货架这一侧（右前方），收银台在左边：顾客进门先逛货架，再回左边结账
             float doorX = w - 3.0f;
-            Material lowWall = Mats.Lit(ArtDirection.Ink, .25f, .2f);
-            Prims.Box(_root, "WallFrontLowA", new Vector3((doorX - 0.7f) / 2, 0.3f, -0.05f), new Vector3(doorX - 0.7f, 0.6f, 0.1f), lowWall);
-            Prims.Box(_root, "WallFrontLowB", new Vector3((doorX + 0.7f + w) / 2, 0.3f, -0.05f), new Vector3(w - doorX - 0.7f, 0.6f, 0.1f), lowWall);
+            Material lowWall = DistrictRoomArt.Finish(district>=2?"958678":"A09D8C");
+            Prims.Box(_root, "WallFrontLowA", new Vector3((doorX - 0.7f) / 2, 0.10f, -0.05f), new Vector3(doorX - 0.7f, 0.20f, 0.1f), lowWall);
+            Prims.Box(_root, "WallFrontLowB", new Vector3((doorX + 0.7f + w) / 2, 0.10f, -0.05f), new Vector3(w - doorX - 0.7f, 0.20f, 0.1f), lowWall);
             Prims.Box(_root, "DoorMat", new Vector3(doorX, 0.012f, 0.45f), new Vector3(1.3f, 0.014f, 0.8f), Mats.Lit(new Color(0.35f, 0.18f, 0.16f)));
             Material doorPost = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
-            Prims.Box(_root, "DoorPostL", new Vector3(doorX - 0.72f, 0.7f, -0.05f), new Vector3(0.1f, 1.4f, 0.14f), doorPost);
-            Prims.Box(_root, "DoorPostR", new Vector3(doorX + 0.72f, 0.7f, -0.05f), new Vector3(0.1f, 1.4f, 0.14f), doorPost);
-            _signOpen = Prims.Box(_root, "DoorSignOpen", new Vector3(doorX, 1.55f, -0.05f), new Vector3(1.5f, 0.2f, 0.05f), Mats.Glow(new Color(0.25f, 0.8f, 0.4f), new Color(0.5f, 2.6f, 0.9f), false));
-            _signClosed = Prims.Box(_root, "DoorSignClosed", new Vector3(doorX, 1.55f, -0.05f), new Vector3(1.5f, 0.2f, 0.05f), Mats.Lit(new Color(0.32f, 0.12f, 0.12f), 0.2f));
+            Prims.Box(_root, "DoorPostL", new Vector3(doorX - 0.72f, 1.13f, -0.05f), new Vector3(0.075f, 2.26f, 0.095f), doorPost);
+            Prims.Box(_root, "DoorPostR", new Vector3(doorX + 0.72f, 1.13f, -0.05f), new Vector3(0.075f, 2.26f, 0.095f), doorPost);
+            _signOpen = Prims.Box(_root, "DoorSignOpen", new Vector3(doorX + .73f, 1.52f, -.12f), new Vector3(.22f, .15f, .05f), Mats.Glow(new Color(0.25f, 0.8f, 0.4f), new Color(0.5f, 2.6f, 0.9f), false));
+            _signClosed = Prims.Box(_root, "DoorSignClosed", new Vector3(doorX + .73f, 1.52f, -.12f), new Vector3(.22f, .15f, .05f), Mats.Lit(new Color(0.32f, 0.12f, 0.12f), 0.2f));
             // 门口的红色“休息中”挂牌（关门时才有）：挂在门框上，一眼看出没营业
             _doorHang = new GameObject("DoorClosedHang");
             _doorHang.transform.SetParent(_root, false);
@@ -644,28 +627,55 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_doorHang.transform, "Tape", new Vector3(doorX, 0.85f, -0.1f), new Vector3(1.34f, 0.07f, 0.03f), Mats.Lit(new Color(0.9f, 0.25f, 0.2f), 0.2f));
             Prims.Box(_doorHang.transform, "Tape2", new Vector3(doorX, 0.55f, -0.1f), new Vector3(1.34f, 0.07f, 0.03f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f), 0.2f));
 
-            BuildDecor(w, d, doorX);
+            if (district == 0) BuildDecor(w, d, doorX);
+            else DistrictRoomArt.Plant(_root, new Vector3(doorX+1.28f,0,.36f),.82f);
+            if(district==0) SuburbanRoomFinish.RollerDoor(_root,doorX);
+            else
+            {
+                DistrictRoomArt.Box(_root,"门头横框",doorX,2.28f,-.05f,1.52f,.075f,.105f,doorPost);
+                var leaf=DistrictRoomArt.Group(_root,"向外开启的店门",new Vector3(doorX-.68f,0,-.10f),76f);
+                var glazing=DistrictFinishes.VillaPane(true);
+                DistrictRoomArt.Box(leaf,"门扇",.5f,1.06f,0,.99f,2.11f,.025f,glazing);
+                foreach(float y in new[]{.10f,2.12f}) DistrictRoomArt.Box(leaf,"扇框",.5f,y,0,1.01f,.065f,.063f,doorPost);
+                DistrictRoomArt.Box(leaf,"锁边",.98f,1.1f,0,.055f,2.11f,.063f,doorPost);
+                DistrictRoomArt.Box(leaf,"拉手",.88f,1.06f,-.06f,.028f,.36f,.036f,doorPost);
+            }
             BuildEmergencyFixture();
 
-            _ceilingLit = Mats.Glow(ArtDirection.Cream, new Color(2.3f, 1.65f, .8f), false);
+            _ceilingLit = district==0 ? Mats.Glow(ArtDirection.Hex("EEE8D6"),new Color(.86f,.80f,.68f),false)
+                : Mats.Glow(ArtDirection.Cream, new Color(2.3f, 1.65f, .8f), false);
             _ceilingDark = Mats.Lit(new Color(.47f, .46f, .42f));
-            int lampsX = Mathf.Max(1, Mathf.CeilToInt(w / 6f)), lampsZ = Mathf.Max(1, Mathf.CeilToInt(d / 6f));
-            for (int lx = 0; lx < lampsX; lx++)
-            for (int lz = 0; lz < lampsZ; lz++)
+            if(district==0)
             {
-                var lampGo = new GameObject("CeilingLight");
-                lampGo.transform.SetParent(_root, false);
-                lampGo.transform.localPosition = new Vector3(w * (lx + 0.5f) / lampsX, 2.8f, d * (lz + 0.5f) / lampsZ);
-                var lamp = lampGo.AddComponent<Light>();
-                lamp.type = LightType.Point;
-                lamp.range = 9f;
-                lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
-                lamp.color = new Color(1f, 0.87f, 0.66f);
-                _shopCeilingLampMeshes.Add(Prims.Box(lampGo.transform, "Steel light housing", Vector3.zero, new Vector3(.7f,.11f,.28f), Mats.Lit(ArtDirection.Ink,.4f,.5f)));
-                var diffuser = Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(.58f,.02f,.2f), _ceilingLit);
-                _shopCeilingLampMeshes.Add(diffuser);
-                _ceilingDiffusers.Add(diffuser.GetComponent<Renderer>());
-                _ceilingLights.Add(lamp);
+                SuburbanRoomFinish.Lamps(_root.Find("后墙"),w,_shopCeilingLampMeshes,_ceilingDiffusers,_ceilingLights,_ceilingLit);
+                SuburbanRoomFinish.Lamps(_root.Find("侧墙"),d,_shopCeilingLampMeshes,_ceilingDiffusers,_ceilingLights,_ceilingLit);
+            }
+            else
+            {
+                int lampsX = Mathf.Max(1, Mathf.CeilToInt(w / 6f)), lampsZ = Mathf.Max(1, Mathf.CeilToInt(d / 6f));
+                for (int lx = 0; lx < lampsX; lx++)
+                for (int lz = 0; lz < lampsZ; lz++)
+                {
+                    var lampGo = new GameObject("CeilingLight");
+                    lampGo.transform.SetParent(_root, false);
+                    // Fix lights to a wall bracket or cove, leaving the cutaway ceiling open.
+                    float along = w*(lx+.5f)/lampsX;
+                    bool side = lz%2==1;
+                    lampGo.transform.localPosition = side
+                        ? new Vector3(w-.14f,2.65f,d*(lx+.5f)/lampsX)
+                        : new Vector3(along,2.65f,d-.15f);
+                    if(side) lampGo.transform.localRotation=Quaternion.Euler(0,90,0);
+                    var lamp = lampGo.AddComponent<Light>();
+                    lamp.type = LightType.Point;
+                    lamp.range = 9f;
+                    lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
+                    lamp.color = new Color(1f, 0.87f, 0.66f);
+                    _shopCeilingLampMeshes.Add(Prims.Box(lampGo.transform, "Steel light housing", Vector3.zero, new Vector3(district==0?.78f:.22f,.10f,.22f), Mats.Lit(ArtDirection.Ink,.4f,.5f)));
+                    var diffuser = Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(district==0?.72f:.17f,.03f,.175f), _ceilingLit);
+                    _shopCeilingLampMeshes.Add(diffuser);
+                    _ceilingDiffusers.Add(diffuser.GetComponent<Renderer>());
+                    _ceilingLights.Add(lamp);
+                }
             }
 
             // 铺子租下来是空的：货架、收银台、展示桌、装机操作台都是玩家自己买、自己摆的家具，
@@ -1327,6 +1337,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float dt, float realDt)
         {
+            _visitedAddress=null;
             var climateShop=s.ShopAt(s.PlayerShopPlace.Id);
             bool showUpgradeClimate=climateShop!=null&&climateShop.Upgrades.Contains(ShopUpgrades.AirCon)&&!climateShop.Layout.Any(p=>p.Id=="aircon"||p.Id=="aircon_large");
             if(showUpgradeClimate&&_upgradeClimate==null)

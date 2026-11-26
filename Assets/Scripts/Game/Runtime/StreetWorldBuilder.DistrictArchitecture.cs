@@ -6,10 +6,7 @@ namespace PCShopSell.Game.Runtime
 {
     public sealed partial class StreetWorldBuilder
     {
-        private int ArtDistrict(string street) => _city.AgencyDistrictFor(street)?.id switch
-        {
-            "community" => 1, "park" => 2, "garden" => 3, _ => 0
-        };
+        private int ArtDistrict(string street) => DistrictRoomArt.District(_city, street);
 
         private static void DistrictVenueEntrance(Transform shell, Place p, float w, float d, int district)
         {

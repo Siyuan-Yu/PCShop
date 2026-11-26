@@ -153,7 +153,20 @@ namespace PCShopSell.Game.Runtime
             }
 
             bool venue=(p.Business??"").StartsWith("venue_");
-            if(TryBuildStarterArt(root,p,w,d)) { }
+            if (p.Model == "office_tower")
+            {
+                var shell=DistrictRoomArt.Group(root,"Exterior",Vector3.zero);
+                var inside=DistrictRoomArt.Group(root,"VenueInterior",Vector3.zero);
+                int district=ArtDistrict(p.StreetId);
+                DistrictOffice.Exterior(shell,w,d,district==3);
+                shell.gameObject.AddComponent<PlaceMarker>().PlaceId=p.Id;
+                DistrictOffice.Interior(inside,w,d,district);
+                inside.gameObject.SetActive(false);
+                vis.Exterior=shell.gameObject;vis.VenueInterior=inside.gameObject;
+                vis.LabelPos=root.TransformPoint(new Vector3(0,(district==3?16:10)*2.85f+2,d*.5f));
+                _venueVisuals.Add(vis);
+            }
+            else if(TryBuildStarterArt(root,p,w,d)) { }
             else if(CityArchitecture.HasExterior(p))
             {
                 var shell=new GameObject("Exterior").transform;shell.SetParent(root,false);

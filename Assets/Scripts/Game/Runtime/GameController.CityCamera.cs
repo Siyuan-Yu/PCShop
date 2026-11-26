@@ -26,7 +26,7 @@ namespace PCShopSell.Game
                         if(delta.sqrMagnitude<=16 && waiting.Exterior==null)place=target;
                     }
                 }
-                if(place==null || !((place.Business??"").StartsWith("venue_",StringComparison.Ordinal)||place.Business=="服装"||Session.IsCityActivityVenue(place)||place.Id==GameSession.LifeServicePlace||place.Id==GameSession.LifeFairPlace))return null;
+                if(place==null || !((place.Business??"").StartsWith("venue_",StringComparison.Ordinal)||place.Model=="office_tower"||place.Business=="服装"||Session.IsCityActivityVenue(place)||place.Id==GameSession.LifeServicePlace||place.Id==GameSession.LifeFairPlace))return null;
                 return World.Places.TryGetValue(place.Id,out var visual)?visual:null;
             }
         }
@@ -35,6 +35,7 @@ namespace PCShopSell.Game
             if(visual.Place.Id==GameSession.LifeServicePlace||visual.Place.Id==GameSession.LifeFairPlace)
                 return visual.Root.transform.TransformPoint(new Vector3(0,.8f,-2));
             float depth=visual.Place.ExplicitEntrance?Mathf.Max(6,(float)visual.Place.Depth):8;
+            if (visual.Place.Model == "office_tower") return visual.Root.transform.TransformPoint(new Vector3(0,1,depth*.5f));
             if (visual.Place.Id == CityLifeCatalog.PachinkoVenue)
             {
                 var center = visual.Root.transform.TransformPoint(new Vector3(0, .8f, depth * .5f));

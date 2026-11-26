@@ -204,7 +204,7 @@ namespace PCShopSell.Game.Runtime
         public void Update(GameSession s, float dt, StreetWorldBuilder streets = null,
             Vector3? roomPosition = null, Vector3 roomFacing = default)
         {
-            bool publicSpace=s.CurrentPlace!=null&&((s.CurrentPlace.Business??"").StartsWith("venue_",System.StringComparison.Ordinal)||((s.CurrentPlace.Business=="服装"||s.IsCityActivityVenue(s.CurrentPlace))&&s.ShopAt(s.CurrentPlace.Id)==null));
+            bool publicSpace=roomPosition.HasValue || s.CurrentPlace!=null&&((s.CurrentPlace.Business??"").StartsWith("venue_",System.StringComparison.Ordinal)||((s.CurrentPlace.Business=="服装"||s.IsCityActivityVenue(s.CurrentPlace))&&s.ShopAt(s.CurrentPlace.Id)==null));
             publicSpace |= s.RunningCityActivity != null && s.RunningCityActivity.VenueId == s.CurrentPlace?.Id;
             bool nightRide = s.RunningCityActivity?.DefinitionId == "race_night";
             bool visible = (s.CurrentPlace == null || publicSpace) && !GameSession.IsVenueFootball(s.RunningCityActivity);

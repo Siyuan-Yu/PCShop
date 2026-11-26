@@ -1,0 +1,24 @@
+home live-home district=0 width=6 depth=4.6
+shop01 live-shop district=0 size=Large vacant=False
+outskirts size-variant Small 8x6
+outskirts size-variant Medium 12x9
+outskirts size-variant Large 18x12
+home_tier1 live-home district=1 width=8 depth=6
+life_unit_s_market_0 live-shop district=1 size=Small vacant=True
+community size-variant Small 8x6
+community size-variant Medium 12x9
+community size-variant Large 18x12
+home_tier2 live-home district=2 width=11 depth=8
+life_unit_s_creative_0 live-shop district=2 size=Small vacant=True
+park size-variant Small 8x6
+park size-variant Medium 12x9
+park size-variant Large 18x12
+home_tier3 live-home district=3 width=15 depth=10
+life_unit_s_night_0 live-shop district=3 size=Small vacant=True
+garden size-variant Small 8x6
+garden size-variant Medium 12x9
+garden size-variant Large 18x12
+life_home_s_oldhomes housing-size preview 7.2x5
+park_office_tower entered/walked 5.59m/exited 17x12
+garden_office_tower entered/walked 5.59m/exited 21x14
+layout=070ADD4BBB974ED78B1B901DB7CDFFC991CF3B87260D33B966C3B5010E986042 source=34B07107D9D383F40CF161F47C6A9963AFFEEC09FCE7FC2439B5FD5387C04C63 sites=261

@@ -14,6 +14,7 @@ using UnityEngine;
 public static partial class TownMatchCamera
 {
     static partial void CaptureWalking(GameController game,string folder);
+    static partial void CaptureInteriors(GameController game, ref bool handled);
     private const string Pending = "PCShop.DistrictArtCapture";
     private static readonly string[] Regions = { "outskirts", "community", "park", "garden" };
     private static readonly (string id, float size)[] Sites =
@@ -92,6 +93,13 @@ public static partial class TownMatchCamera
     {
         try
         {
+            if (Environment.GetEnvironmentVariable("PCSHOP_INTERIORS") == "1")
+            {
+                bool handled = false;
+                CaptureInteriors(game, ref handled);
+                if (!handled) throw new InvalidOperationException("室内复拍需要同时安装 InteriorReview.cs。");
+                return;
+            }
             if (baked && !game.World.Root.TryGetComponent<BakedCityMap>(out _))
                 throw new InvalidOperationException("城市加载未采用预生成地图。");
             game.enabled = false;

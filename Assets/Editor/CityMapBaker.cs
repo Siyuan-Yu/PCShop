@@ -85,7 +85,7 @@ public sealed class CityMapBaker : IPreprocessBuildWithReport
             {
                 if(behavior is PlaceMarker||behavior is GroundMarker||behavior is CityLandscapeResources
                     ||behavior is RaceTrackView||behavior is QuarterlyExpoView)Object.DestroyImmediate(behavior);
-                else if(!(behavior is BakedCityMap)&&!(behavior is UnityEngine.UI.Text))
+                else if(!(behavior is BakedCityMap)&&!(behavior is InteriorWindowLight)&&!(behavior is UnityEngine.UI.Text))
                     throw new BuildFailedException("未声明的地图运行组件："+behavior.GetType().FullName);
             }
             // OS-created dynamic fonts cannot be embedded in a prefab. Runtime restores

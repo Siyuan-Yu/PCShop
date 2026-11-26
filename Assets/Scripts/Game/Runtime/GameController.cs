@@ -40,8 +40,11 @@ namespace PCShopSell.Game
         /// <summary>在自己的出租屋里（真实的小屋，不是街上弹窗）。</summary>
         public bool InHome => Session != null && Session.CurrentPlace != null && Session.CurrentPlace == Session.Home;
         /// <summary>在任意室内场景（店里或家里）：街道隐藏，镜头跟着老板。</summary>
-        public bool InRoom => InInterior || InHome || InVisit;
-        private int RoomKind => InInterior ? 1 : InHome ? 2 : InVisit ? 4 : InPachinkoRoom ? 5 : CityCloseView!=null ? 3 : 0;
+        private bool VisitingShop => Session?.CurrentPlace is Place p && !Session.InPlayerShop &&
+            !Session.IsCityActivityVenue(p) && !Session.IsCityClothingRetail(p) &&
+            (GameSession.IsCommercialPremises(p) || p.Business==GameSession.PhoneBusiness || p.Business==Gifts.TobaccoBusiness);
+        public bool InRoom => InInterior || InHome || InVisit || VisitingShop || Session?.CurrentPlace?.Model=="office_tower";
+        private int RoomKind => VisitingShop ? 6 : InInterior ? 1 : InHome ? 2 : InVisit ? 4 : InPachinkoRoom ? 5 : CityCloseView!=null ? 3 : 0;
 
         private CameraRig _rig;
         private DayNightLighting _lighting;
@@ -161,7 +164,7 @@ namespace PCShopSell.Game
                 Session.Dispose();
             }
             Interior.Clear();
-            EnsureInterior(s.PlayerShop.Size);
+            EnsureInterior(s.PlayerShop.Size, DistrictRoomArt.District(s.City, s.CurrentShop.Place.StreetId));
 
             Session = s;
             _frameOldHomeExit = City.IsLakeCity && s.CurrentPlace?.Id == "home";
@@ -685,14 +688,23 @@ namespace PCShopSell.Game
             bool room = InRoom;
             bool worldRunning = !scooterTutorialPaused && Session.Time.IsRunning && !Session.ManualActivityClockPaused;
             float worldDt = worldRunning ? Mathf.Min(dt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
-            Interior.SetActive(interior);
+            if (interior) EnsureActiveShopRoom();
+            if (VisitingShop) EnsureInterior(Session.CurrentPlace.Size,DistrictRoomArt.District(City,Session.CurrentPlace.StreetId));
+            Interior.SetActive(interior || VisitingShop);
+            if (VisitingShop)
+            {
+                var p=Session.CurrentPlace;
+                string goods=p.Business==Gifts.TobaccoBusiness?"smoke":p.Business==GameSession.PhoneBusiness?"storage":"gpu";
+                Interior.Visit(p.Id,Session.IsVacant(p),goods,worldDt,Session.Clock.MinuteOfDay);
+            }
             bool residenceChanged = EnsureResidenceView();
             HomeRoom.SetActive(InHome);
             VisitRoom?.SetActive(InVisit);
             World.Root.SetActive(!room);
             World.SetVenueFocus(Session.CurrentPlace?.Id);
             var pachinkoRoom = SyncPachinkoRoom();
-            _avatar.Update(Session, dt, World, pachinkoRoom?.OwnerWorld, pachinkoRoom?.OwnerFacing ?? Vector3.zero);
+            var officePosition = SyncOffice();
+            _avatar.Update(Session, dt, World, officePosition ?? pachinkoRoom?.OwnerWorld, officePosition.HasValue ? _officeFacing : pachinkoRoom?.OwnerFacing ?? Vector3.zero);
             SyncExpoView(dt);
             SyncShopEventViews();
             SyncLifeEventViews();
@@ -766,8 +778,10 @@ namespace PCShopSell.Game
                 paintedDaylight = Mathf.SmoothStep(1,0,Mathf.InverseLerp(28,52,distance));
                 heading = oldHome.Root.transform.eulerAngles.y;
             }
-            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining, paintedDaylight, heading, quarterCenter,
-                !room && City.IsLakeCity ? World.OuterDistrictWeight(new Vector2((float)Session.PlayerPosition.X,(float)Session.PlayerPosition.Y)) : 0);
+            _lighting.Apply(Session.Clock.MinuteOfDay, room || _office!=null, raining, paintedDaylight, heading, quarterCenter,
+                !room && City.IsLakeCity ? World.OuterDistrictWeight(new Vector2((float)Session.PlayerPosition.X,(float)Session.PlayerPosition.Y)) : 0,
+                _office?.Root.transform.eulerAngles.y ?? 0f,
+                (InHome || InVisit) ? ActiveResidence?.District==0 : (InInterior || VisitingShop) && Interior.District==0);
         }
 
         private bool _overview;
@@ -792,6 +806,7 @@ namespace PCShopSell.Game
                 var residence = ActiveResidence ?? HomeRoom;
                 return Vector3.Lerp(residence.OwnerWorld + Vector3.up*.8f, residence.Center + Vector3.up*1.5f, overview);
             }
+            if (VisitingShop) return Vector3.Lerp(Interior.OwnerWorld + Vector3.up*.8f,Interior.Center + Vector3.up,overview);
             if (InInterior && _overview) return Interior.ViewCenter + new Vector3(0, 0.8f, 0);
             if (InInterior)
             {
@@ -875,7 +890,9 @@ namespace PCShopSell.Game
             if (!Placing) Ui.HandleHudPanelKeys();
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
-                if (InVisit) InteractVisitRoom();
+                if (VisitingShop) { if(Interior.NearDoor) Session.Leave(); else if(Interior.NearCounter) Ui.OnEnteredPlace(Session.CurrentPlace); }
+                else if (_office != null) { if (OfficeDoor) Session.Leave(); }
+                else if (InVisit) InteractVisitRoom();
                 else if (InHome) HomeInteract(HomeRoom.NearbyId);
                 else if (InPachinkoRoom) InteractPachinkoRoom();
                 else if(Session.IsOwnedVenue(Session.CurrentPlace))Ui.OpenVenueManagement(Session.CurrentPlace);
@@ -963,7 +980,7 @@ namespace PCShopSell.Game
                 return;
             }
 
-            if (!InRoom && !InPachinkoRoom && !Session.CanSteer)
+            if (!InRoom && _office == null && !InPachinkoRoom && !Session.CanSteer)
             {
                 if (!_taxiHinted)
                 {
@@ -987,6 +1004,12 @@ namespace PCShopSell.Game
             right.Normalize();
             Vector3 dir = fwd * v + right * h;
 
+            if (VisitingShop)
+            {
+                Session.SetSteer(0,0); Interior.MoveOwner(dir, IndoorWalkDelta(dt));
+                if(Interior.OwnerOutside) Session.Leave();
+                return;
+            }
             if (InInterior)
             {
                 Session.SetSteer(0, 0);
@@ -1002,6 +1025,12 @@ namespace PCShopSell.Game
             {
                 Session.SetSteer(0, 0);
                 MoveInResidence(dir, dt);
+                return;
+            }
+            if (_office != null)
+            {
+                Session.SetSteer(0,0);
+                WalkOffice(dir,IndoorWalkDelta(dt));
                 return;
             }
             if (InPachinkoRoom)
@@ -1089,6 +1118,16 @@ namespace PCShopSell.Game
             world = Vector3.zero;
             label = null;
             if (Session == null || Session.IsGameOver || Ui.AnyModalOpen || Placing) return false;
+            if (VisitingShop)
+            {
+                if(Interior.NearDoor){world=Interior.DoorWorld;label="店铺出口（按 F）";return true;}
+                if(Interior.NearCounter){world=Interior.CounterWorld;label="柜台（按 F）";return true;}
+                return false;
+            }
+            if (_office != null)
+            {
+                world=_office.Entrance+Vector3.up*1.6f; label="大厅出口（按 F）"; return OfficeDoor;
+            }
             if (InPachinkoRoom) return TryGetPachinkoInteract(out world, out label);
             if(Session.IsOwnedVenue(Session.CurrentPlace))
             {world=StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up*2;label="场馆管理（按 F 打开）";return true;}
@@ -1417,21 +1456,25 @@ namespace PCShopSell.Game
         }
 
         /// <summary>店内场景按店面大小重建（扩建、读档时用）。</summary>
-        private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size, bool rebuild = false)
+        private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size, int district, bool rebuild = false)
         {
-            if (!rebuild && Interior != null && Interior.Size == size) return;
+            if (!rebuild && Interior != null && Interior.Size == size && Interior.District == district) return;
             Interior?.Destroy();
-            Interior = new ShopInteriorView(_actors, size);
+            Interior = new ShopInteriorView(_actors, size, district);
         }
+
+        private void EnsureActiveShopRoom() => EnsureInterior(Session.PlayerShop.Size,
+            DistrictRoomArt.District(City, Session.CurrentShop.Place.StreetId));
 
         private bool EnsureResidenceView()
         {
             if (!InHome && !InVisit) return false;
             var room = InHome ? Session.ResidenceRoom : Session.RoomForResidence(Session.CurrentPlace);
             var view = ActiveResidence;
-            if (view?.Room == room) return false;
+            int district = DistrictRoomArt.District(City, Session.CurrentPlace?.StreetId);
+            if (view?.Room == room && view.District == district) return false;
             view?.Destroy();
-            view = new HomeRoomView(_actors, room);
+            view = new HomeRoomView(_actors, room, district);
             if (InHome) HomeRoom = view;
             else VisitRoom = view;
             return true;
@@ -1440,7 +1483,7 @@ namespace PCShopSell.Game
         /// <summary>签了新铺子（搬店）：店内场景按新铺面重建，街上顾客改往新店门走。</summary>
         private void OnShopExpanded(PCShopSell.Core.Shop.ShopSize size)
         {
-            EnsureInterior(size, true);
+            EnsureInterior(size, DistrictRoomArt.District(City, Session.CurrentShop.Place.StreetId), true);
             SyncCrowdDoor();
             SnapCamera();
         }
@@ -1454,15 +1497,17 @@ namespace PCShopSell.Game
         /// <summary>进入室内时取全景，拉近后跟随玩家。</summary>
         public void SnapCamera(bool smooth = false)
         {
-            bool interior = InInterior;
+            bool interior = InInterior || VisitingShop;
             bool home = InHome || InVisit;
             if (home) EnsureResidenceView();
+            if (InInterior) EnsureActiveShopRoom();
+            else if (VisitingShop) EnsureInterior(Session.CurrentPlace.Size,DistrictRoomArt.District(City,Session.CurrentPlace.StreetId));
             var closeView=interior||home?null:CityCloseView;
             bool editing = Placing && _rig.Edit;
             if (editing) _rig.SetEdit(false);
             _rig.SetInterior(interior || home || closeView!=null);
-            if(closeView!=null)_rig.SetPlaceAngles(closeView.Root.transform.eulerAngles.y + (InPachinkoRoom ? 18f : 0f),
-                InPachinkoRoom ? 49f : 61f);
+            if(closeView!=null)_rig.SetPlaceAngles(closeView.Root.transform.eulerAngles.y + (closeView.Place.Model == "office_tower" ? 34f : InPachinkoRoom ? 18f : 0f),
+                closeView.Place.Model == "office_tower" ? 34f : InPachinkoRoom ? 49f : 61f);
             else if(interior||home)_rig.SetPlaceAngles(CameraRig.DefaultYaw,CameraRig.DefaultPitch);
             _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
             float size = closeView!=null?9.5f:16f;
@@ -1490,7 +1535,7 @@ namespace PCShopSell.Game
                 size = Mathf.Max(ShopInteriorView.DefaultZoom, FrameRoom(Interior.Width,Interior.Depth,dock));
                 _rig.MaxSize = Mathf.Max(size,Interior.CameraSize);
             }
-            else if (InPachinkoRoom && closeView != null)
+            else if (closeView != null && (InPachinkoRoom || closeView.Place.Model == "office_tower"))
             {
                 size = Mathf.Max(9.5f, FrameRoom((float)closeView.Place.Width, (float)closeView.Place.Depth, 0));
                 _rig.MaxSize = Mathf.Max(size, _rig.MaxSize);

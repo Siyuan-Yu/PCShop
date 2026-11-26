@@ -13,6 +13,8 @@ Shader "PCShop/Villa glass"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile_fog
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
                 half _GuardRail, _Sheltered;
@@ -38,13 +40,16 @@ Shader "PCShop/Villa glass"
                 half3 ray=reflect(-view,normal);
                 half3 sky=SampleSH(ray);
                 half upper=smoothstep(.12,.97,i.uv.y);
-                half3 reflected=lerp(half3(.055,.163,.139),half3(.23,.44,.49),upper);
-                half sunward=saturate(dot(normal,GetMainLight().direction)*.5+.5);
+                half3 reflected=lerp(half3(.014,.142,.116),half3(.12,.38,.41),upper);
+                Light sun=GetMainLight(TransformWorldToShadowCoord(i.world));
+                half sunward=saturate(dot(normal,sun.direction)*.5+.5);
+                half shadow=saturate((1.-sun.shadowAttenuation)*(1.-_OldTownNightFactor));
+                reflected=lerp(reflected,half3(.025,.094,.073),shadow*.55);
                 reflected=reflected*(.77+.27*sunward)+.17*max(half3(0,0,0),sky);
-                half alpha=.13+.18*upper+.31*grazing;
+                half alpha=.10+.20*upper+.34*grazing+shadow*.15;
                 // The overhanging slab blocks the bright upper sky at these windows.
-                reflected=lerp(reflected,reflected*half3(.42,.68,.69),_Sheltered);
-                alpha*=1.-.47*_Sheltered;
+                reflected=lerp(reflected,reflected*half3(.31,.73,.72),_Sheltered);
+                alpha*=1.-.32*_Sheltered;
                 alpha=lerp(alpha,.024+.033*upper+.048*grazing,_GuardRail);
                 half night=saturate(_OldTownNightFactor);
                 reflected=lerp(reflected,half3(.033,.074,.106),night*.90);

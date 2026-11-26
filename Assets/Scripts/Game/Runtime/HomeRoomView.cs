@@ -72,7 +72,7 @@ namespace PCShopSell.Game.Runtime
         private readonly RoomFurniture _furniture;
         private readonly Rect _doorArea;
         private bool _wasOn;
-        private int _homeTier = -1;
+
         private string _dressed;
         private GameObject _repairman;
         private Vector3 _repairWork;
@@ -116,9 +116,12 @@ namespace PCShopSell.Game.Runtime
         public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
         public Vector3 OwnerWorld => _owner.transform.position;
 
-        public HomeRoomView(Transform parent, RoomSpec room = null)
+        public int District { get; }
+
+        public HomeRoomView(Transform parent, RoomSpec room = null, int district = 0)
         {
             _moveAlongRoute = MoveOwner;
+            District = district;
             Room = room ?? RoomSpec.Home;
             _doorArea = new Rect(Width - 0.2f, 0.5f, 0.2f, 1.0f);
             _root = new GameObject("HomeRoom").transform;
@@ -126,57 +129,64 @@ namespace PCShopSell.Game.Runtime
             _root.position = Origin;
             float w = Width, d = Depth;
 
-            // ---------- 地面、墙 ----------
-            Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.LitTex(new Color(0.52f, 0.47f, 0.41f), new Vector2(4, 3), 0.05f));
-            Prims.Box(_root, "Outside", new Vector3(w / 2, -0.1f, d / 2), new Vector3(w + 30, 0.05f, d + 30), Mats.Lit(ArtDirection.Ink));
-            Stain("FloorStain1", new Vector3(2.9f, 0.007f, 2.1f), new Vector3(1.1f, 0.01f, 0.7f), new Color(0.40f, 0.36f, 0.31f), 20f);
-            Stain("FloorStain2", new Vector3(4.8f, 0.007f, 3.0f), new Vector3(0.7f, 0.01f, 0.5f), new Color(0.43f, 0.39f, 0.33f), -30f);
-            Stain("Crack1", new Vector3(3.6f, 0.008f, 1.0f), new Vector3(1.6f, 0.01f, 0.03f), new Color(0.25f, 0.22f, 0.2f), 25f);
-            Stain("Crack2", new Vector3(1.4f, 0.008f, 2.5f), new Vector3(1.0f, 0.01f, 0.03f), new Color(0.25f, 0.22f, 0.2f), -50f);
-
-            Color wallUpper = ArtDirection.Cream;
-            Color wallDado = ArtDirection.Sage;
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("concrete", wallUpper, new Vector2(w/2,1)));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", wallUpper * .93f, new Vector2(d/2,1)));
-            Prims.Box(_root, "DadoBack", new Vector3(w / 2, 0.55f, d - 0.01f), new Vector3(w, 1.1f, 0.02f), Mats.Lit(wallDado, 0.05f));
-            Prims.Box(_root, "DadoRight", new Vector3(w - 0.01f, 0.55f, d / 2), new Vector3(0.02f, 1.1f, d), Mats.Lit(wallDado * 0.93f, 0.05f));
-            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(new Color(0.6f, 0.58f, 0.52f)));
-            Prims.Box(_root, "WallFrontLow", new Vector3(w / 2, 0.3f, -0.05f), new Vector3(w, 0.6f, 0.1f), Mats.Lit(new Color(0.6f, 0.58f, 0.52f)));
-            // 墙上的水渍、掉皮、霉斑
-            Prims.Box(_root, "LeakStain", new Vector3(4.7f, 2.45f, d - 0.014f), new Vector3(0.9f, 0.8f, 0.01f), Mats.Lit(new Color(0.62f, 0.56f, 0.40f), 0.05f));
-            Prims.Box(_root, "LeakStain2", new Vector3(4.7f, 2.75f, d - 0.016f), new Vector3(0.5f, 0.3f, 0.01f), Mats.Lit(new Color(0.55f, 0.49f, 0.34f), 0.05f));
-            Prims.Box(_root, "Peeling", new Vector3(1.0f, 1.55f, d - 0.014f), new Vector3(0.6f, 0.5f, 0.01f), Mats.Lit(new Color(0.84f, 0.81f, 0.7f), 0.05f));
-            Prims.Box(_root, "Mold", new Vector3(w - 0.014f, 2.3f, 1.9f), new Vector3(0.01f, 0.7f, 0.9f), Mats.Lit(new Color(0.48f, 0.5f, 0.4f), 0.05f));
-            Prims.Box(_root, "Calendar", new Vector3(5.3f, 1.55f, d - 0.02f), new Vector3(0.32f, 0.45f, 0.02f), Mats.Lit(new Color(0.8f, 0.25f, 0.2f)));
-            // 墙上钉的一根晾衣绳
-            Prims.Box(_root, "Line", new Vector3(w * 0.5f, 2.1f, Depth - 0.06f), new Vector3(2.0f, 0.015f, 0.015f), Mats.Lit(new Color(0.2f, 0.2f, 0.2f)));
-
-            // ---------- 灯 ----------
-            int lamps = Mathf.CeilToInt(w / 6f);
-            for (int i = 0; i < lamps; i++)
+            Prims.Box(_root, "Outside", new Vector3(w / 2, -0.1f, d / 2), new Vector3(w + 30, 0.05f, d + 30), Mats.Unlit(ArtDirection.Hex("293545")));
+            if (district == 0)
             {
-                float x = w * (i + .5f) / lamps;
-                Prims.Box(_root, "BulbWire", new Vector3(x, 2.78f, d * .5f), new Vector3(.02f, .44f, .02f), Mats.Lit(new Color(.1f, .1f, .1f)));
-                Prims.Shape(PrimitiveType.Sphere, _root, "Bulb", new Vector3(x, 2.5f, d * .5f), Vector3.one * .17f,
-                    Mats.Glow(new Color(1f, .95f, .7f), new Color(4f, 3.4f, 2f), false));
-                var bulbGo = new GameObject("BulbLight");
-                bulbGo.transform.SetParent(_root, false);
-                bulbGo.transform.localPosition = new Vector3(x, 2.3f, d * .5f);
-                var bulb = bulbGo.AddComponent<Light>();
-                bulb.type = LightType.Point;
-                bulb.range = 8f;
-                bulb.intensity = 1.1f;
-                bulb.color = new Color(1f, .84f, .58f);
-            }
+                // ---------- 地面、墙 ----------
+                Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), SuburbanRoomFinish.Floor(w,d,true));
 
-            // ---------- 窗（带铁栏杆） ----------
-            Prims.Box(_root, "WindowFrame", new Vector3(3.15f, 1.75f, d - 0.02f), new Vector3(1.15f, 1.05f, 0.04f), Mats.Lit(new Color(0.25f, 0.27f, 0.3f), 0.3f, 0.3f));
-            GameObject pane = Prims.Box(_root, "WindowPane", new Vector3(3.15f, 1.75f, d - 0.045f), new Vector3(1.0f, 0.9f, 0.02f), Mats.Glow(new Color(0.3f, 0.35f, 0.4f), new Color(0.2f, 0.25f, 0.35f), false));
-            _windowMat = new Material(pane.GetComponent<Renderer>().sharedMaterial);
-            pane.GetComponent<Renderer>().sharedMaterial = _windowMat;
-            for (int i = 0; i < 4; i++)
-                Prims.Box(_root, "Bar", new Vector3(2.8f + i * 0.23f, 1.75f, d - 0.09f), new Vector3(0.03f, 0.95f, 0.03f), Mats.Lit(new Color(0.18f, 0.18f, 0.2f), 0.3f, 0.5f));
-            Prims.Box(_root, "BarCross", new Vector3(3.15f, 1.75f, d - 0.09f), new Vector3(1.05f, 0.03f, 0.03f), Mats.Lit(new Color(0.18f, 0.18f, 0.2f), 0.3f, 0.5f));
+                Color wallDado = ArtDirection.Sage;
+                var oldPlaster=DistrictFinishes.Tile("wornLimewash",new Vector2(w/3f,1));
+                const float left=2.575f,right=3.725f,bottom=1.225f,top=2.275f;
+                void BackPanel(float x0,float x1,float y0,float y1) =>
+                    DistrictRoomArt.Box(_root,"旧墙",(x0+x1)*.5f,(y0+y1)*.5f,d+.05f,x1-x0,y1-y0,.1f,oldPlaster);
+                BackPanel(-.1f,left,0,3);BackPanel(right,w+.1f,0,3);
+                BackPanel(left,right,0,bottom);BackPanel(left,right,top,3);
+                DistrictRoomArt.ShadowCeiling(_root,w,d,3.08f);
+                Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), DistrictFinishes.Tile("wornLimewash",new Vector2(d/3f,1),ArtDirection.Hex("EBE5D5")));
+                Prims.Box(_root, "DadoBack", new Vector3(w / 2, 0.55f, d - 0.01f), new Vector3(w, 1.1f, 0.02f), Mats.Lit(wallDado, 0.05f));
+                Prims.Box(_root, "DadoRight", new Vector3(w - 0.01f, 0.55f, d / 2), new Vector3(0.02f, 1.1f, d), Mats.Lit(wallDado * 0.93f, 0.05f));
+                Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(new Color(0.6f, 0.58f, 0.52f)));
+                Prims.Box(_root, "WallFrontLow", new Vector3(w / 2, 0.3f, -0.05f), new Vector3(w, 0.6f, 0.1f), Mats.Lit(new Color(0.6f, 0.58f, 0.52f)));
+                Prims.Box(_root, "Calendar", new Vector3(5.3f, 1.55f, d - 0.051f), new Vector3(0.32f, 0.45f, 0.02f), Mats.Lit(new Color(0.8f, 0.25f, 0.2f)));
+                // 墙上钉的一根晾衣绳
+                Prims.Box(_root, "Line", new Vector3(w * 0.5f, 2.1f, Depth - 0.06f), new Vector3(2.0f, 0.015f, 0.015f), Mats.Lit(new Color(0.2f, 0.2f, 0.2f)));
+
+                var backFinish=DistrictRoomArt.Group(_root,"旧灰墙",new Vector3(0,0,d));
+                var doorFinish=DistrictRoomArt.Group(_root,"旧漆墙",new Vector3(w,0,d),90);
+                SuburbanRoomFinish.Wall(backFinish,w,true,true);
+                SuburbanRoomFinish.Wall(doorFinish,d,true);
+                // ---------- 灯 ----------
+                int lamps = Mathf.CeilToInt(w / 6f);
+                for (int i = 0; i < lamps; i++)
+                {
+                    float x = w * (i + .68f) / lamps;
+                    float fixtureZ=d-.38f;
+                    Prims.Box(_root, "BulbWire", new Vector3(x, 2.78f, fixtureZ), new Vector3(.02f, .44f, .02f), Mats.Lit(new Color(.1f, .1f, .1f)));
+                    Prims.Shape(PrimitiveType.Sphere, _root, "Bulb", new Vector3(x, 2.5f, fixtureZ), Vector3.one * .17f,
+                        Mats.Glow(new Color(1f, .95f, .7f), new Color(4f, 3.4f, 2f), false));
+                    var bulbGo = new GameObject("BulbLight");
+                    bulbGo.transform.SetParent(_root, false);
+                    bulbGo.transform.localPosition = new Vector3(x, 2.32f, fixtureZ-.27f);
+                    var bulb = bulbGo.AddComponent<Light>();
+                    bulb.type = LightType.Point;
+                    bulb.range = 8f;
+                    bulb.intensity = 1.1f;
+                    bulb.color = new Color(1f, .84f, .58f);
+                }
+
+                // ---------- 窗（带铁栏杆） ----------
+                var frame=Prims.Box(_root, "WindowFrame", new Vector3(3.15f, 1.75f, d - 0.02f), new Vector3(1.15f, 1.05f, 0.04f), Mats.Lit(new Color(0.25f, 0.27f, 0.3f), 0.3f, 0.3f));
+                GameObject pane = Prims.Box(_root, "WindowPane", new Vector3(3.15f, 1.75f, d - 0.045f), new Vector3(1.0f, 0.9f, 0.02f), Mats.Glow(new Color(0.3f, 0.35f, 0.4f), new Color(0.2f, 0.25f, 0.35f), false));
+                frame.GetComponent<Renderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+                pane.GetComponent<Renderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+                _windowMat = new Material(pane.GetComponent<Renderer>().sharedMaterial);
+                pane.GetComponent<Renderer>().sharedMaterial = _windowMat;
+                for (int i = 0; i < 4; i++)
+                    Prims.Box(_root, "Bar", new Vector3(2.8f + i * 0.23f, 1.75f, d - 0.09f), new Vector3(0.03f, 0.95f, 0.03f), Mats.Lit(new Color(0.18f, 0.18f, 0.2f), 0.3f, 0.5f));
+                Prims.Box(_root, "BarCross", new Vector3(3.15f, 1.75f, d - 0.09f), new Vector3(1.05f, 0.03f, 0.03f), Mats.Lit(new Color(0.18f, 0.18f, 0.2f), 0.3f, 0.5f));
+            }
+            else DistrictRoomArt.Build(_root,w,d,district,true);
             var wl = new GameObject("WindowLight");
             wl.transform.SetParent(_root, false);
             wl.transform.localPosition = new Vector3(3.15f, 1.7f, d - 0.7f);
@@ -193,12 +203,6 @@ namespace PCShopSell.Game.Runtime
             ResetOwner();
         }
 
-        private void Stain(string name, Vector3 pos, Vector3 size, Color c, float yaw)
-        {
-            GameObject go = Prims.Box(_root, name, pos, size, Mats.Lit(c, 0.02f));
-            go.transform.localRotation = Quaternion.Euler(0, yaw, 0);
-        }
-
         private GameObject Piece(string id, string name, Vector3 center, Vector3 size, Color c, float smooth = 0.1f, float metallic = 0f)
         {
             GameObject go = Prims.Box(_root, name, center, size, Mats.Lit(c, smooth, metallic), id != null);
@@ -211,7 +215,7 @@ namespace PCShopSell.Game.Runtime
             float w = Width;
             Piece(null, "DoorFrame", new Vector3(w - 0.03f, 1.05f, 1.0f), new Vector3(0.05f, 2.1f, 1.05f), new Color(0.3f, 0.22f, 0.15f));
             Piece(Door, "Door", new Vector3(w - 0.07f, 1.0f, 1.0f), new Vector3(0.06f, 2.0f, 0.9f), new Color(0.42f, 0.3f, 0.2f), 0.1f);
-            Piece(null, "DoorPeel", new Vector3(w - 0.108f, 0.7f, 0.8f), new Vector3(0.01f, 0.6f, 0.35f), new Color(0.55f, 0.42f, 0.3f));
+            if (District == 0) Piece(null, "DoorPeel", new Vector3(w - 0.108f, 0.7f, 0.8f), new Vector3(0.01f, 0.6f, 0.35f), new Color(0.55f, 0.42f, 0.3f));
             Piece(null, "DoorHandle", new Vector3(w - 0.12f, 1.0f, 0.65f), new Vector3(0.05f, 0.05f, 0.1f), new Color(0.75f, 0.7f, 0.5f), 0.5f, 0.6f);
             Prims.Box(_root, "ExitMark", new Vector3(w - 0.11f, 2.3f, 1.0f), new Vector3(0.01f, 0.2f, 0.5f), Mats.Glow(new Color(0.1f, 0.4f, 0.2f), new Color(0.4f, 2f, 0.9f), false));
         }
@@ -526,7 +530,7 @@ namespace PCShopSell.Game.Runtime
                 foreach (var figure in _visitResidents.Values) Kill.It(figure);
                 _visitResidents.Clear();
 
-                ApplyFinish(home.Tier);
+
             }
             bool changedRoom = changedAddress || _visitEditable != canSleep;
             _visitEditable = canSleep;
@@ -597,7 +601,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float realDt, float minuteOfDay)
         {
-            if (_homeTier != s.HomeTier) ApplyFinish(s.HomeTier);
+
             if (_dressed != s.EquippedOutfit)
             {
                 _dressed = s.EquippedOutfit;
@@ -616,8 +620,8 @@ namespace PCShopSell.Game.Runtime
             // 窗外的天光：白天亮、夜里黑
             float hour = minuteOfDay / 60f;
             float day = Mathf.Clamp01(Mathf.Min(hour - 6f, 19f - hour) / 1.5f);
-            _windowMat.SetColor("_EmissionColor", Color.Lerp(new Color(0.03f, 0.04f, 0.07f), new Color(1.3f, 1.55f, 1.9f), day));
-            _windowLight.intensity = day * 0.9f;
+            if (_windowMat != null) _windowMat.SetColor("_EmissionColor", Color.Lerp(new Color(0.03f, 0.04f, 0.07f), new Color(1.3f, 1.55f, 1.9f), day));
+            _windowLight.intensity = District==0 ? day*.62f : 0f;
 
             // 够得着的互动点
             Vector3 lp = _owner.transform.localPosition;
@@ -652,20 +656,6 @@ namespace PCShopSell.Game.Runtime
             NearbyId = best;
             NearbyLabel = label;
             NearbyWorld = world;
-        }
-
-        private void ApplyFinish(int tier)
-        {
-            _homeTier = tier;
-            foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold", "Line" })
-                _root.Find(name).gameObject.SetActive(tier == 0);
-            Color floor = tier == 3 ? ArtDirection.Hex("BA9472") : tier == 2 ? ArtDirection.Wood
-                : tier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f);
-            _root.Find("Floor").GetComponent<Renderer>().sharedMaterial = IndustrialMaterials.Surface(tier >= 2 ? "wood" : "paving",
-                floor, new Vector2(Width*.5f, Depth*.65f));
-            Color trim = tier == 3 ? ArtDirection.Hex("555F55") : tier == 2 ? ArtDirection.Blue : ArtDirection.Sage;
-            foreach (string name in new[] { "DadoBack", "DadoRight" })
-                _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(trim);
         }
 
         // ---------- 上门的师傅 ----------

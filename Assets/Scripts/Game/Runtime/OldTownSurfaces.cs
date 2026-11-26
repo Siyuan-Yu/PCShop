@@ -72,6 +72,18 @@ namespace PCShopSell.Game.Runtime
                     material.EnableKeyword("_EMISSION");
                     material.SetTexture("_EmissionMap", texture);
                 }
+                float roomGloss=key switch {
+                    "officeCarpet" => .09f, "terraTile" => .21f, "creamTile" => .29f,
+                    "oakParquet" => .31f, "interiorPorcelain" => .57f, "officeSlate" => .41f,
+                    "suburbPlaster" => .09f, "suburbEnamel" => .20f, "suburbCement" => .10f, "suburbShopTile" => .23f,
+                    "wornLimewash" => .10f, "roomLimewash" => .12f, _ => -1f };
+                if (roomGloss>=0)
+                {
+                    material.SetFloat("_Smoothness",roomGloss);
+                    material.SetTexture("_BumpMap",Resources.Load<Texture2D>("OldTown/Surfaces/"+key+"Relief"));
+                    material.SetFloat("_BumpScale",.68f);
+                    material.EnableKeyword("_NORMALMAP");
+                }
                 Panels[key] = material;
             }
             if (material.IsKeywordEnabled("_EMISSION")) Mats.RestoreBakedGlow(material, new Color(.80f,.58f,.36f), .12f);
