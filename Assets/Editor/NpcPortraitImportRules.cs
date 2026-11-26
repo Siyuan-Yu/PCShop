@@ -22,7 +22,8 @@ public sealed class NpcPortraitImportRules : AssetPostprocessor
     public static void Configure(TextureImporter importer)
     {
         importer.textureType = TextureImporterType.Default;
-        importer.maxTextureSize = 512;
+        // Anime portraits are also cut out and shown large in event CGs; 512 blurs the hair edges into halos.
+        importer.maxTextureSize = importer.assetPath.StartsWith(AnimeRoot, System.StringComparison.Ordinal) ? 1024 : 512;
         importer.mipmapEnabled = false;
         importer.isReadable = false;
         importer.alphaSource = TextureImporterAlphaSource.None;

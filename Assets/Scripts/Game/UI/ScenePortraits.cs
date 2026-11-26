@@ -15,7 +15,7 @@ namespace PCShopSell.Game.UI
             if (Cutouts.TryGetValue(source, out var cached)) return cached;
 
             int width = source.width, height = source.height;
-            var cutout = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            var cutout = new Texture2D(width, height, TextureFormat.RGBA32, true)
             {
                 name = source.name + " Scene Portrait",
                 wrapMode = TextureWrapMode.Clamp,
@@ -35,7 +35,7 @@ namespace PCShopSell.Game.UI
                 var pixels = cutout.GetPixels32();
                 RemoveBackdrop(pixels, width, height);
                 cutout.SetPixels32(pixels);
-                cutout.Apply(false, true);
+                cutout.Apply(true, true);
                 Cutouts[source] = cutout;
                 return cutout;
             }
@@ -60,14 +60,21 @@ namespace PCShopSell.Game.UI
         //     skipped because white coats are cropped there);
         //  2. flat matte-coloured pockets enclosed by dark hair/outlines are removed too,
         //     otherwise the gaps between hair strands stay as grey patches;
-        //  3. the light fringe along the silhouette is eaten for two pixels, then the
-        //     alpha is eroded and softened.
+        //  3. the light fringe along the silhouette is eaten for three pixels;
+        //  4. near the silhouette, matte-like pixels surrounded by strong colour (thin
+        //     gaps between strands, anti-aliased hair tips) are unmixed: the colour is
+        //     replaced by the nearby foreground colour and alpha is the blend factor.
         private const int EdgeTolerance = 18;
         private const int PocketTolerance = 10;
         private const int FringeTolerance = 60;
-        private const int PocketMinArea = 25;
+        private const int PocketMinArea = 6;
         private const int PocketMaxArea = 20000;
         private const float PocketDarkRatio = .6f;
+        private const int UnmixReach = 12;
+        private const int UnmixWindow = 3;
+        private const int StrongDifference = 60;
+        private const int UnmixContrast = 40;
+        private const float UnmixStrongRatio = .4f;
 
         private static void RemoveBackdrop(Color32[] pixels, int width, int height)
         {
@@ -79,8 +86,13 @@ namespace PCShopSell.Game.UI
             var right = MedianColor(pixels, width, width - corner, height - corner, corner, corner);
             int count = pixels.Length;
             var distance = new byte[count];
+            var nearLeft = new bool[count];
             for (int i = 0; i < count; i++)
-                distance[i] = (byte)Math.Min(255, Math.Min(Difference(pixels[i], left), Difference(pixels[i], right)));
+            {
+                int toLeft = Difference(pixels[i], left), toRight = Difference(pixels[i], right);
+                nearLeft[i] = toLeft <= toRight;
+                distance[i] = (byte)Math.Min(255, Math.Min(toLeft, toRight));
+            }
 
             var backdrop = new bool[count];
             var stack = new Stack<int>();
@@ -102,9 +114,9 @@ namespace PCShopSell.Game.UI
                 if (i < top) Seed(i + width);
             }
 
-            RemovePockets(pixels, distance, backdrop, width, height);
+            RemovePockets(pixels, distance, backdrop, width);
 
-            for (int pass = 0; pass < 2; pass++)
+            for (int pass = 0; pass < 3; pass++)
             {
                 var grow = new List<int>();
                 for (int i = 0; i < count; i++)
@@ -117,10 +129,59 @@ namespace PCShopSell.Game.UI
                 foreach (int i in grow) backdrop[i] = true;
             }
 
-            SoftenAlpha(pixels, backdrop, width, height);
+            var alpha = new float[count];
+            for (int i = 0; i < count; i++) alpha[i] = backdrop[i] ? 0f : 1f;
+            Unmix(pixels, distance, nearLeft, backdrop, alpha, left, right, width, height);
+            BleedColor(pixels, alpha, width, height);
+            SoftenAlpha(pixels, alpha, width, height);
         }
 
-        private static void RemovePockets(Color32[] pixels, byte[] distance, bool[] backdrop, int width, int height)
+        // Transparent pixels still carry the matte colour, and bilinear/mip sampling mixes it
+        // back in as a pale outline. Spread the foreground colour outwards over them.
+        private static void BleedColor(Color32[] pixels, float[] alpha, int width, int height)
+        {
+            int count = pixels.Length;
+            var filled = new bool[count];
+            var frontier = new List<int>();
+            long r = 0, g = 0, b = 0, n = 0;
+            for (int i = 0; i < count; i++)
+            {
+                filled[i] = alpha[i] >= .5f;
+                if (!filled[i]) continue;
+                r += pixels[i].r; g += pixels[i].g; b += pixels[i].b; n++;
+            }
+            if (n == 0) return;
+            for (int pass = 0; pass < 8; pass++)
+            {
+                frontier.Clear();
+                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    int i = y * width + x;
+                    if (filled[i]) continue;
+                    int sr = 0, sg = 0, sb = 0, sn = 0;
+                    for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int nx = x + dx, ny = y + dy;
+                        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+                        int j = ny * width + nx;
+                        if (!filled[j]) continue;
+                        sr += pixels[j].r; sg += pixels[j].g; sb += pixels[j].b; sn++;
+                    }
+                    if (sn == 0) continue;
+                    pixels[i] = new Color32((byte)(sr / sn), (byte)(sg / sn), (byte)(sb / sn), pixels[i].a);
+                    frontier.Add(i);
+                }
+                if (frontier.Count == 0) break;
+                foreach (int i in frontier) filled[i] = true;
+            }
+            var average = new Color32((byte)(r / n), (byte)(g / n), (byte)(b / n), 255);
+            for (int i = 0; i < count; i++)
+                if (!filled[i]) pixels[i] = new Color32(average.r, average.g, average.b, pixels[i].a);
+        }
+
+        private static void RemovePockets(Color32[] pixels, byte[] distance, bool[] backdrop, int width)
         {
             int count = pixels.Length;
             var candidate = new bool[count];
@@ -186,46 +247,80 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private static void SoftenAlpha(Color32[] pixels, bool[] backdrop, int width, int height)
+        private static void Unmix(Color32[] pixels, byte[] distance, bool[] nearLeft, bool[] backdrop, float[] alpha,
+            Color32 left, Color32 right, int width, int height)
         {
             int count = pixels.Length;
-            var alpha = new float[count];
+            var reach = new int[count];
+            var queue = new Queue<int>();
+            for (int i = 0; i < count; i++)
+            {
+                if (backdrop[i]) { reach[i] = 0; queue.Enqueue(i); }
+                else reach[i] = int.MaxValue;
+            }
+            while (queue.Count != 0)
+            {
+                int i = queue.Dequeue(), x = i % width, next = reach[i] + 1;
+                if (next > UnmixReach) continue;
+                if (x > 0 && reach[i - 1] > next) { reach[i - 1] = next; queue.Enqueue(i - 1); }
+                if (x < width - 1 && reach[i + 1] > next) { reach[i + 1] = next; queue.Enqueue(i + 1); }
+                if (i >= width && reach[i - width] > next) { reach[i - width] = next; queue.Enqueue(i - width); }
+                if (i < count - width && reach[i + width] > next) { reach[i + width] = next; queue.Enqueue(i + width); }
+            }
+
+            var source = (Color32[])pixels.Clone();
+            int window = (2 * UnmixWindow + 1) * (2 * UnmixWindow + 1);
             for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
-                // 3x3 erosion of the opaque mask (outside the image counts as opaque).
-                bool opaque = true;
-                for (int dy = -1; dy <= 1 && opaque; dy++)
-                for (int dx = -1; dx <= 1; dx++)
+                int i = y * width + x;
+                if (backdrop[i] || reach[i] > UnmixReach || distance[i] > StrongDifference) continue;
+                int best = distance[i], bestIndex = i, strong = 0;
+                for (int dy = -UnmixWindow; dy <= UnmixWindow; dy++)
+                for (int dx = -UnmixWindow; dx <= UnmixWindow; dx++)
                 {
-                    int nx = x + dx, ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-                    if (backdrop[ny * width + nx]) { opaque = false; break; }
+                    int nx = Mathf.Clamp(x + dx, 0, width - 1), ny = Mathf.Clamp(y + dy, 0, height - 1);
+                    int n = ny * width + nx;
+                    if (backdrop[n]) continue;
+                    if (distance[n] >= StrongDifference) strong++;
+                    if (distance[n] > best) { best = distance[n]; bestIndex = n; }
                 }
-                alpha[y * width + x] = opaque ? 1f : 0f;
-            }
+                if (best < distance[i] + UnmixContrast || strong < window * UnmixStrongRatio) continue;
 
-            // Gaussian blur, sigma 0.8, radius 2, separable.
-            float[] kernel = { .0443f, .4578f, 1f, .4578f, .0443f };
-            float sum = 0f;
-            foreach (float k in kernel) sum += k;
-            for (int k = 0; k < kernel.Length; k++) kernel[k] /= sum;
+                var matte = nearLeft[i] ? left : right;
+                var fore = source[bestIndex];
+                var pixel = source[i];
+                float fr = fore.r - matte.r, fg = fore.g - matte.g, fb = fore.b - matte.b;
+                float pr = pixel.r - matte.r, pg = pixel.g - matte.g, pb = pixel.b - matte.b;
+                float length = Mathf.Max(1f, fr * fr + fg * fg + fb * fb);
+                alpha[i] = Mathf.Clamp01((pr * fr + pg * fg + pb * fb) / length);
+                pixels[i] = new Color32(fore.r, fore.g, fore.b, pixel.a);
+            }
+        }
+
+        private static void SoftenAlpha(Color32[] pixels, float[] alpha, int width, int height)
+        {
+            int count = pixels.Length;
+            // Gaussian blur, sigma 0.5, separable.
+            const float side = .1353f, centre = 1f;
+            float sum = centre + 2f * side;
             var temp = new float[count];
             for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
-                float v = 0f;
-                for (int k = -2; k <= 2; k++) v += kernel[k + 2] * alpha[y * width + Mathf.Clamp(x + k, 0, width - 1)];
-                temp[y * width + x] = v;
+                int i = y * width + x;
+                float l = alpha[y * width + Math.Max(0, x - 1)], r = alpha[y * width + Math.Min(width - 1, x + 1)];
+                temp[i] = (alpha[i] * centre + (l + r) * side) / sum;
             }
             for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
-                float v = 0f;
-                for (int k = -2; k <= 2; k++) v += kernel[k + 2] * temp[Mathf.Clamp(y + k, 0, height - 1) * width + x];
+                int i = y * width + x;
+                float d = temp[Math.Max(0, y - 1) * width + x], u = temp[Math.Min(height - 1, y + 1) * width + x];
+                float v = (temp[i] * centre + (d + u) * side) / sum;
                 // The portrait is cropped at the waist; fade the last rows so it does not end in a hard line.
                 float fade = Mathf.SmoothStep(0f, 1f, y / (height * .05f));
-                pixels[y * width + x].a = (byte)Mathf.Clamp(Mathf.RoundToInt(v * fade * pixels[y * width + x].a), 0, 255);
+                pixels[i].a = (byte)Mathf.Clamp(Mathf.RoundToInt(v * fade * pixels[i].a), 0, 255);
             }
         }
 
