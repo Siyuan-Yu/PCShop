@@ -964,9 +964,11 @@ namespace PCShopSell.Game.Runtime
                 }
             if (race.SponsorSticker)
             {
-                bool car = MotorCatalog.ClassOf(race.Model.Kind) == 2;
-                Prims.Box(_player, "PhoneShopSponsorSticker", new Vector3(car ? .78f : .24f, car ? .85f : .64f, 0),
-                    new Vector3(.025f, car ? .32f : .20f, car ? .65f : .42f), Mats.Lit(ArtDirection.Brass));
+                if (MotorCatalog.ClassOf(race.Model.Kind) == 2)
+                    VehiclePropArt.PassengerSponsorSticker(_player, race.Model.Id);
+                else
+                    Prims.Box(_player, "PhoneShopSponsorSticker", new Vector3(.24f,.64f,0),
+                        new Vector3(.025f,.20f,.42f), Mats.Lit(ArtDirection.Brass));
             }
             if (MotorCatalog.ClassOf(race.Model.Kind) != 2)
             {
@@ -1035,47 +1037,9 @@ namespace PCShopSell.Game.Runtime
         }
         public static Transform Build(Transform parent,MotorModel model,Color color,bool includeRider=true)
         {
-            if(MotorCatalog.ClassOf(model.Kind)==2)
-            {
-                var car=Prims.ParkedCar(parent,Vector3.zero,color).transform;car.localRotation=Quaternion.identity;
-                if(model.Price>=500000){car.localScale=new Vector3(1.12f,.75f,1.05f);Prims.Box(car,"RearWing",new Vector3(0,1.2f,-1.35f),new Vector3(1.9f,.12f,.45f),Mats.Lit(ArtDirection.Ink));}
-                if(model.Kind==VehicleKind.Van)Prims.Box(car,"CargoCabin",new Vector3(0,1.3f,-.6f),new Vector3(1.5f,1.2f,2.2f),Mats.Lit(color));
-                return car;
-            }
-            var root=new GameObject(model.Name).transform;root.SetParent(parent,false);bool three=model.Kind==VehicleKind.Tricycle;
-            var body = Mats.Lit(color);
-            var trim = Mats.Lit(ArtDirection.Ink);
-            Prims.Box(root,"Seat",new Vector3(0,.8f,-.35f),new Vector3(.55f,.16f,.7f),trim);
-            if (three)
-            {
-                Prims.Box(root, "Frame", new Vector3(0, .5f, 0), new Vector3(.45f, .3f, 1.7f), body);
-                Prims.Box(root, "Handlebar", new Vector3(0, 1.1f, .65f), new Vector3(.9f, .12f, .12f), trim);
-            }
-            else
-            {
-                Prims.Box(root, "Frame", new Vector3(0, .32f, 0), new Vector3(.45f, .16f, 1.7f), body);
-                Prims.Box(root, "Footboard", new Vector3(0, ScooterDeckHeight - .0275f, .09f), new Vector3(.53f, .055f, .66f), trim);
-                Prims.Box(root, "SeatBase", new Vector3(0, .56f, -.47f), new Vector3(.49f, .34f, .62f), body);
-                var grip = ScooterGrip(0);
-                Prims.Box(root, "SteeringStem", new Vector3(0, 1.04f, .44f), new Vector3(.13f, .36f, .14f), body)
-                    .transform.localRotation = Quaternion.Euler(-34, 0, 0);
-                Prims.Box(root, "Handlebar", grip, new Vector3(ScooterGripOffset * 2, .06f, .065f), trim);
-                Prims.Box(root, "LeftGrip", ScooterGrip(-1), new Vector3(.16f, .074f, .076f), trim);
-                Prims.Box(root, "RightGrip", ScooterGrip(1), new Vector3(.16f, .074f, .076f), trim);
-            }
-            for(int i=0;i<(three?3:2);i++)
-            {
-                var wheel=Prims.Shape(PrimitiveType.Cylinder,root,"Wheel",new Vector3(three&&i>0?(i==1?-.65f:.65f):0,.3f,i==0?.7f:-.7f),new Vector3(.58f,.12f,.58f),Mats.Lit(ArtDirection.Ink));wheel.transform.localRotation=Quaternion.Euler(0,0,90);
-            }
-            if(three)Prims.Box(root,"CargoBed",new Vector3(0,.7f,-.8f),new Vector3(1.4f,.4f,1),Mats.Lit(color));
-            if(!three)
-            {
-                Prims.Box(root,"FrontShield",new Vector3(0,.72f,.55f),new Vector3(.52f,.66f,.22f),Mats.Lit(color));
-                Prims.Shape(PrimitiveType.Sphere,root,"Headlight",new Vector3(0,1.04f,.71f),Vector3.one*.23f,Mats.Lit(ArtDirection.Cream));
-                if(model.Id=="e_range")Prims.Box(root,"StorageBox",new Vector3(0,1.02f,-.78f),new Vector3(.65f,.4f,.5f),Mats.Lit(color));
-                if(model.Id=="e_dash"||model.Id=="e_race")Prims.Box(root,"Windscreen",new Vector3(0,1.27f,.63f),new Vector3(.46f,.42f,.08f),Mats.Lit(ArtDirection.Ink));
-                if(model.Id=="e_turn")Prims.Box(root,"CreamTrim",new Vector3(0,.75f,.68f),new Vector3(.22f,.5f,.02f),Mats.Lit(ArtDirection.Cream));
-            }
+            if (MotorCatalog.ClassOf(model.Kind) == 2) return VehiclePropArt.Car(parent, model.Id, color);
+            var root = PropForms.Group(parent, model.Name);
+            VehiclePropArt.Scooter(root, model, color);
             if(!includeRider)return root;
             Prims.Box(root,"RiderJacket",new Vector3(0,1.15f,-.15f),new Vector3(.5f,.7f,.35f),Mats.Lit(ArtDirection.Ink));
             Prims.Shape(PrimitiveType.Sphere,root,"Helmet",new Vector3(0,1.7f,-.1f),Vector3.one*.48f,Mats.Lit(ArtDirection.Cream));return root;

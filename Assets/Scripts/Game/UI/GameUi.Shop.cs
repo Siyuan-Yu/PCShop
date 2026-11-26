@@ -81,7 +81,10 @@ namespace PCShopSell.Game.UI
             Image panel = Ui.FlatPanel(_dockCanvas.transform, "ShopDock", Ui.FlatWindow);
             _dock = panel.rectTransform.Anchor(1, 0, 1, 1, -ShopDockWidth, 70, 10, 120);
 
-            var titleRow = Ui.Row(_dock, 40, 10).Anchor(0, 1, 1, 1, 16, -49, 120, 6);
+            var header = Ui.Panel(_dock, "ShopDockHeader", Ui.Chrome);
+            header.rectTransform.Anchor(0, 1, 1, 1, 0, -50, 0, 0);
+            header.raycastTarget = false;
+            var titleRow = Ui.Row(header.transform, 40, 10).Anchor(0, 0, 1, 1, 16, 0, 120, 6);
             titleRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
             _dockTitle = Ui.Size(Ui.Label(titleRow, "", 23), -1, 40);
             _dockTitle.fontStyle = FontStyle.Bold;
@@ -115,8 +118,13 @@ namespace PCShopSell.Game.UI
                     if (t == ShopTab.Renovate) S.VisitOpeningRenovationTab();
                     if (t == ShopTab.Counter) S.VisitOpeningCounterTab();
                     SelectTab(t);
-                }, 17);
-                Ui.Trim((RectTransform)button.transform, "ActiveTabRule", Ui.Good, 0);
+                }, 16);
+                Ui.ButtonArtwork(button, t switch
+                {
+                    ShopTab.Counter => UiIcon.Counter, ShopTab.Stock => UiIcon.Stock, ShopTab.Pricing => UiIcon.Pricing,
+                    ShopTab.Orders => UiIcon.Orders, ShopTab.Renovate => UiIcon.Renovate, _ => UiIcon.Employees
+                });
+                Ui.Trim((RectTransform)button.transform, "ActiveTabRule", Ui.ButtonHot, 0);
                 _tabButtons.Add((button, t));
                 if (t == ShopTab.Staff) _staffPurchaseAlert = AddPurchaseAlertDot(button.transform);
             }
@@ -169,6 +177,7 @@ namespace PCShopSell.Game.UI
         public void CloseDock()
         {
             if (_dock == null) return;
+            _dock.gameObject.SetActive(false);
             Kill.It(_dock.gameObject);
             _dock = null;
             _staffPurchaseAlert = null;
@@ -194,7 +203,7 @@ namespace PCShopSell.Game.UI
             foreach (var (b, t) in _tabButtons)
             {
                 bool selected = t == tab;
-                Ui.SetButtonFill(b, selected ? Ui.FlatRow : Ui.FlatWindow);
+                Ui.SetButtonFill(b, Ui.TabFill(selected));
                 b.transform.Find("ActiveTabRule").gameObject.SetActive(selected);
             }
             RefreshDockHeader();

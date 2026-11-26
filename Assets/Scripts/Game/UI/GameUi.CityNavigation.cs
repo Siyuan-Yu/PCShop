@@ -94,13 +94,19 @@ namespace PCShopSell.Game.UI
         private void BuildShortcutButton(Transform parent,string label,int kind,float width)
         {
             var group=Ui.Row(parent,42,1);group.name="Shortcut_"+kind;Ui.Size(group,width+27,42);
-            var main=Ui.Button(group,label,()=>TravelShortcut(kind),16);
+            var main=Ui.Button(group,label,()=>TravelShortcut(kind),16,Ui.HudTile);
             main.name="ShortcutGo_"+kind;Ui.Size(main,width,42);
+            var icon = Ui.Artwork(main.transform, kind switch
+            {
+                SleepShortcut => UiIcon.Home, OwnedShopShortcut => UiIcon.Shop,
+                1 => UiIcon.Wholesale, 2 => UiIcon.Agency, _ => UiIcon.None
+            });
+            if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 8, -9, -26, -9);
             var caption=main.GetComponentInChildren<Text>();
             caption.horizontalOverflow = HorizontalWrapMode.Overflow;
             caption.verticalOverflow = VerticalWrapMode.Truncate;
             caption.supportRichText = false;
-            caption.rectTransform.Anchor(0, 0, 1, 1, ShortcutCaptionPadding, 3, ShortcutCaptionPadding, 3);
+            caption.rectTransform.Anchor(0, 0, 1, 1, icon == null ? ShortcutCaptionPadding : 32, 3, ShortcutCaptionPadding, 3);
             main.gameObject.AddComponent<RectMask2D>().padding = new Vector4(ShortcutCaptionPadding, 0, ShortcutCaptionPadding, 0);
             main.Tip(() =>
             {
@@ -207,13 +213,13 @@ namespace PCShopSell.Game.UI
         private static int ShortcutOptionIndex(Place[] places, Place destination) =>
             Mathf.Max(0, System.Array.IndexOf(places, destination));
 
-        private static void FitShortcutCaption(ShortcutMenu menu, string name, bool hasDestination)
+        private void FitShortcutCaption(ShortcutMenu menu, string name, bool hasDestination)
         {
             var label = menu.Caption;
             var settings = label.GetGenerationSettings(Vector2.zero);
             float Measure(string value) => label.cachedTextGeneratorForLayout.GetPreferredWidth(value, settings) / label.pixelsPerUnit;
             float maxWidth = menu.Kind == SleepShortcut ? 160 : 172;
-            const float gutter = ShortcutCaptionPadding * 2 + 4;
+            float gutter = label.rectTransform.offsetMin.x + ShortcutCaptionPadding + 4;
             float maxTextWidth = maxWidth - gutter;
             name = name.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ');
             string caption = hasDestination ? "前往 " + name : name;
@@ -239,6 +245,7 @@ namespace PCShopSell.Game.UI
             float width = Mathf.Clamp(Mathf.Ceil(preferred) + gutter, Mathf.Max(100, menu.MinimumWidth), maxWidth);
             Ui.Size(menu.Main, width, 42);
             Ui.Size(menu.Group, width + 27, 42);
+            _fittedTravelWidth = 0;
         }
 
         private void RefreshShortcutMenus()
@@ -255,7 +262,7 @@ namespace PCShopSell.Game.UI
                 {
                     menu.Main.interactable = canTravel;
                     if (menu.Kind == OwnedShopShortcut)
-                        Ui.SetButtonFill(menu.Main, canTravel ? Ui.ButtonHot : Ui.ButtonBg);
+                        Ui.SetButtonFill(menu.Main, canTravel ? Ui.ButtonHot : Ui.HudTile);
                 }
                 string selected=destination?.Id;
                 string name = destination == null && menu.Kind == 3 ? "选择目的地" : ShortcutPlaceName(menu.Kind, destination);

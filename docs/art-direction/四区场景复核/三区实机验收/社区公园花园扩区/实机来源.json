@@ -1,0 +1,29 @@
+{
+  "revision": "citypass17",
+  "mode": "Unity Play Mode / full / baked v16",
+  "source": "3218F4C5372B6ABF0CCB7659E23F8857A3E014FDAF9F098D83B041ABBEC5BBBB",
+  "previous": "6805D7228B38223B96D0410387C899AD229803E0F424F67B3116AE31D308545E",
+  "layout": "6CB7C90D59A70924EFF3EAF212A2521E323B8E212FFA7578B45DEE9B77BD931D",
+  "total_entrances": 259,
+  "unchanged_entrances": 259,
+  "districts": {
+    "community": 58,
+    "park": 68,
+    "garden": 56
+  },
+  "registered": 12,
+  "originals": "1600×900",
+  "site_native": "512×288",
+  "baseline_repeat_scores": [
+    99.952,
+    99.956,
+    99.966,
+    99.992
+  ],
+  "oldtown_repeat_scores": [
+    99.997,
+    99.996,
+    99.976
+  ],
+  "max_magenta_fraction": 0.0
+}

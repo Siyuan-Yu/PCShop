@@ -167,7 +167,7 @@ namespace PCShopSell.Game
             if (def == null) return;
             Transform parent = _placeShop ? Interior.Root : ActiveResidence.Root;
             string shelfKind = _placeIndex >= 0 ? PlaceLayout[_placeIndex].Item : null;
-            _ghost = FurnitureVisuals.Build(parent, def, false, shelfKind);
+            _ghost = FurnitureVisuals.Build(parent, def, false, shelfKind, _placeShop ? Interior.District : ActiveResidence.District);
             foreach (Renderer r in _ghost.GetComponentsInChildren<Renderer>())
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _ghostOutline = PlacementOutline.Attach(_ghost);

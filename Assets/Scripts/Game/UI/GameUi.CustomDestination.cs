@@ -68,7 +68,7 @@ namespace PCShopSell.Game.UI
             var detail = Ui.Size(Ui.Panel(columns, "DestinationDetails", Ui.FlatWell), 0, -1, 1);
             Ui.VList(detail.rectTransform, 8, 14);
             var category = Line(detail.transform, "", 16, Ui.Accent);
-            var name = Ui.Size(Ui.Label(detail.transform, "", 25, TextAnchor.MiddleLeft), -1, 60);
+            var name = Ui.Size(Ui.Label(detail.transform, "", 22, TextAnchor.MiddleLeft), -1, 48);
             name.name = "DestinationName";
             name.fontStyle = FontStyle.Bold;
             var address = Line(detail.transform, "", 17, Ui.Dim);
@@ -83,7 +83,7 @@ namespace PCShopSell.Game.UI
             var save = Ui.Size(Ui.Button(detail.transform, "保存到底栏", null, 18), -1, 42);
             save.name = "DestinationSave";
             var saveLabel = save.GetComponentInChildren<Text>();
-            var buttons = new Dictionary<DestinationEntry, Image>();
+            var buttons = new Dictionary<DestinationEntry, Button>();
             go.onClick.AddListener(() =>
             {
                 if (S.CityDestinationTravelBlocker(selected?.Place, out _, out _) != null)
@@ -151,18 +151,20 @@ namespace PCShopSell.Game.UI
                     {
                         selected = entry;
                         RefreshDetail();
-                    }, 19), -1, 54);
+                    }, 17), -1, 50);
                     button.name = "DestinationRow_" + entry.Place.Id;
+                    var icon = Ui.Artwork(button.transform, DestinationIcon(entry));
+                    if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 9, -15, -39, -15);
                     var label = button.GetComponentInChildren<Text>();
                     label.alignment = TextAnchor.MiddleLeft;
-                    label.rectTransform.Fill(10);
-                    buttons.Add(entry, button.image);
+                    label.rectTransform.Anchor(0, 0, 1, 1, icon == null ? 10 : 48, 4, 10, 4);
+                    buttons.Add(entry, button);
                 }
             }
 
             void RefreshDetail()
             {
-                foreach (var button in buttons) button.Value.color = button.Key == selected ? Ui.ButtonHot : Ui.ButtonBg;
+                foreach (var button in buttons) Ui.SetButtonFill(button.Value, Ui.SelectedButton(button.Key == selected));
                 var place = selected?.Place;
                 category.text = selected?.Label ?? "";
                 name.text = selected?.Name ?? "选择一个地点";
@@ -185,6 +187,18 @@ namespace PCShopSell.Game.UI
                 saveLabel.text = saved ? "已保存到底栏" : "保存到底栏";
             }
         }
+
+        private static UiIcon DestinationIcon(DestinationEntry entry) => entry.Place.Kind switch
+        {
+            PlaceKind.Agency => UiIcon.Agency, PlaceKind.Station => UiIcon.Station,
+            PlaceKind.Garage or PlaceKind.Dealer => UiIcon.Garage,
+            PlaceKind.Home => UiIcon.Home,
+            _ when (entry.Types & DestinationType.Shop) != 0 => UiIcon.Shop,
+            _ when (entry.Types & DestinationType.Supply) != 0 => UiIcon.Wholesale,
+            _ when (entry.Types & DestinationType.Leisure) != 0 => UiIcon.Leisure,
+            _ when (entry.Types & DestinationType.Service) != 0 => UiIcon.PublicServices,
+            _ => UiIcon.None
+        };
 
         private DestinationEntry BuildDestinationEntry(Place place, HashSet<string> venues)
         {

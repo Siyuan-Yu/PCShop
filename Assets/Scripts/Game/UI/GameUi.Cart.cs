@@ -168,8 +168,8 @@ namespace PCShopSell.Game.UI
             b.Tip($"点一下：1 {unit}；长按连续调整并立即应用，无需输入数量。");
         }
 
-        private static readonly Color CartColumn = new Color(0.12f, 0.15f, 0.18f);
-        private static readonly Color CartCard = new Color(0.19f, 0.23f, 0.27f);
+        private static readonly Color CartColumn = Ui.FlatBand;
+        private static readonly Color CartCard = Ui.FlatWell;
 
         /// <summary>商品行右边的“加入购物车”按钮；showCount 时前面写购物车里已经有几件。</summary>
         private void CartAddButton(Window w, Transform row, string key, Func<bool> add, string label, float width, bool enabled = true, bool showCount = true,double? maxAmount=null)
@@ -279,7 +279,7 @@ namespace PCShopSell.Game.UI
 
         private static RectTransform CartColumnBox(Transform row, out RectTransform list)
         {
-            Image box = Ui.Panel(row, "CartColumn", CartColumn);
+            Image box = Ui.FlatPanel(row, "CartColumn", CartColumn);
             Ui.Size(box, -1, 190, 1);
             list = Ui.Scroll(box.transform, -1);
             ((RectTransform)list.parent.parent).Fill();
@@ -408,8 +408,7 @@ namespace PCShopSell.Game.UI
             string category = null;
             OpenWindow("叫货车 · " + GameSession.TruckDriverName, 1180, 860, w =>
             {
-                Para(w.Content, $"每辆货车最多装 {Ui.Emphasize($"{GameSession.CourierCapacityKg:0} 千克")}，运费按路程算。先选送到哪，再把左边的东西装车。" +
-                    "在家或店内可搬后仓和临时存放的货物。摆着的家具先收进后仓。", 15, Ui.Dim);
+                Para(w.Content, $"每辆限重 {GameSession.CourierCapacityKg:0} 千克，已摆放的家具需先收纳。", 15, Ui.Dim);
                 Place dest = S.TruckDestination;
                 RectTransform destRow = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(destRow, "送到", 17, TextAnchor.MiddleLeft, Ui.Dim), 44);
@@ -419,11 +418,12 @@ namespace PCShopSell.Game.UI
                 (Money fee, int minutes) = S.TruckQuote(dest);
                 Ui.Size(Ui.Label(destRow, destWhy ?? $"每辆 {fee}，约 {minutes} 分钟到", 15, TextAnchor.MiddleLeft, destWhy != null ? Ui.Warn : Ui.Dim), -1, -1, 1);
 
-                RectTransform cols = Ui.Row(w.Content, 520, 10);
+                RectTransform cols = Ui.Row(w.Content, 0, 10);
+                cols.GetComponent<LayoutElement>().flexibleHeight = 1;
                 RectTransform hereCol = CartColumnBox(cols, out RectTransform hereList);
                 RectTransform loadCol = CartColumnBox(cols, out RectTransform loadList);
-                Ui.Size(hereCol, -1, 520, 1);
-                Ui.Size(loadCol, -1, 520, 1);
+                Ui.Size(hereCol, -1, 0, 1);
+                Ui.Size(loadCol, -1, 0, 1);
 
                 const float headerHeight = 36;
                 var hereScroll = hereList.GetComponentInParent<ScrollRect>();
@@ -477,7 +477,7 @@ namespace PCShopSell.Game.UI
                 send.name = "TruckDispatch";
                 Ui.Size(send, -1, -1, 1);
 
-            }, true, true, () => S.ClearTruckLoad());
+            }, true, true, () => S.ClearTruckLoad(), scrollContent: false);
         }
 
         private void BuildTruckAvailableItems(Window w, RectTransform list, RectTransform loadCol,

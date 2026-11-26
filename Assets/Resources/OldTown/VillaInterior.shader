@@ -35,7 +35,7 @@ Shader "PCShop/Villa interior"
                 // Outside the pool of lamplight the furnished recess falls back into shadow at night.
                 float2 offset=(uv-float2(.33,.64))*float2(2.2,1.);
                 half lamp=exp2(-5.*dot(offset,offset));
-                half3 daylight=pigment*half3(1.94,1.84,1.63)*(.69+.68*lamp)+luma*half3(.06,.13,.16);
+                half3 daylight=pigment*half3(2.75,2.20,1.40)*(.47+1.29*lamp)+luma*half3(.035,.060,.064);
                 half3 lamplight=(pigment*.70+luma*.30)*half3(2.86,1.69,.76)*(.26+1.42*lamp);
                 half3 tint=_RoomView>1.5?half3(.71,.82,.89):_RoomView>.5?half3(.91,1.,.96):half3(1.,.96,.85);
                 return half4(MixFog(lerp(daylight,lamplight,night)*tint,i.fog),1.);

@@ -113,6 +113,9 @@ namespace PCShopSell.Game
             if(!Cam.TryGetComponent<WheelStreetVisibility>(out var wheels))
                 wheels=Cam.gameObject.AddComponent<WheelStreetVisibility>();
             wheels.Bind(Cam,world);
+            if(!Cam.TryGetComponent<CityOverviewShadows>(out var survey))
+                survey=Cam.gameObject.AddComponent<CityOverviewShadows>();
+            survey.World=world;
             var checkpoints = new GameObject("DistrictCheckpoints").AddComponent<DistrictGateView>();
             checkpoints.transform.SetParent(transform, false);
             checkpoints.Initialize(this);

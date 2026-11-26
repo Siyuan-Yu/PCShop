@@ -132,8 +132,23 @@ namespace PCShopSell.Game.Runtime
             _lakeAccessSurfaces.Clear();
             _streetPavementEnvelopes = new RoadSurfaceGeometry.Index();
             float deck = LakeAccessHeight(_city);
-            var gardenDoors = new HashSet<string>(_city.PublicPlaces.Where(p => ArtDistrict(p.StreetId) == 3)
-                .Select(p => p.NodeId));
+            // Doorway nodes alternate with junctions on the same boulevard. Resolve the intervening
+            // segments too, respecting the district edge and leaving the open lake approaches neutral.
+            var frontages=_city.PublicPlaces.Where(p=>!IsLakeAccessNode(p.NodeId))
+                .Select(p=>(door:DoorXZ(p),district:ArtDistrict(p.StreetId))).ToArray();
+            bool GardenStreet(Vector2 point)
+            {
+                float limit=65f*65f;
+                int district=0;
+                foreach(var frontage in frontages)
+                {
+                    float squared=(point-frontage.door).sqrMagnitude;
+                    if(squared>=limit)continue;
+                    limit=squared;
+                    district=frontage.district;
+                }
+                return district==3;
+            }
             float deadline = Time.realtimeSinceStartup + .008f;
             var segments=new List<StreetSegment>();var seen=new HashSet<string>();
             foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))
@@ -146,7 +161,7 @@ namespace PCShopSell.Game.Runtime
                 segments.Add(new StreetSegment { A = new Vector2(a.x, a.z), B = new Vector2(b.x, b.z), Width = width,
                     PavedWidth = width + (float)GameSession.CityPavingWidth * 2, Deck = deck,
                     Raised = raisedA || raisedB, GroundAtA = !raisedA, GroundAtB = !raisedB,
-                    GardenFrontage = gardenDoors.Contains(n.Id) || gardenDoors.Contains(e.To) });
+                    GardenFrontage = !raisedA && !raisedB && GardenStreet(new Vector2((a.x+b.x)*.5f,(a.z+b.z)*.5f)) });
             }
             // A raised access road owns its junction; the ground road terminates at that boundary.
             segments=segments.OrderByDescending(s=>s.Raised).ThenByDescending(s=>(s.B-s.A).sqrMagnitude).ToList();
@@ -159,6 +174,7 @@ namespace PCShopSell.Game.Runtime
             var quarterEdges = new SurfaceMesh();
             var quarterDashes = new SurfaceMesh();
             var gardenArrows = new SurfaceMesh();
+            var gardenEdge = new SurfaceMesh();
             var roads=new SurfaceMesh();var paving=new SurfaceMesh();var white=new SurfaceMesh();var yellow=new SurfaceMesh();
             foreach (var s in segments)
             {
@@ -324,14 +340,20 @@ namespace PCShopSell.Game.Runtime
                 foreach(int sign in new[]{-1,1})
                 {
                     var offset=normal*sign*(s.Width*.5f-.35f);
-                    Mark(RoadSurfaceGeometry.Strip(s.A+d*from+offset,s.A+d*to+offset,.08f),paint ? quarterEdges : white);
+                    bool inlay=s.GardenFrontage && !s.Raised && !paint;
+                    Mark(RoadSurfaceGeometry.Strip(s.A+d*from+offset,s.A+d*to+offset,inlay?.115f:.08f),paint ? quarterEdges : white);
+                    if(inlay)
+                    {
+                        var inset=offset-normal*sign*.21f;
+                        Mark(RoadSurfaceGeometry.Strip(s.A+d*from+inset,s.A+d*to+inset,.095f),gardenEdge);
+                    }
                 }
                 float projection=Vector2.Dot(s.A,d);
                 float spacing = paint ? 4.2f : 5f;
                 for(float at=Mathf.Floor(projection/spacing)*spacing-projection;at<length;at+=spacing)
                 {
                     float start=Mathf.Max(from,at),end=Mathf.Min(at+(paint ? 1.47f : 2f),to);
-                    if(end>start+.05f)Mark(RoadSurfaceGeometry.Strip(s.A+d*start,s.A+d*end,paint ? .17f : .12f),paint ? quarterDashes : yellow);
+                    if(end>start+.05f)Mark(RoadSurfaceGeometry.Strip(s.A+d*start,s.A+d*end,paint ? .17f : s.GardenFrontage ? .19f : .12f),paint ? quarterDashes : s.GardenFrontage ? white : yellow);
                 }
                 if (s.GardenFrontage && !s.Raised && to-from>2.2f)
                 {
@@ -351,9 +373,9 @@ namespace PCShopSell.Game.Runtime
                         for (int head=-1;head<=1;head++)
                         {
                             var tip = center + ahead*(head*.43f);
-                            var back = tip - ahead*.29f;
-                            Mark(RoadSurfaceGeometry.Strip(back+normal*.22f,tip,.094f), gardenArrows);
-                            Mark(RoadSurfaceGeometry.Strip(back-normal*.22f,tip,.094f), gardenArrows);
+                            var back = tip - ahead*.42f;
+                            Mark(RoadSurfaceGeometry.Strip(back+normal*.32f,tip,.125f), gardenArrows);
+                            Mark(RoadSurfaceGeometry.Strip(back-normal*.32f,tip,.125f), gardenArrows);
                         }
                     }
                 }
@@ -374,12 +396,14 @@ namespace PCShopSell.Game.Runtime
                 quarterDashes.Build(root,"Old quarter lane paint",QuarterMaterial("Dash"),resources,castsShadows:false);
             }
             townRoads.Build(root,"Town asphalt",OldTownSurfaces.PanelMaterial("streetAsphalt"),resources);
-            townWalks.Build(root,"Town flagstones",OldTownSurfaces.PanelMaterial("graniteWalk"),resources);
+            townWalks.Build(root,"Town flagstones",OldTownSurfaces.PanelMaterial("districtFlagstones"),resources);
             roads.Build(root,"RoadSurface",IndustrialMaterials.Surface("asphalt",Asphalt,Vector2.one),resources);
             paving.Build(root,"PavementSurface",IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(1.25f,1.25f)),resources);
             white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Cream),resources);
             yellow.Build(root,"LaneMarkings",Mats.Lit(ArtDirection.Brass),resources);
-            gardenArrows.Build(root,"花园路面导向嵌线",Mats.Lit(ArtDirection.Hex("84AAA6"),.18f),resources,castsShadows:false);
+            var aqua=Mats.Lit(ArtDirection.Hex("9ED8D7"),.18f);
+            gardenArrows.Build(root,"花园路面导向嵌线",aqua,resources,castsShadows:false);
+            gardenEdge.Build(root,"花园双线道缘",aqua,resources,castsShadows:false);
             if (HasStarterArt && BuildsPlace(_city.GetPlace(StarterHome)) && BuildsPlace(_city.GetPlace(StarterShop))
                 && BuildsPlace(_city.GetPlace(StarterStation)))
                 BuildQuarterFootpaths(root, resources, pavingIndex);
@@ -484,7 +508,7 @@ namespace PCShopSell.Game.Runtime
                     if(MountainHeight(lakePoint.x,lakePoint.z)>.04f||WithinLake(lakePoint,shore))continue;
                     float clearance=district==0?2.65f:1.25f;
                     var probe=RoadSurfaceGeometry.Strip(pos-direction*clearance,pos+direction*clearance,clearance*2);
-                    if(Overlaps(paving,probe)||Overlaps(reserved,probe))continue;
+                    if(Overlaps(paving,probe)||Overlaps(reserved,probe)||Overlaps(planted,probe))continue;
                     planted.Add(probe);
                     var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
                     if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
@@ -554,6 +578,8 @@ namespace PCShopSell.Game.Runtime
                     seed=(seed*113+91)&1023;
                 }
             }
+            var courts=new SurfaceMesh();
+            var courtsTaken=new RoadSurfaceGeometry.Index();
             // Fill the strips between occupied plots and the reserved street. Every bed
             // and its planting stay outside door approaches, paths, hills and water.
             foreach(var place in _city.PublicPlaces.Where(BuildsPlace))
@@ -573,6 +599,56 @@ namespace PCShopSell.Game.Runtime
                 var along3=rotation*Vector3.forward;
                 var along=new Vector2(along3.x,along3.z);
                 int hash=StableCityHash(place.Id)&int.MaxValue;
+                if(district==3 && (place.Model=="villa" || place.Model=="shop"))
+                {
+                    var node=NodeWorld(place.NodeId);
+                    float setback=Vector2.Dot(door-new Vector2(node.x,node.z),along);
+                    if(setback>1)
+                    {
+                        // Follow the real gate and stop at the existing public paving. Streets, neighbours'
+                        // plots and planted islands cut their own holes before this flagstone apron is added.
+                        var slab=RoadSurfaceGeometry.Strip(door-along*.025f,door-along*Mathf.Min(16,setback),width*.86f);
+                        var pieces=paving.Cut(new List<Vector2[]>{slab},slab);
+                        pieces=reserved.Cut(pieces,slab,id=>!RoadSurfaceGeometry.ClipSegment(door,door,reserved.Polygons[id],out _,out _));
+                        pieces=planted.Cut(pieces,slab);
+                        pieces=courtsTaken.Cut(pieces,slab);
+                        courts.Add(pieces,at=>.044f,along);
+                        foreach(var piece in pieces)courtsTaken.Add(piece);
+                    }
+                }
+                if(place.Id=="life_park")
+                {
+                    // Flower drifts on the street face of the wall stay visible below the
+                    // stone coping. Measure every root ball against the actual public walk.
+                    var frontageFlowers=new StreetPlanting(maintained:true);
+                    var roots=new List<Vector2[]>();
+                    foreach(int side in new[]{-1,1})
+                    foreach(float strip in new[]{.22f,.44f})
+                    for(int k=0;k<7;k++)
+                    {
+                        float x=side*(width*strip+(k%4-1.5f)*.76f);
+                        var offset=rotation*new Vector3(x,0,-1.73f-.72f*(k/4)-.12f*Mathf.Cos(k));
+                        var pos=door+new Vector2(offset.x,offset.z);
+                        var patch=RoadSurfaceGeometry.Strip(pos-along*.63f,pos+along*.63f,1.26f);
+                        if(Overlaps(paving,patch)||Overlaps(reserved,patch)||Overlaps(planted,patch))continue;
+                        var species=k==6?PlantSpecies.Spirea:PlantSpecies.Hydrangea;
+                        frontageFlowers.Add(species,new Vector3(pos.x,.055f,pos.y),1.32f,.85f+.09f*(k%3),strip>.4f?8:11);
+                        roots.Add(patch);
+                    }
+                    foreach(var patch in roots)planted.Add(patch);
+                    frontageFlowers.Build(parent,"河岸公园白墙外的绣球");
+                    // The shade grove sits across the lawn from the loop. Roots have a clear berth
+                    // from the registered neighbouring lots, street and entrances.
+                    foreach(var local in new[]{new Vector2(width*.76f,2.2f),new Vector2(width*.82f,7.0f),new Vector2(width*.68f,1.7f)})
+                    {
+                        var offset=rotation*new Vector3(local.x,0,local.y);
+                        var pos=door+new Vector2(offset.x,offset.z);
+                        var bed=RoadSurfaceGeometry.Strip(pos-along*1.1f,pos+along*1.1f,2.2f);
+                        if(Overlaps(paving,bed)||Overlaps(reserved,bed)||Overlaps(planted,bed))continue;
+                        PaintedWoodland.Plant(parent,new Vector3(pos.x,.025f,pos.y),9,0,hash+(int)local.x,district:2);
+                        planted.Add(bed);
+                    }
+                }
                 // The near beds frame the entrance, the far beds break up the wide lawn
                 // between parcels. Check each complete bed against existing circulation.
                 for(int row=0;row<3;row++)
@@ -651,6 +727,8 @@ namespace PCShopSell.Game.Runtime
                     planting.Build(parent,"临街常绿花境");
                 }
             }
+            courts.Build(parent,"花园门前石板步道",DistrictFinishes.Tile("graniteWalk",Vector2.one),
+                parent.GetComponent<CityLandscapeResources>());
             foreach(var pair in gardens)
             {
                 pair.Value.Build(parent,$"Street planting {pair.Key.x}/{pair.Key.y}");

@@ -287,23 +287,10 @@ namespace PCShopSell.Game.Runtime
 
         public static GameObject ParkedCar(Transform parent, Vector3 at, Color paint)
         {
-            var root = new GameObject("Parked car").transform; root.SetParent(parent, false); root.localPosition = at; root.localRotation = Quaternion.Euler(0, 90, 0);
-            Box(root, "Body", new Vector3(0, 0.52f, 0), new Vector3(1.55f, 0.48f, 3.4f), Mats.Lit(paint, 0.3f));
-            Box(root, "Cabin", new Vector3(0, 0.94f, -0.15f), new Vector3(1.34f, 0.52f, 1.75f), Mats.Lit(ArtDirection.Ink, 0.35f));
-            Box(root, "Roof", new Vector3(0, 1.22f, -0.2f), new Vector3(1.38f, 0.08f, 1.35f), Mats.Lit(paint));
-            foreach (int side in new[] { -1, 1 })
-            {
-                foreach (int axle in new[] { -1, 1 })
-                {
-                    var wheel = Shape(PrimitiveType.Cylinder, root, "Wheel", new Vector3(side * 0.78f, 0.3f, axle * 1.02f), new Vector3(0.52f, 0.10f, 0.52f), Mats.Lit(ArtDirection.Ink));
-                    wheel.transform.localRotation = Quaternion.Euler(0, 0, 90);
-                    var hub = Shape(PrimitiveType.Cylinder, root, "Hub", new Vector3(side * 0.89f, 0.3f, axle * 1.02f), new Vector3(0.25f, 0.012f, 0.25f), Mats.Lit(ArtDirection.Cream));
-                    hub.transform.localRotation = Quaternion.Euler(0, 0, 90);
-                }
-                Box(root, "Headlight", new Vector3(side * 0.5f, 0.6f, 1.71f), new Vector3(0.32f, 0.14f, 0.025f), Mats.Lit(ArtDirection.Cream));
-                Box(root, "TailLight", new Vector3(side * 0.5f, 0.6f, -1.71f), new Vector3(0.28f, 0.12f, 0.025f), Mats.Lit(ArtDirection.Clay));
-            }
-            Box(root, "Plate", new Vector3(0, 0.42f, 1.72f), new Vector3(0.35f, 0.12f, 0.02f), Mats.Lit(ArtDirection.Blue));
+            var root = VehiclePropArt.Car(parent, "c_city", paint);
+            root.name = "Parked car";
+            root.localPosition = at;
+            root.localRotation = Quaternion.Euler(0, 90, 0);
             return root.gameObject;
         }
 

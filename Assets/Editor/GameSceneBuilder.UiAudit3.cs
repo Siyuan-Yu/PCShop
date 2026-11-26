@@ -46,7 +46,7 @@ namespace PCShopSell.EditorTools
             foreach (var m in new[]
             {
                 ("OpenReportWindow", "41-report"), ("OpenShopBuyers", "42-buyers"), ("OpenRelationsPanel", "43-relations"),
-                ("OpenCityPeople", "44-people"), ("OpenCityMap", "45-map"), ("OpenCityWardrobe", "46-wardrobe"),
+                ("OpenCityPeople", "44-people"), ("OpenCityWardrobe", "46-wardrobe"),
                 ("OpenCityClimate", "47-climate"), ("OpenBenchWindow", "48-bench"), ("OpenIndustryNews", "49-news"),
                 ("OpenCityModelCatalog", "50-models"), ("OpenMotorWorkshop", "51-vehicle"), ("OpenRacingDestinations", "52-racing"),
                 ("OpenPetOrders", "53-pets"), ("OpenProcurementBudget", "54-budget"), ("OpenQuarterlyExpo", "55-expo-hall"),

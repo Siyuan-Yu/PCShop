@@ -179,11 +179,10 @@ namespace PCShopSell.EditorTools
                 switch(_step)
                 {
                     case 0:game.Ui.CloseAllWindows();game.StartCityLifePreset("staff");game.Ui.QuestPopups=false;game.Ui.OpenCityFinanceOverview();break;
-                    case 1:Capture("city_main_play_overview");game.Ui.CloseAllWindows();game.Ui.OpenCityMap();break;
-                    case 2:Capture("city_main_play_map");game.Ui.CloseAllWindows();game.Ui.OpenCityAcceptance();break;
-                    case 3:Capture("city_main_play_test_presets");game.Ui.CloseAllWindows();game.StartCityLifePreset("clothing");game.Ui.OpenCityWardrobe();break;
-                    case 4:Capture("city_main_play_wardrobe");game.Ui.CloseAllWindows();game.Ui.OpenCityClimate();break;
-                    case 5:Capture("city_main_play_climate");break;
+                    case 1:Capture("city_main_play_overview");game.Ui.CloseAllWindows();game.Ui.OpenCityAcceptance();break;
+                    case 2:Capture("city_main_play_test_presets");game.Ui.CloseAllWindows();game.StartCityLifePreset("clothing");game.Ui.OpenCityWardrobe();break;
+                    case 3:Capture("city_main_play_wardrobe");game.Ui.CloseAllWindows();game.Ui.OpenCityClimate();break;
+                    case 4:Capture("city_main_play_climate");break;
                     default:
                         Debug.Log("CITY MAIN PLAY RESULT errors="+_errors+" scene="+gameObjectScene(game));
                         SessionState.SetBool(Key,false);EditorApplication.Exit(_errors==0?0:1);return;

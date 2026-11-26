@@ -14,6 +14,7 @@ namespace PCShopSell.Game.UI
         private const KeyCode RacingHotkey = KeyCode.T;
 
         private RectTransform _hudTopRow;
+        private RectTransform _hudTravelRow;
         private RectTransform _hudFunctionBar;
         private RectTransform _hudShortcutRow;
         private Button _hudFoldButton;
@@ -26,6 +27,7 @@ namespace PCShopSell.Game.UI
         private Button _stockMarketButton;
         private Button _racingButton;
         private float _fittedHudWidth;
+        private float _fittedTravelWidth;
         private Button _pauseButton;
         private Text _pauseLabel;
         private readonly List<(Button button, int speed)> _speedButtons = new List<(Button, int)>();
@@ -41,7 +43,7 @@ namespace PCShopSell.Game.UI
             var controls = Ui.Row(panel.transform, 42, gap).Fill();
             controls.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(padding, padding, 5, 5);
 
-            _pauseButton = Ui.Size(Ui.Button(controls, "暂停", () => S.Time.TogglePause(), 16), pauseWidth);
+            _pauseButton = Ui.Size(Ui.Button(controls, "暂停", () => S.Time.TogglePause(), 16, Ui.HudTile), pauseWidth);
             _pauseButton.name = "HudPauseTime";
             _pauseLabel = _pauseButton.GetComponentInChildren<Text>();
             _pauseLabel.rectTransform.Anchor(0, 0, 1, 1, padding, 0, padding, 0);
@@ -53,7 +55,7 @@ namespace PCShopSell.Game.UI
             {
                 int speed = TimeController.Speeds[i];
                 string label = TimeController.SpeedLabel(speed);
-                var button = Ui.Size(Ui.Button(controls, label, () => S.Time.SetSpeed(speed), 16), speedWidth);
+                var button = Ui.Size(Ui.Button(controls, label, () => S.Time.SetSpeed(speed), 16, Ui.HudTile), speedWidth);
                 button.name = "HudSpeed_" + speed;
                 var caption = button.GetComponentInChildren<Text>();
                 caption.rectTransform.Anchor(0, 0, 1, 1, padding, 0, padding, 0);
@@ -67,11 +69,11 @@ namespace PCShopSell.Game.UI
         {
             bool tutorialPaused = S.OpeningClockFrozen || S.RequiredTutorialPaused;
             bool paused = !S.Time.IsRunning || tutorialPaused || S.ManualActivityClockPaused;
-            Ui.SetButtonFill(_pauseButton, paused ? Ui.FlatRow : Ui.ButtonBg);
+            Ui.SetButtonFill(_pauseButton, paused ? Ui.ButtonSecondary : Ui.HudTile);
             _pauseLabel.text = S.ManualActivityClockPaused ? "活动暂停" : S.Time.IsHeld ? "窗口暂停"
                 : tutorialPaused ? "教学暂停" : S.Time.IsUserPaused ? "继续" : "暂停";
             foreach (var (button, speed) in _speedButtons)
-                Ui.SetButtonFill(button, S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg);
+                Ui.SetButtonFill(button, S.Time.Speed == speed ? Ui.ButtonHot : Ui.HudTile);
         }
 
         private void BuildHudSystemControls(Transform parent)
@@ -186,10 +188,18 @@ namespace PCShopSell.Game.UI
         private void FitHudTopRow()
         {
             float availableWidth = ((RectTransform)_hudTopRow.parent).rect.width;
-            if (availableWidth <= 0 || Mathf.Approximately(availableWidth, _fittedHudWidth)) return;
-            _fittedHudWidth = availableWidth;
-            FitHudRow(_hudTopRow, availableWidth);
-            FitHudRow(_hudShortcutRow, _hudFunctionBar.rect.width);
+            if (availableWidth > 0 && !Mathf.Approximately(availableWidth, _fittedHudWidth))
+            {
+                _fittedHudWidth = availableWidth;
+                FitHudRow(_hudTopRow, availableWidth);
+                FitHudRow(_hudShortcutRow, _hudFunctionBar.rect.width);
+            }
+            float travelWidth = ((RectTransform)_hudTravelRow.parent).rect.width;
+            if (travelWidth > 0 && !Mathf.Approximately(travelWidth, _fittedTravelWidth))
+            {
+                _fittedTravelWidth = travelWidth;
+                FitHudRow(_hudTravelRow, travelWidth);
+            }
         }
 
         private static void FitHudRow(RectTransform row, float availableWidth)

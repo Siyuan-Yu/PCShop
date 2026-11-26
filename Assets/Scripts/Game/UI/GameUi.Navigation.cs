@@ -83,6 +83,11 @@ namespace PCShopSell.Game.UI
                 state = new NavigationWindow(); _navigation[group] = state;
             }
             bool changing = state.Page != null && state.Page.Id != page;
+            if (isTab && state.Page != null)
+            {
+                width = state.Page.Width;
+                height = state.Page.Height;
+            }
             if (changing && !isTab)
             {
                 state.Page.Scroll = Ui.SaveScroll(state.Window.Root);
@@ -102,7 +107,7 @@ namespace PCShopSell.Game.UI
             else
             {
                 var w = state.Window; w.TitleText.text = title;
-                ((RectTransform)w.Root.Find("Panel")).sizeDelta = new Vector2(width, height);
+                if (!isTab) ((RectTransform)w.Root.Find("Panel")).sizeDelta = new Vector2(width, height);
                 w.ResetScrollOnRebuild |= changing;
                 w.Builder = Render; w.Root.SetAsLastSibling(); w.Rebuild(); w.Fitter.Fit();
             }

@@ -163,6 +163,16 @@ Shader "PCShop/LakeWater"
                 half clearDay=_DistrictDaylight*(1.-_CityRain*.65);
                 half3 clearWater=water*half3(.62,1.33,1.59)+half3(.012,.078,.125);
                 color=lerp(color,clearWater,clearDay*.86);
+                if(_Basin>1.5 && _Basin<2.5)
+                {
+                    float2 mosaic=p/5.3+eddy*.11+slope*.09;
+                    half network=SAMPLE_TEXTURE2D(_PoolLight,sampler_PoolLight,mosaic).g;
+                    half crossing=SAMPLE_TEXTURE2D(_PoolLight,sampler_PoolLight,mosaic.yx*1.26+float2(.41,.24)+slope*.21).g;
+                    half causticLine=smoothstep(.23,.57,network)*(.39+.61*smoothstep(.09,.45,crossing))+.23*smoothstep(.28,.62,crossing);
+                    half3 tileWater=lerp(half3(.004,.182,.172),half3(.34,.91,.72),causticLine);
+                    color=lerp(color,tileWater,clearDay*.76);
+                }
+                if(_LakeShore>.5)color*=lerp(half3(1,1,1),half3(1.02,1.01,1.16),clearDay*smoothstep(2.,21.,i.shore));
                 color*=dusk*lerp(.72,1.,sun.shadowAttenuation)*(1.-_CityRain*.14);
                 color=lerp(color,reflection.rgb*half3(.84,.94,.86),reflection.a*(_Basin>1.5?.25:.65));
                 half glint=smoothstep(.35,.81,a.b)*(.35+.65*b.r);
@@ -189,8 +199,10 @@ Shader "PCShop/LakeWater"
                     float2 pond=i.uv*2.-1.;
                     half bank=smoothstep(.55,.98,length(pond)+.05*(b.g-.5));
                     half canopy=bank*(.34+.66*smoothstep(-.35,.63,pond.y-.45*pond.x));
-                    half3 teal=lerp(half3(.026,.194,.222),half3(.077,.287,.306),
+                    half3 teal=lerp(half3(.020,.150,.215),half3(.088,.296,.373),
                         smoothstep(-.39,.56,pond.x*.5-pond.y+gust.g*.34));
+                    half skyOpening=(1.-bank)*lerp(.42,1.,smoothstep(-.48,.87,view.x+.40*view.z));
+                    teal+=skyOpening*half3(.089,.126,.139);
                     teal=lerp(teal,half3(.074,.175,.110)*(.80+.38*b.g),canopy);
                     color=lerp(color,teal*dusk*lerp(.62,1.,sun.shadowAttenuation),.79*(1.-reflection.a*.71));
                     // Tree shadows come from the park's real sun and foliage. Ripples
@@ -208,7 +220,7 @@ Shader "PCShop/LakeWater"
                     float2 vertical=ddy(pond);
                     float2 across=float2(vertical.y,-vertical.x)*rsqrt(max(dot(vertical,vertical),.00000001));
                     half column=dot(pond,across)+.08*sin(pond.y*4.4+gust.r);
-                    half openSky=exp2(-34.*column*column)
+                    half openSky=exp2(-63.*column*column)
                         *(1.-smoothstep(.62,.96,length(pond)));
                     float2 mirror=rippleSpace+float2(eddy.y*.76,eddy.x*.29);
                     half coarse=SurfaceFlecks(mirror+float2(1.7,3.4),time,.61);
@@ -220,13 +232,13 @@ Shader "PCShop/LakeWater"
                     // flecks remain visible when the pond occupies only a few dozen pixels.
                     half skyGaps=(1.-smoothstep(.65,.96,length(pond)))
                         *smoothstep(.60,.91,patch)*(.33+.67*windBreak);
-                    half skyWindow=saturate(openSky+skyGaps*.52)*(1.-reflectedLeaf*.65);
+                    half skyWindow=saturate(openSky+skyGaps*.31)*(1.-reflectedLeaf*.65);
                     color+=day*(1.-_CityRain*.74)*sun.shadowAttenuation*skyWindow
                         *((coarse*1.12+fine*.42+wideFleck*.84)*(.48+.52*wave)+.076*lane)*half3(.73,.88,.85);
                     // Only a fraction of the wavelets catch the brightest patch of open sky.
                     // Keep a small, separately antialiased core inside those short crests.
                     half shine=day*(1.-_CityRain*.84)*sun.shadowAttenuation*skyWindow;
-                    color+=shine*SkyCrests(mirror,time)*half3(1.20,1.12,.93);
+                    color+=shine*SkyCrests(mirror,time)*half3(1.62,1.49,1.18);
                 }
                 if (_Basin>2.5)
                 {
@@ -264,7 +276,13 @@ Shader "PCShop/LakeWater"
                     half lane=smoothstep(.36,.82,breeze.r+.14*sin(wind.x*.031+breeze.g*5.2));
                     half ridge=pow(saturate(.5+.5*sin(dot(p,side)*.20+dot(p,towards)*1.35+breeze.g*8.+time*.33)),9);
                     half facing=saturate(dot(reflect(-sun.direction,n),view));
-                    color+=clearDay*offshore*sun.shadowAttenuation*lane*(.018+ridge*(.042+.12*facing))*half3(.68,.91,1.);
+                    float2 lightAxis=normalize(sun.direction.xz+.0001);
+                    half crosswind=dot(p,float2(-lightAxis.y,lightAxis.x));
+                    half gleam=pow(.5+.5*sin(crosswind*.023+breeze.r*2.6),10)*smoothstep(.25,.63,breeze.g);
+                    half longCrest=SurfaceFlecks(float2(dot(p,side),dot(p,towards)),time,.036);
+                    half fleck=SkyCrests(float2(dot(p,side),dot(p,towards))*.13+eddy*.21,time);
+                    color+=clearDay*offshore*sun.shadowAttenuation*(lane*(.020+ridge*(.055+.15*facing))
+                        +gleam*(longCrest*1.19+fleck*1.26+.045*ridge))*half3(.81,.94,1.);
                 }
                 return half4(MixFog(color,i.fog),1);
             }

@@ -13,19 +13,20 @@ namespace PCShopSell.Game.UI
     public static partial class Ui
     {
         public static Color Gold => Accent;
-        public static readonly Color PanelBg = Tone("ECE8DE");
-        public static readonly Color PanelBg2 = Tone("E3DFD4");
-        public static readonly Color Accent = Tone("705230");
-        public static readonly Color ButtonBg = Tone("E9E4D9");
-        public static readonly Color ButtonHot = Tone("CEB17C");
-        public static readonly Color Warn = Tone("8B493E");
-        public static readonly Color Good = Tone("365846");
+        public static readonly Color PanelBg = Tone("EFECE6");
+        public static readonly Color PanelBg2 = Tone("E2DED5");
+        public static readonly Color Accent = Tone("79532B");
+        public static readonly Color ButtonBg = Tone("F4EFE6");
+        public static readonly Color ButtonHot = Tone("AA5D43");
+        public static readonly Color ButtonSecondary = Tone("6F8B72");
+        public static readonly Color Warn = Tone("934638");
+        public static readonly Color Good = Tone("3F5F47");
         internal static Color ChangeColor(double change, double threshold = 0) =>
             change > threshold ? Good : change < -threshold ? Warn : Dim;
-        public static readonly Color Dim = Tone("59584F");
-        public static readonly Color TextColor = Tone("30352E");
-        public static readonly Color Edge = Tone("C9C2B4");
-        public static readonly Color WarningSurface = Tone("F0DFD5");
+        public static readonly Color Dim = Tone("615951");
+        public static readonly Color TextColor = Tone("2F2C28");
+        public static readonly Color Edge = Tone("BDB4A8");
+        public static readonly Color WarningSurface = Tone("F1DFD8");
         internal static string Emphasize(string text, Color? color = null) =>
             $"<b><color=#{ColorUtility.ToHtmlStringRGB(color ?? Accent)}>{text}</color></b>";
 
@@ -482,7 +483,10 @@ namespace PCShopSell.Game.UI
         {
             base.LateUpdate();
             var scrollbar = verticalScrollbar;
-            if (scrollbar == null || !scrollbar.isActiveAndEnabled) return;
+            if (scrollbar == null || viewport == null || content == null) return;
+            bool needed = vertical && viewport.rect.height > 0 && content.rect.height > viewport.rect.height + .01f;
+            if (scrollbar.gameObject.activeSelf != needed) scrollbar.gameObject.SetActive(needed);
+            if (!needed) return;
             var area = (RectTransform)scrollbar.handleRect.parent;
             // A proportional thumb can become almost invisible on long lists such as the purchase catalog.
             float minimumSize = Mathf.Min(0.65f, 24f / Mathf.Max(1f, area.rect.height));

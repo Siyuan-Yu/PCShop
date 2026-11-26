@@ -194,11 +194,7 @@ namespace PCShopSell.Game.Runtime
             _motion = _figure.GetComponent<FigureMotion>();
             _streetRing = Prims.Shape(PrimitiveType.Cylinder, _root.transform, "Ring", new Vector3(0, 0.03f, 0), new Vector3(1.4f, 0.01f, 1.4f), Mats.Unlit(new Color(1f, 0.85f, 0.2f, 0.6f)));
 
-            _taxi = new GameObject("Taxi");
-            _taxi.transform.SetParent(_root.transform, false);
-            Prims.Box(_taxi.transform, "Body", new Vector3(0, 0.6f, 0), new Vector3(1.8f, 0.9f, 4f), Mats.Lit(new Color(0.95f, 0.8f, 0.1f), 0.7f, 0.2f));
-            Prims.Box(_taxi.transform, "Cabin", new Vector3(0, 1.3f, -0.2f), new Vector3(1.6f, 0.6f, 2.2f), Mats.Lit(new Color(0.2f, 0.25f, 0.3f), 0.9f));
-            Prims.Box(_taxi.transform, "TaxiSign", new Vector3(0, 1.7f, -0.2f), new Vector3(0.6f, 0.2f, 0.3f), Mats.Glow(Color.white, new Color(2f, 2f, 1.5f), false));
+            _taxi = VehiclePropArt.Car(_root.transform, "taxi", ArtDirection.Hex("DAB044")).gameObject;
         }
 
         public void Update(GameSession s, float dt, StreetWorldBuilder streets = null,

@@ -1,0 +1,36 @@
+截图	逻辑窗体尺寸	内容溢出与滚动状态
+00-hud	-	—
+00-hud-compact	-	—
+01-phone	(440.00, 850.00)	—
+02-phone-store	(1500.00, 880.00)	-376:off
+03-backpack	(760.00, 700.00)	-128:off,-266:off
+04-my	(1280.00, 960.00)	-394:off
+04-my-food	(1280.00, 960.00)	-612:off
+04-my-home	(1280.00, 960.00)	-510:off
+04-my-map	(1280.00, 960.00)	-87:off,-393:off
+07-quests	(900.00, 720.00)	-184:off
+10-calendar	(1500.00, 880.00)	-200:off
+14-market	(1260.00, 850.00)	—
+22-ledger	(1040.00, 880.00)	-128:off
+28-models	(1260.00, 850.00)	288:on
+43-truck	(1180.00, 860.00)	-589:off,-621:off
+60-system	(620.00, 740.00)	-224:off
+61-settings	(840.00, 850.00)	-243:off
+65-destinations	(1120.00, 730.00)	3592:on
+68-notice	(850.00, 700.00)	-489:off
+36-manage-store	(1280.00, 960.00)	-661:off
+36-manage-employees	(1280.00, 960.00)	-602:off
+36-manage-companies	(1280.00, 960.00)	-725:off
+56-assembly	(900.00, 680.00)	-294:off,-491:off
+dock-0	-	-294:off
+dock-1	-	-44:off
+dock-3	-	-501:off
+dock-4	-	-389:off
+dock-5	-	-259:off
+dock-2	-	-191:off
+home-dock	-	-591:off
+50-bed	(620.00, 410.00)	-591:off,-64:off
+51-cooker	(760.00, 560.00)	-591:off
+52-fridge	-	-591:off
+54-wardrobe	(1000.00, 760.00)	-591:off,-186:off
+53-workbench	(1780.00, 1000.00)	-591:off,-606:off

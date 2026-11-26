@@ -65,6 +65,7 @@ Shader "PCShop/Painted meadow"
                 pigment*=exp2((balance-.5)*1.8*coverage);
                 // Managed turf keeps the brushwork of the original ground plate. Light and dark
                 // blades shift together, while exposed earth keeps its own hue.
+                half lawnFill=0;
                 if (_DistrictLandscape>.001)
                 {
                     half3 nearGrass=SAMPLE_TEXTURE2D(_Lawn,sampler_Lawn,p/9.2+patch.rg*.11).rgb;
@@ -75,6 +76,7 @@ Shader "PCShop/Painted meadow"
                     turf*=lerp(half3(.59,.66,.74),half3(1.35,1.18,.99),mow);
                     half3 zones=SAMPLE_TEXTURE2D(_PlantingZones,sampler_PlantingZones,saturate(fieldUV)).rgb;
                     half grove=smoothstep(.38,.89,field.b)*coverage;
+                    lawnFill=saturate(zones.b+zones.r*.87+zones.g*.48)*coverage*_DistrictLandscape;
                     // Exposed lawns keep warm broken blades. Sheltered turf reads deeper and cooler.
                     turf*=exp2((balance-.5)*1.20*coverage);
                     turf*=lerp(half3(1,1,1),half3(.78,.93,.93),zones.r);
@@ -92,13 +94,28 @@ Shader "PCShop/Painted meadow"
                     // Only the villa lawns have gold blades among deeper olive cover.
                     half goldTips=smoothstep(-.08,.30,dab+(painterly-.5)*.45);
                     paintedBlades*=exp2(zones.g*exposed*(goldTips*.85-.13)*half3(1.20,.96,.87));
-                    turf*=lerp(half3(1,1,1),paintedBlades,managed);
+                    // Broad sweeps of warm sun and cool grass must survive minification over the lake.
+                    half broad=SAMPLE_TEXTURE2D(_Variation,sampler_Variation,rotated/74.+.21).g;
+                    half3 glade=lerp(half3(.64,.78,.81),half3(1.07,1.05,.94),smoothstep(.27,.67,broad));
+                    half3 meadowLight=lerp(half3(1,1,1),paintedBlades,managed)*glade;
+                    // The garden keeps ochre-green light along exposed blades and cool shaded recesses.
+                    half lightBlade=smoothstep(-.06,.31,dab);
+                    meadowLight*=lerp(half3(1,1,1),half3(1.10,1.04,1.11)+lightBlade*half3(.17,.12,.08),zones.g);
+                    half groundSky=1.-exposed;
+                    meadowLight*=1.+lawnFill*(half3(.13,.10,.11)+groundSky*half3(.32,.25,.27));
+                    // Low lawn blades catch warm sky between the maintained trees. The open
+                    // clearings receive less fill so high grass and bare soil keep their contrast.
+                    half meadowFill=managed*(1.-grove*.52)*(1.-.57*smoothstep(.27,.76,mow));
+                    meadowLight*=1.+meadowFill*half3(.36,.26,.32);
+                    turf*=meadowLight;
                     pigment=lerp(pigment,lerp(turf,soil*1.12,dry*.13),_DistrictLandscape*.80);
                 }
                 half3 normal=normalize(i.n);
                 AmbientOcclusionFactor ao=GetScreenSpaceAmbientOcclusion(GetNormalizedScreenSpaceUV(i.pos));
                 half3 light=SampleSH(normal)*ao.indirectAmbientOcclusion+
                     sun.color*saturate(dot(normal,sun.direction))*lerp(.085,1.,sun.shadowAttenuation)*ao.directAmbientOcclusion;
+                half daylight=saturate(sun.color.g);
+                light+=lawnFill*daylight*(1.-sun.shadowAttenuation)*half3(.14,.17,.15);
                 return half4(MixFog(pigment*light,i.fog),1);
             }
             ENDHLSL

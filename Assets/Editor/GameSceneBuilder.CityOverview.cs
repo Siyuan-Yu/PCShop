@@ -29,13 +29,6 @@ namespace PCShopSell.EditorTools
             Check(s.Ledger.Balance == balance && s.Ledger.Entries.Count == entries, "经营总览不产生现金或新账");
             _game.Ui.CloseAllWindows(); _game.Ui.OpenCityProcurement(); Shot("citylife_02_procurement", 1280, 720);
             Check(s.Ledger.Balance == balance && s.Ledger.Entries.Count == entries, "查看统一采购不自动下单");
-            _game.Ui.CloseAllWindows(); _game.Ui.OpenCityMap(); Shot("citylife_03_map", 1280, 720);
-            Check(s.Trip == null && s.CurrentPlace == place, "查看十街地图不自动开始旅行");
-            var pins=UnityEngine.Object.FindObjectsOfType<RectTransform>();
-            var dinnerPin=pins.FirstOrDefault(p=>p.name=="CityMap_life_restaurant");
-            var clothingPin=pins.FirstOrDefault(p=>p.name=="CityMap_clothing_boutique");
-            Check(dinnerPin!=null&&clothingPin!=null&&Vector2.Distance(dinnerPin.anchorMin,clothingPin.anchorMin)>.05f,
-                "不同街区显式入口按节点加门口偏移投影，不堆叠在原点");
             _game.Ui.CloseAllWindows(); s.Meet("life_ming", 15);
             _game.Ui.OpenCityPeople(); Shot("citylife_04_people", 1280, 720);
             _game.Ui.CloseAllWindows(); _game.Ui.OpenCityPerson("life_ming"); Shot("citylife_05_person", 1280, 720);

@@ -17,10 +17,9 @@ namespace PCShopSell.Game.UI
                 ShopSimulation shop = S.PlayerShop;
                 Line(w.Content, $"散客装机单有 {shop.Settings.BuildOrderDueDays} 天交期。逾期影响本店口碑。", 15, Ui.Dim);
 
-                // 台面：深色桌面，每张装机单是一张工单卡
-                Image desk = Ui.Panel(w.Content, "Desk", Ui.Chrome);
-                Ui.Size(desk, -1, 470);
-                RectTransform list = Ui.Scroll(desk.transform, 470);
+                Image desk = Ui.FlatPanel(w.Content, "Desk", Ui.FlatBand);
+                Ui.Size(desk, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
+                RectTransform list = Ui.Scroll(desk.transform);
                 list.parent.parent.GetComponent<RectTransform>().Fill();
 
                 if (shop.Orders.Count == 0)
@@ -33,8 +32,8 @@ namespace PCShopSell.Game.UI
                     List<PartDef> missing = S.MissingParts(order);
                     long left = S.Clock.Now.MinutesUntil(order.DueAt);
                     Image card = Ui.Panel(list, "Order", Ui.PanelBg2);
-                    var v = Ui.VList(card.rectTransform, 2, 10);
-                    Color ink = new Color(0.16f, 0.16f, 0.18f);
+                    Ui.VList(card.rectTransform, 2, 10);
+                    Color ink = Ui.TextColor;
                     string urgent = left < 12 * 60 ? "<color=#B33A2A>（快到期了！）</color>" : "";
                     Text head = Ui.Label(card.transform, $"<b>装机单 #{order.Id}　{PartCatalog.TierName(order.Tier)}整机</b>　报价 <b>{order.Price}</b>　{S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)} {urgent}", 18, TextAnchor.MiddleLeft, ink);
                     Ui.Size(head, -1, 30);
@@ -53,8 +52,7 @@ namespace PCShopSell.Game.UI
                     OrderActions(card.transform, order, w.Rebuild);
                 }
 
-                Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
-            });
+            }, scrollContent: false);
         }
     }
 }

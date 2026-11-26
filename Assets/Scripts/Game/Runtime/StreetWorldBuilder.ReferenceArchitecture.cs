@@ -5,12 +5,13 @@ namespace PCShopSell.Game.Runtime
     public sealed partial class StreetWorldBuilder
     {
         private static float ResidenceArtHeight(float height,int tier,int seed)
-            => Mathf.Clamp(Mathf.Round(height*.65f/2.8f),3,tier>1?5:4)*2.8f;
+            => Mathf.Clamp(Mathf.Round(height*(tier>1?.70f:.77f)/2.8f),3,5)*2.8f;
 
         private void ReferenceResidence(Transform root,float w,float d,float h,int tier,int seed)
         {
             // Compact residential blocks with real recessed bays and balconies replace repeated thin towers.
-            float top=ResidenceArtHeight(h,tier,seed),bw=w*.83f,bd=d*.66f,center=d*.62f;
+            float top=ResidenceArtHeight(h,tier,seed),bw=w*(seed%3==0?.90f:.94f),bd=d*.70f;
+            float center=d*.29f+bd*.5f;
             Color wall=ArtDirection.Hex(seed%3==0?"E6DDD2":seed%3==1?"D7DCD8":"ECE5DB");
             Color trim=ArtDirection.Hex("E6E6DF"),blue=ArtDirection.Hex(tier>1?"527F91":"517791");
             var masonry=DistrictFinishes.Tile(DistrictFinishes.Masonry(tier),new Vector2(w/4,top/3.4f),Color.Lerp(Color.white,wall,.26f));
@@ -88,9 +89,21 @@ namespace PCShopSell.Game.Runtime
                 // Knee-high garden wall with an open central route to the original door.
                 detail.Box(new Vector3(side*(w*.27f+.5f),.26f,.10f),new Vector3(w*.46f-1,.52f,.22f),stone);
             }
+            var gardenBeds=new StreetPlanting(maintained:true);
+            foreach(int side in new[]{-1,1})
+            {
+                // Low side walls and clipped flowering strips make the plot edges read along a row.
+                float length=front-.40f;
+                detail.Box(new Vector3(side*(w*.5f-.17f),.29f,length*.5f+.20f),
+                    new Vector3(.24f,.58f,length),stone);
+                for(int j=0;j<4;j++)
+                    gardenBeds.Add(j==3?PlantSpecies.Boxwood:PlantSpecies.Hydrangea,
+                        new Vector3(side*(w*.38f-.38f*(j%2)),.10f,.89f+j*length*.16f),1.15f,.85f,(seed&1023)/7+side+11);
+            }
+            gardenBeds.Build(root,"住宅前院花境");
             QuarterModules.Add(root,"Condenser",new Vector3(bw*.34f,top+.40f,center-bd*.21f),Vector3.one);
             QuarterModules.Add(root,tier==1?"StripedCanopy":"TinCanopy",new Vector3(0,2.83f,front-.09f),new Vector3(.48f,.8f,.81f));
-            QuarterModules.Add(root,"Bench",new Vector3(-w*.28f,.08f,front*.64f),Vector3.one);
+            DistrictFinishes.SlattedBench(root,new Vector3(-w*.28f,.08f,front*.64f));
             detail.Build(root,"Residential architecture and front garden");
         }
     }

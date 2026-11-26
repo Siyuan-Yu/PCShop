@@ -21,7 +21,7 @@ namespace PCShopSell.Game.UI
             void SwitchTab(int next)
             {
                 tab = next;
-                OpenWorkspace("market", "market:" + tab, "物价", 1260, 850, Build, isTab: true);
+                OpenWorkspace("market", "market:" + tab, "物价", 1260, 850, Build, isTab: true, scrollContent: false);
             }
 
             void Build(Window w)
@@ -36,16 +36,24 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Rect(tabs, "MarketTabSpacer"), 0, 38, 1);
                 Ui.Size(Ui.Button(tabs, "订阅物价信息", OpenMarketPriceSubscriptions, 16), 144, 34).name = "MarketOpenPriceSubscriptions";
                 Ui.Size(Ui.Button(tabs, "经济简报", OpenEconomicReport, 16), 124, 34).name = "MarketOpenEconomicReport";
-                switch (tab)
+                if (tab == 0)
                 {
-                    case 1: BuildIndustryNews(w); break;
-                    case 2: BuildCompetitionMarket(w); break;
-                    case 3: BuildModelCatalog(w); break;
-                    default:
-                        BuildPriceDashboard(w.Content, Math.Max(0, S.Clock.Today.TotalDays - 7),
-                            S.Clock.Today.TotalDays, prices, w.Rebuild, true);
-                        break;
+                    BuildPriceDashboard(w.Content, Math.Max(0, S.Clock.Today.TotalDays - 7),
+                        S.Clock.Today.TotalDays, prices, w.Rebuild, true);
+                    return;
                 }
+                var content = w.Content;
+                w.Content = PhoneFlexibleScroll(content, "MarketTabContent");
+                try
+                {
+                    switch (tab)
+                    {
+                        case 1: BuildIndustryNews(w); break;
+                        case 2: BuildCompetitionMarket(w); break;
+                        case 3: BuildModelCatalog(w); break;
+                    }
+                }
+                finally { w.Content = content; }
             }
         }
 

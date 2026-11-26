@@ -593,7 +593,7 @@ namespace PCShopSell.Game.Runtime
             _root = new GameObject("ShopInterior").transform;
             _root.SetParent(parent, false);
             _root.position = Origin;
-            _decor = new RoomFurniture(_root);
+            _decor = new RoomFurniture(_root, District);
 
             var room = RoomSpec.ForShop(size);
             Width = (float)room.Width;
@@ -1343,7 +1343,7 @@ namespace PCShopSell.Game.Runtime
             if(showUpgradeClimate&&_upgradeClimate==null)
             {
                 var def=FurnitureCatalog.Get("aircon");
-                _upgradeClimate=FurnitureVisuals.Build(_root,def,false);
+                _upgradeClimate=FurnitureVisuals.Build(_root, def, false, district: District);
                 FurnitureVisuals.Place(_upgradeClimate,def,new PlacedFurniture{Id="aircon",X=Width*.7,Z=Depth},s.ShopRoom);
                 var marker=_upgradeClimate.AddComponent<PlacedVisual>();marker.Index=-1;marker.FurnitureId="aircon";
                 // A wall device needs a narrow click volume; it never blocks walking.

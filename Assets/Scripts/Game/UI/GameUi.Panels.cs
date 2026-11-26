@@ -460,7 +460,6 @@ namespace PCShopSell.Game.UI
             _ledgerPage = 0;
             OpenWorkspace("ledger", "ledger", "现金流水", 1040, 880, w =>
             {
-                BuildEventChangeRefunds(w);
                 int today = S.Clock.Today.TotalDays;
                 int span = _ledgerPeriod == 0 ? 1 : _ledgerPeriod == 1 ? 7 : 30;
                 int start = _ledgerDay / span * span;
@@ -493,8 +492,7 @@ namespace PCShopSell.Game.UI
                 }
                 Money income = Money.FromCents(dailyIncome.Sum());
                 Money expense = Money.FromCents(dailyExpense.Sum());
-                Line(w.Content, $"总收入 {income}    总支出 {expense}    净收支 {income - expense}", 21, Ui.Accent);
-                Line(w.Content, $"当前现金 {S.Ledger.Balance} · 含经营、个人收支、购置和借还款。", 16, Ui.Dim);
+                Line(w.Content, $"收入 {income}　支出 {expense}　净收支 {income - expense}　当前现金 {S.Ledger.Balance}", 18, Ui.Accent);
                 var legend = Ui.Row(w.Content, 26);
                 Ui.Size(Ui.Label(legend, "每日现金收支", 18), -1, 26, 1);
                 Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 74);
@@ -517,16 +515,27 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(nav, "上一页", () => { _ledgerPage--; w.Rebuild(); }, 16, Ui.ButtonBg, _ledgerPage > 0), 100);
                 Ui.Size(Ui.Label(nav, $"共 {filtered.Count} 笔 · 第 {_ledgerPage + 1}/{pages} 页", 16, TextAnchor.MiddleCenter), -1, -1, 1);
                 Ui.Size(Ui.Button(nav, "下一页", () => { _ledgerPage++; w.Rebuild(); }, 16, Ui.ButtonBg, _ledgerPage + 1 < pages), 100);
-                RectTransform list = Ui.Scroll(w.Content, 300);
+                RectTransform list = PhoneFlexibleScroll(w.Content, "LedgerEntries");
+                var content = w.Content;
+                w.Content = list;
+                try { BuildEventChangeRefunds(w); }
+                finally { w.Content = content; }
                 if (filtered.Count == 0) Line(list, "这段时间没有符合条件的收支记录。", 18, Ui.Dim);
                 foreach (var e in filtered.Skip(_ledgerPage * pageSize).Take(pageSize))
                 {
                     string sign = e.Amount.IsPositive ? "+" : "";
-                    Line(list, $"{e.Date}  {e.Category}  {sign}{e.Amount}", 18, e.Amount.IsNegative ? Ui.Warn : Ui.Good);
-                    Para(list, string.IsNullOrEmpty(e.Memo) ? "无备注" : e.Memo, 16, Ui.Dim);
-                    Line(list, $"该笔后现金 {e.BalanceAfter}", 14, Ui.Dim);
+                    var entry = Ui.FlatPanel(list, "LedgerEntry", Ui.FlatWell).rectTransform;
+                    Ui.VList(entry, 2, 6);
+                    var header = Ui.Row(entry, 25);
+                    Ui.Size(Ui.Label(header, $"{e.Date}  {e.Category}", 16), 0, 25, 1);
+                    Ui.Size(Ui.Label(header, sign + e.Amount, 17, TextAnchor.MiddleRight,
+                        e.Amount.IsNegative ? Ui.Warn : Ui.Good), 120);
+                    var details = Ui.Row(entry, -1, 8);
+                    var memo = Ui.Label(details, e.Memo ?? string.Empty, 15, TextAnchor.UpperLeft, Ui.Dim);
+                    Ui.Size(memo, 0, -1, 1);
+                    Ui.Size(Ui.Label(details, $"该笔后现金 {e.BalanceAfter}", 14, TextAnchor.UpperRight, Ui.Dim), 180);
                 }
-            });
+            }, scrollContent: false);
         }
 
         public void ShowGameOver()

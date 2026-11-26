@@ -88,40 +88,6 @@ namespace PCShopSell.Game.UI
 
         // ---------- 智能手机 ----------
 
-        private static Color AppColor(string id)
-        {
-            switch (id)
-            {
-                case PhoneApps.Store: return new Color(0.20f, 0.50f, 0.90f);
-                case PhoneApps.Contacts: return new Color(0.25f, 0.65f, 0.35f);
-                case PhoneApps.Settings: return Ui.InfoInk;
-                case PhoneApps.Schedule: return new Color(0.90f, 0.45f, 0.25f);
-                case PhoneApps.FoodDelivery: return Ui.Accent;
-                case PhoneApps.Shop: return new Color(0.88f, 0.28f, 0.35f);
-                case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
-                case PhoneApps.Live: return new Color(0.72f, 0.46f, 0.19f);
-                case PhoneApps.Securities: return Ui.Accent;
-                default: return Ui.TextColor;
-            }
-        }
-
-        private static string AppGlyph(string id)
-        {
-            switch (id)
-            {
-                case PhoneApps.Store: return "商";
-                case PhoneApps.Contacts: return "话";
-                case PhoneApps.Settings: return "设";
-                case PhoneApps.Schedule: return "历";
-                case PhoneApps.FoodDelivery: return "餐";
-                case PhoneApps.Shop: return "购";
-                case PhoneApps.Loans: return "借";
-                case PhoneApps.Live: return "播";
-                case PhoneApps.Securities: return "券";
-                default: return "?";
-            }
-        }
-
         private void BuildSmartphone(Window w)
         {
             var layout=w.Content.GetComponent<VerticalLayoutGroup>();
@@ -137,25 +103,24 @@ namespace PCShopSell.Game.UI
         private void BuildPhoneDesktop(Window w)
         {
 
-            Image wall = Ui.Panel(w.Content, "Wallpaper", Ui.FlatBand);
+            Image wall = Ui.FlatPanel(w.Content, "Wallpaper", Ui.FlatBand);
             Ui.Size(wall).GetComponent<LayoutElement>().flexibleHeight=1;
-            Ui.VList(wall.rectTransform, 14, 14);
+            Ui.VList(wall.rectTransform, 8, 12);
             var apps = PhoneApps.All.Where(a => S.HasApp(a.Id)).ToList();
             for (int i = 0; i < apps.Count; i += 4)
             {
-                RectTransform row = Ui.Row(wall.transform, 104, 10);
+                RectTransform row = Ui.Row(wall.transform, 82, 8);
                 for (int j = i; j < apps.Count && j < i + 4; j++)
                 {
                     PhoneAppDef a = apps[j];
-                    string glyphColor = ColorUtility.ToHtmlStringRGB(AppColor(a.Id));
-                    Button b = Ui.Button(row, $"<size=34><color=#{glyphColor}><b>{AppGlyph(a.Id)}</b></color></size>\n<size=13>{a.Name}</size>", () => LaunchApp(w, a.Id), 13);
+                    Button b = Ui.Button(row, a.Name, () => LaunchApp(w, a.Id), 14);
                     b.name = "PhoneApp_" + a.Id;
-                    Ui.Size(b, 84, 100);
-                    if(a.Id==PhoneApps.Securities)BuildStockAppIcon(b,true);
+                    Ui.Size(b, 84, 80);
+                    Ui.ButtonArtwork(b, Ui.PhoneIcon(a.Id), stacked: true);
                 }
             }
-            Ui.Size(Ui.Label(wall.transform, PhoneApps.All.All(a => S.HasApp(a.Id))
-                ? "" : "更多 app 在「应用商店」", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 36);
+            if (apps.Count < PhoneApps.All.Count)
+                Ui.Size(Ui.Label(wall.transform, "更多 app 在「应用商店」", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 24);
         }
 
         private void LaunchApp(Window w, string id)
@@ -217,17 +182,15 @@ namespace PCShopSell.Game.UI
             var apps = PhoneApps.All.Where(app => app.Id != PhoneApps.Store).ToArray();
             for (int i = 0; i < apps.Length; i += 2)
             {
-                var row = Ui.Row(list, 100, 12);
+                var row = Ui.Row(list, 88, 10);
                 for (int j = i; j < Math.Min(i + 2, apps.Length); j++)
                 {
                     var app = apps[j];
                     bool installed = S.HasApp(app.Id);
-                    var card = Ui.Size(Ui.Row(row, 100, 10), 0, 100, 1);
-                    var icon = Ui.Size(Ui.FlatPanel(card, "PhoneAppIcon", Ui.FlatBand), 64, 64);
-                    icon.raycastTarget = false;
-                    if (app.Id == PhoneApps.Securities) BuildStockAppBars(icon.transform, false);
-                    else Ui.Label(icon.transform, AppGlyph(app.Id), 28, TextAnchor.MiddleCenter, AppColor(app.Id)).rectTransform.Fill();
-                    Ui.Size(Ui.Label(card, $"<b>{app.Name}</b>\n<size=15><color=#655E52>{app.Description}</color></size>", 18), 0, 84, 1);
+                    var card = Ui.Size(Ui.Row(row, 88, 8), 0, 88, 1);
+                    var icon = Ui.Artwork(card, Ui.PhoneIcon(app.Id));
+                    if (icon != null) Ui.Size(icon, 46, 46);
+                    Ui.Size(Ui.Label(card, $"<b>{app.Name}</b>\n<size=14><color=#615951>{app.Description}</color></size>", 16), 0, 80, 1);
                     Ui.Size(Ui.Button(card, installed ? "打开" : "下载", () =>
                     {
                         if (installed) LaunchApp(w, app.Id);
@@ -236,9 +199,9 @@ namespace PCShopSell.Game.UI
                             _phoneWindow.Rebuild();
                             w.Rebuild();
                         }
-                    }, 16), 84, 40).name = "PhoneDownload_" + app.Id;
+                    }, 16, installed ? Ui.ButtonBg : Ui.ButtonSecondary), 72, 36).name = "PhoneDownload_" + app.Id;
                 }
-                if (i + 1 == apps.Length) Ui.Size(Ui.Rect(row, "EmptyAppCell"), 0, 100, 1);
+                if (i + 1 == apps.Length) Ui.Size(Ui.Rect(row, "EmptyAppCell"), 0, 88, 1);
             }
         }
 
@@ -250,23 +213,6 @@ namespace PCShopSell.Game.UI
             var layout=content.GetComponent<VerticalLayoutGroup>();layout.padding=new RectOffset(6,6,6,6);layout.spacing=6;
             return content;
         }
-        private static void BuildStockAppIcon(Button button,bool desktop)
-        {
-            var text=button.GetComponentInChildren<Text>();text.text=desktop?"证券":"";text.fontSize=13;text.alignment=TextAnchor.LowerCenter;
-            BuildStockAppBars(button.transform, desktop);
-        }
-
-        private static void BuildStockAppBars(Transform parent, bool desktop)
-        {
-            var icon=Ui.Rect(parent,"SecuritiesChartIcon").Anchor(.2f,desktop?.36f:.2f,.8f,desktop?.84f:.8f);
-            float[] heights={.32f,.56f,.85f};
-            for(int i=0;i<heights.Length;i++)
-            {
-                var bar=Ui.Panel(icon,"StockAppBar",AppColor(PhoneApps.Securities));bar.raycastTarget=false;
-                bar.rectTransform.Anchor(i*.34f,.03f,i*.34f+.24f,heights[i]);
-            }
-        }
-
         // ---------- 通讯录 ----------
 
         /// <summary>通讯录：查看人物资料或打开聊天。</summary>

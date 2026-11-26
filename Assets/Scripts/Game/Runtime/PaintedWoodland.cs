@@ -7,12 +7,12 @@ namespace PCShopSell.Game.Runtime
 {
     internal static class PaintedWoodland
     {
-        private static readonly Dictionary<(int height,int species,int aspect,bool detailed,bool boughs),Mesh> Trees=new();
+        private static readonly Dictionary<(int height,int species,int aspect,bool detailed,bool boughs,bool grove),Mesh> Trees=new();
         private static Material _paint;
 
-        internal static Mesh Template(int height,int species,int aspect,bool detailed=false,bool boughs=false)
+        internal static Mesh Template(int height,int species,int aspect,bool detailed=false,bool boughs=false,bool grove=false)
         {
-            var key=(height,species,aspect,detailed,boughs);
+            var key=(height,species,aspect,detailed,boughs,grove);
             if(Trees.TryGetValue(key,out var mesh) && mesh!=null)return mesh;
             var positions=new List<Vector3>();var uv=new List<Vector2>();var colors=new List<Color32>();
             var normals=new List<Vector3>();var indices=new List<int>();
@@ -20,7 +20,7 @@ namespace PCShopSell.Game.Runtime
             int Vertex(Vector3 pos,Vector3 normal,Vector2 tex,float shade)
             {
                 int index=positions.Count;positions.Add(pos*height);normals.Add(normal.normalized);uv.Add(tex);
-                byte light=(byte)(255*Mathf.Clamp01(shade));colors.Add(new Color32(light,light,light,255));return index;
+                byte light=(byte)(255*Mathf.Clamp01(shade));colors.Add(new Color32(light,(byte)(species==2 && aspect==3?255:0),light,255));return index;
             }
             Vector2 Leaf(int slot,float x,float y)=>new Vector2((slot%2)*.5f+.009f+x*.482f,(1-slot/2)*.5f+.104f+y*.382f);
             void Quad(int a,int b,int c,int d){indices.Add(a);indices.Add(b);indices.Add(c);indices.Add(a);indices.Add(c);indices.Add(d);}
@@ -92,7 +92,7 @@ namespace PCShopSell.Game.Runtime
                     Vector3 outward=Radial(turn+branch*2.40f);
                     Vector3 basePoint=Vector3.Lerp(fork,leader,branch*.20f);
                     Vector3 elbow=basePoint+outward*(.11f*breadth)+up*(.104f+branch*.010f);
-                    tips[branch]=outward*((.25f+(branch%3)*.025f)*breadth)+up*(.563f+branch*.048f);
+                    tips[branch]=outward*((.32f+(branch%3)*.034f)*breadth)+up*(.563f+branch*.048f);
                     Limb(basePoint,elbow,.020f-branch*.0015f,.012f);
                     Limb(elbow,tips[branch],.012f,.004f);
                     Vector3 offshoot=Vector3.Lerp(elbow,tips[branch],.70f)+up*.075f
@@ -101,10 +101,9 @@ namespace PCShopSell.Game.Runtime
                 }
                 CompleteBarkOffsets();
                 for(int branch=0;branch<tips.Length;branch++)
-                    Clump(tips[branch]+up*.033f,breadth*(.47f+branch%2*.055f),.395f+branch%3*.027f,
-                        (branch+aspect)%2==0,.81f+branch*.036f,(branch+aspect)%4);
-                Clump(top+lean*.145f-up*.085f,breadth*.50f,.41f,true,.93f,(aspect+2)%4);
-                Clump(top,breadth*.53f,.41f,false,1f,(aspect+1)%4);
+                    Clump(tips[branch],breadth*(.49f+branch%2*.065f),.28f+branch%3*.024f,
+                        (branch+aspect)%2==0,.80f+branch*.033f,(branch+aspect)%4);
+                Clump(top-lean*.045f-up*.072f,breadth*.75f,.45f,false,1f,aspect%2);
             }
             else
             {
@@ -118,8 +117,51 @@ namespace PCShopSell.Game.Runtime
                     Limb(joint+up*(branch*.025f),tip,.015f,.0055f);
                 }
                 CompleteBarkOffsets();
-                Clump(new Vector3(0,.672f,0),breadth,.70f,false,1f,species);
-                if(detailed)
+                if(grove)
+                {
+                    // Visible trunks carry separate sunlit fans. The outward offsets
+                    // keep each crown rounded from the opposite bank of the lake.
+                    const int lobes=7;
+                    int body=positions.Count;
+                    for(int ring=0;ring<3;ring++)
+                    for(int j=0;j<lobes;j++)
+                    {
+                        float azimuth=turn+j*Mathf.PI*2/lobes+.09f*ring;
+                        var radial=new Vector3(Mathf.Cos(azimuth),0,Mathf.Sin(azimuth));
+                        float radius=(ring==0?.23f:ring==1?.41f:.22f)*breadth*(.92f+.09f*Mathf.Sin(2*azimuth+aspect));
+                        float y=(ring==0?.43f:ring==1?.67f:.83f)+.037f*Mathf.Cos(3*azimuth);
+                        var point=radial*radius+up*y;
+                        var normal=(radial+up*(ring==0?-.30f:ring==1?.38f:1.15f)).normalized;
+                        Vertex(point,normal,new Vector2(.74f+radial.x*.15f,.034f+.011f*ring+radial.z*.008f),.74f+ring*.075f);
+                        if(ring<2)
+                        {
+                            int a=body+ring*lobes+j,b=body+ring*lobes+(j+1)%lobes;
+                            Quad(a,a+lobes,b+lobes,b);
+                        }
+                    }
+                    int baseTip=Vertex(up*.40f,Vector3.down,new Vector2(.76f,.041f),.72f);
+                    int topTip=Vertex(up*.88f,up,new Vector2(.76f,.06f),.94f);
+                    for(int j=0;j<lobes;j++)
+                    {
+                        int a=body+j,b=body+(j+1)%lobes;
+                        indices.Add(baseTip);indices.Add(a);indices.Add(b);
+                        indices.Add(topTip);indices.Add(b+2*lobes);indices.Add(a+2*lobes);
+                    }
+                    CompleteBarkOffsets();
+                    int limbs=detailed?5:3;
+                    float spread=.26f+aspect%3*.033f;
+                    for(int j=0;j<limbs;j++)
+                    {
+                        float azimuth=turn+j*2.39996f;
+                        var radial=new Vector3(Mathf.Cos(azimuth),0,Mathf.Sin(azimuth));
+                        var center=radial*spread+up*(.57f+.052f*j);
+                        Clump(center,breadth*(.53f+.065f*(j%2)),.35f+.045f*(j%2),
+                            (j+aspect)%2==0,.83f+j*.033f,(j+species+aspect)%3==0?3:0);
+                    }
+                    Clump(new Vector3(.037f,.814f+.021f*(aspect%3),.038f),breadth*.66f,.40f,aspect%2==0,1f,species);
+                }
+                else Clump(new Vector3(0,.672f,0),breadth,.70f,false,1f,species);
+                if(detailed && !grove)
                 {
                     for(int j=0;j<3;j++)
                     {
@@ -138,7 +180,7 @@ namespace PCShopSell.Game.Runtime
         }
 
 
-        private static Material _summer;
+        private static Material _summer,_forest;
         private static readonly Material[] StreetBoughs=new Material[4];
         private static Material CanopyPaint(bool summer=true,int crownDistrict=0)
         {
@@ -152,6 +194,7 @@ namespace PCShopSell.Game.Runtime
             string atlas=boughs ? "streetBoughs" : summer ? "summerCanopies" : "townCanopies";
             material.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/"+atlas));
             material.SetFloat("_Cutoff",boughs ? .43f : .32f);
+            material.SetFloat("_SummerPetals",summer && !boughs ? 1 : 0);
             if(boughs)
             {
                 var tint=crownDistrict==3 ? new Vector4(.77f,.92f,1.14f,1) :
@@ -166,6 +209,7 @@ namespace PCShopSell.Game.Runtime
 
         internal static MeshRenderer Plant(Transform parent,Vector3 foot,int height,int species,int seed,bool summer=true,int district=0)
         {
+            if(district==2 && species==2 && DistrictFinishes.BlossomCover(parent.TransformPoint(foot))<.12f)species=0;
             var go=new GameObject("庭荫树",typeof(MeshFilter),typeof(MeshRenderer));
             go.transform.SetParent(parent,false);go.transform.localPosition=foot;
             bool boughs=district>0 && summer && (species==0 || species==3);
@@ -181,7 +225,13 @@ namespace PCShopSell.Game.Runtime
             mesh.CombineMeshes(chunk.Parts.Select(p=>new CombineInstance{mesh=p.Mesh,transform=Matrix4x4.Translate(p.Position)}).ToArray());
             var go=new GameObject(chunk.Name,typeof(MeshFilter),typeof(MeshRenderer));
             go.transform.SetParent(root,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;
-            go.GetComponent<MeshRenderer>().sharedMaterial=CanopyPaint();owner.Owned.Add(mesh);
+            if(_forest==null)
+            {
+                _forest=new Material(CanopyPaint()){name="湖岸山林树冠",enableInstancing=true};
+                _forest.SetTexture("_BaseMap",Resources.Load<Texture2D>("OldTown/Surfaces/summerGroves"));
+                _forest.SetFloat("_ForestPigment",1);
+            }
+            go.GetComponent<MeshRenderer>().sharedMaterial=_forest;owner.Owned.Add(mesh);
             ForestFloorShade.Build(root,chunk,owner);
         }
     }

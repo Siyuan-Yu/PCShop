@@ -30,11 +30,12 @@ namespace PCShopSell.Game.Runtime
                 PlantSpecies.Hedge or PlantSpecies.Spirea or PlantSpecies.Broadleaf or PlantSpecies.GoldenBush;
             if(mounded) AddShrubBody(foot,width,height,seed,u,v);
             if(floweringHead)
-                for(int cluster=0;cluster<3;cluster++)
+                for(int cluster=0;cluster<4;cluster++)
                 {
                     float angle=seed*.17f+cluster*2.39f;
-                    var center=foot+new Vector3(Mathf.Cos(angle)*width*.29f,height*(.76f+cluster*.074f),Mathf.Sin(angle)*width*.29f);
-                    AddHydrangeaHead(center,width*(.15f+.016f*(cluster%2)),angle);
+                    float spread=cluster==3?.12f:.31f;
+                    var center=foot+new Vector3(Mathf.Cos(angle)*width*spread,height*(.90f+cluster*.041f),Mathf.Sin(angle)*width*spread);
+                    AddHydrangeaHead(center,width*(.145f+.017f*(cluster%2)),angle,(seed&15)==3 || (seed&15)==4?1:(seed&int.MaxValue)/3%3);
                 }
             for(int plane=0;plane<3;plane++)
             {
@@ -95,30 +96,33 @@ namespace PCShopSell.Game.Runtime
             for(int i=0;i<sides;i++) _indices.AddRange(new[]{cap,start+2*sides+(i+1)%sides,start+2*sides+i});
         }
 
-        private void AddHydrangeaHead(Vector3 center,float radius,float twist)
+        private void AddHydrangeaHead(Vector3 center,float radius,float twist,int cultivar)
         {
-            const int sides=8;
-            int first=_positions.Count;
-            // Project the actual florets from the upper mophead of the hydrangea atlas cell.
-            var flower=new Vector2(.13f,.451f);
-            for(int ring=0;ring<2;ring++)
-            for(int i=0;i<sides;i++)
+            // Each cap is a convex mophead. Side-facing and upward-facing flowers
+            // have their own tangent planes, so a reverse view shows petals as well.
+            const int florets=11;
+            for(int k=0;k<florets;k++)
             {
-                float a=i*(2*Mathf.PI/sides)+twist;
-                var side=new Vector3(Mathf.Cos(a),0,Mathf.Sin(a));
-                float spread=ring==0?.88f:.77f;
-                _positions.Add(center+(side*spread+Vector3.up*(ring==0?-.30f:.53f))*radius);
-                _normals.Add((side+Vector3.up*(ring==0?.08f:1.6f)).normalized);
-                _uv.Add(flower+new Vector2(side.x*.023f,side.z*.014f)*spread);
-                byte shade=(byte)(ring==0?183:240);_shading.Add(new Color32(shade,shade,shade,255));
-                if(ring!=0)continue;
-                int lo=first+i,next=first+(i+1)%sides;
-                _indices.AddRange(new[]{lo,lo+sides,next,next,lo+sides,next+sides});
+                float y=-.07f+1.06f*(k+.5f)/florets;
+                float radial=Mathf.Sqrt(1-y*y);
+                float angle=twist+k*2.39996f;
+                var n=new Vector3(radial*Mathf.Cos(angle),y,radial*Mathf.Sin(angle));
+                var x=new Vector3(-Mathf.Sin(angle),0,Mathf.Cos(angle));
+                var v=Vector3.Cross(n,x).normalized;
+                var middle=center+Vector3.Scale(n,new Vector3(1,.82f,1))*radius*.72f;
+                int start=_positions.Count;
+                float size=radius*(.56f+.065f*(k%3));
+                for(int row=0;row<2;row++)for(int col=0;col<2;col++)
+                {
+                    var offset=(x*(2*col-1)+v*(2*row-1))*size;
+                    _positions.Add(middle+offset);
+                    _normals.Add((n+offset/size*.18f+Vector3.up*.48f).normalized);
+                    _uv.Add(new Vector2((cultivar+.025f+col*.95f)*.25f,(.025f+row*.95f)*.25f));
+                    byte shade=(byte)(150+99*Mathf.Max(0,y));
+                    _shading.Add(new Color32(shade,shade,shade,255));
+                }
+                _indices.AddRange(new[]{start,start+1,start+2,start+2,start+1,start+3});
             }
-            int cap=_positions.Count;
-            _positions.Add(center+Vector3.up*radius*.78f);_normals.Add(Vector3.up);
-            _uv.Add(flower);_shading.Add(new Color32(255,255,255,255));
-            for(int i=0;i<sides;i++)_indices.AddRange(new[]{cap,first+sides+(i+1)%sides,first+sides+i});
         }
 
         internal void Build(Transform parent,string name)

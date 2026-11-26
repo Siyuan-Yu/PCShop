@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using UnityEngine;
 
@@ -12,7 +12,7 @@ namespace PCShopSell.Game.Runtime
     }
 
     /// <summary>
-    /// 所有家具的模型（积木拼的低模）。局部坐标：原点在占地中心的地面上，宽沿 X，进深沿 Z，正面朝 -Z；
+    /// 家具模型。局部坐标：原点在占地中心的地面上，宽沿 X，进深沿 Z，正面朝 -Z；
     /// 墙面家具的原点在墙面上、朝屋内是 -Z。摆放时按 Rot 转 90° 的倍数。
     /// </summary>
     public static class FurnitureVisuals
@@ -25,7 +25,7 @@ namespace PCShopSell.Game.Runtime
         private static readonly Vector3 DiningPlatePosition = new Vector3(0, .778f, .115f);
         internal static readonly Vector3 DiningMealPosition = DiningPlatePosition + Vector3.up * .038f;
 
-        public static GameObject Build(Transform parent, FurnitureDef def, bool collider, string shelfKind = null)
+        public static GameObject Build(Transform parent, FurnitureDef def, bool collider, string shelfKind = null, int district = 0)
         {
             var root = new GameObject("F_" + def.Id).transform;
             root.SetParent(parent, false);
@@ -33,7 +33,7 @@ namespace PCShopSell.Game.Runtime
             bool c = collider;
             if (def.IsFixture)
             {
-                ShopFixtures.BuildFixture(root, def, c, shelfKind);
+                ShopFixtures.BuildFixture(root, def, c, shelfKind, district);
                 return root.gameObject;
             }
             if(def.Id.StartsWith("restaurant_")||def.Id.StartsWith("used_")||def.Id==FurnitureCatalog.ModelPaintBench){SpecialFurniture(root,def,c);return root.gameObject;}
@@ -46,16 +46,18 @@ namespace PCShopSell.Game.Runtime
             {
                 case FurnitureCatalog.FittingMirror:
                     Prims.Box(root,"MirrorFrame",new Vector3(0,.92f,0),new Vector3(.7f,1.8f,.09f),Mats.Lit(ArtDirection.Wood),c);
-                    Prims.Box(root,"MirrorGlass",new Vector3(0,.96f,-.05f),new Vector3(.60f,1.56f,.012f),Mats.Lit(new Color(.66f,.81f,.86f),.85f));
+                    Prims.Box(root,"MirrorGlass",new Vector3(0,.96f,-.05f),new Vector3(.60f,1.56f,.012f),Mats.Lit(new Color(.66f,.81f,.86f),.36f));
+                    Prims.Box(root,"MirrorBevel",new Vector3(-.285f,.96f,-.058f),new Vector3(.018f,1.48f,.005f),PropForms.Pigment("AFCED1"));
+                    Prims.Box(root,"MirrorBevel",new Vector3(0,1.724f,-.058f),new Vector3(.56f,.017f,.005f),PropForms.Pigment("AFCED1"));
                     Prims.Box(root,"MirrorFoot",new Vector3(0,.06f,0),new Vector3(.70f,.12f,.25f),Mats.Lit(Metal),c);
                     break;
-                case FurnitureCatalog.BedBoard: Bed(root, w, d, c, 0); break;
-                case "bed_spring": Bed(root, w, d, c, 1); break;
-                case "bed_good": Bed(root, w, d, c, 2); break;
-                case FurnitureCatalog.WardrobeCloth: Wardrobe(root, w, d, c, false); break;
-                case "wardrobe_wood": Wardrobe(root, w, d, c, true); break;
+                case FurnitureCatalog.BedBoard: Bed(root, w, d, c, 0, district); break;
+                case "bed_spring": Bed(root, w, d, c, 1, district); break;
+                case "bed_good": Bed(root, w, d, c, 2, district); break;
+                case FurnitureCatalog.WardrobeCloth: FurniturePropArt.Wardrobe(root, w, d, false, c, district); break;
+                case "wardrobe_wood": FurniturePropArt.Wardrobe(root, w, d, true, c, district); break;
                 case FurnitureCatalog.FridgeSmall:
-                case FurnitureCatalog.Fridge: Fridge(root, def, c); break;
+                case FurnitureCatalog.Fridge: FurniturePropArt.Refrigerator(root, def, c); break;
                 case FurnitureCatalog.TableCooker: TableCooker(root, w, d, c); break;
                 case "stool": Stool(root, c); break;
                 case "fan_broken": Fan(root, c, true); break;
@@ -63,22 +65,22 @@ namespace PCShopSell.Game.Runtime
                 case "fan_fixed": Fan(root, c, false); break;
                 case "junk": Junk(root, c); break;
                 case FurnitureCatalog.HomeBox:
-                case FurnitureCatalog.ShopBox: Carton(root, w, d, c); break;
+                case FurnitureCatalog.ShopBox: FurniturePropArt.Carton(root,"Carton",Vector3.zero,new Vector3(w-.04f,.5f,d-.04f),c); break;
                 case "aircon_large":
                 case "aircon":
-                    AirCon(root);
+                    FurniturePropArt.AirConditioner(root,w);
                     if(c){var click=root.gameObject.AddComponent<BoxCollider>();click.center=new Vector3(0,2.4f,-.15f);click.size=new Vector3(w,.5f,.35f);}
                     break;
-                case FurnitureCatalog.Curtain: Curtain(root); break;
+                case FurnitureCatalog.Curtain: FurniturePropArt.Drapes(root); break;
                 case "poster": Poster(root, w, 1.0f, 1.55f, new Color(0.85f, 0.55f, 0.25f), new Color(0.25f, 0.45f, 0.65f)); break;
                 case "rug": Rug(root, w, d); break;
-                case "plant": Plant(root, 0.4f, 0.9f, c); break;
-                case "shop_plant": Plant(root, 0.5f, 1.3f, c); break;
+                case "plant": FurniturePropArt.Plant(root, .4f, .9f, c, false); break;
+                case "shop_plant": FurniturePropArt.Plant(root, .5f, 1.3f, c, true); break;
                 case FurnitureCatalog.HomeWorkbench: HomeWorkbench(root, w, d, c); break;
-                case "desk": Desk(root, w, d, c); break;
-                case "sofa": Sofa(root, w, d, c, new Color(0.55f, 0.4f, 0.3f)); break;
-                case "shop_sofa": Sofa(root, w, d, c, new Color(0.25f, 0.4f, 0.6f)); break;
-                case "shop_dispenser": Dispenser(root, c); break;
+                case "desk": Desk(root, w, d, c, district: district); break;
+                case "sofa": FurniturePropArt.Sofa(root, w, d, c, ArtDirection.Hex("946E52"), district); break;
+                case "shop_sofa": FurniturePropArt.Sofa(root, w, d, c, ArtDirection.Hex("546C84"), district); break;
+                case "shop_dispenser": FurniturePropArt.Dispenser(root, c); break;
                 case "shop_poster": Poster(root, w, 1.3f, 2.55f, new Color(0.9f, 0.3f, 0.25f), new Color(0.95f, 0.9f, 0.4f)); break;
                 case "shop_led": Led(root, w); break;
                 default:
@@ -88,51 +90,115 @@ namespace PCShopSell.Game.Runtime
             return root.gameObject;
         }
 
-        private static void SpecialFurniture(Transform root,FurnitureDef def,bool collider)
+        private static void SpecialFurniture(Transform root, FurnitureDef def, bool collider)
         {
-            float w=(float)def.Width,d=(float)def.Depth;
+            float w = (float)def.Width, d = (float)def.Depth;
             if (def.Id == "restaurant_table")
             {
                 RestaurantDiningSet(root, w, d, collider);
                 return;
             }
-            Desk(root,w,d,collider);
-            if(def.Id=="restaurant_stove")
+
+            Material steel = PropForms.Pigment("838882");
+            Material dark = PropForms.Pigment("423D37");
+            Material wood = PropForms.Wood("96704D");
+            if (def.Id == "restaurant_stove")
             {
-                Prims.Box(root,"StoveBody",new Vector3(0,.55f,0),new Vector3(w,.6f,d),Mats.Lit(Metal),collider);
-                Prims.Shape(PrimitiveType.Cylinder,root,"Wok",new Vector3(0,.94f,0),new Vector3(.5f,.07f,.5f),Mats.Lit(Metal));
-                Prims.Box(root,"WokHandle",new Vector3(.34f,.96f,0),new Vector3(.32f,.04f,.06f),Mats.Lit(ArtDirection.Wood));
-                Prims.Shape(PrimitiveType.Sphere,root,"FoodInWok",new Vector3(0,1.02f,0),new Vector3(.38f,.08f,.38f),Mats.Lit(new Color(.85f,.67f,.25f)));
-            }
-            else if(def.Id==FurnitureCatalog.LegacyRestaurantPrep)
-            {
-                Prims.Box(root,"ChoppingBoard",new Vector3(0,.87f,0),new Vector3(.55f,.04f,.35f),Mats.Lit(new Color(.72f,.51f,.3f)));
-                Prims.Box(root,"Vegetable",new Vector3(-.15f,.92f,0),new Vector3(.2f,.07f,.13f),Mats.Lit(new Color(.25f,.55f,.25f)));
-            }
-            else if(def.Id==FurnitureCatalog.LegacyRestaurantPass)
-                Prims.Box(root,"PassTop",new Vector3(0,1.3f,.12f),new Vector3(w,.05f,.3f),Mats.Lit(Metal));
-            else if(def.Id=="used_buydesk")
-            {
-                Prims.Box(root,"InspectionMat",new Vector3(0,.87f,0),new Vector3(w*.8f,.025f,d*.75f),Mats.Lit(new Color(.18f,.38f,.3f)));
-                Prims.Box(root,"InspectionLamp",new Vector3(w*.3f,1.05f,.15f),new Vector3(.08f,.38f,.08f),Mats.Lit(Metal));
-            }
-            else if(def.Id=="used_display")
-                Prims.Box(root,"SalesGlass",new Vector3(0,1.03f,0),new Vector3(w,.25f,d),Mats.Lit(new Color(.55f,.72f,.7f),.3f));
-            else if (def.Id == FurnitureCatalog.ModelPaintBench)
-            {
-                Prims.Box(root, "SprayBooth", new Vector3(0, 1.08f, d * .34f), new Vector3(w * .78f, .46f, .12f), Mats.Lit(ArtDirection.Sage));
-                Prims.Box(root, "Turntable", new Vector3(0, .9f, -.04f), new Vector3(.3f, .06f, .3f), Mats.Lit(Metal));
-                Prims.Box(root, "Model", new Vector3(0, 1f, -.04f), new Vector3(.14f, .14f, .13f), Mats.Lit(ArtDirection.Brass));
+                PropForms.Box(root, "StoveBody", new Vector3(0, .42f, 0), new Vector3(w, .84f, d), steel, collider);
+                PropForms.Box(root, "StoveTop", 0, .854f, 0, w, .045f, d, dark);
+                PropForms.Box(root, "ServicePanel", 0, .393f, -.5f * d - .008f, w * .82f, .48f, .018f, PropForms.Pigment("68706D"));
                 for (int i = 0; i < 3; i++)
-                    Prims.Box(root, "PaintCup", new Vector3(w * .25f, .93f, (i - 1) * .12f), new Vector3(.065f, .12f, .065f),
-                        Mats.Lit(i == 0 ? ArtDirection.Sage : i == 1 ? ArtDirection.Brass : ArtDirection.Wood));
+                    PropForms.Tube(root, "ControlKnob", new Vector3((i - 1) * .142f, .735f, -.5f * d),
+                        new Vector3((i - 1) * .142f, .735f, -.5f * d - .034f), .061f, i == 1 ? PropForms.Pigment("A65943") : dark);
+                Prims.Shape(PrimitiveType.Cylinder, root, "Burner", new Vector3(0, .902f, 0),
+                    new Vector3(.31f, .032f, .31f), dark);
+                PropForms.Revolve(root, "Wok", PropForms.Pigment("4F4D45"), "kitchen-wok", new Vector3(0, .905f, 0),
+                    new Vector3(.49f, .157f, .49f), new Vector2(0, 0), new Vector2(.207f, 0),
+                    new Vector2(.339f, .35f), new Vector2(.46f, .75f), new Vector2(.50f, .94f),
+                    new Vector2(.48f, 1), new Vector2(.42f, .81f), new Vector2(.29f, .38f),
+                    new Vector2(.145f, .25f), new Vector2(0, .25f));
+                PropForms.Tube(root, "WokHandle", new Vector3(.215f, 1.019f, 0), new Vector3(.379f, 1.065f, 0), .046f, wood);
+                Prims.Shape(PrimitiveType.Sphere, root, "FoodInWok", new Vector3(0, .979f, 0), new Vector3(.275f, .036f, .275f), PropForms.Pigment("B88B52"));
+                return;
             }
-            else if(def.Id=="used_repairbench")
+            if (def.Id == "used_display")
             {
-                Prims.Box(root,"RepairMat",new Vector3(0,.88f,0),new Vector3(w*.8f,.025f,d*.75f),Mats.Lit(ArtDirection.Sage));
-                Prims.Box(root,"ToolRack",new Vector3(0,1.07f,d*.35f),new Vector3(w*.8f,.35f,.06f),Mats.Lit(ArtDirection.Wood));
-                for(int i=-1;i<=1;i++)Prims.Box(root,"HandTool",new Vector3(i*w*.22f,1.1f,d*.3f),new Vector3(.045f,.24f,.045f),Mats.Lit(Metal));
-                Prims.Box(root,"PartsTray",new Vector3(w*.28f,.92f,-d*.12f),new Vector3(.25f,.07f,.2f),Mats.Lit(ArtDirection.Brass));
+                PropForms.Box(root, "DisplayBase", new Vector3(0, .419f, 0), new Vector3(w, .838f, d), wood, collider);
+                PropForms.Box(root, "FeltBed", 0, .849f, 0, w - .06f, .026f, d - .06f, PropForms.Pigment("627369"));
+                Material glass = DistrictFinishes.VillaPane(balustrade: true);
+                PropForms.Box(root, "GlassTop", 0, 1.128f, 0, w - .04f, .012f, d - .04f, glass);
+                foreach (int side in new[] { -1, 1 })
+                {
+                    PropForms.Box(root, "GlassSide", side * (w / 2 - .022f), .988f, 0, .01f, .272f, d - .046f, glass);
+                    PropForms.Box(root, "GlassFrontBack", 0, .988f, side * (d / 2 - .022f), w - .046f, .272f, .01f, glass);
+                    foreach (int end in new[] { -1, 1 })
+                        PropForms.Box(root, "GlassPost", side * (w / 2 - .02f), .982f, end * (d / 2 - .02f), .028f, .285f, .028f, dark);
+                }
+                PropForms.Box(root, "DrawerFront", 0, .669f, -d / 2 - .006f, w - .12f, .188f, .022f, PropForms.Wood("AE845A"));
+                PropForms.Box(root, "DrawerPull", 0, .686f, -d / 2 - .026f, .14f, .022f, .028f, dark);
+                return;
+            }
+
+            Desk(root, w, d, collider, withLaptop: false);
+            switch (def.Id)
+            {
+                case FurnitureCatalog.LegacyRestaurantPrep:
+                    PropForms.Box(root, "Cabinet", 0, .424f, .023f, w - .16f, .52f, d - .1f, wood);
+                    PropForms.Box(root, "SteelWorktop", 0, .786f, 0, w, .043f, d, steel);
+                    PropForms.Box(root, "ChoppingBoard", .072f, .822f, -.03f, .49f, .033f, .317f, PropForms.Wood("BC925D"));
+                    PropForms.Box(root, "KnifeBlade", .123f, .847f, .036f, .19f, .008f, .054f, steel);
+                    PropForms.Box(root, "KnifeHandle", .263f, .848f, .034f, .105f, .022f, .038f, dark);
+                    break;
+                case FurnitureCatalog.LegacyRestaurantPass:
+                    PropForms.Box(root, "PassCounter", 0, .788f, 0, w, .044f, d, steel);
+                    PropForms.Box(root, "PassTop", 0, 1.302f, .10f, w, .051f, .29f, steel);
+                    foreach (int side in new[] { -1, 1 })
+                        PropForms.Box(root, "ShelfRiser", side * (w / 2 - .042f), 1.049f, .178f, .045f, .49f, .044f, steel);
+                    PropForms.Box(root, "WarmingLamp", 0, 1.268f, .061f, w - .18f, .021f, .047f,
+                        Mats.Glow(ArtDirection.Hex("D49A52"), new Color(.65f,.27f,.08f), false));
+                    break;
+                case "used_buydesk":
+                    PropForms.Box(root, "InspectionMat", -.12f, .776f, -.05f, .54f, .017f, .37f, PropForms.Pigment("4F685B"));
+                    PropForms.Box(root, "ScaleBase", .327f, .828f, -.05f, .265f, .114f, .219f, steel);
+                    PropForms.Box(root, "ScaleTray", .327f, .897f, -.04f, .243f, .022f, .167f, PropForms.Pigment("AAA797"));
+                    PropForms.Box(root, "ScaleReadout", .327f, .845f, -.163f, .115f, .034f, .013f, dark);
+                    Vector3 low = new Vector3(-.38f, .789f, .206f), hinge = new Vector3(-.38f, 1.275f, .18f);
+                    PropForms.Tube(root, "LampArm", low, hinge, .027f, dark);
+                    PropForms.Tube(root, "LampArm", hinge, new Vector3(-.30f, 1.331f, -.038f), .027f, dark);
+                    PropForms.Box(root, "LampShade", -.30f, 1.315f, -.065f, .205f, .080f, .117f, PropForms.Pigment("777D5C"));
+                    PropForms.Box(root, "Diffuser", -.30f, 1.273f, -.065f, .174f, .012f, .091f, PropForms.Cream);
+                    break;
+                case "used_repairbench":
+                    PropForms.Box(root, "RepairMat", 0, .791f, -.031f, w * .72f, .02f, d * .59f, PropForms.Pigment("637666"));
+                    PropForms.Box(root, "ToolRack", 0, 1.081f, d * .425f, w * .84f, .447f, .076f, wood);
+                    for (int i = 0; i < 6; i++)
+                        PropForms.Box(root, "RackSlot", (i - 2.5f) * w * .119f, 1.165f, d * .425f - .042f, .039f, .027f, .013f, dark);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float x = (i - 1.5f) * w * .14f;
+                        PropForms.Box(root, "ToolShank", x, 1.106f, d * .425f - .054f, .025f, .162f, .021f, steel);
+                        PropForms.Box(root, "ToolGrip", x, 1.042f, d * .425f - .058f, .043f, .083f, .033f, PropForms.Pigment(i % 2 == 0 ? "976044" : "5B625B"));
+                    }
+                    PropForms.Box(root, "Vise", w * .289f, .866f, -.11f, .211f, .171f, .15f, PropForms.Pigment("586A6C"));
+                    PropForms.Box(root, "ViseJaw", w * .289f, .958f, -.164f, .206f, .033f, .058f, steel);
+                    PropForms.Tube(root, "ViseHandle", new Vector3(w * .289f - .082f, .873f, -.202f),
+                        new Vector3(w * .289f + .082f, .873f, -.202f), .015f, steel);
+                    break;
+                default:
+                    Material enamel = PropForms.Pigment("7F887A");
+                    PropForms.Box(root, "SprayBooth", 0, 1.087f, d * .385f, w * .78f, .558f, .08f, enamel);
+                    PropForms.Box(root, "SprayHood", 0, 1.389f, .161f, w * .78f, .077f, .43f, enamel);
+                    foreach (int side in new[] { -1, 1 })
+                        PropForms.Box(root, "SpraySide", side * w * .365f, 1.108f, .163f, .043f, .508f, .361f, enamel);
+                    PropForms.Box(root, "FilterFrame", 0, 1.144f, d * .385f - .047f, .53f, .256f, .019f, dark);
+                    for (int i = 0; i < 8; i++)
+                        PropForms.Box(root, "MeshFilter", 0, 1.023f + i * .031f, d * .385f - .062f, .499f, .014f, .009f, steel);
+                    Prims.Shape(PrimitiveType.Cylinder, root, "Turntable", new Vector3(0, .808f, -.017f), new Vector3(.281f, .037f, .281f), dark);
+                    PropForms.Tube(root, "Airbrush", new Vector3(.235f,.797f,-.196f), new Vector3(.378f,.802f,-.156f), .024f, steel);
+                    for (int i = 0; i < 3; i++)
+                        Prims.Shape(PrimitiveType.Cylinder, root, "PaintCup", new Vector3(-.32f, .811f, -.138f + i * .084f),
+                            new Vector3(.057f, .045f, .057f), PropForms.Pigment(i == 0 ? "AD6C51" : i == 1 ? "BCA067" : "6A7D6C"));
+                    break;
             }
         }
 
@@ -161,24 +227,6 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        private static void Fridge(Transform root, FurnitureDef def, bool collider)
-        {
-            float w = (float)def.Width, d = (float)def.Depth;
-            bool small = def.Id == FurnitureCatalog.FridgeSmall;
-            float height = small ? 1.15f : 1.8f;
-            int rows = small ? 1 : 2;
-            Color body = new Color(0.8f, 0.86f, 0.85f);
-            Color door = new Color(0.92f, 0.95f, 0.93f);
-            Prims.Box(root, "FridgeBody", new Vector3(0, height / 2, 0), new Vector3(w, height, d), Mats.Lit(body), collider);
-            for (int y = 0; y < rows; y++)
-            {
-                float dh = height / rows;
-                float cy = dh * (y + 0.5f);
-                Prims.Box(root, "FridgeDoor_0_" + y, new Vector3(0, cy, -d / 2 - 0.015f), new Vector3(w - 0.025f, dh - 0.025f, 0.04f), Mats.Lit(door), false);
-                Prims.Box(root, "FridgeHandle_0_" + y, new Vector3(w / 2 - 0.09f, cy, -d / 2 - 0.065f), new Vector3(0.035f, Mathf.Min(0.28f, dh / 3), 0.05f), Mats.Lit(Metal), false);
-            }
-        }
-
         /// <summary>把模型摆到房间里的位置上。</summary>
         public static void Place(GameObject go, FurnitureDef def, PlacedFurniture p, RoomSpec room)
         {
@@ -203,65 +251,75 @@ namespace PCShopSell.Game.Runtime
 
         // ---------- 床 ----------
 
-        private static void Bed(Transform r, float w, float d, bool c, int grade)
+        private static void Bed(Transform r, float w, float d, bool c, int grade, int district)
         {
             float hx = -w / 2;
+            if (district == 3 && grade == 2)
+            {
+                var ivory = PropForms.Pigment("D0D3CC");
+                PropForms.Box(r, "BedRecessedSupport", new Vector3(0,.188f,0),new Vector3(w*.78f,.36f,d*.76f),PropForms.Ink,c);
+                PropForms.Box(r, "BedPlatform", 0,.375f,0,w,.106f,d,PropForms.Wood("846A55"));
+                for (int side = -1; side <= 1; side += 2)
+                    PropForms.Box(r,"ToppedMattress",0,.528f,side*d*.237f,w-.13f,.207f,d*.462f,ivory);
+                var underlight = Mats.Glow(ArtDirection.Hex("A1C7C6"),new Color(.23f,.70f,.82f),false);
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    PropForms.Box(r,"BedSideLight",0,.32f,side*(d*.5f-.079f),w-.16f,.019f,.018f,underlight);
+                    PropForms.Box(r,"BedEndLight",side*(w*.5f-.079f),.32f,0,.018f,.019f,d-.14f,underlight);
+                }
+                return;
+            }
             if (grade == 0)
             {
                 foreach (Vector2 p in new[] { new Vector2(-w / 2 + 0.1f, -d / 2 + 0.1f), new Vector2(w / 2 - 0.1f, -d / 2 + 0.1f), new Vector2(-w / 2 + 0.1f, d / 2 - 0.1f), new Vector2(w / 2 - 0.1f, d / 2 - 0.1f) })
                     Prims.Box(r, "Leg", new Vector3(p.x, 0.15f, p.y), new Vector3(0.06f, 0.3f, 0.06f), Mats.Lit(Metal, 0.3f, 0.5f));
-                Prims.Box(r, "Board", new Vector3(0, 0.33f, 0), new Vector3(w, 0.06f, d), Mats.Lit(new Color(0.45f, 0.33f, 0.22f)), c);
+                Prims.Box(r, "Board", new Vector3(0, 0.33f, 0), new Vector3(w, 0.06f, d), FurniturePropArt.TexturedWood(district), c);
                 Prims.Box(r, "Head", new Vector3(hx + 0.04f, 0.65f, 0), new Vector3(0.08f, 0.6f, d), Mats.Lit(Metal, 0.3f, 0.5f));
-                Prims.Box(r, "Mattress", new Vector3(0.1f, 0.40f, 0), new Vector3(w - 0.2f, 0.08f, d - 0.08f), Mats.Lit(new Color(0.62f, 0.6f, 0.5f), 0.02f));
-                Prims.Box(r, "Stain", new Vector3(0.25f, 0.445f, 0.05f), new Vector3(0.5f, 0.01f, 0.4f), Mats.Lit(new Color(0.5f, 0.46f, 0.36f), 0.02f));
+                Prims.Box(r, "Mattress", new Vector3(0.1f, 0.40f, 0), new Vector3(w - 0.2f, 0.08f, d - 0.08f), PropForms.Pigment("ACA07E"));
                 Prims.Box(r, "Pillow", new Vector3(hx + 0.4f, 0.47f, 0), new Vector3(0.38f, 0.1f, 0.6f), Mats.Lit(new Color(0.72f, 0.7f, 0.64f), 0.02f));
                 Prims.Box(r, "Blanket", new Vector3(0.5f, 0.46f, 0), new Vector3(0.95f, 0.06f, d - 0.1f), Mats.Lit(new Color(0.55f, 0.38f, 0.3f), 0.02f));
             }
             else if (grade == 1)
             {
-                Prims.Box(r, "Frame", new Vector3(0, 0.22f, 0), new Vector3(w, 0.3f, d), Mats.Lit(new Color(0.4f, 0.3f, 0.22f)), c);
-                Prims.Box(r, "Head", new Vector3(hx + 0.04f, 0.6f, 0), new Vector3(0.08f, 0.7f, d), Mats.Lit(new Color(0.35f, 0.26f, 0.19f)));
+                Prims.Box(r, "Frame", new Vector3(0, 0.22f, 0), new Vector3(w, 0.3f, d), FurniturePropArt.TexturedWood(district), c);
+                Prims.Box(r, "Head", new Vector3(hx + 0.04f, 0.6f, 0), new Vector3(0.08f, 0.7f, d), FurniturePropArt.TexturedWood(district));
                 Prims.Box(r, "Mattress", new Vector3(0.05f, 0.47f, 0), new Vector3(w - 0.12f, 0.22f, d - 0.1f), Mats.Lit(new Color(0.45f, 0.62f, 0.74f), 0.05f));
                 Prims.Box(r, "Pillow", new Vector3(hx + 0.4f, 0.64f, 0), new Vector3(0.38f, 0.12f, 0.6f), Mats.Lit(new Color(0.9f, 0.9f, 0.88f), 0.05f));
                 Prims.Box(r, "Blanket", new Vector3(0.5f, 0.6f, 0), new Vector3(0.95f, 0.07f, d - 0.12f), Mats.Lit(new Color(0.4f, 0.5f, 0.65f), 0.05f));
             }
             else
             {
-                Prims.Box(r, "Frame", new Vector3(0, 0.2f, 0), new Vector3(w, 0.34f, d), Mats.Lit(new Color(0.3f, 0.2f, 0.14f), 0.2f), c);
-                Prims.Box(r, "Head", new Vector3(hx + 0.05f, 0.7f, 0), new Vector3(0.1f, 1.0f, d), Mats.Lit(new Color(0.27f, 0.18f, 0.12f), 0.2f));
+                Prims.Box(r, "Frame", new Vector3(0, 0.2f, 0), new Vector3(w, 0.34f, d), FurniturePropArt.TexturedWood(district), c);
+                Prims.Box(r, "Head", new Vector3(hx + 0.05f, 0.7f, 0), new Vector3(0.1f, 1.0f, d), FurniturePropArt.TexturedWood(district));
                 Prims.Box(r, "Mattress", new Vector3(0.05f, 0.5f, 0), new Vector3(w - 0.14f, 0.28f, d - 0.12f), Mats.Lit(new Color(0.93f, 0.9f, 0.82f), 0.1f));
                 Prims.Box(r, "PillowA", new Vector3(hx + 0.4f, 0.71f, -d * 0.2f), new Vector3(0.38f, 0.14f, 0.45f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f), 0.1f));
                 Prims.Box(r, "PillowB", new Vector3(hx + 0.4f, 0.71f, d * 0.2f), new Vector3(0.38f, 0.14f, 0.45f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f), 0.1f));
                 Prims.Box(r, "Blanket", new Vector3(0.5f, 0.68f, 0), new Vector3(1.0f, 0.08f, d - 0.14f), Mats.Lit(new Color(0.3f, 0.55f, 0.6f), 0.1f));
             }
+            float bedding = grade == 0 ? .417f : grade == 1 ? .495f : .535f;
+            float blanket = grade == 0 ? .478f : grade == 1 ? .621f : .711f;
+            var cottonEdge = PropForms.Pigment(grade == 0 ? "877A65" : grade == 1 ? "6D8396" : "C5B9A4");
+            var blanketEdge = PropForms.Pigment(grade == 0 ? "AA745B" : grade == 1 ? "738CA3" : "609597");
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Prims.Box(r,"MattressPiping",new Vector3(.05f,bedding,side*(d/2-(grade==0?.038f:grade==1?.049f:.059f))),
+                    new Vector3(w-.20f,.015f,.012f),cottonEdge);
+                Prims.Box(r,"BlanketHem",new Vector3(.48f,blanket,side*(d/2-(grade==0?.052f:grade==1?.062f:.070f))),
+                    new Vector3(.91f,.013f,.019f),blanketEdge);
+                if (grade > 0)
+                    Prims.Box(r,"BedRail",new Vector3(0,.156f,side*d*.49f),new Vector3(w-.08f,.058f,.041f),PropForms.Wood("6B4C37"));
+            }
+            if (district == 0 && grade == 0)
+                Prims.Box(r,"EdgeRepair",new Vector3(.44f,.33f,-d/2-.002f),new Vector3(.16f,.025f,.007f),PropForms.Pigment("956747"));
         }
 
         // ---------- 衣柜 ----------
-
-        private static void Wardrobe(Transform r, float w, float d, bool c, bool wood)
-        {
-            float h = wood ? 1.9f : 1.7f;
-            Color body = wood ? new Color(0.55f, 0.38f, 0.24f) : new Color(0.48f, 0.5f, 0.56f);
-            Prims.Box(r, "Body", new Vector3(0, h / 2, 0), new Vector3(w, h, d), Mats.Lit(body, wood ? 0.25f : 0.05f), c);
-            float fz = -d / 2 - 0.012f;
-            Color seam = wood ? new Color(0.3f, 0.2f, 0.13f) : new Color(0.25f, 0.26f, 0.3f);
-            Prims.Box(r, "Seam", new Vector3(0, h / 2, fz), new Vector3(0.025f, h - 0.1f, 0.02f), Mats.Lit(seam));
-            if (!wood)
-            {
-                Prims.Box(r, "SeamB", new Vector3(w * 0.3f, h / 2, fz), new Vector3(0.02f, h - 0.1f, 0.02f), Mats.Lit(new Color(0.3f, 0.31f, 0.35f)));
-                Prims.Box(r, "Top", new Vector3(0.05f, h + 0.08f, 0), new Vector3(w * 0.7f, 0.16f, d * 0.7f), Mats.Lit(new Color(0.68f, 0.58f, 0.4f)));
-            }
-            Color hc = new Color(0.75f, 0.75f, 0.78f);
-            Prims.Box(r, "HandleL", new Vector3(-0.08f, h * 0.5f, fz - 0.015f), new Vector3(0.03f, 0.18f, 0.03f), Mats.Lit(hc, 0.5f, 0.6f));
-            Prims.Box(r, "HandleR", new Vector3(0.08f, h * 0.5f, fz - 0.015f), new Vector3(0.03f, 0.18f, 0.03f), Mats.Lit(hc, 0.5f, 0.6f));
-        }
 
         // ---------- 小桌与电饭锅 ----------
 
         private static void TableCooker(Transform r, float w, float d, bool c)
         {
-            Color wood = new Color(0.55f, 0.45f, 0.32f);
-            Prims.Box(r, "Top", new Vector3(0, 0.72f, 0), new Vector3(w, 0.05f, d), Mats.Lit(wood, 0.1f), c);
+            Prims.Box(r, "Top", new Vector3(0, 0.72f, 0), new Vector3(w, 0.05f, d), PropForms.Wood("9A764F"), c);
             foreach (Vector2 p in new[] { new Vector2(-w / 2 + 0.06f, -d / 2 + 0.06f), new Vector2(w / 2 - 0.06f, -d / 2 + 0.06f), new Vector2(-w / 2 + 0.06f, d / 2 - 0.06f), new Vector2(w / 2 - 0.06f, d / 2 - 0.06f) })
                 Prims.Box(r, "Leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.04f, 0.72f, 0.04f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f, 0.5f));
             Prims.Shape(PrimitiveType.Cylinder, r, "RiceCooker", new Vector3(-0.35f, 0.88f, 0), new Vector3(0.34f, 0.15f, 0.34f), Mats.Lit(new Color(0.86f, 0.86f, 0.8f), 0.3f), c);
@@ -269,6 +327,9 @@ namespace PCShopSell.Game.Runtime
             Prims.Shape(PrimitiveType.Cylinder, lid, "Lid", Vector3.zero, new Vector3(.35f, .015f, .35f), Mats.Lit(new Color(.65f, .69f, .66f), .5f));
             Prims.Box(lid, "Handle", new Vector3(0, .031f, 0), new Vector3(.11f, .025f, .045f), Mats.Lit(new Color(.2f, .24f, .22f)));
             var light = Prims.Box(r, "CookerLight", new Vector3(-.35f, .93f, -.17f), new Vector3(.075f, .035f, .025f), Mats.Glow(new Color(.18f, .2f, .17f), Color.black, false));
+            Prims.Box(r,"TableApron",new Vector3(0,.662f,-d*.42f),new Vector3(w-.075f,.047f,.056f),PropForms.Wood("795A3D"));
+            PropForms.Tube(r,"锅底胶圈",new Vector3(-.35f,.749f,0),new Vector3(-.35f,.762f,0),.313f,PropForms.Ink);
+            PropForms.Tube(r,"锅身接口",new Vector3(-.35f,1.004f,0),new Vector3(-.35f,1.017f,0),.337f,PropForms.Pigment("A6A598"));
             var animation = r.gameObject.AddComponent<RiceCookerVisual>();
             animation.Lid = lid; animation.Indicator = light.GetComponent<Renderer>(); animation.Steam = new Renderer[5];
             for (int i = 0; i < animation.Steam.Length; i++)
@@ -303,6 +364,13 @@ namespace PCShopSell.Game.Runtime
                 leg.transform.localRotation = Quaternion.FromToRotation(Vector3.up, axis);
             }
 
+            foreach (int side in new[] { -1, 1 })
+            {
+                PropForms.Box(root, "MouldedBrace", side * .096f, .151f, 0, .032f, .039f, .191f, redPlastic);
+                PropForms.Box(root, "MouldedBrace", 0, .151f, side * .096f, .191f, .039f, .032f, redPlastic);
+            }
+            PropForms.Box(root, "SeatEdgeScuff", -.072f, StoolSeatHeight - .008f, -.133f, .033f, .004f, .009f, PropForms.Pigment("AD7760"));
+
             if (collider)
             {
                 var hit = root.gameObject.AddComponent<CapsuleCollider>();
@@ -314,8 +382,8 @@ namespace PCShopSell.Game.Runtime
 
         private static void Fan(Transform root, bool collider, bool broken)
         {
-            var housing = Mats.Lit(new Color(.60f, .60f, .62f), .18f);
-            var metal = Mats.Lit(new Color(.47f, .48f, .50f), .28f, .35f);
+            var housing = PropForms.Pigment(broken ? "96917E" : "A4A7A7");
+            var metal = Mats.Lit(broken ? ArtDirection.Hex("777363") : ArtDirection.Hex("868A8D"), .22f, .26f);
             var grille = Mats.Lit(new Color(.56f, .56f, .58f), .27f, .32f);
             var blades = Mats.Lit(new Color(.69f, .72f, .73f), .23f);
             Prims.Shape(PrimitiveType.Cylinder, root, "Base", new Vector3(0, .028f, 0),
@@ -386,6 +454,8 @@ namespace PCShopSell.Game.Runtime
                 }
             }
             guard.Build(head, "WireGuard");
+            if (broken)
+                PropForms.Box(root, "WornEnamelChip", -.071f, .073f, -.092f, .041f, .003f, .022f, PropForms.Pigment("927054"));
 
             void AddWire(Vector3 start, Vector3 end, float radius) =>
                 MiniatureDetailMesh.Branch(wire.V, wire.T, start, end, radius, radius);
@@ -393,35 +463,17 @@ namespace PCShopSell.Game.Runtime
 
         private static void Junk(Transform r, bool c)
         {
-            Prims.Box(r, "Box1", new Vector3(-0.1f, 0.28f, -0.05f), new Vector3(0.7f, 0.56f, 0.6f), Mats.Lit(new Color(0.7f, 0.58f, 0.4f), 0.02f), c);
-            Prims.Box(r, "Box2", new Vector3(-0.2f, 0.7f, -0.08f), new Vector3(0.5f, 0.28f, 0.45f), Mats.Lit(new Color(0.66f, 0.54f, 0.37f), 0.02f));
-            Prims.Shape(PrimitiveType.Cylinder, r, "Basin", new Vector3(0.3f, 0.1f, -0.2f), new Vector3(0.45f, 0.1f, 0.45f), Mats.Lit(new Color(0.8f, 0.3f, 0.25f), 0.3f));
-            Prims.Shape(PrimitiveType.Cylinder, r, "Bucket", new Vector3(0.28f, 0.2f, 0.28f), new Vector3(0.3f, 0.2f, 0.3f), Mats.Lit(new Color(0.25f, 0.45f, 0.7f), 0.3f));
-        }
-
-        private static void Carton(Transform r, float w, float d, bool c)
-        {
-            Prims.Box(r, "Box", new Vector3(0, 0.25f, 0), new Vector3(w - 0.04f, 0.5f, d - 0.04f), Mats.Lit(new Color(0.72f, 0.58f, 0.38f), 0.02f), c);
-            Prims.Box(r, "Tape", new Vector3(0, 0.505f, 0), new Vector3(0.08f, 0.01f, d - 0.03f), Mats.Lit(new Color(0.85f, 0.78f, 0.6f), 0.3f));
-            Prims.Box(r, "Flap", new Vector3(0, 0.25f, -d / 2 + 0.015f), new Vector3(w * 0.4f, 0.12f, 0.01f), Mats.Lit(new Color(0.6f, 0.47f, 0.3f), 0.02f));
+            FurniturePropArt.Carton(r, "LargeCarton", new Vector3(-.14f, 0, -.031f), new Vector3(.66f, .49f, .57f), c);
+            FurniturePropArt.Carton(r, "SmallCarton", new Vector3(-.18f, .49f, -.075f), new Vector3(.48f, .282f, .41f), false);
+            PropForms.Revolve(r, "Basin", PropForms.Pigment("A45443"), "house-basin", new Vector3(.302f, 0, -.13f),
+                new Vector3(.44f, .165f, .44f), new Vector2(0, 0), new Vector2(.30f, 0), new Vector2(.50f,.89f),
+                new Vector2(.488f, 1), new Vector2(.45f, .965f), new Vector2(.282f, .18f), new Vector2(0, .18f));
+            PropForms.Revolve(r, "Bucket", PropForms.Pigment("587786"), "house-basin", new Vector3(.272f, 0, .263f),
+                new Vector3(.29f, .262f, .29f), new Vector2(0, 0), new Vector2(.30f, 0), new Vector2(.50f,.89f),
+                new Vector2(.488f, 1), new Vector2(.45f, .965f), new Vector2(.282f, .18f), new Vector2(0, .18f));
         }
 
         // ---------- 墙面 ----------
-
-        private static void AirCon(Transform r)
-        {
-            Prims.Box(r, "Body", new Vector3(0, 2.4f, -0.15f), new Vector3(1.1f, 0.3f, 0.25f), Mats.Lit(new Color(0.88f, 0.88f, 0.86f), 0.3f));
-            Prims.Box(r, "Led", new Vector3(0.35f, 2.4f, -0.285f), new Vector3(0.06f, 0.03f, 0.02f), Mats.Glow(new Color(0.1f, 0.4f, 0.1f), new Color(0.3f, 3f, 0.6f), false));
-            Prims.Box(r, "Vent", new Vector3(0, 2.3f, -0.22f), new Vector3(0.9f, 0.03f, 0.15f), Mats.Lit(new Color(0.7f, 0.7f, 0.7f)));
-        }
-
-        private static void Curtain(Transform r)
-        {
-            Material cm = Mats.Lit(new Color(0.6f, 0.4f, 0.45f), 0.02f);
-            Prims.Box(r, "PanelL", new Vector3(-0.6f, 1.75f, -0.07f), new Vector3(0.3f, 1.4f, 0.04f), cm);
-            Prims.Box(r, "PanelR", new Vector3(0.6f, 1.75f, -0.07f), new Vector3(0.3f, 1.4f, 0.04f), cm);
-            Prims.Box(r, "Rod", new Vector3(0, 2.45f, -0.07f), new Vector3(1.5f, 0.03f, 0.03f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f, 0.5f));
-        }
 
         private static void Poster(Transform r, float w, float h, float y, Color paper, Color accent)
         {
@@ -440,15 +492,15 @@ namespace PCShopSell.Game.Runtime
 
         private static void Rug(Transform r, float w, float d)
         {
-            Prims.Box(r, "Rug", new Vector3(0, 0.012f, 0), new Vector3(w, 0.02f, d), Mats.Lit(new Color(0.55f, 0.28f, 0.28f), 0.02f));
-            Prims.Box(r, "RugIn", new Vector3(0, 0.024f, 0), new Vector3(w - 0.3f, 0.01f, d - 0.3f), Mats.Lit(new Color(0.78f, 0.62f, 0.4f), 0.02f));
-        }
-
-        private static void Plant(Transform r, float size, float height, bool c)
-        {
-            Prims.Shape(PrimitiveType.Cylinder, r, "Pot", new Vector3(0, 0.15f, 0), new Vector3(size * 0.7f, 0.15f, size * 0.7f), Mats.Lit(new Color(0.7f, 0.4f, 0.28f), 0.2f), c);
-            Prims.Shape(PrimitiveType.Sphere, r, "Leaves", new Vector3(0, height * 0.55f, 0), new Vector3(size * 1.1f, height * 0.6f, size * 1.1f), Mats.Lit(new Color(0.25f, 0.55f, 0.28f), 0.1f));
-            Prims.Shape(PrimitiveType.Sphere, r, "LeavesB", new Vector3(size * 0.15f, height * 0.85f, 0), new Vector3(size * 0.7f, height * 0.4f, size * 0.7f), Mats.Lit(new Color(0.3f, 0.62f, 0.32f), 0.1f));
+            PropForms.Box(r, "WovenBorder", 0, .010f, 0, w, .018f, d, PropForms.Pigment("86504C"));
+            PropForms.Box(r, "WovenField", 0, .020f, 0, w - .25f, .009f, d - .25f, PropForms.Pigment("B59B74"));
+            foreach (float side in new[] { -1f, 1f })
+            {
+                PropForms.Box(r, "BorderCord", 0, .025f, side * (d / 2 - .106f), w - .176f, .006f, .018f, PropForms.Pigment("D0AB77"));
+                for (int tuft = 0; tuft < 22; tuft++)
+                    PropForms.Box(r, "Tassel", (tuft - 10.5f) * (w - .14f) / 22f, .018f, side * (d / 2 - .028f),
+                        .012f, .007f, .049f, PropForms.Pigment("B69774"));
+            }
         }
 
         private static void HomeWorkbench(Transform root, float width, float depth, bool collider)
@@ -513,32 +565,39 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        private static void Desk(Transform r, float w, float d, bool c, bool withLaptop = true)
+        private static void Desk(Transform r, float w, float d, bool c, bool withLaptop = true, int district = 0)
         {
-            Prims.Box(r, "Top", new Vector3(0, 0.74f, 0), new Vector3(w, 0.05f, d), Mats.Lit(new Color(0.6f, 0.5f, 0.38f), 0.15f), c);
+            if (district == 3 && withLaptop)
+            {
+                var body = PropForms.Pigment("BABBB5");
+                var edge = PropForms.Pigment("7F8381");
+                PropForms.Box(r,"DeskTop",new Vector3(0,.754f,0),new Vector3(w,.074f,d),body,c);
+                foreach (int side in new[] {-1,1})
+                    PropForms.Box(r,"DeskEnd",side*(w/2-.053f),.356f,0,.092f,.712f,d-.034f,body);
+                PropForms.Box(r,"DeskStretcher",0,.547f,.46f*d,w-.134f,.25f,.051f,edge);
+                var display = Mats.Glow(ArtDirection.Hex("80ADB6"),new Color(.18f,.56f,.70f),false);
+                PropForms.Box(r,"DeskDock",0,.809f,.221f,.592f,.041f,.096f,edge);
+                PropForms.Box(r,"ThinDisplay",0,1.079f,.224f,.659f,.508f,.023f, display);
+                for (int i=0;i<3;i++)
+                    PropForms.Box(r,"DisplayInterface",-.15f,1.198f-i*.075f,.21f,.225f-i*.041f,.016f,.007f,PropForms.Cream);
+                PropForms.Box(r,"Keyboard",0,.798f,-.113f,.353f,.023f,.145f,edge);
+                return;
+            }
+            Prims.Box(r, "Top", new Vector3(0, 0.74f, 0), new Vector3(w, 0.05f, d), FurniturePropArt.TexturedWood(district), c);
             foreach (Vector2 p in new[] { new Vector2(-w / 2 + 0.05f, -d / 2 + 0.05f), new Vector2(w / 2 - 0.05f, -d / 2 + 0.05f), new Vector2(-w / 2 + 0.05f, d / 2 - 0.05f), new Vector2(w / 2 - 0.05f, d / 2 - 0.05f) })
                 Prims.Box(r, "Leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.05f, 0.72f, 0.05f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f, 0.5f));
+            Prims.Box(r,"DeskApron",new Vector3(0,.683f,d*.388f),new Vector3(w-.10f,.059f,.038f),FurniturePropArt.TexturedWood(district));
             if (!withLaptop) return;
             Prims.Box(r, "Laptop", new Vector3(0, 0.78f, 0.05f), new Vector3(0.34f, 0.02f, 0.24f), Mats.Lit(new Color(0.2f, 0.2f, 0.23f), 0.4f, 0.4f));
-            Prims.Box(r, "Screen", new Vector3(0, 0.92f, 0.17f), new Vector3(0.34f, 0.24f, 0.015f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.3f, 0.8f, 1.5f), false));
+            var screen = Prims.Box(r, "Screen", new Vector3(0,.895f,.159f), new Vector3(.343f,.226f,.022f),PropForms.Ink);
+            screen.transform.localRotation=Quaternion.Euler(13,0,0);
+            Prims.Box(screen.transform,"Display",new Vector3(0,.028f,-.58f),new Vector3(.91f,.86f,.075f),
+                Mats.Glow(ArtDirection.Hex("314856"),new Color(.36f,.73f,.88f),false));
+            for(int row=0;row<4;row++)
+                Prims.Box(r,"Keyboard",new Vector3(0,.793f,-.022f+row*.031f),new Vector3(.26f,.007f,.019f),PropForms.Pigment("5D5D5B"));
+            Prims.Box(r,"Trackpad",new Vector3(0,.793f,-.054f),new Vector3(.097f,.006f,.032f),PropForms.Pigment("51524F"));
         }
 
-        private static void Sofa(Transform r, float w, float d, bool c, Color color)
-        {
-            Material m = Mats.Lit(color, 0.1f);
-            Material dark = Mats.Lit(color * 0.82f, 0.1f);
-            Prims.Box(r, "Seat", new Vector3(0, SofaSeatHeight - .2f, 0), new Vector3(w, .4f, d), m, c);
-            Prims.Box(r, "Back", new Vector3(0, 0.6f, d / 2 - 0.1f), new Vector3(w, 0.5f, 0.2f), dark);
-            Prims.Box(r, "ArmL", new Vector3(-w / 2 + 0.1f, 0.45f, 0), new Vector3(0.2f, 0.4f, d), dark);
-            Prims.Box(r, "ArmR", new Vector3(w / 2 - 0.1f, 0.45f, 0), new Vector3(0.2f, 0.4f, d), dark);
-        }
-
-        private static void Dispenser(Transform r, bool c)
-        {
-            Prims.Box(r, "Body", new Vector3(0, 0.5f, 0), new Vector3(0.36f, 1.0f, 0.36f), Mats.Lit(new Color(0.88f, 0.9f, 0.92f), 0.3f), c);
-            Prims.Shape(PrimitiveType.Cylinder, r, "Jug", new Vector3(0, 1.25f, 0), new Vector3(0.3f, 0.25f, 0.3f), Mats.Lit(new Color(0.5f, 0.75f, 0.95f), 0.5f));
-            Prims.Box(r, "Tap", new Vector3(0, 0.72f, -0.19f), new Vector3(0.08f, 0.06f, 0.05f), Mats.Lit(new Color(0.2f, 0.4f, 0.8f)));
-        }
     }
 
     /// <summary>
@@ -548,6 +607,7 @@ namespace PCShopSell.Game.Runtime
     public sealed class RoomFurniture
     {
         private readonly Transform _parent;
+        private readonly int _district;
         private readonly List<GameObject> _items = new List<GameObject>();
         private readonly List<PlacedFurniture> _snapshot = new List<PlacedFurniture>();
         private double _roomWidth = -1, _roomDepth = -1;
@@ -572,9 +632,10 @@ namespace PCShopSell.Game.Runtime
         /// <summary>布局重建过几次（店内场景据此刷新设施数据）。</summary>
         public int Version { get; private set; }
 
-        public RoomFurniture(Transform parent)
+        public RoomFurniture(Transform parent, int district = 0)
         {
             _parent = parent;
+            _district = district;
         }
 
         /// <summary>布局有变化就重建，返回是否重建了。</summary>
@@ -602,7 +663,7 @@ namespace PCShopSell.Game.Runtime
             {
                 FurnitureDef def = FurnitureCatalog.Get(layout[i].Id);
                 if (def == null) continue;
-                GameObject go = FurnitureVisuals.Build(_parent, def, true, layout[i].Item);
+                GameObject go = FurnitureVisuals.Build(_parent, def, true, layout[i].Item, _district);
                 FurnitureVisuals.Place(go, def, layout[i], room);
                 var pv = go.AddComponent<PlacedVisual>();
                 pv.Index = i;

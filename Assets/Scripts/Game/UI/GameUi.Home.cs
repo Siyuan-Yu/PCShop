@@ -1188,7 +1188,7 @@ namespace PCShopSell.Game.UI
                 var button = Ui.Size(Ui.Button(nav, names[i], () =>
                 {
                     if (_myPage != tab) OpenMyPanel(tab);
-                }, 18, Ui.SelectedButton(_myPage == tab)), 0, 42, 1);
+                }, 17, Ui.TabFill(_myPage == tab)), 0, 42, 1);
                 button.name = "MyTab_" + (int)tab;
             }
 
@@ -1243,14 +1243,17 @@ namespace PCShopSell.Game.UI
             return card;
         }
 
-        private static void MyFact(Transform parent, string title, string value)
+        private static void MyFact(Transform parent, string title, string value, UiIcon icon = UiIcon.None)
         {
             var fact = MyCard(parent, title, 0, 70, 1);
             var layout = fact.GetComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(12, 12, 8, 6);
             layout.spacing = 0;
-            Ui.Size(Ui.Label(fact, title, 15, color: Ui.Dim), -1, 20);
-            Ui.Size(Ui.Label(fact, "<b>" + value + "</b>", 23), -1, 33);
+            var heading = Ui.Row(fact, 23, 6);
+            var art = Ui.Artwork(heading, icon);
+            if (art != null) Ui.Size(art, 24, 22);
+            Ui.Size(Ui.Label(heading, title, 15, color: Ui.Dim), 0, 23, 1);
+            Ui.Size(Ui.Label(fact, "<b>" + value + "</b>", 20), -1, 32);
         }
 
         private void BuildMyProfile(Window w, Transform body)
@@ -1269,36 +1272,39 @@ namespace PCShopSell.Game.UI
             Ui.Size(info, 0, 162, 1);
             var layout = Ui.VList(info, 8, 5);
             layout.childAlignment = TextAnchor.MiddleLeft;
-            Line(info, "玩家", 30);
+            Line(info, "玩家", 25);
             double fame = S.HasShop ? S.PlayerShop.Reputation : 0;
             Line(info, $"名望 {fame:0.#} · {PersonStanding.Label(fame)}", 19, Ui.Accent).name = "MyStanding";
 
             var condition = MyCard(top, "MyCondition", 0, 194, 1);
             Line(condition, "身体状态", 22, Ui.Accent);
-            void Meter(Transform row, string label, double value, double max, bool warn = false)
+            void Meter(Transform row, UiIcon icon, string label, double value, double max, bool warn = false)
             {
                 var cell = Ui.Size(Ui.Rect(row, "MyStat_" + label), 0, 43, 1);
                 var heading = Ui.Row(cell, 26);
                 heading.Anchor(0, 1, 1, 1, 0, -26, 0, 0);
+                var art = Ui.Artwork(heading, icon);
+                if (art != null) Ui.Size(art, 24, 21);
                 Ui.Size(Ui.Label(heading, label, 16, color: Ui.Dim), 0, 26, 1);
                 Ui.Size(Ui.Label(heading, $"{value:0} / {max:0}", 17, TextAnchor.MiddleRight, warn ? Ui.Warn : Ui.TextColor), 110, 26);
                 var rail = Ui.Panel(cell, "StatRail", Ui.PanelBg).rectTransform.Anchor(0, 0, 1, 0, 0, 4, 0, -12);
-                Ui.Panel(rail, "StatFill", warn ? Ui.Warn : Ui.Good).rectTransform.Anchor(0, 0, Mathf.Clamp01((float)(value / max)), 1);
+                Color fill = warn ? Ui.Warn : value / max <= .45 && icon != UiIcon.Stress ? Ui.ChromeGold : Ui.ButtonSecondary;
+                Ui.Panel(rail, "StatFill", fill).rectTransform.Anchor(0, 0, Mathf.Clamp01((float)(value / max)), 1);
             }
             var first = Ui.Row(condition, 43, 16);
-            Meter(first, "饱腹", stats.Hunger, 100, stats.Hunger <= 20);
-            Meter(first, "精力", stats.Energy, Math.Max(1, stats.MaxEnergy), S.EnergyExhausted);
+            Meter(first, UiIcon.Hunger, "饱腹", stats.Hunger, 100, stats.Hunger <= 20);
+            Meter(first, UiIcon.Energy, "精力", stats.Energy, Math.Max(1, stats.MaxEnergy), S.EnergyExhausted);
             var second = Ui.Row(condition, 43, 16);
-            Meter(second, "健康", stats.Health, 100, stats.Health <= 25);
-            Meter(second, "压力", stats.Stress, 100, stats.Stress >= PlayerStats.HighStressThreshold);
+            Meter(second, UiIcon.Health, "健康", stats.Health, 100, stats.Health <= 25);
+            Meter(second, UiIcon.Stress, "压力", stats.Stress, 100, stats.Stress >= PlayerStats.HighStressThreshold);
             if (S.EnergyExhausted) Line(condition, S.EnergyExhaustionText, 15, Ui.Warn);
 
             Line(body, "个人能力", 20, Ui.Accent);
             var skills = Ui.Row(body, 70, 5);
-            MyFact(skills, "智力", stats.Intelligence.ToString());
-            MyFact(skills, "魅力", S.EffectiveCharm.ToString());
-            MyFact(skills, "动手能力", stats.Skill.ToString());
-            MyFact(skills, "体能", stats.Stamina.ToString());
+            MyFact(skills, "智力", stats.Intelligence.ToString(), UiIcon.Intelligence);
+            MyFact(skills, "魅力", S.EffectiveCharm.ToString(), UiIcon.Charm);
+            MyFact(skills, "动手能力", stats.Skill.ToString(), UiIcon.Hands);
+            MyFact(skills, "体能", stats.Stamina.ToString(), UiIcon.Fitness);
             Ui.Size(Ui.Button(body, "天气与穿衣", OpenCityClimate, 17), -1, 38);
             HelpLink(body, "身体详细资料", $"欠觉 {stats.SleepDebt:0.#} 小时 · 营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}\n压力达到 {PlayerStats.HighStressThreshold:0} 时，到岗表现奖金减少 {GameSession.HighStressWorkPenalty}%。");
             BuildPlayerWorkSummary(body, w);
@@ -1768,8 +1774,10 @@ namespace PCShopSell.Game.UI
         {
             _homeDock = Ui.Panel(_dockCanvas.transform, "HomeDock", Ui.PanelBg).rectTransform
                 .Anchor(1, 0, 1, 1, -HomeDockWidth, 70, 10, 120);
-            var header = Ui.Panel(_homeDock, "HomeDockHeader", Ui.PanelBg2).rectTransform.Anchor(0, 1, 1, 1, 0, -76, 0, 0);
-            Ui.Label(header, "<b>我的住处</b>", 24).rectTransform.Anchor(0, 1, 1, 1, 13, -40, 102, 7);
+            var header = Ui.Panel(_homeDock, "HomeDockHeader", Ui.Chrome).rectTransform.Anchor(0, 1, 1, 1, 0, -76, 0, 0);
+            var homeIcon = Ui.Artwork(header, UiIcon.Home);
+            if (homeIcon != null) homeIcon.rectTransform.Anchor(0, 1, 0, 1, 12, -38, -39, 11);
+            Ui.Label(header, "<b>我的住处</b>", 22).rectTransform.Anchor(0, 1, 1, 1, homeIcon == null ? 13 : 46, -40, 102, 7);
             _homeDockTitle = Ui.Label(header, "", 17, color: Ui.Dim);
             _homeDockTitle.rectTransform.Anchor(0, 1, 1, 1, 13, -67, 102, 37);
             _homeDockTitle.resizeTextForBestFit = true;
@@ -1812,9 +1820,9 @@ namespace PCShopSell.Game.UI
         private void BuildHomePlacementPanel()
         {
             _homePlacementPanel = Ui.Panel(_dockCanvas.transform, "HomePlacementPanel", Ui.PanelBg).rectTransform;
-            var header = Ui.Panel(_homePlacementPanel, "HomePlacementHeader", Ui.PanelBg2).rectTransform
+            var header = Ui.Panel(_homePlacementPanel, "HomePlacementHeader", Ui.Chrome).rectTransform
                 .Anchor(0, 1, 1, 1, 0, -76, 0, 0);
-            Ui.Label(header, "<b>住宅装修</b>", 24).rectTransform.Anchor(0, 1, 1, 1, 13, -40, 13, 7);
+            Ui.Label(header, "<b>住宅装修</b>", 22).rectTransform.Anchor(0, 1, 1, 1, 13, -40, 13, 7);
             _homePlacementTitle = Ui.Label(header, "", 17, color: Ui.Dim);
             _homePlacementTitle.rectTransform.Anchor(0, 1, 1, 1, 13, -67, 13, 37);
             _homePlacementContent = Ui.Scroll(_homePlacementPanel);

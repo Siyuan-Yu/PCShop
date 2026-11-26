@@ -16,20 +16,34 @@ namespace PCShopSell.Game.Runtime
             int count = PetShopCatalog.HouseCapacity(def.Id);
             if (count == 0)
             {
-                Prims.Box(root,"ToyMat",new Vector3(0,.025f,0),new Vector3(.36f,.05f,.34f),Mats.Lit(Moss),collider);
-                var toy = BuildToy(root, PetShopCatalog.IsDogToy(def.Id), PetShopCatalog.ToyTier(def.Id));
-                toy.transform.localPosition = new Vector3(0,.09f,0);
+                Prims.Box(root, "ToyMat", new Vector3(0, .025f, 0), new Vector3(.36f, .05f, .34f), PropForms.Pigment(Moss), collider);
+                bool ball = PetShopCatalog.IsDogToy(def.Id);
+                int tier = PetShopCatalog.ToyTier(def.Id);
+                if (ball)
+                {
+                    BuildToy(root, true, tier).transform.localPosition = Vector3.up * .117f;
+                }
+                else
+                {
+                    var standWood = PropForms.Wood("886B50");
+                    PropForms.Box(root, "WandStandFoot", .031f, .059f, .012f, .19f, .033f, .18f, standWood);
+                    PropForms.Tube(root, "WandStand", new Vector3(.036f, .072f, -.063f),
+                        new Vector3(.036f, .572f, -.063f), .027f, standWood);
+                    var wand = BuildToy(root, false, tier).transform;
+                    wand.localPosition = new Vector3(.036f, .515f, -.131f);
+                    wand.localRotation = Quaternion.Euler(13, -18, 0);
+                }
                 return;
             }
             float w = (float)def.Width, d = (float)def.Depth;
             Prims.Box(root,"CareMat",new Vector3(0,.026f,0),new Vector3(w,.05f,d),Mats.Lit(Moss),collider);
-            var frame = Mats.Lit(Wood);
-            Prims.Box(root,"BackRail",new Vector3(0,.26f,d*.5f-.06f),new Vector3(w,.48f,.11f),frame,collider);
+            var frame = PropForms.Wood(count == 4 ? "A17A51" : count == 8 ? "917355" : "B4946B");
+            Rail("BackRail", new Vector3(0, .26f, d * .5f - .06f), new Vector3(w, .48f, .11f), false);
             for (int side = -1; side <= 1; side += 2)
             {
-                Prims.Box(root,"SideRail",new Vector3(side*(w*.5f-.06f),.26f,0),new Vector3(.11f,.48f,d),frame,collider);
-                Prims.Box(root,"FrontRail",new Vector3(side*(w+.86f)*.25f,.21f,-d*.5f+.06f),
-                    new Vector3((w-.86f)*.5f,.38f,.11f),frame,collider);
+                Rail("SideRail", new Vector3(side * (w * .5f - .06f), .26f, 0), new Vector3(.11f, .48f, d), true);
+                Rail("FrontRail", new Vector3(side * (w + .86f) * .25f, .21f, -d * .5f + .06f),
+                    new Vector3((w - .86f) * .5f, .38f, .11f), false);
             }
             int cols = count == 4 ? 4 : count / 2;
             for (int i = 0; i < count; i++)
@@ -46,6 +60,25 @@ namespace PCShopSell.Game.Runtime
                 new Vector3(.44f,.10f,.34f),Mats.Lit(new Color(.40f,.39f,.46f)));
             Prims.Box(litter.transform,"Fill",new Vector3(0,.48f,0),new Vector3(.82f,.10f,.78f),Mats.Lit(Linen));
             Prims.Box(litter.transform,"Used",new Vector3(.10f,.5f,-.10f),new Vector3(.25f,.14f,.30f),Mats.Lit(new Color(.50f,.38f,.30f)));
+
+            void Rail(string name, Vector3 center, Vector3 size, bool alongZ)
+            {
+                var rail = PropForms.Group(root, name, center);
+                if (collider) rail.gameObject.AddComponent<BoxCollider>().size = size;
+                Vector3 axis = alongZ ? Vector3.forward : Vector3.right;
+                float length = alongZ ? size.z : size.x;
+                var slat = size;
+                slat.y = .10f;
+                foreach (int level in new[] {-1, 1})
+                    PropForms.Box(rail, "WoodSlat", Vector3.up * (.105f * level), slat, frame);
+                int posts = Mathf.Max(2, Mathf.CeilToInt(length / 1.25f) + 1);
+                for (int i = 0; i < posts; i++)
+                {
+                    Vector3 at = axis * ((i / (posts - 1f) - .5f) * (length - .085f));
+                    PropForms.Box(rail, "JoineryPost", at, new Vector3(.078f, size.y, .078f), frame);
+                    PropForms.Box(rail, "PostCap", at + Vector3.up * (.5f * size.y), new Vector3(.094f,.029f,.094f), frame);
+                }
+            }
 
             void Bowl(string name,float x,Color rim,Color contents)
             {

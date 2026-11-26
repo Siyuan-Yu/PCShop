@@ -73,7 +73,7 @@ namespace PCShopSell.Game.Runtime
                     lineIndices[t]=v;lineIndices[t+1]=v+1;lineIndices[t+2]=next;
                     lineIndices[t+3]=v+1;lineIndices[t+4]=next+1;lineIndices[t+5]=next;
                 }
-                _roofInlay=new Mesh{name="屋顶青色嵌条",vertices=lineVertices,triangles=lineIndices};
+                _roofInlay=new Mesh{name="弧板内嵌饰条",vertices=lineVertices,triangles=lineIndices};
                 _roofInlay.RecalculateNormals();
             }
 
@@ -110,9 +110,9 @@ namespace PCShopSell.Game.Runtime
             return mesh;
         }
 
-        internal static void RoofInlay(Transform parent,Vector3 at,float width,float depth,Material edge)
+        internal static void WingInlay(Transform parent,string name,Vector3 at,float width,float depth,Material edge)
         {
-            var strip=new GameObject("屋顶青色嵌条",typeof(MeshFilter),typeof(MeshRenderer));
+            var strip=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));
             strip.transform.SetParent(parent,false);strip.transform.localPosition=at;
             strip.transform.localScale=new Vector3(width,1,depth);
             strip.GetComponent<MeshFilter>().sharedMesh=_roofInlay;
@@ -123,7 +123,7 @@ namespace PCShopSell.Game.Runtime
         private static Vector2 Sculpt(Vector2 point)
         {
             float leading=Mathf.SmoothStep(0,1,.5f-point.y);
-            point.y-=leading*(.048f+.071f*Mathf.Cos((point.x+.24f)*Mathf.PI*2));
+            point.y-=leading*(.045f+.114f*Mathf.Cos((point.x+.24f)*Mathf.PI*2));
             point.x+=.045f*Mathf.Sin((point.y+.15f)*Mathf.PI);
             return point;
         }
@@ -193,21 +193,21 @@ namespace PCShopSell.Game.Runtime
 
         internal static void VillaSolarBlades(MiniatureDetailMesh mesh,Vector3 center,float width)
         {
-            var cells=DistrictFinishes.Tile("solarCells",Vector2.one*.64f,ArtDirection.Hex("7791A1"));
-            var backing=Mats.Lit(ArtDirection.Hex("2D485A"),.24f);
+            var cells=DistrictFinishes.Tile("solarCells",Vector2.one*.64f,ArtDirection.Hex("A7C1CB"));
+            var backing=Mats.Lit(ArtDirection.Hex("36566A"),.31f);
             var metal=Mats.Lit(ArtDirection.Hex("A5B8BB"),.28f);
             var baseRail=Mats.Lit(ArtDirection.Hex("617784"),.20f);
             // Bifacial blades share a low mounting rail. Their raised tips leave sky between
             // the three silhouettes when viewed from either corner of the street.
-            var cross=new Vector3(.133f,0,-.014f)*width;
-            var lean=new Vector3(.192f,.144f,.038f)*width;
+            var cross=new Vector3(.203f,0,-.020f)*width;
+            var lean=new Vector3(.34f,.181f,.068f)*width;
             for(int i=-1;i<=1;i++)
             {
-                var foot=center+Vector3.up*.085f+Vector3.right*(i*.234f*width-lean.x*.5f);
+                var foot=center+Vector3.up*.085f+Vector3.right*(i*.262f*width-lean.x*.5f);
                 var a=foot-cross*.5f;
                 var b=foot+cross*.5f;
-                var c=foot+lean+cross*.35f;
-                var d=foot+lean-cross*.35f;
+                var c=foot+lean+cross*.31f;
+                var d=foot+lean-cross*.31f;
                 void Panel(Material material,Vector3 p0,Vector3 p1,Vector3 p2,Vector3 p3)
                 {
                     var face=mesh.Part(material);
@@ -221,7 +221,12 @@ namespace PCShopSell.Game.Runtime
                 Strut(mesh,a,b,.046f,.047f,baseRail);
                 Strut(mesh,a,d,.035f,.040f,metal);
                 Strut(mesh,b,c,.035f,.040f,metal);
-                Strut(mesh,c,d,.030f,.035f,metal);
+                Strut(mesh,c,d,.048f,.050f,metal);
+                for(int row=1;row<=3;row++)
+                {
+                    float t=row*.25f;
+                    Strut(mesh,Vector3.Lerp(a,d,t)+Vector3.up*.012f,Vector3.Lerp(b,c,t)+Vector3.up*.012f,.014f,.020f,baseRail);
+                }
                 var knee=Vector3.Lerp(b,c,.48f);
                 Strut(mesh,new Vector3(knee.x,foot.y,knee.z-.13f),knee,.045f,.05f,baseRail);
             }
@@ -265,6 +270,11 @@ namespace PCShopSell.Game.Runtime
             Plate(root,"设备层",new Vector3(0,height+.81f,depth*.48f),new Vector3(width-.48f,.17f,depth-.36f),alloy);
             bool smallPavilion=width<=15 && depth<=14;
             float span=smallPavilion?width+.44f:width*.88f;
+            if(!smallPavilion)
+            {
+                // Place the array on the front roof bay, clear of the planted rear bay.
+                SolarFins(detail,new Vector3(0,height+1.14f,depth*.29f),width*.65f,depth*.25f,5);
+            }
             if(glassPavilion)
             {
                 // Silver edge and recessed glass turn the corner together; the existing door and shutters remain below.

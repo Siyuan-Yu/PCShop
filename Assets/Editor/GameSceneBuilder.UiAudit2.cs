@@ -32,7 +32,6 @@ namespace PCShopSell.EditorTools
                 ("OpenGoalsPanel", "21-goals"), ("OpenEconomicReport", "22-report"), ("OpenHomeWorkbench", "23-workbench"),
                 ("OpenCityStories", "24-stories"), ("OpenCityInvestments", "25-investments"), ("OpenRetailTypeChooser", "26-retail-kinds"),
                 ("OpenDisplayWindow", "27-display"), ("OpenFleetPanel", "28-fleet"), ("OpenDistrictStory", "29-district-story"),
-                ("OpenCityLife", "30-city-life"),
             })
             { Call(m.Item1); Snap(m.Item2); }
             ui.CloseAllWindows();

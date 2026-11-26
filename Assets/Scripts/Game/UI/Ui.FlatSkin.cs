@@ -15,39 +15,41 @@ namespace PCShopSell.Game.UI
         public static Color FlatInk => TextColor;
         public static Color FlatUp => Good;
         public static Color FlatDown => Warn;
-        public static readonly Color FlatCardEdge = Tone("C9C2B4");
-        public static readonly Color FlatButtonEdge = Tone("C5BDAD");
-        public static readonly Color FlatHotEdge = Tone("A98D60");
-        public static readonly Color FlatWell = Tone("F4F0E7");
-        public static readonly Color FlatWellEdge = Tone("BEB6A7");
-        public static readonly Color FlatBand = Tone("E7E3D9");
-        public static readonly Color FlatRow = Tone("DCE2D7");
-        public static readonly Color SelectionEdge = Tone("879887");
+        public static readonly Color FlatCardEdge = Tone("C2B8AB");
+        public static readonly Color FlatButtonEdge = Tone("B2A696");
+        public static readonly Color FlatHotEdge = Tone("8D4834");
+        public static readonly Color FlatWell = Tone("F7F3EC");
+        public static readonly Color FlatWellEdge = Tone("ACA194");
+        public static readonly Color FlatBand = Tone("E8E2D8");
+        public static readonly Color FlatRow = Tone("E5EBDD");
+        public static readonly Color SelectionEdge = Tone("A8624B");
         internal static readonly Color PaperStock = Tone("FCF8EE");
         internal static readonly Color NoteStock = Tone("F9F3E2");
-        internal static readonly Color Clipboard = Tone("8B8D7D");
+        internal static readonly Color Clipboard = Tone("A79A86");
         internal static readonly Color WoodBoard = Tone("B7AA97");
         internal static readonly Color WoodBack = Tone("DDD3C4");
         internal static readonly Color ShelfChannel = Tone("858479");
-        public static readonly Color Chrome = Tone("292F2C");
-        public static readonly Color ChromeWell = Tone("1D2421");
-        public static readonly Color ChromeButton = Tone("3A4339");
-        public static readonly Color ChromeEdge = Tone("575B4B");
-        public static readonly Color ChromeInk = Tone("F4EFE2");
-        public static readonly Color ChromeDim = Tone("CDC9BA");
-        public static readonly Color ChromeGold = Tone("DFC18C");
+        public static readonly Color Chrome = Tone("3A3733");
+        public static readonly Color ChromeWell = Tone("2B2825");
+        public static readonly Color ChromeButton = Tone("4B443D");
+        public static readonly Color ChromeEdge = Tone("7A7268");
+        public static readonly Color ChromeInk = Tone("FFF8EA");
+        public static readonly Color ChromeDim = Tone("D6CCBF");
+        public static readonly Color ChromeGold = Tone("E0BB73");
         public static readonly Color ChromeGood = Tone("B7D3A8");
         public static readonly Color ChromeWarn = Tone("F3AA93");
+        internal static readonly Color HudTile = Tone("EDE4D5");
         public static readonly Color SuccessSurface = Tone("E3ECDE");
         public static readonly Color PendingSurface = Tone("EEE3CA");
-        public static readonly Color InfoInk = Tone("416575");
-        public static readonly Color InfoSurface = Tone("E3EBE9");
-        public static readonly Color WorldShade = Tone("1A251C87");
+        public static readonly Color InfoInk = Tone("4B6474");
+        public static readonly Color InfoSurface = Tone("E1E8EB");
+        public static readonly Color WorldShade = Tone("26221E7A");
 
         public static Color SelectedButton(bool selected) => selected ? FlatRow : ButtonBg;
+        internal static Color TabFill(bool selected) => selected ? Chrome : ButtonBg;
 
         public static Button Tab(Transform parent, string title, System.Action select, bool selected, float width = 124)
-            => Size(Button(parent, title, select, 17, SelectedButton(selected)), width, 34, 0);
+            => Size(Button(parent, title, select, 17, TabFill(selected)), width, 34, 0);
 
         public static void SetButtonFill(Button button, Color fill)
         {
@@ -69,6 +71,8 @@ namespace PCShopSell.Game.UI
 
         internal static Color ReadableInk(Color ink, Color surface)
         {
+            if (surface == ButtonHot && (ink == TextColor || ink == Dim)) return Color.white;
+            if (surface == ButtonSecondary && (ink == TextColor || ink == Dim)) return Tone("201C18");
             if (!Dark(surface)) return ink;
             if (ink == TextColor) return ChromeInk;
             if (ink == Dim) return ChromeDim;
@@ -85,7 +89,7 @@ namespace PCShopSell.Game.UI
             if (!dark) return color;
             if (color == ButtonBg || color == PanelBg2) return ChromeButton;
             if (color == FlatWell) return ChromeWell;
-            if (color == FlatRow) return Tone("4C594B");
+            if (color == FlatRow) return Tone("50634F");
             return color;
         }
 
@@ -117,6 +121,7 @@ namespace PCShopSell.Game.UI
             if (color.a <= .01f) return Color.clear;
             if (color == ButtonHot) return FlatHotEdge;
             if (color == FlatRow) return SelectionEdge;
+            if (color == ButtonSecondary) return Good;
             if (color == WarningSurface || color == Warn) return Tone("C98569");
             if (Dark(color)) return ChromeEdge;
             if (name == "Choice" || name == "Input" || color == FlatWell) return FlatWellEdge;
@@ -274,7 +279,7 @@ namespace PCShopSell.Game.UI
                 if (_requestedFill == fill && image.color == face) return;
                 _requestedFill = fill;
                 image.color = face;
-                if (fill == ButtonHot || fill == Accent || fill == FlatRow || fill == Warn)
+                if (fill == ButtonHot || fill == ButtonSecondary || fill == Accent || fill == FlatRow || fill == Warn || fill == Chrome)
                 {
                     var edge = _darkParent && fill == FlatRow ? ChromeGood : SurfaceEdge(face, "Button");
                     FlatBorder(image, edge);
@@ -287,7 +292,7 @@ namespace PCShopSell.Game.UI
                 _enabledInk = _fixedInk ?? ReadableInk(ink, under);
                 _disabledInk = ReadableInk(Dim, under);
                 UpdateInk();
-                _caption.fontStyle = fill == FlatRow || fill == ButtonHot || fill == Accent
+                _caption.fontStyle = fill == FlatRow || fill == ButtonHot || fill == Accent || fill == Chrome
                     ? FontStyle.Bold : FontStyle.Normal;
             }
 
@@ -307,7 +312,7 @@ namespace PCShopSell.Game.UI
             private void UpdateInk()
             {
                 _caption.color = _captionDimmed ? _disabledInk : _enabledInk;
-                if (_icon != null) _icon.color = _caption.color;
+                if (_icon != null) _icon.color = new Color(1, 1, 1, _captionDimmed ? .48f : 1f);
             }
 
             protected override void DoStateTransition(SelectionState state, bool instant)

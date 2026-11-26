@@ -41,8 +41,8 @@ namespace PCShopSell.Game.Runtime
                 joinery.Box(new Vector3(counterX+side*1.96f,1.8f,6.75f),new Vector3(.12f,3.4f,.13f),wood);
                 QuarterModules.Add(root,"Bench",new Vector3(side*(width*.43f),.10f,3),Vector3.one);
                 for(int row=0;row<8;row++)
-                    flowers.Add(row%3==0?PlantSpecies.Spirea:PlantSpecies.Hedge,new Vector3(side*(width*.47f),.11f,2.5f+row*1.27f),
-                        1.51f,.87f+(row%3)*.11f,row+side*29);
+                    flowers.Add(row%5==0?PlantSpecies.Spirea:row%5==4?PlantSpecies.Hedge:PlantSpecies.Hydrangea,
+                        new Vector3(side*(width*.47f),.11f,2.5f+row*1.27f),1.65f,1.04f+(row%3)*.11f,18+side*6+row/4);
             }
             if(garden)
             {
@@ -87,11 +87,12 @@ namespace PCShopSell.Game.Runtime
                 cabin.localRotation = Quaternion.Euler(0, garden ? -37f : -103f, 0);
                 Beam(carriage, "CabinSuspension", new Vector3(0, 0, .85f * cabinSide),
                     new Vector3(0, 1.52f, cabinOffset), .24f, blue);
-                Material body = i % 3 == 0 ? blue : i % 3 == 1 ? red : pale;
+                Material body = garden ? pale : i % 3 == 0 ? blue : i % 3 == 1 ? red : pale;
                 Prims.Box(cabin, "CarFloor", new Vector3(0, -.57f, 0), new Vector3(3.2f, .16f, 2.5f), body);
                 Prims.Box(cabin, "CabinRoof", new Vector3(0, 1.46f, 0), new Vector3(3.38f, .25f, 2.72f), garden ? pale : interior);
                 if(garden)
                 {
+                    Prims.Shape(PrimitiveType.Sphere,cabin,"弧面观景舱顶",new Vector3(0,1.55f,0),new Vector3(3.52f,.64f,2.82f),pale);
                     Prims.Box(cabin,"CabinFascia",new Vector3(0,1.29f,0),new Vector3(3.31f,.15f,2.64f),body);
                     Prims.Box(cabin,"CabinApron",new Vector3(0,-.41f,0),new Vector3(3.24f,.39f,2.55f),body);
                 }
@@ -109,9 +110,24 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(cabin, "BenchBack", new Vector3(0, .22f, -1.06f), new Vector3(2.68f, .57f, .17f), upholstery);
                 if (i == 0) Child(cabin, "SeatedEye", CabinEye);
             }
-            foreach (float side in new[] { -1f, 1f })
-                Beam(wheel, "SupportLeg", new Vector3(side * (garden ? 10f : 6f), -wheel.localPosition.y, -2.4f * cabinSide),
-                    new Vector3(0, 0, -.85f * cabinSide), garden ? 1.25f : .85f, blue);
+            // Both A-frames stay behind the boarding side. The feet, axle bearings and
+            // high cross-braces give the wheel a readable silhouette from across the water.
+            float spread=garden?15.2f:7.2f;
+            var baseStone=DistrictFinishes.Tile("cutStone",Vector2.one);
+            for(int frame=0;frame<2;frame++)
+            {
+                float z=-(2.45f+frame*(garden?6.2f:4.0f))*cabinSide;
+                var bearing=new Vector3(0,0,z*.45f);
+                Prims.Box(wheel,"轴承座",bearing,new Vector3(garden?3.6f:2.55f,garden?3.1f:2.1f,1.16f),blue);
+                foreach(int side in new[]{-1,1})
+                {
+                    var foot=new Vector3(side*spread,-wheel.localPosition.y+.42f,z);
+                    Beam(wheel,"SupportLeg",foot,bearing,garden?1.54f:1.03f,blue);
+                    Prims.Box(wheel,"支脚基座",foot,new Vector3(garden?3.1f:2.1f,.82f,garden?3.6f:2.7f),baseStone);
+                    var inner=Vector3.Lerp(foot,bearing,.42f);
+                    Beam(wheel,"下支架",inner,new Vector3(0,-wheel.localPosition.y*.74f,z),garden?.54f:.37f,blue);
+                }
+            }
             Prims.Box(wheel, "Axle", Vector3.zero, new Vector3(2.7f, 2.7f, 2.6f), red);
             if (!garden) return;
 

@@ -50,7 +50,7 @@ namespace PCShopSell.Game.Runtime
             {
                 var texture = Resources.Load<Texture2D>("OldTown/Surfaces/" + key);
                 if (texture == null) return null;
-                bool paving=key=="streetAsphalt" || key=="graniteWalk" || key=="streetPavers";
+                bool paving=key=="streetAsphalt" || key=="graniteWalk" || key=="districtFlagstones" || key=="streetPavers";
                 var shader=paving?Resources.Load<Shader>("OldTown/PavedSurface"):Shader.Find("Universal Render Pipeline/Lit");
                 material = new Material(shader) { name = "老城 / " + key, enableInstancing = true };
                 if(paving)
@@ -60,10 +60,10 @@ namespace PCShopSell.Game.Runtime
                 }
                 material.SetTexture("_BaseMap", texture);
                 material.SetFloat("_Smoothness", key=="slate"?.25f:key=="walnut"?.22f:.13f);
-                bool relief=key=="buffBrick" || key=="cutStone" || key=="ivoryPlaster" || key=="slate" || key=="quarterClay" || key=="walnut";
+                bool relief=key=="buffBrick" || key=="cutStone" || key=="ivoryPlaster" || key=="slate" || key=="parkSlate" || key=="quarterClay" || key=="walnut";
                 if(relief)
                 {
-                    material.SetTexture("_BumpMap",Resources.Load<Texture2D>("OldTown/Surfaces/"+key+"Relief"));
+                    material.SetTexture("_BumpMap",Resources.Load<Texture2D>("OldTown/Surfaces/"+(key=="parkSlate"?"slate":key)+"Relief"));
                     material.SetFloat("_BumpScale",key=="quarterClay"?.80f:.64f);
                     material.EnableKeyword("_NORMALMAP");
                 }

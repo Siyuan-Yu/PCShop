@@ -62,7 +62,7 @@ namespace PCShopSell.Game.Runtime
                             int seed=col*11+row*3+side+2;
                             var foot=mid+new Vector3(((col+.5f)/cols-.5f)*(width-.22f),.18f,
                                 ((row+.5f)/rows-.5f)*(depth-.25f));
-                            var species=seed%11==0?PlantSpecies.Spirea:seed%7==0?PlantSpecies.SilverGrass:
+                            var species=seed%6<2?PlantSpecies.Hydrangea:seed%11==0?PlantSpecies.Spirea:seed%7==0?PlantSpecies.SilverGrass:
                                 seed%5==0?PlantSpecies.GoldenBush:PlantSpecies.Broadleaf;
                             hedge.Add(species,foot,.84f+(seed%4)*.084f,.46f+(seed%5)*.102f,seed);
                         }
@@ -92,9 +92,16 @@ namespace PCShopSell.Game.Runtime
             var frame = Mats.Lit(ArtDirection.Hex(district == 1 ? "655842" : district == 2 ? "516D67" : "504C44"));
             Color accent = ArtDirection.Hex(district == 1 ? (seed%2==0?"327476":"46767C") : district == 2 ? "558498":"467789");
             float wallHeight=glassPavilion?3.48f:h;
-            var shell = Prims.Box(root,"Street masonry",new Vector3(0,wallHeight*.5f,d*.5f),new Vector3(w,wallHeight,d),
+            float shopRecess=tailor?.63f:0;
+            var shell = Prims.Box(root,"Street masonry",new Vector3(0,wallHeight*.5f,(d+shopRecess)*.5f),new Vector3(w,wallHeight,d-shopRecess),
                 DistrictFinishes.Tile(DistrictFinishes.Masonry(district),new Vector2(Mathf.Max(1,w/4),Mathf.Max(1,h/3.5f))),true);
             shell.AddComponent<PlaceMarker>().PlaceId=p.Id;
+            if(tailor)
+            {
+                var originalShell=shell.GetComponent<BoxCollider>();
+                originalShell.center=new Vector3(0,0,-shopRecess/(2*(d-shopRecess)));
+                originalShell.size=new Vector3(1,1,d/(d-shopRecess));
+            }
             if(glassPavilion)
             {
                 // Keep the original selectable envelope while opening a recessed continuous glazed gallery above the shop.
@@ -113,6 +120,10 @@ namespace PCShopSell.Game.Runtime
             if(tailor)
             {
                 float transom=3.64f;
+                var jamb=DistrictFinishes.Tile("buffBrick",new Vector2(.28f,1));
+                foreach(int side in new[]{-1,1})
+                    detail.Box(new Vector3(side*(w*.5f-.10f),transom*.50f,shopRecess*.48f),
+                        new Vector3(.22f,transom,shopRecess+.13f),jamb);
                 var lime=DistrictFinishes.Tile("ivoryPlaster",new Vector2(w*.26f,(h-transom)*.32f),ArtDirection.Hex("F2DDD0"));
                 Prims.Box(root,"楼上石灰抹面",new Vector3(0,(h+transom)*.5f,d*.5f),new Vector3(w+.03f,h-transom,d+.03f),lime);
                 detail.Box(new Vector3(0,transom-.08f,d*.5f),new Vector3(w+.11f,.14f,d+.13f),stone);
@@ -149,14 +160,14 @@ namespace PCShopSell.Game.Runtime
                             var size=new Vector3(span,1.62f,.14f);
                             Prims.Box(elevation,"窗洞外沿",center,size+reveal,stone);
                             Prims.Box(elevation,"窗框",center+Vector3.back*.086f,size,frame);
-                            var panes=Mats.Lit(ArtDirection.Hex((bay+face)%2==0?"788784":"859390"),.34f);
+                            var panes=DistrictFinishes.Tile((bay+face)%2==0?"tailorPaneEast":"tailorPaneWest",Vector2.one);
                             Prims.Box(elevation,"住家玻璃",center+Vector3.back*.159f,new Vector3(span-.14f,1.47f,.035f),panes);
                             var curtain=DistrictFinishes.Tile("ivoryPlaster",Vector2.one,ArtDirection.Hex("A7A89A"));
                             for(int fold=0;fold<3;fold++)
                             {
-                                float inset=(bay%2==0?-1:1)*(span*.43f-fold*.077f);
+                                float inset=(bay%2==0?-1:1)*(span*.41f-fold*.089f);
                                 Prims.Box(elevation,"折帘",center+new Vector3(inset,-.10f,-.184f),
-                                    new Vector3(.077f,1.15f,.024f),curtain);
+                                    new Vector3(.086f,1.29f,.024f),curtain);
                             }
                             Prims.Box(elevation,"中梃",center+Vector3.back*.19f,new Vector3(.054f,1.51f,.052f),frame);
                             Prims.Box(elevation,"上亮横档",center+new Vector3(0,.44f,-.19f),new Vector3(span-.095f,.048f,.05f),frame);
@@ -207,7 +218,7 @@ namespace PCShopSell.Game.Runtime
                 if(p.Business=="裁缝")
                 {
                     var rack=new GameObject("收摊时移入店内的布架").transform;rack.SetParent(root,false);
-                    rack.localPosition=new Vector3(-w*(tailor?.398f:.34f),.12f,-.68f);
+                    rack.localPosition=new Vector3(-w*(tailor?.357f:.34f),tailor?.28f:.12f,tailor?.03f:-.68f);
                     if(tailor)rack.localScale=new Vector3(.75f,.88f,.80f);
                     _cur.OpenOnly.Add(rack.gameObject);
                     var display=new MiniatureDetailMesh();
@@ -222,7 +233,7 @@ namespace PCShopSell.Game.Runtime
                     display.Build(rack,"布架");
                     // The shop keeps its original entrance; the mannequin sits in the outer display bay.
                     var dummy=new MiniatureDetailMesh();
-                    var foot=new Vector3(w*(tailor?.264f:.33f),.12f,-.52f);
+                    var foot=new Vector3(w*(tailor?.319f:.33f),tailor?.39f:.12f,tailor?.04f:-.52f);
                     var linen=Mats.Lit(ArtDirection.Hex("CFB695"));
                     dummy.Box(foot+Vector3.up*.05f,new Vector3(.49f,.10f,.44f),frame);
                     dummy.Box(foot+Vector3.up*.49f,new Vector3(.075f,.86f,.075f),frame);
@@ -268,16 +279,25 @@ namespace PCShopSell.Game.Runtime
                     var timber=Mats.Lit(ArtDirection.Hex("A1825E"));
                     foreach(int side in new[]{-1,1})
                     {
-                        var bay=new Vector3(side*w*.31f,1.29f,-.27f);
-                        joinery.Box(bay-Vector3.up*.81f,new Vector3(w*.26f,.11f,.24f),timber);
-                        joinery.Box(bay+Vector3.up*.83f,new Vector3(w*.26f,.10f,.19f),timber);
+                        var bay=new Vector3(side*w*(tailor?.275f:.31f),tailor?1.51f:1.29f,-.27f);
+                        float bayWidth=w*(tailor?.369f:.26f),bayHeight=tailor?2.18f:1.65f;
+                        joinery.Box(bay-Vector3.up*(bayHeight*.50f),new Vector3(bayWidth,.11f,.24f),timber);
+                        joinery.Box(bay+Vector3.up*(bayHeight*.50f),new Vector3(bayWidth,.10f,.19f),timber);
                         for(int edge=-1;edge<=1;edge+=2)
-                            joinery.Box(bay+Vector3.right*edge*w*.124f,new Vector3(.085f,1.65f,.14f),timber);
+                            joinery.Box(bay+Vector3.right*edge*(bayWidth-.08f)*.5f,new Vector3(.085f,bayHeight,.14f),timber);
                     }
                     if(tailor)
                     {
                         // Folded stock occupies the outer third of one bay. The opposite bay is the dress-form display.
-                        var bolts=new[]{"8F644E","6A8085","BDAC86"};
+                        var bolts=new[]{"A5654D","698EA3","D4B17C"};
+                        var counterTop=DistrictFinishes.Tile("walnut",Vector2.one*.48f,new Color(1.43f,1.23f,.92f));
+                        foreach(int side in new[]{-1,1})
+                        {
+                            float x=side*w*.275f;
+                            joinery.Box(new Vector3(x,.44f,.045f),new Vector3(w*.37f,.095f,.82f),counterTop);
+                            joinery.Box(new Vector3(x,.29f,-.31f),new Vector3(w*.37f,.25f,.079f),counterTop);
+                            joinery.Box(new Vector3(x,2.54f,.08f),new Vector3(w*.36f,.065f,.59f),counterTop);
+                        }
                         var stand=new Vector3(-w*.388f,.78f,-.35f);
                         joinery.Box(stand,new Vector3(w*.097f,.070f,.24f),wood);
                         for(int pile=0;pile<2;pile++)for(int layer=0;layer<2+pile;layer++)
@@ -324,10 +344,13 @@ namespace PCShopSell.Game.Runtime
             {
                 float pitch=-17f;
                 var pose=Quaternion.Euler(pitch,0,0);
-                var canvas=DistrictFinishes.Tile("sageCloth",new Vector2(2,1),new Color(.50f,.79f,.90f));
+                var canvas=DistrictFinishes.Tile("sageCloth",new Vector2(2,1),new Color(.43f,.66f,.88f));
                 var piping=Mats.Lit(ArtDirection.Hex("A1A494"));
                 var at=new Vector3(0,3.02f,-.55f);
                 detail.Box(at,new Vector3(canopyWidth,.10f,1.21f),canvas,pose);
+                var seam=DistrictFinishes.Tile("sageCloth",Vector2.one,new Color(.57f,.94f,1.12f));
+                for(int panel=-2;panel<=2;panel++)
+                    detail.Box(at+pose*new Vector3(panel*canopyWidth*.18f,.052f,0),new Vector3(.028f,.015f,1.19f),seam,pose);
                 var lip=at+pose*new Vector3(0,-.09f,-.58f);
                 detail.Box(lip,new Vector3(canopyWidth,.195f,.072f),canvas);
                 detail.Box(lip+new Vector3(0,-.082f,-.04f),new Vector3(canopyWidth,.024f,.027f),piping);

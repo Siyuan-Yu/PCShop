@@ -198,7 +198,7 @@ namespace PCShopSell.Game.Runtime
 
             BuildDoor();
 
-            _furniture = new RoomFurniture(_root);
+            _furniture = new RoomFurniture(_root, district);
             _owner = Prims.Figure(_root, "Owner", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.05f, FigureAppearance.Player);
             ResetOwner();
         }

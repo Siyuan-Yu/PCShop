@@ -139,6 +139,9 @@ public static partial class TownMatchCamera
                     // The fixed street and survey views above/below remain the baseline for layout checks.
                     Shot(cam,tag+"DetailA",center,(float)site.Place.Heading+34,36,Sites[i].size*.81f);
                     Shot(cam,tag+"DetailB",center,(float)site.Place.Heading-37,31,Sites[i].size*.76f);
+                    var nearSize=Sites[i].size;
+                    DistrictMatch(cam,i-1,0,center,(float)site.Place.Heading+34,36,nearSize*(i==1?.81f:1));
+                    DistrictMatch(cam,i-1,1,center,(float)site.Place.Heading-37,31,nearSize*(i==1?.76f:.91f));
                     if(i==1)
                     {
                         var yard=site.Root.transform.TransformPoint(new Vector3(-(float)site.Place.Width*.5f-1.15f,1.18f,(float)site.Place.Depth*.70f));
@@ -157,6 +160,7 @@ public static partial class TownMatchCamera
                     var inverse = Quaternion.Inverse(Quaternion.Euler(pitch,yaw,0));
                     float size = corners.Select(p=>inverse*(p-origin)).Max(p=>Mathf.Max(Mathf.Abs(p.x)*9/16,Mathf.Abs(p.y)));
                     Shot(cam,"wide"+tag+(j==0?"A":"B"),origin,yaw,pitch,size*1.04f+6);
+                    if(i>0)DistrictMatch(cam,i-1,j+2,origin,yaw,pitch,size*1.04f+6);
                 }
                 if(i==0)
                 {
@@ -249,6 +253,23 @@ public static partial class TownMatchCamera
             EditorApplication.Exit(0);
         }
         catch (Exception ex) { Fail(ex); }
+    }
+
+    // Calibrated from fixed roof corners, pond edges, fountain centres, road junctions
+    // and wheel hubs on the approved boards. Translation is in a 512 x 288 view.
+    private static readonly (float yaw,float pitch,float size,float x,float y)[,] DistrictPoses =
+    {
+        { (0.234f,-3.365f,0.967f,0.801f,5.547f), (-1.900f,-2.129f,1.017f,-4.937f,4.462f), (-0.012f,2.093f,1.041f,-11.126f,-4.741f), (-1.679f,0.405f,0.958f,-14.593f,-8.101f) },
+        { (0.468f,-1.797f,0.906f,9.116f,-1.167f), (2.449f,3.535f,1.049f,2.167f,2.788f), (0.510f,0.240f,1.039f,-3.944f,-3.146f), (-1.137f,-2.170f,0.970f,-4.208f,0.138f) },
+        { (0.047f,-2.065f,0.863f,-3.365f,12.707f), (-3.547f,-0.477f,0.820f,-10.444f,-13.371f), (-0.734f,-0.801f,0.977f,-10.357f,-6.278f), (1.679f,-1.948f,1.033f,-7.496f,-7.421f) }
+    };
+    private static void DistrictMatch(Camera cam,int district,int view,Vector3 pivot,float yaw,float pitch,float size)
+    {
+        var adjust=DistrictPoses[district,view];
+        yaw+=adjust.yaw;pitch+=adjust.pitch;size*=adjust.size;
+        var shift=Quaternion.Euler(pitch,yaw,0)*new Vector3(-adjust.x,adjust.y,0)*(size/144f);
+        string label=view<2?"street":"wide";
+        Shot(cam,"match-"+(district+2).ToString("00")+"-"+label+(view%2==0?"A":"B"),pivot+shift,yaw,pitch,size);
     }
 
     private static void Shot(Camera cam, string name, Vector3 point, float yaw, float pitch, float size, int width=1600,float? standOff=null)

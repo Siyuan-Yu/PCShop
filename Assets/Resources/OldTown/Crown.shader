@@ -1,7 +1,7 @@
 Shader "PCShop/Layered town canopy"
 {
     Properties { [MainTexture] _BaseMap("Leaf and bark pigment",2D)="white"{} _Cutoff("Leaf edge",Range(0,1))=.32
-        _LeafTone("District foliage",Vector)=(1,1,1,1) _PaintedBough("Painted leaf fans",Float)=0 }
+        _LeafTone("District foliage",Vector)=(1,1,1,1) _PaintedBough("Painted leaf fans",Float)=0 _ForestPigment("Woodland pigment",Float)=0 _SummerPetals("Flowering tree palette",Float)=0 }
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "Queue"="AlphaTest" "RenderType"="TransparentCutout" "DisableBatching"="True" }
@@ -12,11 +12,11 @@ Shader "PCShop/Layered town canopy"
         TEXTURE2D(_BaseMap);SAMPLER(sampler_BaseMap);
         CBUFFER_START(UnityPerMaterial)
             half4 _LeafTone;
-            half _Cutoff,_PaintedBough;
+            half _Cutoff,_PaintedBough,_ForestPigment,_SummerPetals;
         CBUFFER_END
         half _OldTownNightFactor;
         struct Input {float4 pos:POSITION;half3 n:NORMAL;float4 tangent:TANGENT;float2 uv:TEXCOORD0;float2 offset:TEXCOORD2;half4 color:COLOR;};
-        struct Vary {float4 clip:SV_POSITION;float3 world:TEXCOORD0;float2 uv:TEXCOORD1;half3 n:TEXCOORD2;half shade:TEXCOORD3;float fog:TEXCOORD4;};
+        struct Vary {float4 clip:SV_POSITION;float3 world:TEXCOORD0;float2 uv:TEXCOORD1;half3 n:TEXCOORD2;half shade:TEXCOORD3;float fog:TEXCOORD4;half paleBloom:TEXCOORD5;};
         Vary LitVert(Input v)
         {
             Vary o;float3 view=GetWorldSpaceNormalizeViewDir(TransformObjectToWorld(v.pos.xyz));
@@ -30,7 +30,7 @@ Shader "PCShop/Layered town canopy"
                 float3 relief=right*sign(v.offset.x)*.72+view*.39+float3(0,.80+sign(v.offset.y)*.35,0);
                 o.n=normalize(relief);
             }
-            o.uv=v.uv;o.shade=v.color.r;o.fog=ComputeFogFactor(o.clip.z);return o;
+            o.uv=v.uv;o.shade=v.color.r;o.paleBloom=v.color.g;o.fog=ComputeFogFactor(o.clip.z);return o;
         }
         half4 Albedo(Vary i){half4 p=SAMPLE_TEXTURE2D(_BaseMap,sampler_BaseMap,i.uv);clip(p.a-_Cutoff);return p;}
         ENDHLSL
@@ -51,6 +51,16 @@ Shader "PCShop/Layered town canopy"
                 half3 paint=raw*half3(1.02,.91,1.03);
                 paint=lerp(paint,raw*half3(.98,1.06,.91),_DistrictDaylight);
                 paint*=lerp(half3(1,1,1),_LeafTone.rgb,step(.097,i.uv.y));
+                if(_SummerPetals>.5 && i.uv.x<.5 && i.uv.y>.103 && i.uv.y<.49)
+                {
+                    half petals=smoothstep(.008,.085,raw.r-raw.g)*smoothstep(-.009,.05,raw.b-raw.g);
+                    half light=Luminance(raw);
+                    half3 ivory=half3(1.08,1.0,.92)*(light*1.20+sqrt(light)*.21);
+                    half tip=smoothstep(.17,.69,light);
+                    half3 pink=paint*lerp(half3(.78,.57,.74),half3(1.,.89,.95),tip);
+                    half3 cultivar=lerp(pink,ivory,smoothstep(.1,.9,i.paleBloom));
+                    paint=lerp(paint,cultivar,petals*.96);
+                }
                 Light sun=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));
                 half diffuse=.22+.78*saturate(dot(normalize(i.n),sun.direction)*.85+.18);
                 half3 sky=lerp(half3(.43,.50,.54),half3(.13,.18,.24),_OldTownNightFactor);
@@ -62,7 +72,21 @@ Shader "PCShop/Layered town canopy"
                     half body=smoothstep(.032,.12,value)*(1-smoothstep(.32,.57,value));
                     half tips=smoothstep(.36,.63,value);
                     half day=saturate(1-_OldTownNightFactor);
-                    lit*=lerp(half3(1,1,1),(1-.31*body)*half3(1+.04*tips,1,.92-.13*tips),day);
+                    half lower=1.-smoothstep(.17,.85,frac((i.uv.y-.103)*2.));
+                    half leafSun=smoothstep(.18,.61,Luminance(raw));
+                    lit*=lerp(half3(1,1,1),(1.-.13*body)*(1.-.14*lower)*half3(.94+.16*tips,1.03,.92-.14*tips),day);
+                    lit+=day*sun.shadowAttenuation*leafSun*leafSun*half3(.18,.14,.035);
+                }
+                // Distant foliage still needs distinct underleaf, mids and sunlit tips. Protect bark and blossom.
+                if(_ForestPigment>.5 && i.uv.y>.097)
+                {
+                    half tips=smoothstep(.18,.61,Luminance(lit));
+                    half green=smoothstep(-.012,.068,raw.g-raw.r*.94);
+                    half highSlope=smoothstep(36.,148.,i.world.y);
+                    half3 mids=lerp(half3(.48,.56,1.09),half3(1.04,1.06,1.24),highSlope);
+                    half3 forest=lit*lerp(mids,half3(1.04,1.08,1.18),tips)
+                        +lerp(half3(0,.001,.010),half3(.013,.016,.023),highSlope)*(1.-tips);
+                    lit=lerp(lit,forest,_DistrictDaylight*green);
                 }
                 return half4(MixFog(lit,i.fog),1);
             }

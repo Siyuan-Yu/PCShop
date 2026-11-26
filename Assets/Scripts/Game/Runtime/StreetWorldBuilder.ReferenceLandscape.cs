@@ -55,7 +55,7 @@ namespace PCShopSell.Game.Runtime
             }
             BatchStatic(root.gameObject);
         }
-        private void Garden(Transform parent,Rect area,bool lake, Material districtLawn = null)
+        private void Garden(Transform parent,Rect area,bool lake, Material districtLawn = null,bool customCentre=false)
         {
             var root=new GameObject(lake?"ApartmentLakeGarden":"CommunityFountainGarden").transform;
             root.SetParent(parent,false);root.localPosition=new Vector3(area.center.x,0,area.center.y);
@@ -75,6 +75,7 @@ namespace PCShopSell.Game.Runtime
                     Prims.Box(root,"ParkBench",new Vector3(i*w*.26f,.55f,side*(d/2-2)),new Vector3(2,.2f,.6f),Mats.Lit(ArtDirection.Wood));
                 }
             }
+            if(customCentre)return;
             if(lake)
             {
                 Prims.Shape(PrimitiveType.Cylinder,root,"LakeStoneBank",new Vector3(0,.12f,0),new Vector3(w*.68f,.14f,d*.63f),stone);

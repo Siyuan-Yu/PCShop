@@ -9,13 +9,13 @@ namespace PCShopSell.Game.Runtime
     {
         private static readonly Dictionary<(string, Vector2, Color), Material> Materials = new();
         internal static string Masonry(int district) => district == 1 ? "buffBrick" : district == 2 ? "ivoryPlaster" : "cutStone";
-        internal static string Roof(int district) => district == 1 ? "slate" : "limestoneWalk";
+        internal static string Roof(int district) => district == 1 ? "slate" : district==2 ? "parkSlate" : "limestoneWalk";
         internal static Material Tile(string key, Vector2 repeat, Color? color = null)
         {
             Color tint = color ?? Color.white;
             var id = (key, repeat, tint);
             if (Materials.TryGetValue(id, out var result) && result != null) return result;
-            var original = OldTownSurfaces.PanelMaterial(key);
+            var original = OldTownSurfaces.PanelMaterial(key=="graniteWalk" ? "districtFlagstones" : key);
             if (original == null) throw new InvalidOperationException("Missing city surface " + key);
             result = new Material(original) { name = "街区 / " + key };
             result.SetTextureScale("_BaseMap", repeat);
@@ -42,6 +42,45 @@ namespace PCShopSell.Game.Runtime
             var sample=LandUse.GetPixelBilinear(u,v);
             return Mathf.Lerp(.5f,sample.b,sample.a);
         }
+        // x/y are world X/Z; z is the radius of the planted grove in metres.
+        // Positions follow clusters in the two district paintings. The forest builder checks
+        // actual plot, shore and road clearance before using any of these planting zones.
+        private static readonly Vector3[] FloweringGroves =
+        {
+            // 社区沿街、湖岸和背街
+            new Vector3(312,-600,26), new Vector3(349,-559,25), new Vector3(545,-523,24),
+            new Vector3(358,-317,24), new Vector3(763,-264,24), new Vector3(438,-594,24),
+            new Vector3(678,-504,22), new Vector3(194,-493,22), new Vector3(200,-327,22),
+            new Vector3(561,-560,20), new Vector3(329,-418,19), new Vector3(397,-527,18),
+            new Vector3(717,-469,18), new Vector3(166,-424,18), new Vector3(193,-388,17),
+            new Vector3(814,-324,17), new Vector3(703,-92,17), new Vector3(678,-326,16),
+            new Vector3(290,-409,15), new Vector3(785,-332,15), new Vector3(594,-507,15),
+            new Vector3(716,-504,15),
+            // 公园环路与坡脚
+            new Vector3(868,117,15), new Vector3(809,533,14), new Vector3(985,669,14),
+            new Vector3(870,794,13),
+            // 花园大道与临水游乐场
+            new Vector3(-442,790,24), new Vector3(-61,879,24), new Vector3(189,867,23),
+            new Vector3(66,1082,22), new Vector3(241,861,22), new Vector3(172,839,22),
+            new Vector3(-14,949,22), new Vector3(51,850,21), new Vector3(-490,829,21),
+            new Vector3(33,877,21), new Vector3(-262,965,21), new Vector3(224,832,20),
+            new Vector3(-23,867,20), new Vector3(-459,898,20), new Vector3(-508,872,18),
+            new Vector3(-314,1069,18), new Vector3(-548,965,18), new Vector3(200,929,17),
+            new Vector3(227,1032,16), new Vector3(312,951,16), new Vector3(-499,766,15),
+            new Vector3(19,885,15), new Vector3(-5,964,14),
+        };
+
+        internal static float BlossomCover(Vector3 world)
+        {
+            float best=0;
+            foreach(var grove in FloweringGroves)
+            {
+                float x=world.x-grove.x,z=world.z-grove.y;
+                best=Mathf.Max(best,1-(x*x+z*z)/(grove.z*grove.z));
+            }
+            return best;
+        }
+
         private static Material _meadow;
         internal static Material Meadow()
         {
@@ -57,6 +96,26 @@ namespace PCShopSell.Game.Runtime
                 _meadow.SetTexture("_SoilPigment",Resources.Load<Texture2D>("OldTown/Surfaces/soilPigment"));
             }
             return _meadow;
+        }
+
+        internal static void SlattedBench(Transform parent,Vector3 at,float yaw=0)
+        {
+            var seat=new GameObject("街区木长椅").transform;
+            seat.SetParent(parent,false);seat.localPosition=at;seat.localRotation=Quaternion.Euler(0,yaw,0);
+            var mesh=new MiniatureDetailMesh();
+            var timber=Mats.Lit(ArtDirection.Hex("C28757"),.20f);
+            var pale=Mats.Lit(ArtDirection.Hex("D6A375"),.20f);
+            var iron=Mats.Lit(ArtDirection.Hex("4D5853"),.27f);
+            for(int slat=0;slat<4;slat++)
+                mesh.Box(new Vector3(0,.46f,-.23f+slat*.137f),new Vector3(2.32f,.065f,.11f),slat==2?pale:timber);
+            foreach(int side in new[]{-1,1})
+            {
+                mesh.Box(new Vector3(side*.84f,.23f,.02f),new Vector3(.092f,.46f,.36f),iron);
+                mesh.Box(new Vector3(side*.84f,.62f,.276f),new Vector3(.052f,.80f,.058f),iron,Quaternion.Euler(6,0,0));
+            }
+            for(int slat=0;slat<3;slat++)
+                mesh.Box(new Vector3(0,.60f+slat*.137f,.249f+slat*.016f),new Vector3(2.32f,.108f,.061f),timber);
+            mesh.Build(seat,"浅色硬木坐板和铸铁支座");
         }
 
         private static Material _glass,_villaPane,_balconyPane,_shelteredPane;
@@ -159,12 +218,12 @@ namespace PCShopSell.Game.Runtime
                         material.SetTextureScale("_EmissionMap",repeat);material.SetTextureOffset("_EmissionMap",offset);
                         TailorDisplay[bay]=material;
                     }
-                    Mats.RestoreBakedGlow(TailorDisplay[bay],new Color(1.32f,.92f,.58f),.34f);
+                    Mats.RestoreBakedGlow(TailorDisplay[bay],new Color(2.25f,1.63f,.94f),.71f);
                     bool door=bay==2;
-                    float x=door?0:bay==0?-2.78f:2.78f;
-                    float y=door?1.53f:1.32f;
-                    var size=door?new Vector3(1.42f,1.54f,1):new Vector3(2.36f,1.66f,1);
-                    var background=Prims.Shape(PrimitiveType.Quad,front,"作坊内墙与裁剪台",new Vector3(x,y,-.024f),size,TailorDisplay[bay]);
+                    float x=door?0:bay==0?-2.39f:2.39f;
+                    float y=door?1.53f:1.51f;
+                    var size=door?new Vector3(1.42f,1.54f,1):new Vector3(3.20f,2.18f,1);
+                    var background=Prims.Shape(PrimitiveType.Quad,front,"作坊内墙与裁剪台",new Vector3(x,y,door?.25f:.45f),size,TailorDisplay[bay]);
                     background.GetComponent<MeshRenderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
                     var pane=Prims.Shape(PrimitiveType.Quad,front,door?"木门玻璃":"营业橱窗玻璃",new Vector3(x,y,door?-.379f:-.33f),
                         new Vector3(size.x-.12f,size.y-.07f,1),VillaPane(sheltered:true));
