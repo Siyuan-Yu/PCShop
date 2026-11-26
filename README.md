@@ -1,5 +1,7 @@
 # PETSHOP · PCShopSell
 
+**三区与赛场美术换机交接（2026-11-26）**　美术分支为 `art/experiment`。三区与三个赛场已实装，95% 视觉验收待完成。[当前差距、30 张实机原帧与复拍方法](docs/art-direction/四区场景复核/三区实机验收/换机交接.md)
+
 **城郊旧居街美术实装（2026-11-25）**　[两类住宅、院巷、植被光照、实机对照与复现](docs/art-direction/old-quarter/README.md) · [历轮交付图档](docs/art-direction/old-quarter/图档索引.md)
 
 **当前玩法全量交接（2026-11-23）** · [玩法索引、公司、场所活动与赞助](docs/153-current-gameplay-sponsorship-and-relationships-2026-11-23.md)。涵盖 25 处场所活动、赞助特卖、银行后教学、公司经营与四阶段主线。[12 条人物感情线](docs/relationship-stories.md)含赴约回应、友情与恋爱的后续。
