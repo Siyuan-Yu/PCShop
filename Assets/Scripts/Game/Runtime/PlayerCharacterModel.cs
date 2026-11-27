@@ -170,6 +170,7 @@ namespace PCShopSell.Game.Runtime
                 _paint[(int)Paint.Top]=PlayerPaint(shirt,.12f,surface);
                 _paint[(int)Paint.Trim]=PlayerPaint(trim,.12f,style is "apron" or "apronbow" or "waistapron"?7:0);
                 _paint[(int)Paint.Pants]=PlayerPaint(trousers,.10f,bottoms.Contains("skirt")?9:10);
+                if(style=="landlady")_paint[(int)Paint.Cream]=PlayerPaint(layer,.12f,13);
             }
             Apply(_top, "NpcTop-" + cut);
             Apply(_legs, "NpcBottom-" + bottoms);
@@ -227,18 +228,19 @@ namespace PCShopSell.Game.Runtime
                 renderer.SetBlendShapeWeight(0, Mathf.Clamp01(blend) * 100f);
         }
 
-        private static Vector3 SeatedClothPoint(Vector3 p, bool skirt)
+        private static Vector3 SeatedClothPoint(Vector3 p, bool skirt, float clearance)
         {
             if (p.y >= .81f) return p;
             float t = Mathf.Clamp01((.81f - p.y) / (skirt ? .378f : .334f));
             float along = Mathf.SmoothStep(0, 1, t);
             float front = skirt ? Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-.07f, .10f, p.z)) : 1;
             float y = .81f + .04f * Mathf.Sin(Mathf.PI * t) - (skirt ? .035f : .010f) * t * t * t;
+            y += clearance * Mathf.SmoothStep(0,1,Mathf.Clamp01(t/.25f));
             return Vector3.Lerp(p, new Vector3(p.x, y, p.z + (skirt ? .25f : .275f) * along), front);
         }
 
         private static void AddSeatedCloth(Mesh mesh, List<Vector3> positions, List<Vector3> normals,
-            List<BoneWeight> weights, List<bool> cloth, bool skirt)
+            List<BoneWeight> weights, List<bool> cloth, bool skirt, float clearance)
         {
             if (!cloth.Contains(true)) return;
             var delta = new Vector3[positions.Count];var deltaNormal = new Vector3[positions.Count];
@@ -254,13 +256,13 @@ namespace PCShopSell.Game.Runtime
                 for (int row = 0; row < 3; row++)
                     for (int col = 0; col < 4; col++)skin[row,col] = Mathf.Lerp(skin[row,col],hem[row,col],amount);
                 var inverse = skin.inverse;var p = positions[i];
-                delta[i] = inverse.MultiplyPoint3x4(SeatedClothPoint(p,skirt)) - p;
+                delta[i] = inverse.MultiplyPoint3x4(SeatedClothPoint(p,skirt,clearance)) - p;
                 const float step = .0001f;
                 var jacobian = Matrix4x4.identity;
                 for (int axis = 0; axis < 3; axis++)
                 {
                     var h = Vector3.zero;h[axis] = step;
-                    var derivative = (SeatedClothPoint(p+h,skirt)-SeatedClothPoint(p-h,skirt))/(2*step);
+                    var derivative = (SeatedClothPoint(p+h,skirt,clearance)-SeatedClothPoint(p-h,skirt,clearance))/(2*step);
                     jacobian.SetColumn(axis,new Vector4(derivative.x,derivative.y,derivative.z,0));
                 }
                 // 曲面铺平时三维雅可比可奇异，直接变换两条切线，避免法线变零或翻面。
@@ -380,7 +382,9 @@ namespace PCShopSell.Game.Runtime
             mesh.subMeshCount = paints.Count;
             for (int i = 0; i < paints.Count; i++) mesh.SetTriangles(triangles[paints[i]], i, false);
             mesh.RecalculateBounds();
-            if (PaintedSample) AddSeatedCloth(mesh, positions, normals, weights, cloth, id == "NpcBottom-singer" || id.Contains("skirt") || id.EndsWith("labcoat",StringComparison.Ordinal));
+            if (PaintedSample) AddSeatedCloth(mesh, positions, normals, weights, cloth,
+                id == "NpcBottom-singer" || id.Contains("skirt") || id.EndsWith("labcoat",StringComparison.Ordinal),
+                id.Contains("painted_") ? id.StartsWith("NpcTop",StringComparison.Ordinal) ? .034f : .018f : 0f);
             model = new ModelMesh { Mesh = mesh, Paints = paints.ToArray() };
             Meshes[cacheKey] = model;
             return model;

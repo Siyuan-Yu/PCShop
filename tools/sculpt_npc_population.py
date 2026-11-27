@@ -65,7 +65,8 @@ def cap(kind):
         v[:,1]-=.016*front*low
     if kind in ('tousled','curlymale','curly'):
         above=np.clip((v[:,1]-1.39)/.10,0,1);a=np.arctan2(v[:,0],v[:,2]+.025)
-        v[:,1]+=.012*np.sin(a*7+.4)**2*above;v[:,0]+= .006*np.sin(a*5)*above
+        crown=np.clip(np.hypot(v[:,0],v[:,2]+.026)/.075,0,1)**2
+        v[:,1]+=.012*np.sin(a*7+.4)**2*above*crown;v[:,0]+= .006*np.sin(a*5)*above*crown
     if kind=='receding':
         front=np.clip((v[:,2]+.04)/.11,0,1);v[:,1]+=.022*front*np.clip((1.48-v[:,1])/.06,0,1)
     # 变形后重新计算共享顶点法线；发帽底缘保留独立顶点。
@@ -103,13 +104,15 @@ def head(kind):
             disk(parts,b.HAIR,'head',(0,1.280,-.155),(.068,.060,.055),950)
         else:
             side=.125 if style=='sidepony' else 0
-            ytop=1.36 if style=='ponytail' else 1.26
+            ytop=1.36 if style=='ponytail' else 1.33 if style=='sidepony' else 1.26
             def tail(p):
+                if style=='sidepony':
+                    return b.loft(p,[(.93,.13,-.155,.014,.021),(.98,.14,-.170,.035,.032),(1.08,.15,-.178,.045,.041),(1.20,.14,-.154,.047,.045),(1.28,.13,-.103,.047,.043),(1.33,.10,-.055,.037,.038)])
                 wave=.012*np.sin(p[...,1]*42) if style=='braid' else .010*np.sin(p[...,1]*17)
                 q=p.copy();q[...,0]-=side+wave
                 return b.loft(q,[(.93,0,-.155,.014,.021),(.98,0,-.170,.035,.032),(1.08,0,-.178,.045,.041),(1.20,0,-.168,.044,.045),(ytop,0,-.131,.034,.039)])
             primitive(parts,b.HAIR,'head',tail,((-.09,.22),(.91,ytop+.03),(-.24,-.07)),1600,.004)
-            disk(parts,b.BROW,'head',(side,ytop-.013,-.153),(.039,.014,.043),220)
+            disk(parts,b.BROW,'head',(.125,1.278,-.106) if style=='sidepony' else (side,ytop-.013,-.153),(.039,.014,.043),220)
     if 'glasses' in kind or style=='spectacles':
         primitive(parts,b.BROW|s.NO_SHELL,'head',s.npc.glasses,((-.15,.15),(1.29,1.38),(-.005,.16)),1200,.0023)
     if 'ribbon' in kind or 'headband' in kind:
@@ -207,6 +210,14 @@ def top(cut):
             mesh=s.curved_panel(lambda x,y:.15-.12*(x/.24)**2,lambda y:.196,.414,.765);out.append((b.CREAM,'apron',mesh))
         return out
     append(out,cache('common-body-v1',common_body))
+    if cut=='landlady':
+        panel_patch(out,b.CREAM|s.NO_SHELL,'torso',[(-.033,.67),(.033,.67),(.037,1.08),(-.037,1.08)],lambda y:np.interp(y,[.67,.86,1.08],[.127,.137,.129]),.003,.002)
+        for sign in (-1,1):
+            panel_patch(out,b.CREAM|s.NO_SHELL,'torso',[(sign*x,y) for x,y in ((.013,1.129),(.058,1.120),(.093,1.078),(.087,1.051),(.071,1.043),(.045,1.047),(.017,1.085))],lambda y:np.interp(y,[1.04,1.08,1.13],[.143,.129,.073]),.004,.003)
+        line(out,b.CREAM,'torso',[(-.031,1.11,.102),(-.032,1.07,.141),(0,1.028,.146),(.032,1.07,.141),(.031,1.11,.102)],.002)
+        disk(out,b.TIE|s.NO_SHELL,'torso',(0,1.018,.151),(.012,.022,.005),280)
+        for y in (.77,.85,.93):disk(out,b.CREAM|s.NO_SHELL,'torso',(.043,y,.130),(.008,.008,.004),140)
+        return out
     if cut in ('shirt','polo','vest','vestbow','vestscarf','vestbadge','utilityvest','knitvest','formal','cardigan','floral','flowerblouse','bowblouse'):
         collar(out,cut in ('vestbow','cardigan','floral','flowerblouse','bowblouse'))
         buttons(out)
@@ -251,10 +262,16 @@ def top(cut):
 def bottom(kind):
     if kind=='pants':return cache('approved-bottom-v1',lambda:collect(s.baker))['NpcBottom-chef']
     out=[]
-    if kind in ('skirt','longskirt'):
+    if kind in ('skirt','longskirt','pencilskirt'):
         mesh=s.pleated_skirt_mesh()
+        if kind=='pencilskirt':
+            v,n,f=mesh;t=np.clip((.70-v[:,1])/.324,0,1);sx=1-.26*t;sz=1-.20*t
+            v[:,0]*=sx;v[:,2]*=sz;n[:,0]/=sx;n[:,2]/=sz;n/=np.maximum(np.linalg.norm(n,axis=1)[:,None],1e-9)
         if kind=='longskirt':
             v,n,f=mesh;t=np.clip((.70-v[:,1])/.324,0,1);v[:,1]-=.16*t;v[:,0]*=1-.035*t
+        # 泛用上衣与歌手专用短上衣的腰口不同；普通裙腰藏入衣摆，不能顶穿背心。
+        v,n,f=mesh;t=np.clip((v[:,1]-.54)/.157,0,1);v[:,1]-=.034*t
+        n[:,1]/=1-.034/.157*(t>0);n/=np.maximum(np.linalg.norm(n,axis=1)[:,None],1e-9)
         out.append((b.PANTS|s.NO_SHELL,'skirt',mesh))
         primitive(out,b.SKIN|s.NO_SHELL,'pants',lambda p:b.loft(b.mirror_x(p),[(.065,.104,0,.039,.038),(.14,.104,0,.044,.043),(.29,.104,0,.053,.05),(.47,.096,0,.053,.057),(.63,.078,0,.055,.062),(.67,.072,0,.054,.061)]),s.w.LEGS,2600)
     else:

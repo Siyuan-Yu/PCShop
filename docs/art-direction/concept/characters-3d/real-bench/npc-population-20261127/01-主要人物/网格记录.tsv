@@ -27,7 +27,7 @@ keeper_tobacco	Player B · NpcHead-painted_tousled	13960	27212	5	PCShop/PlayerPa
 keeper_tobacco	Player B · NpcTop-painted_workjacket	13174	26170	4	PCShop/PlayerPainted
 keeper_tobacco	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
 landlady	Player B · NpcHead-painted_curly	15312	29912	5	PCShop/PlayerPainted
-landlady	Player B · NpcTop-painted_floral	7798	15230	4	PCShop/PlayerPainted
+landlady	Player B · NpcTop-painted_landlady	7558	14878	4	PCShop/PlayerPainted
 landlady	Player B · NpcBottom-painted_longskirt	11430	21540	4	PCShop/PlayerPainted
 li	Player B · NpcHead-painted_spectacles	14559	28412	5	PCShop/PlayerPainted
 li	Player B · NpcTop-painted_knitvest	7070	13942	4	PCShop/PlayerPainted
@@ -92,7 +92,7 @@ life_tenant	Player B · NpcBottom-painted_skirt	11430	21540	4	PCShop/PlayerPaint
 lin	Player B · NpcHead-painted_tousled	13960	27212	5	PCShop/PlayerPainted
 lin	Player B · NpcTop-painted_hoodie	8542	16998	5	PCShop/PlayerPainted
 lin	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
-momo	Player B · NpcHead-painted_sidepony_glasses	16275	31832	5	PCShop/PlayerPainted
+momo	Player B · NpcHead-painted_sidepony_glasses	16285	31830	5	PCShop/PlayerPainted
 momo	Player B · NpcTop-painted_cardigan	7798	15230	4	PCShop/PlayerPainted
 momo	Player B · NpcBottom-painted_skirt	11430	21540	4	PCShop/PlayerPainted
 qian	Player B · NpcHead-painted_bun	14914	29112	5	PCShop/PlayerPainted
@@ -167,7 +167,7 @@ staff_gpu	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
 staff_gpu2	Player B · NpcHead-painted_swept	13960	27212	5	PCShop/PlayerPainted
 staff_gpu2	Player B · NpcTop-painted_track	7734	15274	4	PCShop/PlayerPainted
 staff_gpu2	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
-staff_mall	Player B · NpcHead-painted_sidepony	15676	30632	5	PCShop/PlayerPainted
+staff_mall	Player B · NpcHead-painted_sidepony	15686	30630	5	PCShop/PlayerPainted
 staff_mall	Player B · NpcTop-painted_blazerscarf	13362	26402	5	PCShop/PlayerPainted
 staff_mall	Player B · NpcBottom-painted_skirt	11430	21540	4	PCShop/PlayerPainted
 staff_mall2	Player B · NpcHead-painted_curlymale	15312	29912	5	PCShop/PlayerPainted

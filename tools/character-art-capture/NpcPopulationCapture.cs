@@ -37,7 +37,14 @@ public static class NpcPopulationCapture
     static GameObject Figure(Transform stage,string id,float x,GameController game)
     {
         string person=id.StartsWith("crowd:")?null:id;
-        var fig=(GameObject)typeof(Prims).GetMethod("FigureForPerson",F).Invoke(null,new object[]{stage,id,ArtDirection.Hex("667667"),ArtDirection.Hex("E8AB82"),1f,person,id});
+        GameObject fig;
+        if(id.StartsWith("legacy:"))
+        {
+            var kind=typeof(Prims).Assembly.GetType("PCShopSell.Game.Runtime.FigureAppearance");
+            fig=(GameObject)typeof(Prims).GetMethod("Figure",F,null,new[]{typeof(Transform),typeof(string),typeof(Color),typeof(Color),typeof(float),kind},null).Invoke(null,new object[]{stage,id,Color.gray,Color.white,1f,Enum.Parse(kind,id.Substring(7))});
+            person=null;
+        }
+        else fig=(GameObject)typeof(Prims).GetMethod("FigureForPerson",F).Invoke(null,new object[]{stage,id,ArtDirection.Hex("667667"),ArtDirection.Hex("E8AB82"),1f,person,id});
         CityNpcClothing.Apply(fig,game.Session,person);fig.transform.localPosition=new Vector3(x,0,0);fig.transform.localRotation=Quaternion.Euler(0,180,0);return fig;
     }
     static void Capture()
@@ -48,7 +55,8 @@ public static class NpcPopulationCapture
             var game=new GameObject("全体人物复拍").AddComponent<GameController>();game.Bootstrap(false,914);game.enabled=false;game.Ui.CloseAllWindows();foreach(var c in game.Ui.Canvases)c.gameObject.SetActive(false);
             game.World.Root.SetActive(false);((Transform)typeof(GameController).GetField("_actors",F).GetValue(game)).gameObject.SetActive(false);
             RenderSettings.fog=false;RenderSettings.ambientMode=AmbientMode.Flat;RenderSettings.ambientLight=new Color(.62f,.63f,.65f);RenderSettings.ambientIntensity=1;
-            foreach(var l in UnityEngine.Object.FindObjectsOfType<Light>()){l.enabled=l.type==LightType.Directional&&l.name=="Sun";if(l.enabled){l.intensity=.9f;l.color=Color.white;l.transform.rotation=Quaternion.Euler(52,-22,0);}}
+            var lamps=UnityEngine.Object.FindObjectsOfType<Light>().Select(l=>(light:l,on:l.enabled)).ToArray();
+            foreach(var pair in lamps){var l=pair.light;l.enabled=l.type==LightType.Directional&&l.name=="Sun";if(l.enabled){l.intensity=.9f;l.color=Color.white;l.transform.rotation=Quaternion.Euler(52,-22,0);}}
             Shader.SetGlobalVector("_OldQuarterFigureZone",Vector4.zero);
             var cam=game.Cam;cam.nearClipPlane=.1f;cam.farClipPlane=200;cam.clearFlags=CameraClearFlags.SolidColor;cam.backgroundColor=ArtDirection.Hex("E4E4E6");
             var data=cam.GetUniversalAdditionalCameraData();data.renderPostProcessing=false;data.antialiasing=AntialiasingMode.SubpixelMorphologicalAntiAliasing;
@@ -84,6 +92,34 @@ public static class NpcPopulationCapture
                 Photo(cam,$"{page+1:00}-坐姿");
                 File.WriteAllLines(Path.Combine(Output,$"{page+1:00}-名单.txt"),rows);
                 foreach(var f in figs){f.SetActive(false);UnityEngine.Object.DestroyImmediate(f);}
+            }
+            if(Environment.GetEnvironmentVariable("PCSHOP_NPC_CONTEXT")=="1")
+            {
+                var figs=ids.Take(5).Select((id,i)=>Figure(stage,id,(i-2)*.84f,game)).ToArray();
+                CameraAt(cam,stage.position+Vector3.up*.83f,18,1.32f);
+                foreach(var fig in figs)fig.GetComponent<FigureMotion>().WorkAction=FigureWorkAction.Assemble;
+                for(int frame=0;frame<24;frame++){FigureMotion.AdvanceAll(1f/24,true);Photo(cam,$"工作-{frame:00}");}
+                foreach(var fig in figs){fig.GetComponent<FigureMotion>().WorkAction=FigureWorkAction.None;fig.GetComponent<FigureMotion>().ResetMotion();fig.transform.localRotation=Quaternion.Euler(0,100,0);}
+                foreach(float blend in new[]{.5f,1f})
+                {
+                    foreach(var fig in figs)typeof(FigureMotion).GetMethod("SetFurnitureSeatPose",F).Invoke(fig.GetComponent<FigureMotion>(),new object[]{.42f,blend});
+                    Photo(cam,blend==1?"家具坐姿-侧面":"坐下过渡-侧面");
+                }
+                foreach(var fig in figs){typeof(FigureMotion).GetMethod("SetFurnitureSeatPose",F).Invoke(fig.GetComponent<FigureMotion>(),new object[]{0f,0f});fig.GetComponent<FigureMotion>().ResetMotion();fig.transform.localRotation=Quaternion.Euler(0,180,0);}
+                // 用同一实际骨架检查头颈与发型连接，不生成新动画资源。
+                foreach(var turn in new[]{("点头",Quaternion.Euler(15,0,0)),("转头",Quaternion.Euler(0,25,0))})
+                {foreach(var fig in figs)fig.transform.Find("Visual/Torso/Head").localRotation=turn.Item2;Photo(cam,turn.Item1);}
+                foreach(var fig in figs)fig.transform.Find("Visual/Torso/Head").localRotation=Quaternion.identity;
+                game.World.Root.SetActive(true);foreach(var p in lamps)if(p.light!=null)p.light.enabled=p.on;
+                var place=game.World.Places[game.City.PlayerShop().Id];stage.position=place.Entrance+Vector3.up*.02f-place.Root.transform.forward*3;stage.rotation=place.Root.transform.rotation;
+                var lighting=(DayNightLighting)typeof(GameController).GetField("_lighting",F).GetValue(game);data.renderPostProcessing=true;cam.farClipPlane=2000;
+                foreach(var state in new[]{("白天",720,false),("雨天",720,true),("夜间",1320,false)})
+                {
+                    lighting.Apply(state.Item2,false,state.Item3);
+                    cam.transform.rotation=Quaternion.Euler(CameraRig.DefaultPitch,CameraRig.DefaultYaw,0);cam.orthographicSize=16;cam.transform.position=stage.position+Vector3.up*.65f-cam.transform.forward*30;
+                    Photo(cam,"街道-默认距离-"+state.Item1);
+                    cam.orthographicSize=5.5f;Photo(cam,"街道-拉近查看-"+state.Item1);
+                }
             }
             File.WriteAllLines(Path.Combine(Output,"网格记录.tsv"),report);
             File.WriteAllLines(Path.Combine(Output,"人口清单.tsv"),new[]{"Id\t姓名\t身份\t年龄"}.Concat(CityLifeCatalog.People.OrderBy(p=>p.Id).Select(p=>$"{p.Id}\t{p.Name}\t{p.Role}\t{p.Age}")));

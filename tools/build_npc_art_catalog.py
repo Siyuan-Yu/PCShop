@@ -13,7 +13,7 @@ keeper_mall crop workbadge AC8D66 35343A C5BBA0 pants 43434A
 keeper_phone bun blazerbow 3E4C67 ECDDC2 9A8580 skirt B5A38B
 keeper_phone2 crop apron 333B49 384859 B08C62 pants 41414A
 keeper_tobacco tousled workjacket 968164 DFD5BD D2AA6F pants 4B4850
-landlady curly floral 9D493D E8D4B5 5C9575 longskirt 635042
+landlady curly landlady 9D493D E8D4B5 5C9575 longskirt 635042
 li spectacles knitvest 824C3E 343C47 BD9463 pants 393D48
 life_bartender crop apron 34333B 705043 BD9E70 pants 383840
 life_chef crop chef E7D9C4 37363B 9E4940 pants 3A3B45
@@ -180,11 +180,11 @@ restaurant_tier4_evening swept vestbow 363842 E9DEC9 39333C pants 3F3D49
 DOCTORS='''
 community_day shortfemale labcoat E7E1D3 DCD2BF 6F919A pants 616C75
 community_night spectacles labcoat E6E1D4 3B4B61 8EA7B0 pants 454F64
-garden_day sidepony labcoat EAE3D7 C999A1 8CA2A8 skirt B7A99E
+garden_day sidepony labcoat EAE3D7 C999A1 8CA2A8 pencilskirt B7A99E
 garden_night crop labcoat E7E0D1 728773 7C989B pants 4B5D5A
 outskirts_day bob_glasses labcoat E5DFD0 6C9996 8CA3A6 pants 4E696A
 outskirts_night tousled labcoat E7E0D3 40536A 8CA2AF pants 48596E
-park_day curly labcoat E9E1D3 A99BB5 91A4AA skirt A49BA7
+park_day curly labcoat E9E1D3 A99BB5 91A4AA pencilskirt A49BA7
 park_night spectacles labcoat E8E0D3 728CA4 8FA3AD pants 4A5E75
 '''
 EXTRA='''
