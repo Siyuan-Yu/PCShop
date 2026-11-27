@@ -199,9 +199,21 @@ tailor_garden_1 long blazer DBD7CD 435266 C9AD7B pants 545E72
 tailor_garden_2 bun blazerbow C0B2CE E5DED0 8C719D skirt 706080
 '''
 
+SCENE_EXTRA='''
+CommunityBloodNurse bun labcoat E9E5DA E4CBD1 8C5562 pants 526B78
+CommunityChildHelper spectacles vestbadge 647C6B E4D7BE BFA568 pants 465867
+CommunityLanternHost fringe apron A75C4E D3BB90 786449 pants 4B5360
+quarter_entry_neighbor senior jacket 617675 DDD3BF A49579 pants 4B5661
+quarter_entry_visitor bob cardigan B19178 E4D8C4 79614E skirt 65554C
+quarter_shop_customer tousled workjacket 566D78 D9D4C2 A2AE98 pants 3E4E5F
+quarter_stop_commuter spectacles formal 726F55 E3D8C2 5F6F7E pants 515B66
+pond_walk_0 crop track BEAA8A D9D5C5 727F65 pants 5C6357
+pond_walk_1 bun cardigan 806A65 E3D9C7 A69170 longskirt 575F4C
+'''
+
 def build():
     rows=[]
-    for text,prefix in ((ROWS,''),(RESIDENTS,'resident_'),(LEISURE,'life_leisure_staff_'),(DOCTORS,'hospital_'),(EXTRA,'')):
+    for text,prefix in ((ROWS,''),(RESIDENTS,'resident_'),(LEISURE,'life_leisure_staff_'),(DOCTORS,'hospital_'),(EXTRA,''),(SCENE_EXTRA,'')):
         for line in text.strip().splitlines():
             ident,head,cut,top,layer,accent,bottom,pants=line.split()
             if prefix=='hospital_':region,shift=ident.split('_');ident=region+'_doctor_'+shift
@@ -234,7 +246,8 @@ def build():
     if missing:raise ValueError('未登记立绘：'+str(sorted(missing)))
     target=ROOT/'Assets/Resources/Characters/NpcArtCatalog.json';target.write_text(json.dumps({'profiles':rows},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     out=ROOT/'work/npc-art';out.mkdir(parents=True,exist_ok=True)
-    groups={'01-主要人物':[r['id'] for r in rows if not r['id'].startswith(('resident_','life_leisure_staff_','hospital_'))], '02-医院与场所员工':[r['id'] for r in rows if r['id'].startswith(('life_leisure_staff_','hospital_'))], '03-社区居民':[r['id'] for r in rows if r['id'].startswith('resident_')]}
+    scene_ids={line.split()[0] for line in SCENE_EXTRA.strip().splitlines()}
+    groups={'01-主要人物':[r['id'] for r in rows if r['id'] not in scene_ids and not r['id'].startswith(('resident_','life_leisure_staff_','hospital_'))], '02-医院与场所员工':[r['id'] for r in rows if r['id'].startswith(('life_leisure_staff_','hospital_'))], '03-社区居民':[r['id'] for r in rows if r['id'].startswith('resident_')], '06-现场活动与街坊':[r['id'] for r in rows if r['id'] in scene_ids]}
     for group,ids in groups.items():
         d=out/group;d.mkdir(exist_ok=True);(d/'角色列表.txt').write_text('\n'.join(ids)+'\n',encoding='utf-8')
     print(len(rows),'份三维身份；',len(portraits),'份立绘全部登记')

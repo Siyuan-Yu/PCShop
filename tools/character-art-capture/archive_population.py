@@ -8,6 +8,7 @@ font=lambda size:ImageFont.truetype('C:/Windows/Fonts/msyh.ttc',size)
 names={r['Id']:r['姓名'] for r in csv.DictReader((src/'人口清单.tsv').open(encoding='utf-8-sig'),delimiter='\t')}
 names.update({'service_officer':'警务人员','service_repair':'维修工','CommunityRoofWorker':'屋顶维修工','CommunityLostChild':'走失儿童','tailor_garden_1':'现场裁缝甲','tailor_garden_2':'现场裁缝乙','legacy:Coach':'足球练习教练','legacy:PhoneClerk':'旧枚举·手机店员','legacy:Classmate':'旧枚举·程序员','legacy:Florist':'旧枚举·花店人物'})
 blocks=[];strips=[]
+names.update({'CommunityBloodNurse':'献血工作人员','CommunityChildHelper':'寻人协助者','CommunityLanternHost':'灯会摊主','quarter_entry_neighbor':'旧居街坊','quarter_entry_visitor':'旧居访客','quarter_shop_customer':'店前顾客','quarter_stop_commuter':'候车街坊','pond_walk_0':'公园散步者甲','pond_walk_1':'公园散步者乙'})
 for pagefile in sorted(src.glob('*-名单.txt')):
     page=pagefile.name.split('-')[0];ids=pagefile.read_text(encoding='utf-8-sig').splitlines();n=len(ids)
     for suffix in ('正面','游玩角度','侧面','背面','坐姿'):
