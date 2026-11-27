@@ -1,0 +1,5 @@
+legacy:PhoneClerk
+legacy:Classmate
+legacy:Florist
+dynamic_shop_employee
+dynamic_shop_customer

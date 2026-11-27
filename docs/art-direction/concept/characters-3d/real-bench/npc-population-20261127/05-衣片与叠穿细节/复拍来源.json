@@ -1,7 +1,7 @@
 {
   "说明": "独立 Unity 工程，正式人物入口，原始截图无补画；无自动测试或发布构建。",
   "sourceSha256": {
-    "Assets/Resources/Characters/NpcArtCatalog.json": "ab0cb60a4e5a1a6a2444b95c86ec03d6df696ea481a3f44e0fa474f428207aee",
+    "Assets/Resources/Characters/NpcArtCatalog.json": "2885f19dce8ddda3f426843d13f6f31393427c0ea743180142e03f0f6be9e32e",
     "Assets/Resources/Characters/PlayerB-Chen.bytes": "48967b745fd9cffc5421f02d2741a68487fd6022533ad0311606d004d92f5587",
     "Assets/Resources/Characters/PlayerB-Core.bytes": "0b278100328e56a47c45e4e923cf058024575753f8d3f151d7bc9394f6e4559a",
     "Assets/Resources/Characters/PlayerB-formal.bytes": "8e1dc6f0e7db4e210411f890646583efaed99002b2077994ae7e301e86020597",
@@ -79,7 +79,7 @@
     "Assets/Resources/Characters/PlayerB-NpcTop-painted_hoodie.bytes": "f66b7647b8d14e5f7ade998395d36c1c9cbdff994d74ab480e27d5aead1ad7a5",
     "Assets/Resources/Characters/PlayerB-NpcTop-painted_jacket.bytes": "dee7c438da871483d4ac421bfe27b97461fe130d036ebd8efbae78eba17774fb",
     "Assets/Resources/Characters/PlayerB-NpcTop-painted_knitvest.bytes": "b7ee602a4d4559ff25d4cdf7c7b02c844d461c0f34862b1220c826152bb0580a",
-    "Assets/Resources/Characters/PlayerB-NpcTop-painted_labcoat.bytes": "0e7a3b0d2f2cbbc60ef0f40d6fd236d0facb5b02335f52328694454ee6e142d4",
+    "Assets/Resources/Characters/PlayerB-NpcTop-painted_labcoat.bytes": "bec7c1d5f45187491b2490d2d862ae0f58220f59f12d7479235d6d48158dc93b",
     "Assets/Resources/Characters/PlayerB-NpcTop-painted_landlady.bytes": "ec37b10fb804fb596bbad366d47213aebf66f67fc3ae50a008ae8bcf32792162",
     "Assets/Resources/Characters/PlayerB-NpcTop-painted_patrol.bytes": "3fae1f371c315f8b5b74453c5159e5590038ce9b138a6ab2725bd912d6f65451",
     "Assets/Resources/Characters/PlayerB-NpcTop-painted_polo.bytes": "6c06e7d5d57ef996eefdf9a3c05ebeaba212e8efe2c695994979cf9ef3bb1fa4",
@@ -118,6 +118,6 @@
     "Assets/Scripts/Game/Runtime/CityNpcClothing.cs": "03787aa85bf16278b854e6f3fff63274ca12900a8984ee52d5f58bd76bc96a4d",
     "Assets/Scripts/Game/Runtime/PlayerCharacterModel.cs": "a9eaf5692f18a9da23d54587400ff32e837329c1ea65038293eef08c76c1969a",
     "Assets/Scripts/Game/Runtime/FigureMotion.cs": "1e78f43638c223fe63cb9951493fdb007b19e28efbb0ab6fb5c66414321e366e",
-    "tools/character-art-capture/NpcPopulationCapture.cs": "4f55a3353cc0829e379ece03f44d00270d9713c6845598cbccabe8f84a3dfca6"
+    "tools/character-art-capture/NpcPopulationCapture.cs": "07316a7e861b3f2119defec6b3b52bcf741893d1e78abfed52e447cce0e55719"
   }
 }

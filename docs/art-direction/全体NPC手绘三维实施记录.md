@@ -2,6 +2,8 @@
 
 更新日期：2026-11-27。工作分支：`art/experiment`。
 
+当前全部批次已完成。先看[全员实机总检阅页](concept/characters-3d/real-bench/npc-population-20261127/index.html)，逐人索引见[全员覆盖清单](concept/characters-3d/real-bench/npc-population-20261127/全员覆盖清单.tsv)。共 194 份固定外观配置全部复拍；另有随机人群、旧枚举入口与动作环境样本。
+
 本次用户明确要求把全体 NPC 按三人母版连续做完，并允许分批提交上传。分批是存档节点，不是等待下一次授权的停止点。本次未要求自动测试或发布包，因此仅做 Unity 编辑器编译、正式入口实机复拍和人工画面对照。
 
 ## 标准和范围
@@ -21,7 +23,7 @@
 | 主要人物、职业人物、临时角色 | 76 | 已完成模型、正侧背、游戏俯角、行走及坐姿复拍 | [第一批检阅页](concept/characters-3d/real-bench/npc-population-20261127/01-主要人物/index.html) |
 | 医院昼夜班和娱乐场所员工 | 52 | 已完成 11 组正侧背、俯角、行走及坐姿复拍；修正两位医生内裙叠穿 | [第二批检阅页](concept/characters-3d/real-bench/npc-population-20261127/02-医院与场所员工/index.html) |
 | 社区居民 | 57 | 已完成 12 组正侧背、俯角、行走及坐姿复拍，衣片贴合问题已修正 | [第三批检阅页](concept/characters-3d/real-bench/npc-population-20261127/03-社区居民/index.html) |
-| 无名人群和环境灯光 | 动态组合 | 待最终复拍 | 待归档 |
+| 无名人群和环境灯光 | 20 个样本 | 已完成 9 个随机头型、4 条旧枚举入口、动态雇员与顾客、5 名环境代表人物的复拍 | [动态入口与灯光检阅页](concept/characters-3d/real-bench/npc-population-20261127/04-动态入口与灯光/index.html) |
 | 衣片与叠穿细节 | 8 个重点样本 | 完整 24 帧行走周期与侧背、坐姿复查 | [细节检阅页](concept/characters-3d/real-bench/npc-population-20261127/05-衣片与叠穿细节/index.html) |
 | 现场活动与固定街坊 | 9 | 已完成正侧背、俯角、完整行走周期和坐姿；修正白大褂背面的裤臀穿插 | [现场人物检阅页](concept/characters-3d/real-bench/npc-population-20261127/06-现场活动与街坊/index.html) |
 
@@ -51,7 +53,11 @@
 
 每组 5 人，独立 Unity 工程内调用正式 `Prims.FigureForPerson`、`CityNpcClothing` 与 `FigureMotion`，渲染 2400×1350。正面、侧面、背面使用俯角 8°，游戏俯角查看使用 35°。白底棚拍为近距离查错；最终另拍正式街道的默认游玩距离。原始 PNG 不补画，立绘对照页只裁切排版；GIF 从实际行走帧编码。
 
-`复拍来源.json` 在启动该轮 Unity 前记录代码、着色器和人物资源的 SHA-256。`角色列表.txt` 和逐组名单对应每一位人物。`网格记录.tsv` 保存实际加载的网格、顶点、三角面、子网格和材质着色器。
+`复拍来源.json` 在启动该轮 Unity 前记录代码、着色器和人物资源的 SHA-256；`复拍脚本.cs.txt` 保存该轮取景脚本原文，避免日后改取景工具后丢失来源。`角色列表.txt` 和逐组名单对应每一位人物。`网格记录.tsv` 保存实际加载的网格、顶点、三角面、子网格和材质着色器。
+
+最终档案包含 47 组、245 张原始静态 PNG 和 48 个实际动作 GIF。179 位固定角色、178 份原立绘、194 份外观配置全部覆盖；缺失资源、网格／材质异常、来源不一致均为 0，详细记录见[归档核对记录](concept/characters-3d/real-bench/npc-population-20261127/归档核对记录.json)。各轮 Unity 完成标记为 `NPC_POPULATION_CAPTURE_DONE`，未见 C# 或 Shader 编译错误。
+
+环境复拍使用既有 `DayNightLighting`：白天 12:00、雨天 12:00、夜间 22:00。正式默认镜头为俯角 35°、方位 45°、正交尺寸 16，另附尺寸 5.5 的拉近图。人物临时排在店铺附近开阔道路上以避免遮挡，没有改游戏出生点或场景布局。随机人群的同色棚拍用于看清 9 种头型，实际游戏仍使用各自的颜色种子。工作图调用正式装机动作；点头、转头图只检查骨架连接，不代表新增了这些游戏动作。家具坐姿图检查既有坐姿和坐下过渡。
 
 “95%”是用户的视觉目标，不能由本轮覆盖率或此前三人正面轮廓 IoU 代替。这里记录实际覆盖和可复查画面，不虚构整体美术相似度分数。
 
@@ -61,13 +67,16 @@
 2. 修改人物身份：编辑 `tools/build_npc_art_catalog.py` 对应行，再执行它重建 JSON。主色、内搭、饰色、下装、发型和款式在同一行。
 3. 修改模型：使用 `tools/sculpt_npc_population.py --kind heads|tops|bottoms --names ...`；它继承 `sculpt_character_samples.py` 的耳手、比例、骨架和 PBM2 格式，不重写三人母版资源。依赖 numpy、scipy、scikit-image、fast-simplification。
 4. `work/npc-art/sculpt-cache` 是可删除的本地中间缓存；若母版生成代码改变，删除该缓存再重烘。不要复用改变前的缓存。
-5. 复拍须用独立 Unity 工程，不能对正在编辑的主工程运行批处理。先前一进程退出，再开始下一轮。
+5. 复拍须用独立 Unity 工程，不能对正在编辑的主工程运行批处理。新设备先复制当前项目的 `Assets`、`Packages`、`ProjectSettings` 到独立目录，使用同版本 Unity；不必复制 `Library`。通过 `--project` 和 `--unity` 指定本机路径。先前一进程退出，再开始下一轮。
 
 ```powershell
 python tools/build_npc_art_catalog.py
 & work/character-art/venv/Scripts/python.exe tools/sculpt_npc_population.py --kind all
 python tools/character-art-capture/population_capture.py --project <独立复拍工程> --output work/npc-art/01-主要人物
 python tools/character-art-capture/archive_population.py work/npc-art/01-主要人物 docs/art-direction/concept/characters-3d/real-bench/npc-population-20261127/01-主要人物
+python tools/character-art-capture/inventory_population.py docs/art-direction/concept/characters-3d/real-bench/npc-population-20261127
 ```
 
-`population_capture.py --census` 仅导出实际角色名单；`--all-frames` 保留 24 张连续行走帧，否则保留周期中的 4 帧。没有调用自动测试框架或发布构建入口。
+`population_capture.py --census` 仅导出实际角色名单；`--all-frames` 保留 24 张连续行走帧，否则保留周期中的 4 帧；`--context` 增加工作、家具坐姿、头部连接及日／雨／夜场景复拍。脚本打印进程 ID 后立即返回，须等对应进程退出且日志出现完成标记，再执行归档。没有调用自动测试框架或发布构建入口。
+
+`work/` 不上传；本轮可复查结果全部放在上述 `docs` 档案。需要复拍时，可从相应归档复制 `角色列表.txt` 到新的输出目录，不必依赖这台机器的临时目录。
