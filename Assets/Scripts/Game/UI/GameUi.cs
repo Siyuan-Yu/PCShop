@@ -25,6 +25,8 @@ namespace PCShopSell.Game.UI
         internal Button CloseButton;
         internal string TimeStatusOverride;
         internal Action RefreshContent;
+        // 工作台固定外壳只构建一次，刷新时仅替换侧栏与当前页。
+        internal Action RebuildContent;
         public Action<Window> Builder;
         public Action OnClosed;
         public bool Holds;
@@ -53,6 +55,7 @@ namespace PCShopSell.Game.UI
             RebuildPending = false;
             _quantityOnly = false;
             RefreshQuantityContent = null;
+            if (RebuildContent != null) { RebuildContent(); return; }
             RefreshContent = null;
             DialogIllustration = null;
             var scrolled = Ui.SaveScroll(Root);

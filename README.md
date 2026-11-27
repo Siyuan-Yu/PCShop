@@ -1,5 +1,9 @@
 # PETSHOP · PCShopSell
 
+**证券与全屏工作台交接（2026-11-27）**　开发分支为 `art/experiment`。证券三处入口同步，居家工作台采用全屏、五项侧栏及常驻日进度带。[实现、操作入口、验证边界与换机方法](docs/art-direction/证券与居家工作台实施记录.md) · [24 张原图与定稿图并排对照](docs/art-direction/implemented/stock-workbench-20261127/index.html)。已完成 Unity 编译与界面复拍，未运行自动测试、未生成新发布包。
+
+**全体 NPC 手绘三维（2026-11-27）**　194 份固定外观配置及动态人物入口已统一接入。[全员实施与换机记录](docs/art-direction/全体NPC手绘三维实施记录.md) · [逐人实机图库](docs/art-direction/concept/characters-3d/real-bench/npc-population-20261127/index.html)。场景美术的视觉验收状态仍以下方三区交接为准。
+
 **三区与赛场美术换机交接（2026-11-26）**　美术分支为 `art/experiment`。三区与三个赛场已实装，95% 视觉验收待完成。[当前差距、30 张实机原帧与复拍方法](docs/art-direction/四区场景复核/三区实机验收/换机交接.md)
 
 **城郊旧居街美术实装（2026-11-25）**　[两类住宅、院巷、植被光照、实机对照与复现](docs/art-direction/old-quarter/README.md) · [历轮交付图档](docs/art-direction/old-quarter/图档索引.md)

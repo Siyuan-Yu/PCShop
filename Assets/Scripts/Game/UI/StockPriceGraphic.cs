@@ -42,6 +42,23 @@ namespace PCShopSell.Game.UI
                 .Select(group => (group.Key.Minute, group.Key.Price, group.ToArray(), group.Any(IsBuy), group.Any(e => !IsBuy(e))))
                 .ToArray();
             Initialize(new[] { points }, new[] { Ui.Accent });
+            if (points.Length > 0)
+            {
+                var latest = points.Last();
+                float fraction = (float)((latest.PriceCents - _low) / (_high - _low));
+                var tag = Ui.FlatPanel(transform,"StockCurrentPrice",Ui.ChangeColor(latest.PriceCents - points.First().PriceCents));
+                var rt=tag.rectTransform;rt.anchorMin=rt.anchorMax=new Vector2(1,fraction);rt.pivot=new Vector2(1,.5f);
+                rt.sizeDelta=new Vector2(80,25);rt.anchoredPosition=new Vector2(-12,Mathf.Lerp(28,-12,fraction));
+                var text=Ui.Label(tag.transform,Money.FromCents(latest.PriceCents).ToString(),13,TextAnchor.MiddleCenter,Color.white);
+                text.rectTransform.Fill();text.raycastTarget=false;tag.raycastTarget=false;
+                if(cost.HasValue)
+                {
+                    float y=(float)((cost.Value-_low)/(_high-_low));
+                    var basis=Ui.Label(transform,"成本 ¥"+(cost.Value/100).ToString("N2"),12,TextAnchor.MiddleLeft,CostColor);
+                    basis.rectTransform.anchorMin=basis.rectTransform.anchorMax=new Vector2(0,y);basis.rectTransform.pivot=new Vector2(0,0);
+                    basis.rectTransform.anchoredPosition=new Vector2(84,Mathf.Lerp(28,-12,y)+3);basis.rectTransform.sizeDelta=new Vector2(120,20);basis.raycastTarget=false;
+                }
+            }
             if (_tradeMarks.Length > 0) this.Tip(TradeTooltip);
         }
 

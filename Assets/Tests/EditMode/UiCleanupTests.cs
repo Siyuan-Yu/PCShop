@@ -804,7 +804,7 @@ namespace PCShopSell.Tests
                     Assert.AreEqual($"×{lots} 股", cycle.GetComponentInChildren<Text>().text);
                     r.Button("StockDraftPlus_city_chip").onClick.Invoke();
                     var draft = r.Components<Text>().Single(t => t.name == "StockDraft_city_chip");
-                    Assert.AreEqual($"+{lots * GameSession.StockLotSize:N0} 股", draft.text);
+                    Assert.AreEqual($"+{lots * GameSession.StockLotSize:N0}", draft.text);
                     r.Button("StockDraftMinus_city_chip").onClick.Invoke();
                     Assert.AreEqual("—", draft.text);
                 }
@@ -813,7 +813,7 @@ namespace PCShopSell.Tests
                 r.Button("StockChartSeries_city_chip").onClick.Invoke();
                 Assert.That(r.Button("StockChartSeries_city_chip").transform.Find("SeriesHidden"), Is.Not.Null);
                 r.Button("StockPage_Exchange").onClick.Invoke();
-                Assert.That(r.Components<Text>().Single(t => t.name == "StockDraft_city_chip").text, Is.EqualTo("+1 股"));
+                Assert.That(r.Components<Text>().Single(t => t.name == "StockDraft_city_chip").text, Is.EqualTo("+1"));
                 Assert.AreEqual(cash, r.S.Ledger.Balance);
                 r.Button("StockBatchExecute").onClick.Invoke();
                 StringAssert.Contains("成交会动用预留资金", r.Text);

@@ -23,40 +23,22 @@ namespace PCShopSell.Game.UI
 
         private void BuildWorkbenchPersonal(Transform parent, Window w)
         {
-            var row = Ui.Row(parent, -1, 12); Ui.Size(row, -1, -1, 1).GetComponent<LayoutElement>().flexibleHeight = 1;
-            var me = WbColumn(row, "WorkbenchPersonalState");
-            WbHeading(me, "我的状态");
-            WbMeter(me, "健康", S.Player.Health, 100); WbMeter(me, "精力", S.Player.Energy, S.Player.MaxEnergy, S.Player.Energy.ToString("0") + "/" + S.Player.MaxEnergy.ToString("0"));
-            WbMeter(me, "饱腹", S.Player.Hunger, 100); WbMeter(me, "心情", S.Player.Mood, 100); WbMeter(me, "营养", S.Player.Nutrition, 100);
-            WbHeading(me, "工作属性");
-            WbStat(me, "智力", S.Player.Intelligence.ToString(), null, 15); WbStat(me, "魅力", S.Player.Charm.ToString(), null, 15);
-            WbStat(me, "动手", S.Player.Skill.ToString(), null, 15); WbStat(me, "体能", S.Player.Stamina.ToString(), null, 15);
-            WbHeading(me, "住处与载具");
-            WbStat(me, S.HomeTitle, "周租 " + S.CurrentHomeRent, null, 15); WbStat(me, "载具", S.CurrentVehicle.Name, null, 15);
-            WbStat(me, "过去24小时睡眠", S.SleepHoursLast24.ToString("0.#") + " / 8 小时", null, 15);
-            var meActions = Ui.Row(me, 34, 6);
-            Ui.Size(WbButton(meActions, "生活托管设置", OpenHomeAutomation, "WorkbenchPersonalAutomation"), -1, 34, 1);
-            Ui.Size(WbButton(meActions, "背包与家中物品", OpenBackpackPanel, "WorkbenchBackpack"), -1, 34, 1);
-
-            var todo = WbColumn(row, "WorkbenchPersonalDecisions", 1.8f);
-            WbHeading(todo, "今日待办");
-            BuildWorkbenchTodos(WbScroll(todo, "WorkbenchDecisionsList"), w);
-            var links = Ui.Row(todo, 32, 8);
-            WbAction(links, "日程与邀约", OpenSchedulePanel, "WorkbenchCalendar");
-            WbFlex(links);
-
-            var finance = WbColumn(row, "WorkbenchPersonalFinance", 1.1f);
-            WbHeading(finance, "我的财务");
-            Ui.Size(Ui.Label(finance, S.Ledger.Balance.ToString(), 30, TextAnchor.MiddleLeft, WbInk), -1, 42).fontStyle = FontStyle.Bold;
-            Ui.Size(Ui.Label(finance, "净资产 " + S.NetWorth() + (S.TotalDebt.IsPositive ? " · 债务 " + S.TotalDebt : ""), 14, TextAnchor.MiddleLeft, WbDim), -1, 22);
-            var periodRow = Ui.Row(finance, 28, 6); WbSegment(periodRow, new[] { "昨日", "近7日", "本月" }, _workbenchPeriod, n => { _workbenchPeriod = n; w.RequestRebuild(); }, "WorkbenchPeriod_"); WbFlex(periodRow); var range = WorkbenchDates(true); var flow = S.WorkbenchPersonalCash(range.from, range.to);
-            if (_workbenchPeriod == 0 && S.Clock.Today.TotalDays == 0) flow = (Money.Zero, Money.Zero);
-            WbStat(finance, "收入", "+" + flow.income, Ui.FlatUp); WbStat(finance, "支出", "-" + flow.expense, Ui.FlatDown);
-            var floating = StockUnrealized;
-            WbStat(finance, "证券浮动盈亏", floating.ToString(), floating.IsNegative ? Ui.FlatDown : Ui.FlatUp);
-            Ui.Size(Ui.Label(finance, "日常收支 · 投资与借还单列", 13, TextAnchor.MiddleLeft, WbDim), -1, 20);
-            WbLink(finance, "完整账本", OpenLedger, "WorkbenchLedger"); WbLink(finance, "物业与资产", OpenCityProperties, "WorkbenchProperties");
-            WbLink(finance, "手机借款与还款", OpenLoansApp, "WorkbenchDebt");
+            var row = Ui.Row(parent,-1,16);Ui.Size(row).GetComponent<LayoutElement>().flexibleHeight=1;
+            var todo=WbColumn(row,"WorkbenchPersonalDecisions",1.5f);WbHeading(todo,"今日待办");
+            _wbTodoPrimary=false;BuildWorkbenchTodos(WbScroll(todo,"WorkbenchDecisionsList"),w);
+            var right=Ui.Rect(row,"WorkbenchPersonalRight");Ui.VList(right,12,0);Ui.Size(right,0,-1,1);
+            var me=WbColumn(right,"WorkbenchPersonalState");Ui.Size(me,-1,302);WbHeading(me,"我的状态");
+            WbMeter(me,"健康",S.Player.Health,100);WbMeter(me,"精力",S.Player.Energy,S.Player.MaxEnergy,S.Player.Energy.ToString("0")+"/"+S.Player.MaxEnergy.ToString("0"));
+            WbMeter(me,"饱腹",S.Player.Hunger,100);WbMeter(me,"心情",S.Player.Mood,100);WbMeter(me,"营养",S.Player.Nutrition,100);
+            var skills=Ui.Row(me,34,8);
+            foreach(var pair in new[]{("智力",S.Player.Intelligence),("魅力",S.Player.Charm),("动手",S.Player.Skill),("体能",S.Player.Stamina)})
+                Ui.Size(Ui.Label(skills,pair.Item1+"  "+pair.Item2,15,TextAnchor.MiddleCenter),0,32,1);
+            var home=WbColumn(right,"WorkbenchHomeVehicle");Ui.Size(home,-1,150);WbHeading(home,"住处与载具");
+            WbText(home,S.HomeTitle+" · 周租 "+S.CurrentHomeRent+" · "+S.CurrentVehicle.Name,15);
+            Ui.Size(Ui.Button(home,"背包与家中物品",OpenBackpackPanel,16,Ui.ButtonSecondary),-1,36).name="WorkbenchBackpack";
+            var schedule=WbColumn(right,"WorkbenchRecentSchedule");WbHeading(schedule,"近期日程");
+            BuildWorkbenchActivityRows(schedule,false,true);
+            WbLink(schedule,"全部日程",OpenSchedulePanel,"WorkbenchCalendar",32);
         }
 
         private void WbTodo(Transform parent, string title, string detail, Color accent, string button, Action action, string name)
@@ -64,15 +46,16 @@ namespace PCShopSell.Game.UI
             var card = Ui.Panel(parent, name, Ui.ButtonBg).rectTransform;
             var layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12; layout.padding = new RectOffset(0, 10, 6, 6);
-            layout.childControlWidth = layout.childControlHeight = true; layout.childForceExpandWidth = false; layout.childForceExpandHeight = true;
+            layout.childControlWidth = layout.childControlHeight = true; layout.childForceExpandWidth = false; layout.childForceExpandHeight = false;
             layout.childAlignment = TextAnchor.MiddleLeft;
-            Ui.Size(card, -1, 66);   // 固定高度：标题最多两行，再加一行说明
-            Ui.Size(Ui.Panel(card, "TodoRail", accent), 5, -1, 0);
-            var text = Ui.Rect(card, "TodoText"); Ui.VList(text, 1, 0); Ui.Size(text, -1, -1, 1);
-            Ui.Label(text, title, 16);
-            if (!string.IsNullOrEmpty(detail)) Ui.Label(text, detail, 13, TextAnchor.MiddleLeft, WbDim);
-            if (button != null && action != null) Ui.Size(Ui.Button(card, button, action, 15, Ui.ButtonHot), 104, 34, 0).name = name + "_Action";
+            Ui.Size(card, -1, 102);   // 固定高度：标题最多两行，再加一行说明
+            Ui.Size(Ui.Panel(card, "TodoRail", accent), 5, 90, 0);
+            var text = Ui.Rect(card, "TodoText"); Ui.VList(text, 1, 0); Ui.Size(text, -1, 86, 1);
+            Bold(Ui.Size(Ui.Label(text, title, 19), -1, 48));
+            if (!string.IsNullOrEmpty(detail)) Ui.Size(Ui.Label(text, detail, 15, TextAnchor.MiddleLeft, WbDim), -1, 24);
+            if (button != null && action != null) Ui.Size(Ui.Button(card, button, action, 16, !_wbTodoPrimary ? Ui.ButtonHot : Ui.ButtonSecondary), 104, 34, 0).name = name + "_Action";
             else if (button != null) Ui.Size(Ui.Label(card, button, 14, TextAnchor.MiddleCenter, WbDim), 104, 34, 0);
+            if (button != null && action != null) _wbTodoPrimary = true;
         }
         private void GoWorkbenchStock(string id, bool shortMode)
         {
@@ -145,23 +128,38 @@ namespace PCShopSell.Game.UI
 
         private void BuildWorkbenchBusiness(Transform parent, Window w)
         {
-            var nav = Ui.Row(parent, 32, 6); string[] names = { "报表", "门店", "人员采购", "订单合作", "资产" };
-            for (int i = 0; i < names.Length; i++) { int index = i; WbSubTab(nav, names[i], () => { _workbenchBusinessTab = index; w.RequestRebuild(); }, "WorkbenchBusiness_" + i, _workbenchBusinessTab == i, 128); }
-            WbFlex(nav);
-            if (_workbenchBusinessTab == 0)
+            var row=Ui.Row(parent,-1,16);Ui.Size(row).GetComponent<LayoutElement>().flexibleHeight=1;
+            var shops=WbColumn(row,"WorkbenchShopSelector");Ui.Size(shops,280,-1,0);
+            WbHeading(shops,"我的门店 · "+S.MyShops.Count+" 家");
+            var all=Ui.Size(Ui.Button(shops,"全部门店 · 总览",()=>{_workbenchShop="";w.RequestRebuild();},18,Ui.ButtonBg),-1,48);
+            all.name="WorkbenchShop_all";if(string.IsNullOrEmpty(_workbenchShop))Ui.FlatBorder(all.image,Ui.SelectionEdge,1.5f);
+            var list=WbScroll(shops,"WorkbenchShopList");
+            foreach(var group in S.MyShops.GroupBy(x=>x.Place.StreetId))
             {
-                // 统计周期只是个筛选，做成右上角的小分段，不再占一整行。
-                string[] periods = { "今日", "近7日", "本月" };
-                for (int i = 0; i < periods.Length; i++) { int n = i; WbSubTab(nav, periods[i], () => { _workbenchPeriod = n; w.RequestRebuild(); }, "WorkbenchPeriod_" + i, _workbenchPeriod == i, 78, 32); }
+                Ui.Size(Bold(Ui.Label(list,S.City.StreetName(group.Key)+" · "+group.Count()+" 家",15)), -1,30);
+                foreach(var shop in group)
+                {
+                    var target=shop; bool selected=_workbenchShop==shop.Place.Id;
+                    var button=Ui.Size(Ui.Button(list,"",()=>{_workbenchShop=target.Place.Id;w.RequestRebuild();},17),-1,112);
+                    button.name="WorkbenchShop_"+shop.Place.Id;
+                    var label=button.GetComponentInChildren<Text>();label.alignment=TextAnchor.MiddleLeft;
+                    label.text="<b>"+S.ShopTitle(shop)+"</b>\n<size=14>"+(shop.Sim.IsOpen?"营业中":"休息")
+                        +(!S.IsOwnedVenue(shop.Place)&&WbStockCount(shop)==0?"  · 缺货":"")+(!S.Employees.Any(e=>e.Shop==shop)?"  · 无人值守":"")+"\n今日 "+S.GetCityFinance(S.Clock.Today,S.Clock.Today,shop.Place.Id).Sales+"</size>";
+                    if(selected)Ui.FlatBorder(button.image,Ui.SelectionEdge,1.5f);
+                }
             }
-            switch (_workbenchBusinessTab)
+            var body=Ui.Rect(row,"WorkbenchShopWorkspace");Ui.Size(body,0,-1,1);Ui.VList(body,12,0);
+            var chosen=S.MyShops.FirstOrDefault(x=>x.Place.Id==_workbenchShop);
+            if(chosen==null)
             {
-                case 0: BuildWorkbenchReport(parent, w); break;
-                case 1: BuildWorkbenchShops(parent, w); break;
-                case 2: BuildWorkbenchStaff(parent, w); break;
-                case 3: BuildWorkbenchOrdersPage(parent, w); break;
-                default: BuildWorkbenchAssets(parent); break;
+                var periods=Ui.Row(body,30,6);WbFlex(periods);WbSegment(periods,new[]{"今日","近7日","本月"},_workbenchPeriod,n=>{_workbenchPeriod=n;w.RequestRebuild();},"WorkbenchPeriod_");
+                BuildWorkbenchReport(body,w);
+                var actions=Ui.Row(body,40,8);
+                WbAction(actions,"全店补货预算",OpenProcurementBudget,"ProcurementBudget",160);
+                WbAction(actions,"直供协议与账款",OpenProcurementAgreement,"WorkbenchDirectSupply",180);
+                WbAction(actions,"品牌与合作 ›",OpenWorkbenchCooperation,"WorkbenchBrandBusiness",160);WbFlex(actions);
             }
+            else BuildWorkbenchShopDetail(body,w,chosen);
         }
 
         /// <summary>街区筛选：只有跨 2 条以上街区时才显示。</summary>
@@ -227,54 +225,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildWorkbenchShopDetail(Transform parent, Window w, OwnedShop shop)
         {
-            if (S.IsOwnedVenue(shop.Place)) { WbButton(parent, "服务价格、营业与值守", () => OpenVenueManagement(shop.Place), "WorkbenchVenue"); return; }
-            var sim = shop.Sim;
-            var columns = Ui.Row(parent, -1, 14);
-            var left = Ui.Rect(columns, "ShopSettings"); Ui.VList(left, 8, 0); Ui.Size(left, -1, -1, 1);
-            var right = Ui.Rect(columns, "ShopGoods"); Ui.VList(right, 4, 0); Ui.Size(right, -1, -1, 1.5f);
-
-            WbHeading(left, "经营设置");
-            var hours = Ui.Row(left, 34, 6);
-            Ui.Size(Ui.Label(hours, "营业时间", 15, TextAnchor.MiddleLeft, WbDim), 70, -1, 0);
-            var options = Enumerable.Range(0, 24).Select(i => i.ToString("00") + ":00").ToArray();
-            const int defaultOpenHour = PCShopSell.Core.Shop.ShopSimulation.DefaultOpenMinute / 60, defaultCloseHour = PCShopSell.Core.Shop.ShopSimulation.DefaultCloseMinute / 60;
-            int openHour = sim.AllDay ? defaultOpenHour : sim.OpenMinute / 60;
-            int closeHour = sim.AllDay ? defaultCloseHour : sim.CloseMinute / 60 % 24;
-            var open = Ui.Size(Ui.Choice(hours, options, openHour, i => { S.SetWorkbenchHours(shop.Place.Id, i, closeHour, false); w.RequestRebuild(); }), 96, 34, 0); open.name = "WorkbenchOpenHour";
-            var close = Ui.Size(Ui.Choice(hours, options, closeHour, i => { S.SetWorkbenchHours(shop.Place.Id, openHour, i, false); w.RequestRebuild(); }), 96, 34, 0); close.name = "WorkbenchCloseHour";
-            Ui.Size(WbButton(hours, sim.AllDay ? "不限时 ✓" : "不限时", () => { S.SetWorkbenchHours(shop.Place.Id, defaultOpenHour, defaultCloseHour, !sim.AllDay); w.RequestRebuild(); }, "WorkbenchAllDay"), -1, 34, 1);
-            Ui.Size(Ui.Label(left, "统一加价 " + sim.Markup.ToString("0.00") + "×", 15, TextAnchor.MiddleLeft, WbDim), -1, 22);
-            PriceMultiplierEditor(left, "WorkbenchMarkup_" + shop.Place.Id, "统一加价", () => sim.Markup, PCShopSell.Core.Shop.ShopSettings.MinMarkup, PCShopSell.Core.Shop.ShopSettings.MaxMarkup, .05, value => S.SetWorkbenchMarkup(shop.Place.Id, value), w.RequestRebuild);
-            var actions = Ui.Row(left, 32, 6);
-            Ui.Size(WbButton(actions, "员工与排班", OpenEmployeesPanel, "WorkbenchShopStaff"), -1, 32, 1);
-            Ui.Size(WbButton(actions, "进货员与记录", () => OpenShopBuyers(shop), "WorkbenchShopBuyers"), -1, 32, 1); Ui.Size(WbButton(actions, "本店采购", () => OpenCityProcurementFor(shop), "WorkbenchShopProcurement"), -1, 32, 1);
-            
-            Ui.Size(Ui.Label(left, "搬运、摆放家具和手工装机需本人到店。", 13, TextAnchor.MiddleLeft, WbDim), -1, 20);
-
-            WbHeading(right, "已陈列商品 · 定价");
-            var widths = new[] { 96f, 80f, 80f, 70f };
-            Ui.Size(Ui.Rect(WbTable(right, new[] { "商品", "陈列 / 库存", "售价", "购买意愿" }, widths, true), "Gap"), 54, -1, 0);
-            var shelfStock = sim.Stock.GoodsLines().ToDictionary(l => l.Key, l => l.Value);
-            foreach (var kind in ShelfKinds.All)
-            {
-                var fill = sim.ShelfFillOf(kind);
-                foreach (var line in fill.Goods)
-                {
-                    string id = line.Key; var price = sim.GoodsPriceOf(id);
-                    string intent = PurchaseEstimateText(sim.GoodsPurchaseEstimateAtPrice(id, price));
-                    var row = WbTable(right, new[] { Gifts.Get(id).Name, line.Value + " / " + (shelfStock.TryGetValue(id, out int back) ? back : line.Value), price.ToString(), intent }, widths, itemKey: id);
-                    Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchGoodsPrice(shop, id), 14, Ui.ButtonBg), 54, 28, 0).name = "WorkbenchGoods_" + id;
-                }
-                foreach (var line in fill.Parts)
-                {
-                    var part = line.Part; bool boxed = line.Boxed; var price = sim.PriceOf(part, boxed);
-                    int intent = (int)Math.Round(sim.PartPurchaseIntentAtPrice(part, boxed, price.Yuan) * 100);
-                    var row = WbTable(right, new[] { part.Name + (boxed ? "·盒装" : "·散件"), line.Count + " / " + sim.Stock.CountAll(part), price.ToString(), intent + "%" }, widths, itemKey: part.Id);
-                    Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchPartPrice(shop, part, boxed), 14, Ui.ButtonBg), 54, 28, 0).name = "WorkbenchPart_" + part.Id + (boxed ? "_b" : "_l");
-                }
-            }
-            var back2 = sim.Stock.GoodsLines().Select(l => Gifts.Get(l.Key).Name + " " + l.Value).Concat(sim.Stock.Lines().Select(l => l.Part.Name + (l.Boxed ? "·盒" : "·散") + " " + l.Count)).ToArray();
-            Ui.Size(Ui.Label(right, "后仓库存（查看）：" + (back2.Length == 0 ? "空" : string.Join(" / ", back2)), 13, TextAnchor.UpperLeft, WbDim), -1, 20 + 18 * (back2.Length / 6));
+            BuildWorkbenchUnifiedShop(parent,w,shop);
         }
         private void BuildWorkbenchStaff(Transform parent, Window w)
         {
@@ -385,7 +336,7 @@ namespace PCShopSell.Game.UI
         {
             var card = Ui.FlatPanel(parent, "Strip_" + head).rectTransform; Ui.VList(card, 0, 8); Ui.Size(card, -1, 62, 1);
             Ui.Size(Ui.Label(card, head, 14, TextAnchor.MiddleLeft, WbDim), -1, 18);
-            var text = Ui.Label(card, value, 25, TextAnchor.MiddleLeft, color ?? WbInk); text.fontStyle = FontStyle.Bold; Ui.Size(text, -1, 32);
+            var text = Ui.Label(card, value, 21, TextAnchor.MiddleLeft, color ?? WbInk); text.fontStyle = FontStyle.Bold; Ui.Size(text, -1, 32);
         }
 
         private string _workbenchReportShop = "";
@@ -418,11 +369,10 @@ namespace PCShopSell.Game.UI
             var strip = Ui.Row(parent, 66, 10); strip.name = "WorkbenchOperatingSummary";
             WbStripCard(strip, "销售", summary.Sales.ToString()); WbStripCard(strip, "经营支出", summary.OperatingOut.ToString());
             WbStripCard(strip, "现金净额", summary.OperatingNet.ToString(), summary.OperatingNet.IsNegative ? Ui.FlatDown : Ui.FlatUp);
-            BuildWorkbenchStreetFilter(parent, w);
             var row = Ui.Row(parent, -1, 12); Ui.Size(row, -1, -1, 1).GetComponent<LayoutElement>().flexibleHeight = 1;
-            var report = WbColumn(row, "WorkbenchShopReports", 2.4f); WbHeading(report, "门店收支");
+            var report = WbColumn(row, "WorkbenchShopReports", 1.2f); WbHeading(report, "门店收支");
             var list = WbScroll(report, "WorkbenchShopReportList");
-            var widths = new[] { 110f, 110f, 110f };
+            var widths = new[] { 86f, 86f, 86f };
             foreach (var group in WbVisibleShops().GroupBy(s => s.Place.StreetId ?? "").OrderBy(g => S.City.StreetName(g.Key)))
             {
                 var totals = group.Select(s => S.GetCityFinance(range.from, range.to, s.Place.Id)).ToArray();

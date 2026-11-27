@@ -55,10 +55,10 @@ namespace PCShopSell.Core.Session
         public int BaseCents;
         public string Industry, RivalKind;
         public double Volatility, Margin;
-        public long DailyRevenueYuan, Liquidity;
+        public long DailyRevenueYuan, Liquidity, TotalShares;
         public CityEquityDefinition(string id, string name, string description, int cents, string industry,
-            long revenue, double margin, double volatility, long liquidity, string rivalKind=null)
-        { Id=id;Name=name;Description=description;BaseCents=cents;Industry=industry;DailyRevenueYuan=revenue;Margin=margin;Volatility=volatility;Liquidity=liquidity;RivalKind=rivalKind; }
+            long revenue, double margin, double volatility, long liquidity, string rivalKind=null, long totalShares=1_000_000)
+        { Id=id;Name=name;Description=description;BaseCents=cents;Industry=industry;DailyRevenueYuan=revenue;Margin=margin;Volatility=volatility;Liquidity=liquidity;RivalKind=rivalKind;TotalShares=totalShares; }
     }
 
     public static class CityInvestments
@@ -78,6 +78,13 @@ namespace PCShopSell.Core.Session
             new CityEquityDefinition("life_company", "云帆技术服务公司", "主营企业管理软件、系统实施和运维，签约、交付验收与云资源成本影响业绩。",
                 4600, SoftwareServicesIndustry, 950000, .11, .02, 17000),
         };
+        // 定义常量，不进入存档。约为每日流动量的 50–80 倍，持有一两成需要持续投入。
+        static CityInvestments()
+        {
+            long[] shares = { 1_200_000, 1_800_000, 900_000, 1_000_000, 1_100_000, 800_000,
+                2_000_000, 800_000, 1_600_000, 1_400_000, 1_100_000 };
+            for (int i = 0; i < All.Length; i++) All[i].TotalShares = shares[i];
+        }
         public static CityEquityDefinition Get(string id) => Array.Find(All, x => x.Id == id);
         public static Money Fee(Money gross, bool hardware = false) => Money.FromCents(Math.Max(1,
             checked((gross.Cents * (hardware ? 5 : 2) + 999) / 1000)));

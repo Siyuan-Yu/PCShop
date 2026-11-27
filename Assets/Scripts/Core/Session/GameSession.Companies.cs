@@ -566,7 +566,7 @@ namespace PCShopSell.Core.Session
             var company = ListedCompanyOf(id);
             if (company == null) return CityInvestments.Get(id);
             return new CityEquityDefinition(id, CompanyName(company), "以所属门店实际经营财报定价。", (int)company.ListingPriceCents,
-                CompanyIndustryName(Brand(company.BrandId).Kind), 0, .08, .008, 15000);
+                CompanyIndustryName(Brand(company.BrandId).Kind), 0, .08, .008, 15000, totalShares: CompanyTotalShares);
         }
 
         public long CompanyFounderHolding(CompanyRecord company) => company?.ListedDay >= 0 ? CompanyFounderShares : 0;

@@ -21,9 +21,9 @@ namespace PCShopSell.Game.UI
             return kind switch { 'r' => Ui.Warn, 'y' => Ui.Accent, 'g' => Ui.Good, _ => Ui.InfoInk };
         }
 
-        /// <summary>金色小标题。</summary>
+        /// <summary>纸面卡片上的暖炭标题。</summary>
         private static Text WbHeading(Transform parent, string text, int size = 19) =>
-            Bold(Ui.Size(Ui.Label(parent, text, size, TextAnchor.MiddleLeft, Ui.Accent), -1, size * 1.5f));
+            Bold(Ui.Size(Ui.Label(parent, text, size, TextAnchor.MiddleLeft, Ui.TextColor), -1, size * 1.5f));
 
         private static Text Bold(Text t) { t.fontStyle = FontStyle.Bold; return t; }
 
@@ -46,7 +46,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(b, -1, height); return b;
         }
 
-        /// <summary>小号分段切换（周期等筛选）：选中使用琥珀色。</summary>
+        /// <summary>小号分段切换（周期等筛选）：选中使用暖炭色。</summary>
         private static void WbSegment(Transform row, string[] labels, int selected, Action<int> pick, string namePrefix, float width = 76, float height = 28)
         {
             for (int i = 0; i < labels.Length; i++) { int n = i; WbSubTab(row, labels[i], () => pick(n), namePrefix + i, selected == i, width, height); }
@@ -87,6 +87,7 @@ namespace PCShopSell.Game.UI
         private static void WbMeter(Transform parent, string label, double value, double max, string valueText = null, bool warn = false)
         {
             var row = Ui.Row(parent, 24, 8); row.name = "Meter_" + label;
+            row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
             Ui.Size(Ui.Label(row, label, 15, TextAnchor.MiddleLeft, WbDim), 58, -1, 0);
             var track = Ui.Panel(row, "MeterTrack", Ui.FlatWell); Ui.FlatBorder(track, Ui.FlatButtonEdge); Ui.Size(track, 0, 10, 1);
             var fill = Ui.Panel(track.transform, "Value", warn ? Ui.Warn : Ui.Accent); fill.raycastTarget = false;
@@ -119,8 +120,8 @@ namespace PCShopSell.Game.UI
             layout.spacing = 14; layout.padding = new RectOffset(0, 12, 4, 4);
             layout.childControlWidth = layout.childControlHeight = true; layout.childForceExpandWidth = false; layout.childForceExpandHeight = true; layout.childAlignment = TextAnchor.MiddleLeft;
             Ui.Size(bar, -1, 34, 0);
-            Ui.Size(Ui.Panel(bar, "Rail", Ui.Accent), 5, -1, 0);
-            var head = Ui.Label(bar, title, 17, TextAnchor.MiddleLeft, Ui.Accent); head.fontStyle = FontStyle.Bold; head.horizontalOverflow = HorizontalWrapMode.Overflow; Ui.Size(head, -1, -1, 0);
+            Ui.Size(Ui.Panel(bar, "Rail", Ui.InfoInk), 5, -1, 0);
+            var head = Ui.Label(bar, title, 17, TextAnchor.MiddleLeft, Ui.TextColor); head.fontStyle = FontStyle.Bold; head.horizontalOverflow = HorizontalWrapMode.Overflow; Ui.Size(head, -1, -1, 0);
             var dim = Ui.Label(bar, info, 13, TextAnchor.MiddleLeft, WbDim); dim.horizontalOverflow = HorizontalWrapMode.Overflow;
             WbFlex(bar);
             if (!string.IsNullOrEmpty(chipText)) WbChip(bar, chipText, chipKind);

@@ -183,6 +183,7 @@ namespace PCShopSell.Game.UI
             var content = PhoneFlexibleScroll(parent, name);
             content.parent.parent.GetComponent<Image>().color = Color.clear;
             content.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(0, 0, 0, 0);
+            content.GetComponent<VerticalLayoutGroup>().spacing = 3;
             return content;
         }
         private Money StockUnrealized => S.CityEquityValue - S.CityEquityCost + S.FundValue
@@ -191,13 +192,14 @@ namespace PCShopSell.Game.UI
         private void BuildStockWorkspace(Window w)
         {
             var root = StockRoot(w);
-            var summary = Ui.Row(root, StockCashCardHeight, 12);
+            var summary = Ui.Row(root, _stockEmbedded ? 48 : StockCashCardHeight, 12);
             var floating = StockUnrealized;
             var realized = S.StockTotalRealized;
-            var (cash, _) = StockCashCard(summary, "StockAvailableCash", "可用现金", 300);
+            Text cash = null;
+            if (!_stockEmbedded) (cash, _) = StockCashCard(summary, "StockAvailableCash", "可用现金", 260);
             var balance = S.Ledger.Balance;
-            cash.text = balance.ToString();
-            cash.color = balance.IsNegative ? Ui.FlatDown : Ui.Accent;
+            if (cash != null) { cash.text = balance.ToString(); cash.color = balance.IsNegative ? Ui.FlatDown : Ui.Accent; }
+            StockFlex(Ui.Label(summary, "持仓市值\n" + (S.CityEquityValue + S.FundValue), 17), 48);
             StockFlex(Ui.Label(summary, "总浮动盈亏  " + floating, 18, color: floating.IsNegative ? Ui.Warn : Ui.Good), 48);
             StockFlex(Ui.Label(summary, "已实现盈亏  " + realized, 18, color: realized.IsNegative ? Ui.Warn : Ui.Good), 48);
             StockFlex(Ui.Label(summary, S.StockTradingStatus + "\n下次报价 " + S.StockNextQuote, 15, color: Ui.Dim), 48);
@@ -231,7 +233,7 @@ namespace PCShopSell.Game.UI
                 case StockPage.News: BuildStockNews(w, StockScroll(root, "StockNewsScroll")); break;
                 default: BuildStockExchange(w, refreshNavigation); break;
             }
-            navigation.SetAsLastSibling();
+            // 页签固定在摘要下方，不移到底部。
         }
 
         private (RectTransform navigation, Action refresh) BuildStockPageTabs(Window w, Transform parent)
@@ -247,7 +249,7 @@ namespace PCShopSell.Game.UI
                     _stockPage = page;
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
-                }, 17, Ui.SelectedButton(page == _stockPage));
+                }, 17, page == _stockPage ? Ui.Chrome : Ui.ButtonBg);
                 button.name = "StockPage_" + page;
                 Ui.Size(button, 132, 36);
                 if (page == StockPage.Exchange) exchange = button.GetComponentInChildren<Text>();
@@ -256,6 +258,20 @@ namespace PCShopSell.Game.UI
             {
                 int count = _stockSpotDraft.Count + _stockShortDraft.Count;
                 exchange.text = count == 0 ? "交易所" : $"交易所 · {count}";
+            }
+            WbFlex(navigation);
+            if (_stockPage == StockPage.Exchange)
+            {
+                foreach (bool mode in new[] { false, true })
+                {
+                    bool chosen = mode;
+                    Ui.Size(Ui.Button(navigation, mode ? "做空" : "买入", () =>
+                    { _stockShortMode = chosen; _stockTradeFeedback = null; w.Rebuild(); }, 16,
+                        mode == _stockShortMode ? Ui.Chrome : Ui.ButtonBg), 80, 34).name = "StockMode_" + (mode ? "short" : "spot");
+                }
+                Ui.Size(Ui.Button(navigation, _stockWatchOnly ? "只看自选 ✓" : "只看自选", () =>
+                { _stockWatchOnly = !_stockWatchOnly; w.Rebuild(); }, 15), 110, 34);
+                Ui.Size(Ui.Button(navigation, "?", () => { _stockHelp = !_stockHelp; w.Rebuild(); }, 18), 34, 34).Tip("交易规则");
             }
             Refresh();
             return (navigation, Refresh);
@@ -266,28 +282,6 @@ namespace PCShopSell.Game.UI
             bool shortMode = _stockShortMode;
             var draft = StockDraft(shortMode);
             var root = StockRoot(w);
-            var modes = Ui.Row(root, 37, StockQuoteGap);
-            foreach (bool mode in new[] { false, true })
-            {
-                var button = Ui.Button(modes, mode ? "做空" : "交易所", () =>
-                {
-                    if (mode == shortMode) return;
-                    _stockShortMode = mode;
-                    _stockTradeFeedback = null;
-                    w.ResetScrollOnRebuild = true;
-                    w.Rebuild();
-                }, 17, Ui.SelectedButton(mode == shortMode));
-                button.name = "StockMode_" + (mode ? "short" : "spot");
-                StockFlex(button, 36);
-            }
-            Ui.Size(Ui.Button(modes, _stockWatchOnly ? "只看自选 ✓" : "只看自选", () =>
-            {
-                _stockWatchOnly = !_stockWatchOnly;
-                w.ResetScrollOnRebuild = true;
-                w.Rebuild();
-            }, 15, Ui.SelectedButton(_stockWatchOnly)), 110, 36);
-            var help = Ui.Size(Ui.Button(modes, "?", () => { _stockHelp = !_stockHelp; w.Rebuild(); }, 18), 38, 36);
-            help.Tip("交易规则");
             if (_stockHelp)
             {
                 StockText(root, $"个股单日涨跌上限为 ±{GameSession.StockDailyLimitPercent}%，第 {GameSession.StockEarlyMarketDays + 1} 天起波动加大。\n"
@@ -305,65 +299,70 @@ namespace PCShopSell.Game.UI
                 refreshNavigation();
                 var quote = shownQuote = S.PreviewStockBatch(draft, shortMode, calculateReserve: false);
                 net.text = StockSignedMoney(quote.Net);
-                net.color = quote.Net.IsNegative ? Ui.FlatDown : quote.Net.IsPositive ? Ui.Good : Ui.TextColor;
+                net.color = quote.Net.IsNegative ? Ui.ChromeWarn : quote.Net.IsPositive ? Ui.ChromeGood : Ui.ChromeInk;
                 fees.text = (draft.ContainsKey("hardware") ? "佣金 0.2% · 旧指数 0.5%" : "佣金 0.2%")
                     + (draft.Count > 0 ? " · " + quote.Fees : "");
                 bool ready = quote.Blocker == null;
+                string summaryText = draft.Count > 2
+                    ? $"待{(shortMode ? "做空" : "买入")} {draft.Count(p => p.Value > 0)} 笔 · {draft.Where(p => p.Value > 0).Sum(p => p.Value):N0} 股 / 待{(shortMode ? "平仓" : "卖出")} {draft.Count(p => p.Value < 0)} 笔 · {draft.Where(p => p.Value < 0).Sum(p => -p.Value):N0} 股"
+                    : string.Join(" · ", draft.Select(pair => (pair.Value > 0 ? "待" + (shortMode ? "做空" : "买入") : "待" + (shortMode ? "平仓" : "卖出")) + " " + StockTitle(pair.Key) + " " + Math.Abs(pair.Value).ToString("N0") + " 股"));
                 status.text = _stockTradeFeedback ?? (ready
-                    ? $"{draft.Count} 笔待成交 · 成交后现金 {quote.CashAfter}"
+                    ? (draft.Count == 0 ? "暂无待成交订单" : summaryText)
                     : quote.Blocker);
-                status.color = _stockTradeFeedback != null ? (_stockTradeFailed ? Ui.Warn : Ui.Good)
-                    : !ready && draft.Count > 0 ? Ui.Warn : Ui.Dim;
+                status.color = _stockTradeFeedback != null ? (_stockTradeFailed ? Ui.ChromeWarn : Ui.ChromeGood)
+                    : !ready && draft.Count > 0 ? Ui.ChromeWarn : Ui.ChromeInk;
                 clear.interactable = draft.Count > 0;
                 execute.interactable = ready;
             }
 
-            var heading = Ui.Row(root, 33, StockQuoteGap);
-            Ui.Trim(heading, "StockHeadingRule", Ui.FlatWellEdge, 0);
-            heading.GetComponent<HorizontalLayoutGroup>().padding.right = 20;
-            StockFlex(Ui.Label(heading, "公司", 15, color: Ui.Dim), 33);
-            var quotes = Ui.Row(heading, 33, StockQuoteGap);
-            Ui.Size(quotes, StockQuoteWidth, 33, 0);
+            var workspace = Ui.Row(root, -1, 14);
+            Ui.Size(workspace, -1, -1, 1).GetComponent<LayoutElement>().flexibleHeight = 1;
+            var table = Ui.Rect(workspace, "StockQuoteTable"); Ui.VList(table, 3, 0);
+            Ui.Size(table, 0, -1, 1.75f);
+            var detail = Ui.FlatPanel(workspace, "StockDetailPane", Ui.ButtonBg).rectTransform;
+            Ui.Size(detail, 0, -1, 1); Ui.VList(detail, 6, 10);
+            var heading = Ui.Row(table, 32, 4);
+            StockFlex(Ui.Label(heading, "公司", 14, color: Ui.Dim), 32);
             void Sort(int column) { _stockSort = _stockSort == column ? 0 : column; w.Rebuild(); }
-            Ui.Size(Ui.Button(quotes, "股价", () => Sort(1), 15), 65, 31);
+            Ui.Size(Ui.Button(heading, "股价", () => Sort(1), 14), 86, 30);
             Text stepLabel = null;
-            string StepLabel() => "×" + StockLotSteps[_stockLotStep] + " 股";
-            var cycle = Ui.Size(Ui.Button(quotes, StepLabel(), () =>
-            {
-                _stockLotStep = (_stockLotStep + 1) % StockLotSteps.Length;
-                stepLabel.text = StepLabel();
-            }, 15, Ui.SelectedButton(true)), 74, 31);
-            cycle.name = "StockLotCycle";
-            cycle.Tip(() => $"每次加减 {StockStep:N0} 股 · 点击切换");
+            string StepLabel() => "×" + StockStep + " 股";
+            var cycle = Ui.Size(Ui.Button(heading, StepLabel(), () =>
+            { _stockLotStep = (_stockLotStep + 1) % StockLotSteps.Length; stepLabel.text = StepLabel(); }, 14), 68, 30);
+            cycle.name = "StockLotCycle"; cycle.Tip(() => $"每次加减 {StockStep:N0} 股 · 点击切换");
             stepLabel = cycle.GetComponentInChildren<Text>();
-            Ui.Size(Ui.Button(quotes, "涨跌", () => Sort(2), 15), 65, 31);
-            StockCell(heading, shortMode ? "做空股数" : "我的持股", StockPositionWidth, Ui.Dim);
-            StockCell(heading, shortMode ? "开仓均价" : "成本价", StockCostWidth, Ui.Dim);
-            StockCell(heading, "待成交", StockDraftWidth, Ui.Dim);
-            Ui.Size(Ui.Label(heading, shortMode ? "做空" : "买入", 15, TextAnchor.MiddleCenter, Ui.Dim), StockActionWidth, 39);
-            Ui.Size(Ui.Label(heading, shortMode ? "平仓" : "卖出", 15, TextAnchor.MiddleCenter, Ui.Dim), StockActionWidth, 39);
-            Ui.Size(Ui.Rect(heading, "StockActionsSpacer"), StockActionWidth, 39);
-
-            var list = StockScroll(root, "StockQuoteScroll");
+            Ui.Size(Ui.Button(heading, "涨跌", () => Sort(2), 14), 78, 30);
+            StockCell(heading, shortMode ? "做空股数" : "我的持股", 76, Ui.Dim);
+            StockCell(heading, "持股比例", 80, Ui.Dim);
+            StockCell(heading, shortMode ? "开仓均价" : "成本价", 86, Ui.Dim);
+            StockCell(heading, "待成交", 174, Ui.Dim);
+            var list = StockScroll(table, "StockQuoteScroll");
             var ids = StockIds.Where(id => (!_stockWatchOnly || S.StockWatched(id) || draft.ContainsKey(id))
                 && (id != "hardware" || !shortMode && (S.FundUnits > 0 || draft.ContainsKey(id))));
             if (_stockSort == 1) ids = ids.OrderByDescending(id => S.CityInvestmentPrice(id).Cents);
             if (_stockSort == 2) ids = ids.OrderByDescending(S.StockDayChange);
-            foreach (string id in ids) refreshRows.Add(BuildStockRow(w, list, id, shortMode, Refresh));
+            var visibleIds = ids.ToArray();
+            if (!visibleIds.Contains(_stockExpanded)) _stockExpanded = visibleIds.FirstOrDefault();
+            foreach (string id in visibleIds) refreshRows.Add(BuildStockRow(w, list, id, shortMode, Refresh));
             if (refreshRows.Count == 0) StockText(list, "暂无自选股票。", 16, Ui.Dim);
-
-            var footer = Ui.Row(root, StockCashCardHeight, 10);
-            (net, fees) = StockCashCard(footer, "StockBatchNet", "现金净变动", 360, withDetail: true);
-            status = Ui.Label(footer, "", 16, TextAnchor.MiddleCenter);
-            status.name = "StockTradeFeedback";
-            StockFlex(status, 56);
-            clear = Ui.Size(Ui.Button(footer, "清空", () =>
+            if (_stockExpanded != null)
             {
-                draft.Clear();
-                _stockTradeFeedback = null;
-                if (_stockWatchOnly) w.Rebuild();
-                else Refresh();
-            }, 16, Ui.ButtonSecondary), 82, 42);
+                string id = _stockExpanded; long held = StockHeld(id, shortMode);
+                long basis = shortMode ? S.StockState(id)?.ShortBasisCents ?? 0 : S.CityInvestmentCost(id).Cents;
+                double? cost = held > 0 ? basis / (double)held : (double?)null;
+                BuildStockDetails(w, detail, id, held, basis, cost, cost.HasValue ? "¥" + (cost.Value / 100).ToString("N2") : "—");
+            }
+            var footer = Ui.Row(root, StockCashCardHeight, 12);
+            var footerImage = footer.gameObject.AddComponent<Image>(); footerImage.color = Ui.Chrome;
+            footer.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(12,12,6,6);
+            var netCard = Ui.Rect(footer, "StockNetCard"); Ui.Size(netCard, 280, -1); Ui.VList(netCard, 0, 0);
+            Ui.Size(Ui.Label(netCard, "现金净变动", 14, color: Ui.ChromeDim), -1, 18);
+            net = Ui.Size(Ui.Label(netCard, "", 23, color: Ui.ChromeInk), -1, 28); net.name = "StockBatchNet";
+            fees = Ui.Size(Ui.Label(netCard, "", 12, color: Ui.ChromeDim), -1, 17);
+            status = Ui.Label(footer, "", 16, TextAnchor.MiddleLeft, Ui.ChromeInk);
+            status.name = "StockTradeFeedback"; StockFlex(status, 54);
+            clear = Ui.Size(Ui.Button(footer, "清空", () =>
+            { draft.Clear(); _stockTradeFeedback = null; if (_stockWatchOnly) w.Rebuild(); else Refresh(); }, 16, Ui.ButtonSecondary), 92, 42);
             clear.name = "StockDraftClear";
             execute = Ui.Size(Ui.Button(footer, "成交！", () => ExecuteStockDraft(w, shortMode, shownQuote), 20, Ui.ButtonHot), 124, 46);
             execute.name = "StockBatchExecute";
@@ -410,63 +409,55 @@ namespace PCShopSell.Game.UI
             refresh();
         }
 
+        private static string StockRatioText(double ratio) => ratio > 0 && ratio < .0001 ? "<0.01%" : ratio == 0 ? "0%" : ratio.ToString("P2");
+
         private Action BuildStockRow(Window w, Transform list, string id, bool shortMode, Action refresh)
         {
-            bool expanded = _stockExpanded == id;
-            var stock = S.StockState(id);
+            bool selected = _stockExpanded == id;
             long held = StockHeld(id, shortMode);
-            long basis = shortMode ? stock.ShortBasisCents : S.CityInvestmentCost(id).Cents;
-            double? cost = held > 0 ? basis / (double)held : (double?)null;
-            string costText = cost.HasValue ? "¥" + (cost.Value / 100).ToString("N2") : "—";
-            var row = Ui.Row(list, 42, StockQuoteGap);
-            row.name = "StockQuote_" + id;
-            var background = row.gameObject.AddComponent<Image>();
-            background.raycastTarget = false;
-            Ui.Trim(row, "StockQuoteRule", Ui.FlatCardEdge, 0);
-            Ui.Size(Ui.Button(row, S.StockWatched(id) ? "★" : "☆", () => { S.ToggleStockWatch(id); w.Rebuild(); }, 17), 40, 36);
-            var name = Ui.Button(row, (expanded ? "▾  " : "▸  ") + StockTitle(id), () =>
-            {
-                _stockExpanded = expanded ? null : id;
-                _stockCandles = false;
-                w.Rebuild();
-                if (!expanded) RevealStock(w, id);
-            }, 17, Ui.SelectedButton(expanded));
+            long basis = shortMode ? S.StockState(id)?.ShortBasisCents ?? 0 : S.CityInvestmentCost(id).Cents;
+            string cost = held > 0 ? "¥" + (basis / (double)held / 100).ToString("N2") : "—";
+            var row = Ui.Row(list, _stockEmbedded ? 44 : 46, 4); row.name = "StockQuote_" + id;
+            var bg = row.gameObject.AddComponent<Image>(); bg.color = selected ? Ui.ButtonBg : Color.clear; bg.raycastTarget = false;
+            if (selected) Ui.FlatBorder(bg, Ui.SelectionEdge, 1.5f); else WbDivider(row);
+            var company = Ui.Row(row, 43, 2); Ui.Size(company, 0, 43, 1);
+            Ui.Size(Ui.Button(company, S.StockWatched(id) ? "★" : "☆", () => { S.ToggleStockWatch(id); w.Rebuild(); }, 17), 27, 32);
+            var name = Ui.Size(Ui.Button(company, "", () => { _stockExpanded = id; _stockCandles = false; w.Rebuild(); }, 15, Color.clear), 0, 43, 1);
             name.name = "StockExpand_" + id;
-            StockFlex(name, 37);
-            name.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
+            var nameText = name.GetComponentInChildren<Text>();
+            nameText.text = "<b>" + StockTitle(id) + "</b>\n<size=11><color=#615951>" + (S.StockDefinition(id)?.Industry ?? "指数") + "</color></size>";
+            nameText.alignment = TextAnchor.MiddleLeft;
+            StockCell(row, S.CityInvestmentPrice(id).ToString(), 86);
+            Ui.Size(Ui.Rect(row, "StockStepSpacer"), 68, 32);
             double change = S.StockDayChange(id);
-            StockCell(row, S.CityInvestmentPrice(id).ToString(), 106);
-            string changeText = change == 0 ? "0.00%" : Math.Abs(change) < .00005
-                ? (change > 0 ? "+<0.01%" : "−<0.01%") : change.ToString("+0.00%;-0.00%");
-            StockCell(row, changeText, StockQuoteWidth - 106 - StockQuoteGap, Ui.ChangeColor(change, 0))
-                .Tip("较上一交易日收盘价的涨跌幅。尚无新报价时保留最近一次涨跌幅。\n对比价格："
-                    + PCShopSell.Core.Common.Money.FromCents(S.StockPreviousClose(id)));
-            StockCell(row, held.ToString("N0"), StockPositionWidth);
-            StockCell(row, costText, StockCostWidth, cost.HasValue ? StockPriceGraphic.CostColor : Ui.Dim);
-            var pending = StockCell(row, "—", StockDraftWidth, Ui.Dim);
-            pending.name = "StockDraft_" + id;
-            var plus = Ui.Size(Ui.Button(row, "+", () => StepStockDraft(id, shortMode, 1, refresh), 23, Ui.ButtonBg), StockActionWidth, 35);
-            plus.name = "StockDraftPlus_" + id;
-            var minus = Ui.Size(Ui.Button(row, "−", () => StepStockDraft(id, shortMode, -1, refresh), 23), StockActionWidth, 35);
+            var changeSlot = Ui.Size(Ui.Rect(row,"StockChangeSlot"),78,43,0);
+            var pill = Ui.FlatPanel(changeSlot, "StockChange_" + id, Ui.ChangeColor(change), Ui.ChangeColor(change));
+            pill.rectTransform.Anchor(0,.5f,1,.5f,0,-13,0,-13);
+            var changeText = Ui.Label(pill.transform, change.ToString("+0.00%;-0.00%;0.00%"), 14, TextAnchor.MiddleCenter, Color.white);
+            changeText.rectTransform.Fill(); changeText.raycastTarget = false;
+            pill.Tip("较上一交易日收盘价的涨跌幅。对比价格：" + Money.FromCents(S.StockPreviousClose(id)));
+            long founder = !shortMode ? S.CompanyFounderHolding(S.ListedCompanyOf(id)) : 0;
+            var holding = StockCell(row, (held + founder).ToString("N0"), 76);
+            if (founder > 0) holding.Tip($"创始持股 {founder:N0} 股 · 可交易持股 {held:N0} 股。加减与成本价按可交易持仓计算。");
+            StockCell(row, shortMode || id == "hardware" ? "—" : StockRatioText(S.StockOwnershipRatio(id)), 80, shortMode ? Ui.Dim : Ui.TextColor);
+            StockCell(row, cost, 86, held > 0 ? Ui.TextColor : Ui.Dim);
+            var draftRow = Ui.Row(row, 35, 2); Ui.Size(draftRow, 174, 35);
+            draftRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+            var minus = Ui.Size(Ui.Button(draftRow, "−", () => StepStockDraft(id, shortMode, -1, refresh), 20), 29, 31);
             minus.name = "StockDraftMinus_" + id;
+            var box = Ui.FlatPanel(draftRow, "StockDraftBox", Ui.ButtonBg); Ui.Size(box, 74, 31);
+            var pending = Ui.Label(box.transform, "—", 15, TextAnchor.MiddleCenter, Ui.Dim); pending.rectTransform.Fill(); pending.name = "StockDraft_" + id;
+            var plus = Ui.Size(Ui.Button(draftRow, "+", () => StepStockDraft(id, shortMode, 1, refresh), 20), 29, 31);
+            plus.name = "StockDraftPlus_" + id;
             foreach (var button in new[] { plus, minus })
-            {
-                var repeat = button.GetComponent<HoldRepeat>();
-                repeat.Owner = w;
-                repeat.Key = (shortMode ? "short/" : "spot/") + button.name;
-            }
-            plus.Tip(() => $"每次增加 {StockStep:N0} 股");
-            minus.Tip(() => $"每次减少 {StockStep:N0} 股");
-            Ui.Size(Ui.Button(row, "…", () => OpenStockOrderTools(w, id, shortMode), 20), StockActionWidth, 35).name = "StockDraftMore_" + id;
-            if (expanded) BuildStockDetails(w, list, id, held, basis, cost, costText);
+            { var repeat = button.GetComponent<HoldRepeat>(); repeat.Owner = w; repeat.Key = (shortMode ? "short/" : "spot/") + button.name; }
+            plus.Tip(() => $"每次增加 {StockStep:N0} 股"); minus.Tip(() => $"每次减少 {StockStep:N0} 股");
+            Ui.Size(Ui.Button(draftRow, "…", () => OpenStockOrderTools(w, id, shortMode), 19), 34, 31).name = "StockDraftMore_" + id;
             return () =>
             {
-                var draft = StockDraft(shortMode);
-                long units = draft.TryGetValue(id, out long value) ? value : 0;
-                pending.text = units == 0 ? "—" : $"{(units > 0 ? "+" : "−")}{Math.Abs(units):N0}{(id == "hardware" ? " 份" : " 股")}";
-                pending.color = units == 0 ? Ui.Dim : Ui.Accent;
-                pending.fontStyle = units == 0 ? FontStyle.Normal : FontStyle.Bold;
-                background.color = units == 0 ? Color.clear : Ui.PendingSurface;
+                long units = StockDraft(shortMode).TryGetValue(id, out long value) ? value : 0;
+                pending.text = units == 0 ? "—" : (units > 0 ? "+" : "−") + Math.Abs(units).ToString("N0");
+                pending.color = units == 0 ? Ui.Dim : Ui.Accent; pending.fontStyle = units == 0 ? FontStyle.Normal : FontStyle.Bold;
                 plus.interactable = units < 0 || CanOpenStockPosition(id, shortMode) && units < GameSession.StockOrderLimit;
                 minus.interactable = units > -Math.Min(held, GameSession.StockOrderLimit);
             };
@@ -474,53 +465,34 @@ namespace PCShopSell.Game.UI
 
         private void BuildStockDetails(Window w, Transform parent, string id, long units, long basis, double? cost, string costText)
         {
-            var card = StockCard(parent);
-            card.name = "StockDetails_" + id;
-            const int days = 7;
-            var executions = S.StockExecutions(id, StockRangeStart(days), _stockShortMode);
-            var heading = Ui.Row(card, 34, 8);
-            StockFlex(Ui.Label(heading, "近7天走势 · " + StockTitle(id), 18, color: Ui.Accent), 34);
-            if (executions.Length > 0)
-            {
-                Ui.Size(Ui.Label(heading, _stockShortMode ? "▲ 平仓" : "▲ 买入", 15, TextAnchor.MiddleCenter, StockPriceGraphic.BuyColor), 64, 30);
-                Ui.Size(Ui.Label(heading, _stockShortMode ? "▼ 做空" : "▼ 卖出", 15, TextAnchor.MiddleCenter, StockPriceGraphic.SellColor), 64, 30);
-                Ui.Size(Ui.Button(heading, "成交明细", () => OpenStockTradeHistory(id, executions), 15), 100, 32);
-            }
-            Ui.Size(Ui.Button(heading, _stockCandles ? "切换折线" : "切换K线", () =>
-            { _stockCandles = !_stockCandles; w.Rebuild(); }, 15), 110, 32);
-
+            var card = Ui.Rect(parent, "StockDetails_" + id); Ui.VList(card, 8, 0);
+            Ui.Size(card, 0, -1, 1).GetComponent<LayoutElement>().flexibleHeight = 1;
+            var heading = Ui.Row(card, 42, 6);
+            StockFlex(Bold(Ui.Label(heading, StockTitle(id) + " · " + (S.StockDefinition(id)?.Industry ?? "指数"), 20)), 42);
+            Ui.Size(Ui.Button(heading, S.StockWatched(id) ? "★" : "☆", () => { S.ToggleStockWatch(id); w.Rebuild(); }, 20), 36, 32);
+            var switches = Ui.Row(card, 30, 6);
+            foreach (bool candles in new[] { false, true })
+            { bool pick = candles; Ui.Size(Ui.Button(switches, candles ? "K线" : "折线", () => { _stockCandles = pick; w.Rebuild(); }, 14, candles == _stockCandles ? Ui.Chrome : Ui.ButtonBg), 62, 28); }
+            WbFlex(switches);
+            var executions = S.StockExecutions(id, StockRangeStart(7), _stockShortMode);
+            var graph = Ui.Rect(card, "StockPriceLine"); var graphLayout = Ui.Size(graph).GetComponent<LayoutElement>();
+            graphLayout.minHeight = 190; graphLayout.flexibleHeight = 1;
+            graph.gameObject.AddComponent<StockPriceGraphic>().Initialize(StockQuotesInRange(id, 7), cost, _stockCandles, executions);
             if (S.StockDefinition(id) is CityEquityDefinition company)
-                StockText(card, company.Industry + " · " + company.Description, 15, Ui.Dim);
-
-            var figures = Ui.Row(card, 34, 8);
+                Ui.Size(Ui.Label(card, company.Description, 13, TextAnchor.UpperLeft, Ui.Dim), -1, 40);
+            var stock = S.StockState(id);
+            Ui.Size(Ui.Label(card, "最近每股分红 " + Money.FromCents(stock?.LastDividendCents ?? 0), 13, color: Ui.Dim), -1, 22);
             long value = S.CityInvestmentPrice(id).Cents * units;
             var profit = Money.FromCents(_stockShortMode ? basis - value : value - basis);
-            StockFlex(Ui.Label(figures, (_stockShortMode ? "开仓均价  " : "平均持仓成本  ") + costText, 17,
-                color: StockPriceGraphic.CostColor), 34);
-            StockFlex(Ui.Label(figures, (_stockShortMode ? "借股金额  " : "持仓总成本  ") + (cost.HasValue ? Money.FromCents(basis).ToString() : "—"), 17), 34);
-            StockFlex(Ui.Label(figures, "浮动盈亏  " + (cost.HasValue ? profit.ToString() : "—"), 17,
-                color: profit.IsNegative ? Ui.Warn : Ui.Good), 34);
-
-            var quotes = StockQuotesInRange(id, days);
-            var graph = Ui.Size(Ui.Rect(card, "StockPriceLine"), -1, 218);
-            graph.gameObject.AddComponent<StockPriceGraphic>().Initialize(quotes, cost, _stockCandles, executions);
-            if (quotes.Length < 2) StockText(card, "近7天报价不足，后续随交易日更新。", 14, Ui.Dim);
-
-            var stock = S.StockState(id);
-            if (stock != null)
-            {
-                var disclosure = stock.YesterdayRevenueCents > 0
-                    ? $"昨日营收 {Money.FromCents(stock.YesterdayRevenueCents)} · 利润 {Money.FromCents(stock.YesterdayProfitCents)}"
-                    : "经营数据待披露";
-                StockText(card, disclosure + " · 最近每股分红 " + Money.FromCents(stock.LastDividendCents), 14, Ui.Dim);
-            }
+            var figures = Ui.Row(card, 66, 7);
+            WbStripCard(figures, _stockShortMode ? "借股金额" : "持仓成本", units > 0 ? Money.FromCents(basis).ToString() : "—");
+            WbStripCard(figures, "浮动盈亏", units > 0 ? profit.ToString() : "—", profit.IsNegative ? Ui.Warn : Ui.Good);
+            WbStripCard(figures, "昨日营收", stock?.YesterdayRevenueCents > 0 ? Money.FromCents(stock.YesterdayRevenueCents).ToString() : "—");
+            Ui.Size(Ui.Button(card, "成交明细", () => OpenStockTradeHistory(id, executions), 15, Ui.ButtonSecondary), -1, 32);
             if (_stockShortMode && units > 0)
             {
-                var margin = Ui.Row(card, 34, 8);
-                double ratio = S.StockMarginRatio(id);
-                StockFlex(Ui.Label(margin, $"担保比例 {ratio:P0} · 冻结总额 {Money.FromCents(stock.ShortCollateralCents)}",
-                    16, color: ratio < 1.5 ? Ui.Warn : Ui.Dim), 34);
-                Ui.Size(Ui.Button(margin, "补充保证金", () => OpenStockMargin(w, id), 15), 126, 32);
+                Ui.Size(Ui.Label(card, "担保比例 " + S.StockMarginRatio(id).ToString("P0") + " · 冻结 " + Money.FromCents(stock.ShortCollateralCents), 14, color: S.StockMarginRatio(id) < 1.5 ? Ui.Warn : Ui.Dim), -1, 25);
+                Ui.Size(Ui.Button(card, "补充保证金", () => OpenStockMargin(w, id), 15), -1, 32);
             }
         }
 

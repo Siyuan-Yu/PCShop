@@ -48,6 +48,13 @@ namespace PCShopSell.Core.Session
         public Money StockShortRealized => Money.FromCents(_cityEquities.Sum(e=>e.ShortRealizedCents));
         public Money StockTotalRealized => CityEquityRealized+Money.FromCents(CityFundRealizedCents)+StockShortRealized;
         public CityEquityState StockState(string id) => _cityEquities.Find(e=>e.Id==id);
+        public double StockOwnershipRatio(string id)
+        {
+            var company = ListedCompanyOf(id);
+            long total = company != null ? CompanyTotalShares : StockDefinition(id)?.TotalShares ?? 0;
+            long held = CityInvestmentUnits(id) + (company != null ? CompanyFounderHolding(company) : 0);
+            return total > 0 ? held / (double)total : 0;
+        }
         public StockQuote[] StockQuotes(string id) => id=="hardware"?_stockMarket.IndexQuotes:StockState(id)?.Quotes??Array.Empty<StockQuote>();
         public StockExecution[] StockExecutions(string id, long from, bool shortMode) =>
             _stockMarket.Executions.Where(e => e.StockId == id && e.Minute >= from && e.Minute <= Clock.Now.TotalMinutes

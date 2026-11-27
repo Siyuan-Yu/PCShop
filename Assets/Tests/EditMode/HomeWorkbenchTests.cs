@@ -266,7 +266,7 @@ namespace PCShopSell.Tests
                 finally{ui.CloseAllWindows();foreach(var c in ui.Canvases)UnityEngine.Object.DestroyImmediate(c.gameObject);UnityEngine.Object.DestroyImmediate(root);if(existing==null&&UnityEngine.EventSystems.EventSystem.current!=null)UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);}
             }
         }
-        [Test] public void WorkbenchHasFourRealPagesAndRemotePriceConfirmationChangesActualShop()
+        [Test] public void WorkbenchHasFiveRealPagesAndInlinePriceChangesActualShop()
         {
             using(var s=Ready())
             {
@@ -278,13 +278,15 @@ namespace PCShopSell.Tests
                 Button Button(string name)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>b.name==name);
                 try
                 {
-                    ui.OpenHomeWorkbench();Assert.False(s.Time.IsHeld);Assert.AreEqual(4,ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Count(b=>b.name.StartsWith("WorkbenchTab_")));
+                    ui.OpenHomeWorkbench();Assert.False(s.Time.IsHeld);Assert.AreEqual(5,ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Count(b=>b.name.StartsWith("WorkbenchTab_")));
                     Assert.IsFalse(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name.StartsWith("WorkbenchBuyers_")));
-                    Button("WorkbenchTab_1").onClick.Invoke();ui.RebuildWindows();Button("WorkbenchBusiness_1").onClick.Invoke();ui.RebuildWindows();
-                    var before=s.PlayerShop.GoodsPriceOf(product.Id);Button("WorkbenchGoods_"+product.Id).onClick.Invoke();
-                    Button("PricePlus_goods_"+product.Id).onClick.Invoke();Assert.AreEqual(before,s.PlayerShop.GoodsPriceOf(product.Id));
-                    Button("ConfirmPrice_goods_"+product.Id).onClick.Invoke();Assert.AreEqual(before.Yuan+1,s.PlayerShop.GoodsPriceOf(product.Id).Yuan);
-                    ui.CloseTopWindow();s.SetSmartphone(true);Button("WorkbenchTab_2").onClick.Invoke();ui.RebuildWindows();
+                    var dayBar=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>()).Single(t=>t.name=="WorkbenchDayBar");
+                    Button("WorkbenchTab_1").onClick.Invoke();ui.RebuildWindows();Button("WorkbenchShop_"+s.MainShop.Place.Id).onClick.Invoke();ui.RebuildWindows();
+                    var before=s.PlayerShop.GoodsPriceOf(product.Id);
+                    Button("WorkbenchGoods_"+product.Id+"_Plus").onClick.Invoke();
+                    Assert.Greater(s.PlayerShop.GoodsPriceOf(product.Id).Yuan,before.Yuan);
+                    Assert.AreSame(dayBar,ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>()).Single(t=>t.name=="WorkbenchDayBar"));
+                    s.SetSmartphone(true);Button("WorkbenchTab_2").onClick.Invoke();ui.RebuildWindows();
                     // 投资页直接内嵌手机证券的交易所：不打开新窗口、不暂停时间。
                     const string stock = "city_chip";
                     const int lot = GameSession.StockLotSize;
@@ -296,7 +298,7 @@ namespace PCShopSell.Tests
                     Button("StockBatchExecute").onClick.Invoke();
                     Assert.AreEqual(held+lot,s.CityInvestmentUnits(stock));Assert.Less(s.Ledger.Balance.Cents,tradeCash.Cents);
                     Assert.False(s.Time.IsHeld);
-                    Button("WorkbenchTab_3").onClick.Invoke();ui.RebuildWindows();Assert.NotNull(Button("WorkbenchContacts"));
+                    Button("WorkbenchTab_4").onClick.Invoke();ui.RebuildWindows();Assert.NotNull(Button("WorkbenchScheduleFilter_0"));
                     Button("WorkbenchAutomation").onClick.Invoke();Assert.NotNull(Button("Automation_Sleep"));Button("Automation_Sleep").onClick.Invoke();Assert.True(s.HomeAutomation.Sleep);
                     Assert.AreEqual(s.Home,s.CurrentPlace);
                 }

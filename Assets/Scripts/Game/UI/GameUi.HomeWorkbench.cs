@@ -34,7 +34,7 @@ namespace PCShopSell.Game.UI
         private Button _workbenchLauncher;
         private int _workbenchTab,_workbenchPeriod,_workbenchBusinessTab;
         private string _workbenchShop;
-        // 与游戏其他窗口同一套深蓝金配色：窗口底色用 Ui.PanelBg，卡片用 Ui.PanelBg2。
+        // 纸面内容与暖炭导航沿用 §18 定稿。
         private static readonly Color WbCard=Ui.PanelBg2,WbInk=Ui.TextColor,WbDim=Ui.Dim;
         private Image _wbDayFill;
         private RectTransform _wbDayMarker;
@@ -43,7 +43,7 @@ namespace PCShopSell.Game.UI
         {var t=Ui.Label(parent,text,size,TextAnchor.MiddleLeft,color??WbInk);Ui.Size(t,-1,size*1.6f);return t;}
         private static Button WbButton(Transform parent,string label,Action action,string name=null,bool selected=false,bool enabled=true)
         {
-            var b=Ui.Size(Ui.Button(parent,label,action,17,Ui.SelectedButton(selected),enabled),-1,40,1);
+            var b=Ui.Size(Ui.Button(parent,label,action,17,selected ? Ui.Chrome : Ui.ButtonBg,enabled),-1,40,1);
             if(name!=null)b.name=name;return b;
         }
         private static RectTransform WbScroll(Transform parent,string name)
@@ -54,7 +54,9 @@ namespace PCShopSell.Game.UI
         }
         private static RectTransform WbColumn(Transform parent,string name,float weight=1)
         {
-            var panel=Ui.FlatPanel(parent,name).rectTransform;Ui.Size(panel,-1,-1,weight);Ui.VList(panel,5,12);return panel;
+            var panel=Ui.FlatPanel(parent,name,Ui.ButtonBg).rectTransform;
+            var size=Ui.Size(panel,0,-1,weight).GetComponent<LayoutElement>();size.minWidth=0;size.minHeight=0;
+            Ui.VList(panel,7,14);return panel;
         }
         private static void WbVital(Transform parent,string label,double value,double max)
         {
@@ -108,8 +110,8 @@ namespace PCShopSell.Game.UI
                 return;
             }
             if(_homeWorkbench!=null)return;
-            _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false);
-            // 大屏接近全屏：背后的 HUD 几乎压黑，看起来是一块独立的屏幕。
+            _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false,fullScreen:true);
+            // 全屏覆盖 HUD，内容区按当前画布尺寸伸展。
             var backdrop=_homeWorkbench.Root.GetComponent<Image>();if(backdrop!=null)backdrop.color=Ui.ChromeWell;
             _homeWorkbench.LiveConversation=true;
             _homeWorkbench.LiveKey = WorkbenchViewKey;
@@ -123,69 +125,133 @@ namespace PCShopSell.Game.UI
             return _workbenchTab == 0 ? $"{key}:{S.Player.Health:0}:{S.Player.Hunger:0}" : key;
         }
 
+        private Text _wbDayTime;
+        private RectTransform _wbPage;
+        private bool _wbTodoPrimary;
+        private int _wbContactsFilter;
+        private string _wbContactSearch = "";
+        private int _wbRenderedTab = -1;
+        private string _wbRenderedShop;
+
         private void BuildHomeWorkbench(Window w)
         {
-            if(!S.CanUseHomeWorkbench){w.Close();return;}
-            var padding=w.Content.GetComponent<VerticalLayoutGroup>();padding.padding=new RectOffset(14,14,8,12);padding.spacing=6;
-            var title=Ui.Row(w.Content,28,10);title.name="WorkbenchStatusBar";
-            _wbClockText=WbText(title,S.Clock.Now+" · 在家",16);Ui.Size(_wbClockText,-1,28,1);
-            Ui.Size(WbText(title,"现金 "+S.Ledger.Balance,18,Ui.Accent),230,28);
-            Ui.Size(WbText(title,"净资产 "+S.NetWorth(),16),240,28);
-            var stress = Ui.Size(WbText(title, "", 16), 130, 28);
+            if (!S.CanUseHomeWorkbench) { w.Close(); return; }
+            var padding = w.Content.GetComponent<VerticalLayoutGroup>() ?? Ui.VList(w.Content);
+            var paper = w.Content.GetComponent<Image>() ?? w.Content.gameObject.AddComponent<Image>();
+            paper.color = Ui.PanelBg; paper.raycastTarget = false;
+            padding.padding = new RectOffset(16,16,10,14); padding.spacing = 12;
+            var title = Ui.Row(w.Content, 40, 12); title.name = "WorkbenchStatusBar";
+            _wbClockText = Ui.Size(WbText(title, S.Clock.Now + " · 在家", 16), 0, 36, 1.2f);
+            var cash = Ui.Size(WbText(title, "", 22, Ui.Accent), 0, 36, 1);
+            var worth = Ui.Size(WbText(title, "", 17), 0, 36, 1);
+            var stress = Ui.Size(WbText(title, "", 16), 125, 36);
+            var pause = Ui.Size(WbControl(title, "继续", () => { S.Time.TogglePause(); w.RefreshContent?.Invoke(); }, "WorkbenchPause", false), 80, 34);
+            var speeds = new System.Collections.Generic.List<(Button button, int speed)>();
+            foreach (int speed in TimeController.Speeds)
+            {
+                int chosen = speed;
+                var button = Ui.Size(WbControl(title, TimeController.SpeedLabel(speed), () => { S.Time.SetSpeed(chosen); w.RefreshContent?.Invoke(); }, "WorkbenchSpeed_" + speed, false), 54, 34);
+                speeds.Add((button, chosen));
+            }
             w.RefreshContent = () =>
             {
-                stress.text = $"压力 {S.Player.Stress:0}/100";
-                stress.color = S.Player.Stress >= 70 ? Ui.Warn : WbDim;
+                cash.text = "现金 " + S.Ledger.Balance; worth.text = "净资产 " + S.NetWorth();
+                stress.text = $"压力 {S.Player.Stress:0}/100"; stress.color = S.Player.Stress >= 70 ? Ui.Warn : WbDim;
+                pause.GetComponentInChildren<Text>().text = S.Time.IsRunning ? "暂停" : "继续";
+                foreach (var pair in speeds) pair.button.GetComponentInChildren<Text>().fontStyle = S.Time.Speed == pair.speed ? FontStyle.Bold : FontStyle.Normal;
             };
-            w.RefreshContent();
             BuildWorkbenchDayBar(w.Content);
-            // 一级页签 + 时间控制挤在同一行：页签靠左，暂停/倍速/托管靠右。
-            var nav=Ui.Row(w.Content,38,6);nav.name="WorkbenchNavigation";
-            string[] tabs={"总览","经营","投资","联系人"};
-            for(int i=0;i<tabs.Length;i++){int index=i;WbMainTab(nav,tabs[i],()=>{_workbenchTab=index;w.RequestRebuild();},"WorkbenchTab_"+i,_workbenchTab==i);}
-            WbFlex(nav);
-            Ui.Size(WbControl(nav,S.Time.IsRunning?"暂停":"继续",()=>{S.Time.TogglePause();w.RequestRebuild();},"WorkbenchPause",false),76,34,0);
-            foreach(int speed in TimeController.Speeds)
+            _wbPage = Ui.Rect(w.Content, "WorkbenchWorkspace"); Ui.VList(_wbPage, 0, 0);
+            Ui.Size(_wbPage).GetComponent<LayoutElement>().flexibleHeight = 1;
+            w.RebuildContent = () => RefreshWorkbenchPage(w);
+            RefreshWorkbenchPage(w); w.RefreshContent();
+        }
+
+        private void RefreshWorkbenchPage(Window w)
+        {
+            if (!S.CanUseHomeWorkbench) { w.Close(); return; }
+            var scrolled = _wbRenderedTab == _workbenchTab && _wbRenderedShop == _workbenchShop && !w.ResetScrollOnRebuild ? Ui.SaveScroll(_wbPage) : null;
+            w.ResetScrollOnRebuild = false;
+            Ui.Clear(_wbPage);
+            var workspace = Ui.Row(_wbPage, -1, 16); Ui.Size(workspace).GetComponent<LayoutElement>().flexibleHeight = 1;
+            var nav = Ui.FlatPanel(workspace, "WorkbenchNavigation", Ui.FlatBand).rectTransform;
+            Ui.Size(nav, 184, -1, 0); Ui.VList(nav, 10, 8);
+            string[] tabs = { "今日", "门店", "投资", "财务", "联系人" };
+            int todos = WorkbenchTodoCount();
+            int shops = S.MyShops.Count(shop => !S.IsOwnedVenue(shop.Place) && (WbStockCount(shop) == 0 || !S.Employees.Any(e => e.Shop == shop)));
+            for (int i = 0; i < tabs.Length; i++)
             {
-                int chosen=speed;
-                Ui.Size(WbControl(nav,TimeController.SpeedLabel(speed),()=>{S.Time.SetSpeed(chosen);w.RequestRebuild();},"WorkbenchSpeed_"+speed,S.Time.IsRunning&&S.Time.Speed==speed),50,34,0);
+                int index = i;
+                var button = Ui.Size(Ui.Button(nav, tabs[i], () => { _workbenchTab = index; w.RequestRebuild(); }, 23, _workbenchTab == i ? Ui.Chrome : Ui.ButtonBg), -1, 70);
+                button.name = "WorkbenchTab_" + i;
+                int badge = i == 0 ? todos : i == 1 ? shops : 0;
+                if (badge > 0)
+                {
+                    var bg = Ui.FlatPanel(button.transform, "Badge", Ui.Warn, Ui.Warn); bg.rectTransform.Anchor(1,1,1,1,-27,-26,4,3);
+                    var label = Ui.Label(bg.transform, badge.ToString(), 14, TextAnchor.MiddleCenter, Color.white); label.rectTransform.Fill(); label.raycastTarget = false;
+                }
             }
-            Ui.Size(WbControl(nav,"生活托管",OpenHomeAutomation,"WorkbenchAutomation",false),110,34,0);
-            var body=Ui.Rect(w.Content,"WorkbenchBody");var le=Ui.Size(body).GetComponent<LayoutElement>();le.minHeight=160;le.flexibleHeight=1;Ui.VList(body,8,0);
-            switch(_workbenchTab)
+            var flex = Ui.Rect(nav, "NavSpace"); Ui.Size(flex).GetComponent<LayoutElement>().flexibleHeight = 1;
+            Ui.Size(Ui.Button(nav, "生活托管", OpenHomeAutomation, 17, Ui.ButtonSecondary), -1, 44).name = "WorkbenchAutomation";
+            var a = S.HomeAutomation; int enabled = new[] { a.Meals,a.Takeaway,a.Sleep,a.Clothing,a.Supplies }.Count(x => x);
+            Ui.Size(Ui.Label(nav, "已开启 " + enabled + " 项", 14, TextAnchor.MiddleCenter, WbDim), -1, 24);
+            var body = Ui.Rect(workspace, "WorkbenchBody"); Ui.Size(body, 0, -1, 1); Ui.VList(body, 12, 0);
+            switch (_workbenchTab)
             {
-                case 0:BuildWorkbenchPersonal(body,w);break;
-                case 1:BuildWorkbenchBusiness(body,w);break;
-                case 2:BuildWorkbenchInvestments(body,w);break;
-                case 3:BuildWorkbenchContacts(body);break;
+                case 0: BuildWorkbenchPersonal(body,w); break;
+                case 1: BuildWorkbenchBusiness(body,w); break;
+                case 2: BuildWorkbenchInvestments(body,w); break;
+                case 3: BuildWorkbenchFinance(body,w); break;
+                case 4: BuildWorkbenchContacts(body); break;
             }
+            w.RefreshContent?.Invoke();
+            Ui.RestoreScroll(w.Root,_wbPage,scrolled);
+            _wbRenderedTab = _workbenchTab; _wbRenderedShop = _workbenchShop;
             if (w.LiveKey != null) w.LiveStamp = w.LiveKey();
         }
         private static Button WbMainTab(Transform parent,string label,Action action,string name,bool selected)
         {
-            var b=Ui.Button(parent,label,action,18,Ui.SelectedButton(selected));
+            var b=Ui.Button(parent,label,action,18,selected ? Ui.Chrome : Ui.ButtonBg);
             b.name=name;Ui.Size(b,136,38,0);return b;
         }
         private static Button WbSubTab(Transform parent,string label,Action action,string name,bool selected,float width=120,float height=32)
         {
-            var b=Ui.Button(parent,label,action,16,Ui.SelectedButton(selected));
+            var b=Ui.Button(parent,label,action,16,selected ? Ui.Chrome : Ui.ButtonBg);
             b.name=name;Ui.Size(b,width,height,0);return b;
         }
         private static Button WbControl(Transform parent,string label,Action action,string name,bool selected)
         {
-            var b=Ui.Button(parent,label,action,16,Ui.SelectedButton(selected));b.name=name;return b;
+            var b=Ui.Button(parent,label,action,16,selected ? Ui.Chrome : Ui.ButtonBg);b.name=name;return b;
         }
-        /// <summary>今日进度条：金色为已过去的时间，白线为现在；夜间（0–6 点、22–24 点）底色更暗。每帧由 UpdateWorkbenchDayBar 推进，不触发重建。</summary>
+        /// <summary>两色全高日进度带；外壳常驻，逐帧只推进填充、刻线和时间文字。</summary>
         private void BuildWorkbenchDayBar(Transform parent)
         {
-            var row=Ui.Row(parent,10,0);row.name="WorkbenchDayBar";
-            var holder=Ui.Rect(row,"DayTrack");Ui.Size(holder,-1,10,1);
-            var back=Ui.Panel(holder,"DayTrackBack",Ui.PendingSurface);back.raycastTarget=false;back.rectTransform.Anchor(0,.5f,1,.5f,0,-4,0,-4);
-            foreach(var night in new[]{(0f,.25f),(22f/24f,1f)})
-            {var shade=Ui.Panel(back.transform,"Night",Ui.ChromeButton);shade.raycastTarget=false;shade.rectTransform.Anchor(night.Item1,0,night.Item2,1);}
-            _wbDayFill=Ui.Panel(back.transform,"DayFill",Ui.ButtonHot);_wbDayFill.raycastTarget=false;_wbDayFill.rectTransform.Anchor(0,0,0,1);
-            foreach(float tick in new[]{.25f,.5f,.75f}){var line=Ui.Panel(back.transform,"Tick",new Color(0,0,0,.35f));line.raycastTarget=false;line.rectTransform.Anchor(tick,0,tick,1,-.5f,0,-.5f,0);}
-            var marker=Ui.Panel(holder,"DayNow",Ui.Accent);marker.raycastTarget=false;_wbDayMarker=marker.rectTransform;_wbDayMarker.Anchor(0,0,0,1,-1.5f,0,-1.5f,0);
+            var track = Ui.FlatPanel(parent, "WorkbenchDayBar", new Color(.227f,.216f,.2f,.12f), new Color(.227f,.216f,.2f,.6f));
+            Ui.Size(track,-1,88); track.raycastTarget = false;
+            var clip = Ui.Panel(track.transform, "DayClip", Color.white); Ui.Round(clip); clip.rectTransform.Fill();
+            clip.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            _wbDayFill = Ui.Panel(clip.transform,"DayFill",new Color32(196,132,34,150));
+            _wbDayFill.raycastTarget = false; _wbDayFill.rectTransform.Anchor(0,0,0,1);
+            for (int i = 1; i < 4; i++)
+            {
+                var line = Ui.Panel(track.transform,"Tick_"+i,new Color(.227f,.216f,.2f,.27f)); line.raycastTarget=false;
+                line.rectTransform.Anchor(i/4f,0,i/4f,1,-.5f,0,-.5f,0);
+            }
+            string[] periods = { "凌晨","上午","下午","夜晚" };
+            for (int i=0;i<4;i++)
+            {
+                var label=Bold(Ui.Label(track.transform,periods[i],13,TextAnchor.UpperCenter,Ui.Chrome));
+                label.rectTransform.Anchor(i/4f,.65f,(i+1)/4f,1,0,0,0,5);label.raycastTarget=false;
+            }
+            for(int i=0;i<=4;i++)
+            {
+                var label=Bold(Ui.Label(track.transform,(i*6)+":00",12,i==0?TextAnchor.LowerLeft:i==4?TextAnchor.LowerRight:TextAnchor.LowerCenter,Ui.Chrome));
+                label.rectTransform.Anchor(i/4f,0,i/4f,.3f,i==0?6:i==4?-76:-34,4,i==4?6:i==0?-76:-34,0);label.raycastTarget=false;
+            }
+            var marker = Ui.Panel(track.transform,"DayNow",Ui.Chrome); marker.raycastTarget=false;
+            _wbDayMarker=marker.rectTransform;_wbDayMarker.Anchor(0,0,0,1,-1.5f,0,-1.5f,0);
+            var pill=Ui.FlatPanel(_wbDayMarker,"CurrentTime",Ui.Chrome,Ui.Chrome);pill.rectTransform.Anchor(.5f,.5f,.5f,.5f,-40,-16,-40,-16);
+            _wbDayTime=Bold(Ui.Label(pill.transform,"",16,TextAnchor.MiddleCenter,Color.white));_wbDayTime.rectTransform.Fill();_wbDayTime.raycastTarget=false;
             UpdateWorkbenchDayBar();
         }
         private void UpdateWorkbenchDayBar()
@@ -194,8 +260,9 @@ namespace PCShopSell.Game.UI
             if(_wbClockText!=null)_wbClockText.text=S.Clock.Now+" · 在家";
             if(_wbDayFill==null||_wbDayMarker==null)return;
             float progress=Mathf.Clamp01(S.Clock.MinuteOfDay/1440f);
-            var fill=_wbDayFill.rectTransform;fill.anchorMax=new Vector2(progress,1);
+            _wbDayFill.rectTransform.anchorMax=new Vector2(progress,1);
             _wbDayMarker.anchorMin=new Vector2(progress,0);_wbDayMarker.anchorMax=new Vector2(progress,1);
+            if(_wbDayTime!=null)_wbDayTime.text=GameSession.ClockText(S.Clock.MinuteOfDay);
         }
         private (GameDate from,GameDate to) WorkbenchDates(bool personal=false)
         {
@@ -263,26 +330,7 @@ namespace PCShopSell.Game.UI
             // 与手机证券是同一套看盘交易界面；这里不暂停时间，也不需要返回手机。
             BuildEmbeddedStock(w,parent);
         }
-        private void BuildWorkbenchContacts(Transform parent)
-        {
-            // 只有「通讯录」和「日程」：通讯录就是下面这份名单，点头像看资料/邀约，右侧固定大小的按钮可打电话。
-            var actions=Ui.Row(parent,32,6);WbSubTab(actions,"通讯录",()=>{},"WorkbenchContacts",true,128);WbSubTab(actions,"日程",OpenSchedulePanel,"WorkbenchContactCalendar",false,128);WbFlex(actions);
-            var list=WbScroll(parent,"WorkbenchContactsBody");
-            foreach(var contact in S.SavedConversationContacts())
-            {
-                string id=contact.Id;
-                var row=PersonSummary(list,id,PersonNameWithKolBadge(id, contact.Name),contact.Role,54,()=>OpenCityPersonProfile(id),ink:WbInk,muted:WbDim);
-                Ui.Size(Ui.Label(row,Npcs.LevelName(S.Relation(id))+" "+S.Relation(id),16,TextAnchor.MiddleCenter,Ui.Good),110);
-                var talk=Ui.Size(Ui.Button(row,"打电话",()=>OpenPersonDialogue(id,remote:true),17,Ui.ButtonHot),100,44,0);talk.name="WorkbenchKnownContact_"+id;
-            }
-            foreach(var worker in S.Employees)
-            {
-                string personId=S.PersonIdOf(worker.Person);var employee=worker;
-                var row=PersonSummary(list,personId,employee.Person.Name,GameSession.RoleName(employee.Role)+" · "+S.EmployeeStatus(employee),54,ink:WbInk,muted:WbDim);
-                Ui.Size(Ui.Label(row,"员工",16,TextAnchor.MiddleCenter,WbDim),110);
-                var talk=Ui.Size(Ui.Button(row,"打电话",()=>OpenPersonDialogue(personId,remote:true),17,Ui.ButtonHot,S.RemoteConversationBlocker(personId)==null),100,44,0);talk.name="WorkbenchContact_"+employee.Person.Id;
-            }
-        }        private void OpenHomeAutomation()
+        private void OpenHomeAutomation()
         {
             if(!S.CanUseHomeWorkbench)return;
             OpenWindow("生活托管",830,700,w=>
