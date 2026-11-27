@@ -32,7 +32,7 @@ namespace PCShopSell.Core.Session
             Id=id; Name=name; WholesaleBasePrice=Money.FromYuan(priceYuan); Price=WholesaleBasePrice.Scale(.95); CharmBonus=Math.Min(9,Math.Max(0,charmBonus)); Description=description;
             Tier=tier; OccasionTags=occasion; ComfortMinC=minC; ComfortMaxC=maxC; VisualPreset=visual; ColorHex=color; SeasonTags=seasons;
             FictionalBrandId=new[]{"巷日","远迹","序章","岚序"}[Math.Max(0,Math.Min(3,tier))];
-            WeightKg=visual=="winter"?1.8:visual=="short"?.35:visual=="formal"?1.1:.75;
+            WeightKg=id=="tee"?.35:visual=="winter"?1.8:visual=="short"?.35:visual=="formal"?1.1:.75;
         }
         public bool IsOccasion(string occasion) => OccasionTags.Split(',').Contains(occasion);
         public string TierName => new[]{"平价","品质","精品","奢侈"}[Tier];
@@ -43,7 +43,7 @@ namespace PCShopSell.Core.Session
         public const string Default="tee";
         public static readonly IReadOnlyList<OutfitDef> All=new[]
         {
-            new OutfitDef("tee","地摊 T 恤",0,0,"洗得发白，但是舒服。"),
+            new OutfitDef("tee","旧夹克与棉衫",0,0,"轻薄的棕色旧夹克，搭配奶白棉衫和深蓝长裤。",visual:"paintedJacket",color:"946F48"),
             new OutfitDef("cotton_short","巷日·棉风短袖套装",99,1,"轻棉短袖和及膝短裤。",0,"daily",23,32,"short","8CB5AE"),
             new OutfitDef("sport_basic","巷日·晨练运动套装",169,1,"透气短袖与宽松运动短裤。",0,"sport,daily",22,32,"sport","6B98B0"),
             new OutfitDef("shirt","干净衬衫",280,2,"至少看起来像个正经老板。",0,"business,daily",18,28,"long","EAECEF","spring,autumn"),

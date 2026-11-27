@@ -97,7 +97,9 @@ namespace PCShopSell.Game.Runtime
             var palette = choices[SignaturePalettes.TryGetValue(personId, out int index) ? index : (int)(hash % (uint)choices.Length)];
             string cut = personId switch
             {
-                "keeper_phone2" or "life_bartender" or "life_chef" or "res_baker" or "res_cook" or "res_wang"
+                "res_baker" => "chef",
+                "life_singer" => "singer",
+                "keeper_phone2" or "life_bartender" or "life_chef" or "res_cook" or "res_wang"
                     or "resident_luhai" or "resident_pancheng" => "apron",
                 "res_auntie" or "keeper_agent" => "formal",
                 "res_rider" or "keeper_farm" => "uniform",
@@ -113,6 +115,8 @@ namespace PCShopSell.Game.Runtime
             if (personId == "life_chef") palette = new Palette("DDD0BC", "433C41", "A35449", "393A43");
             if (personId == "res_grandpa") palette = new Palette("A28A6E", "CBC1B5", "D9C9AC", "49515A");
             if (personId == "staff_mall") palette = new Palette("B39A8E", "53444B", "DDC6A3", "3F3742");
+            if (personId == "res_baker") palette = new Palette("EBD6BE", "774B3E", "5B4033", "514C47");
+            if (personId == "life_singer") palette = new Palette("C36763", "423C3F", "D0C3B3", "423C3D");
             model.DressNpc(cut, palette.Top, palette.Trousers, palette.Layer, palette.Accent);
         }
     }

@@ -14,6 +14,10 @@ namespace PCShopSell.Game.Runtime
         private static readonly Vector3 ChopstickGrip = new Vector3(0, -.033f, 0);
         private static readonly List<FigureMotion> Active = new List<FigureMotion>();
         private Transform _visual, _head;
+        private bool _paintedSample;
+        private PlayerCharacterModel _character;
+        private Transform _hairTailL, _hairTailR;
+        private Transform _garmentHem;
         private readonly Transform[] _hips = new Transform[2], _knees = new Transform[2], _feet = new Transform[2], _arms = new Transform[2], _hands = new Transform[2];
         private readonly Transform[] _elbows = new Transform[2];
         private Vector3 _previousPosition;
@@ -124,6 +128,14 @@ namespace PCShopSell.Game.Runtime
             _visual = visual;
             Torso = torso;
             _head = torso.Find("Head");
+            _character = GetComponent<PlayerCharacterModel>();
+            _paintedSample = _character.PaintedSample;
+            if (_paintedSample)
+            {
+                _hairTailL = _head.Find("HairTailL");
+                _hairTailR = _head.Find("HairTailR");
+                _garmentHem = visual.Find("GarmentHem");
+            }
             _baseScale = _scale = scale;
             _baseVisualScale = visual.localScale;
             Appearance = appearance;
@@ -161,6 +173,7 @@ namespace PCShopSell.Game.Runtime
         {
             var tool = new GameObject(cooking ? "CookingSpatula" : "AssemblyScrewdriver");
             tool.transform.SetParent(_hands[1], false);
+            if (_paintedSample) tool.transform.localScale = Vector3.one * .78f;
             var steel = Mats.Lit(new Color(.73f, .76f, .79f));
             if (cooking)
             {
@@ -205,6 +218,7 @@ namespace PCShopSell.Game.Runtime
         private void ApplyStreetProportions(Vector3? center)
         {
             if (_visual == null) return;
+            if (_paintedSample) return;
             float weight = 0;
             if (center.HasValue && !_seated && _scooter == null)
             {
@@ -266,6 +280,27 @@ namespace PCShopSell.Game.Runtime
 
         private void ApplyPose()
         {
+            ApplySkeletonPose();
+            if (_garmentHem != null)
+            {
+                float seated = _seated ? 1 : _furnitureSeatBlend;
+                float forwardLeg = Mathf.Min(0, Mathf.Min(Mathf.DeltaAngle(0, _hips[0].localEulerAngles.x), Mathf.DeltaAngle(0, _hips[1].localEulerAngles.x)));
+                float lift = Mathf.Lerp(forwardLeg * .80f - 5f * _blend - 12f * _reachCrouch, -78f, seated);
+                _garmentHem.localPosition = new Vector3(0,PlayerCharacterModel.HipHeight,.025f*_blend*(1-seated));
+                _garmentHem.localRotation = Quaternion.Euler(lift, 0, 0);
+                _character.SetGarmentSeat(seated);
+            }
+        }
+
+        private void ApplySkeletonPose()
+        {
+            if (_hairTailL != null)
+            {
+                float sway = Mathf.Sin(_phase * Mathf.PI * 2) * _blend * 5f;
+                float idle = Mathf.Sin(_idleTime * 1.7f) * .8f * (1 - _blend);
+                _hairTailL.localRotation = Quaternion.Euler(-2f * _blend, 0, sway + idle);
+                _hairTailR.localRotation = Quaternion.Euler(-2f * _blend, 0, sway - idle);
+            }
             bool working = !_bedWakePose.HasValue && _scooter == null && !_seated && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
             const float hipHeight = PlayerCharacterModel.HipHeight;
             const float segment = PlayerCharacterModel.LegSegment;
@@ -585,15 +620,15 @@ namespace PCShopSell.Game.Runtime
                 case FigureWorkAction.Cook:
                     float stir = _idleTime * 6f;
                     Torso.localRotation = Quaternion.Euler(10, Mathf.Sin(stir) * 7, 0);
-                    _arms[0].localRotation = Quaternion.Euler(-91, -7, 12);
-                    _arms[1].localRotation = Quaternion.Euler(-100 + Mathf.Cos(stir) * 14, -21 + Mathf.Sin(stir) * 22, -13);
+                    _arms[0].localRotation = Quaternion.Euler(_paintedSample ? -55 : -91, -7, 12);
+                    _arms[1].localRotation = Quaternion.Euler((_paintedSample ? -58 : -100) + Mathf.Cos(stir) * 14, -21 + Mathf.Sin(stir) * 22, -13);
                     break;
                 case FigureWorkAction.Assemble:
                     float turn = _idleTime * 7f;
                     float press = Mathf.Pow((1 + Mathf.Sin(turn * .5f)) * .5f, 2);
-                    Torso.localRotation = Quaternion.Euler(13 + 7 * press, -4, -3);
-                    _arms[0].localRotation = Quaternion.Euler(-99 + 4 * press, -8, 13);
-                    _arms[1].localRotation = Quaternion.Euler(-112 + 11 * press, -18 + Mathf.Sin(turn) * 5, -12);
+                    Torso.localRotation = Quaternion.Euler((_paintedSample ? 8 + 4 * press : 13 + 7 * press), -4, -3);
+                    _arms[0].localRotation = Quaternion.Euler((_paintedSample ? -56 : -99) + 4 * press, -8, 13);
+                    _arms[1].localRotation = Quaternion.Euler((_paintedSample ? -63 : -112) + 11 * press, -18 + Mathf.Sin(turn) * 5, -12);
                     _screwdriver.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(turn) * 35);
                     break;
                 case FigureWorkAction.Plate:

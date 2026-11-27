@@ -103,6 +103,8 @@ namespace PCShopSell.Game.Runtime
 
         public void Destroy()
         {
+            // Destroy 会延迟到帧末；同帧打开下一面镜子时，旧人物不能继续参与渲染。
+            if (_root != null) _root.SetActive(false);
             Kill.It(_root);
             if (Texture != null)
             {

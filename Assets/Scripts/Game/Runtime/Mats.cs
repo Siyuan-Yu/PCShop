@@ -354,8 +354,8 @@ namespace PCShopSell.Game.Runtime
         public static void Dress(GameObject figure, string outfitId)
         {
             var outfit = PCShopSell.Core.Session.Outfits.Get(outfitId) ?? PCShopSell.Core.Session.Outfits.Get("tee");
-            Color top = ArtDirection.Hex(outfit.Id == "tee" ? "B85E42" : outfit.ColorHex);
-            Color trousers = ArtDirection.Hex(outfit.VisualPreset == "formal" ? "303040" : "34394F");
+            Color top = ArtDirection.Hex(outfit.ColorHex);
+            Color trousers = ArtDirection.Hex(outfit.VisualPreset == "formal" ? "303040" : outfit.VisualPreset == "paintedJacket" ? "3C3D43" : "34394F");
             figure.GetComponent<PlayerCharacterModel>().Dress(outfit.VisualPreset, top, trousers);
         }
 

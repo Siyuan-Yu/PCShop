@@ -50,12 +50,14 @@ namespace PCShopSell.Game.Runtime
                 var heads = id == null ? CrowdHeads : AdultHeads;
                 head = heads[hash % (uint)heads.Length];
             }
-            bool slim = head is "bob" or "fringe" or "waves" or "tied";
+            bool slim = head is "bob" or "fringe" or "waves" or "tied" or "twintail";
             bool young = head == "young";
             float height = young ? .79f : slim ? .92f : .98f;
             height += ((hash >> 12) % 7) * .01f;
             float width = slim ? .91f : head is "crop" or "senior" ? 1.05f : .99f;
             if (id == "landlady") width = 1.06f;
+            if (id == "res_baker") width = 1.05f;
+            if (id == "life_singer") width = .97f;
 
             string hair = head switch
             {
@@ -66,6 +68,11 @@ namespace PCShopSell.Game.Runtime
                 _ => HairColors[(hash >> 4) % (uint)HairColors.Length]
             };
             Color skin = ArtDirection.Hex(SkinColors[(hash >> 8) % (uint)SkinColors.Length]);
+            if (id is "res_baker" or "life_singer")
+            {
+                skin = ArtDirection.Hex("F4B080");
+                hair = id == "res_baker" ? "64403F" : "68433A";
+            }
             if (id == null) skin = Color.Lerp(baseSkin, skin, .78f);
             bool skirt = slim && (id is "life_ning" or "life_singer" or "life_teacher" or "resident_yujia" or "resident_zengyu"
                 || id == null && (hash >> 16) % 3 == 0);
@@ -98,7 +105,7 @@ namespace PCShopSell.Game.Runtime
             }
 
             Add("crop", "keeper_mall", "keeper_phone2", "life_bartender", "life_chef", "life_gardener", "life_maker",
-                "life_model_supplier", "life_qiao", "res_baker", "res_cook", "res_wang", "resident_dongyu",
+                "life_model_supplier", "life_qiao", "res_cook", "res_wang", "resident_dongyu",
                 "resident_gaobo", "resident_hanzheng", "resident_jiyun", "resident_peiran", "resident_qiufeng",
                 "resident_quyuan", "resident_shaoan", "resident_songan", "resident_wenbo", "resident_yucheng",
                 "staff_gpu", "staff_gpu2", "staff_psu", "sun", "zhou");
@@ -116,7 +123,9 @@ namespace PCShopSell.Game.Runtime
                 "resident_xiaqing", "resident_yujia", "staff_cpu", "staff_mem");
             Add("fringe", "life_clothier", "life_ning", "resident_caihong", "resident_fanglu", "resident_luwei",
                 "resident_wanqing", "resident_yinhe", "resident_yuanan");
-            Add("waves", "keeper_farm", "landlady", "life_creator", "life_designer", "life_singer", "life_teacher",
+            Add("baker", "res_baker");
+            Add("twintail", "life_singer");
+            Add("waves", "keeper_farm", "landlady", "life_creator", "life_designer", "life_teacher",
                 "qiao", "racer_0", "racer_1", "racer_3", "res_fang", "resident_luoya", "resident_penglan",
                 "resident_taoran", "resident_xuwei", "resident_yeli", "resident_zengyu", "life_leisure_staff_ferris_evening");
             Add("tied", "momo", "qian", "res_tea", "resident_chenxia", "resident_dengyue", "resident_duma",

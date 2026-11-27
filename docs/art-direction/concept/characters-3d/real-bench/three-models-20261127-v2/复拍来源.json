@@ -1,0 +1,966 @@
+{
+  "日期": "2026-11-27",
+  "分支": "art/experiment",
+  "来源": "Unity 2022.3.6f1 / D3D11 / 独立工程 Play Mode；正式人物、服装、动作入口。",
+  "静态": "static28",
+  "动作": "animation05",
+  "处理": "原图不补画；对照图仅等高等比排版；GIF 以原始帧等比缩放并使用统一调色板编码。",
+  "轮廓测量边界": "IoU 仅衡量正面二值轮廓，不是整体美术相似度，不代表用户验收。",
+  "复拍结果": {
+    "静态完成标记": "CHARACTER_STATIC_CAPTURE_DONE",
+    "动作完成标记": "CHARACTER_CAPTURE_DONE",
+    "C#编译错误": false,
+    "Shader编译错误": false,
+    "自动测试": "未运行",
+    "发布构建": "未生成"
+  },
+  "图片": [
+    {
+      "归档": "00-concept-vs-static.png",
+      "原始来源": "work/character-art/static28/00-concept-vs-static.png",
+      "SHA256": "b8b7058b3ffb20ed6d2bbe7427e7b2c4600f808df467af47342d0ee406b88e76"
+    },
+    {
+      "归档": "01-front.png",
+      "原始来源": "work/character-art/static28/01-front.png",
+      "SHA256": "401451d1e8c4fefdeee766045a40561b4d40862ace04bf05e7bdc1700b0d8fb6"
+    },
+    {
+      "归档": "02-three-quarter.png",
+      "原始来源": "work/character-art/static28/02-three-quarter.png",
+      "SHA256": "6f81d2736d86ce936aa4c82026a67babeb57b7933b0fe1dfdde491e8a8e934c5"
+    },
+    {
+      "归档": "03-side.png",
+      "原始来源": "work/character-art/static28/03-side.png",
+      "SHA256": "0132fb911c705965fbf6d02691326b1c2ff6d1c27cd1d7859afa1be2608974ab"
+    },
+    {
+      "归档": "04-back.png",
+      "原始来源": "work/character-art/static28/04-back.png",
+      "SHA256": "933df24699dbd41613a5b996ca4eddfc6c3b53e30965d5519c49c6652b54a2ac"
+    },
+    {
+      "归档": "05-game-angle-close.png",
+      "原始来源": "work/character-art/static28/05-game-angle-close.png",
+      "SHA256": "392035a3e12a82ffc87cd7812257bec052e66769f76bbd60c266b8ebe7358f54"
+    },
+    {
+      "归档": "06-game-distance.png",
+      "原始来源": "work/character-art/static28/06-game-distance.png",
+      "SHA256": "ceafe9309a81ae399ada8f3b67284a010b77191420c5fc2cea20344c63003691"
+    },
+    {
+      "归档": "06b-street-static.png",
+      "原始来源": "work/character-art/static28/06b-street-static.png",
+      "SHA256": "9dd070cd7092e273a432de8db9f3bc4e6db1d6404d43954ab626d70714abb3dc"
+    },
+    {
+      "归档": "06c-street-default.png",
+      "原始来源": "work/character-art/static28/06c-street-default.png",
+      "SHA256": "affb3a32e2c2a42b3397b7211178d7a8ef4d84cf56b74f2b5adef7329071875d"
+    },
+    {
+      "归档": "轮廓差异.png",
+      "原始来源": "work/character-art/static28/轮廓差异.png",
+      "SHA256": "3dce858b93f976725de19974e238bf6073e352145b86ed8086ef13b5f563ae65"
+    },
+    {
+      "归档": "轮廓测量.json",
+      "原始来源": "work/character-art/static28/轮廓测量.json",
+      "SHA256": "7948c81c98020be3a565067a9d66d4d168ea021c3d7b5edd01d79f8a80929810"
+    },
+    {
+      "归档": "静态复拍记录.txt",
+      "原始来源": "work/character-art/static28/静态复拍记录.txt",
+      "SHA256": "f78c25a46a6e77b5a093f0e9e524107e9db0b0fb16b9922f80cb89dd76321b7f"
+    },
+    {
+      "归档": "07-seated-side.png",
+      "原始来源": "work/character-art/animation05/07-seated-side.png",
+      "SHA256": "6951bdab29f278ff07e4607ab5355ffe8d9e91b3a4d1a54e9c271a8637c06266"
+    },
+    {
+      "归档": "07-seated.png",
+      "原始来源": "work/character-art/animation05/07-seated.png",
+      "SHA256": "4c42d008b15dd1b736a5079ca54a7df5b7f44e3db6ea90036b4d70745ec47902"
+    },
+    {
+      "归档": "07b-furniture-seat-side.png",
+      "原始来源": "work/character-art/animation05/07b-furniture-seat-side.png",
+      "SHA256": "a6ce1efba523129b4dafa21d655afd46cc2a882b7d68d747001bb2237ffcbe4c"
+    },
+    {
+      "归档": "07c-seat-transition.png",
+      "原始来源": "work/character-art/animation05/07c-seat-transition.png",
+      "SHA256": "b9029be4fa24a0764857f90e4fd1d9cc293f88931ef33cc06b6b47a07eed2377"
+    },
+    {
+      "归档": "08-street-day.png",
+      "原始来源": "work/character-art/animation05/08-street-day.png",
+      "SHA256": "48243b193715fa13ee0258c2ce7b0954484b2b932368c3bb6564fed89833495a"
+    },
+    {
+      "归档": "09-street-rain.png",
+      "原始来源": "work/character-art/animation05/09-street-rain.png",
+      "SHA256": "8da0c66e980f6a66cb9ac66e35e9ae293467c9642de4bdd28e3081f744e51440"
+    },
+    {
+      "归档": "10-street-night.png",
+      "原始来源": "work/character-art/animation05/10-street-night.png",
+      "SHA256": "8bc8e024009f80cf1ab5b51ca0fd16a895ef54a00baeabb00943a31b5f263492"
+    },
+    {
+      "归档": "11-wardrobe.png",
+      "原始来源": "work/character-art/animation05/11-wardrobe.png",
+      "SHA256": "f88fc71f06babf67023d5c27ce2d52811c7a45cef4c5ef0034b2d4114c232e67"
+    },
+    {
+      "归档": "12-portrait.png",
+      "原始来源": "work/character-art/animation05/12-portrait.png",
+      "SHA256": "5971bb14e28172207d801c306c6f1fe4e32307b8e510faa9d077066ff3a307c3"
+    },
+    {
+      "归档": "fullcycle-baker-walk-side.png",
+      "原始来源": "work/character-art/animation05/fullcycle-baker-walk-side.png",
+      "SHA256": "4769e350b68e3c954fc4049372aefddfa52610722d1f8e952bbae5c0daf7efbe"
+    },
+    {
+      "归档": "fullcycle-baker-walk.png",
+      "原始来源": "work/character-art/animation05/fullcycle-baker-walk.png",
+      "SHA256": "890a3bcdc02e2e9719ed960e817b90badd6094fbc3844991153b96da5fd8cb5d"
+    },
+    {
+      "归档": "fullcycle-singer-walk-side.png",
+      "原始来源": "work/character-art/animation05/fullcycle-singer-walk-side.png",
+      "SHA256": "fef6cce3aaa63bd2e6683fcb5c03762cae0fb4692f2f3cde027cdc89519eca2c"
+    },
+    {
+      "归档": "fullcycle-singer-walk.png",
+      "原始来源": "work/character-art/animation05/fullcycle-singer-walk.png",
+      "SHA256": "d665887bd2c4381032b73dc93c89e5ef71321f0d804eb01655d5e4f76429efd4"
+    },
+    {
+      "归档": "gesture-Nod.png",
+      "原始来源": "work/character-art/animation05/gesture-Nod.png",
+      "SHA256": "4a0861878a56ac6dc54b755da2f9ee22322bf783b910b5b2146d9a5875437339"
+    },
+    {
+      "归档": "gesture-ShakeHead.png",
+      "原始来源": "work/character-art/animation05/gesture-ShakeHead.png",
+      "SHA256": "33d7f49727b385ff2424d3966c46fab929534590ab924d539b24d83af21f3f1a"
+    },
+    {
+      "归档": "gesture-Wave.png",
+      "原始来源": "work/character-art/animation05/gesture-Wave.png",
+      "SHA256": "864a068618b96f7773bee83b081629d805d5d721cac1134e9ad3c7327baf413c"
+    },
+    {
+      "归档": "outfit-coat_quality.png",
+      "原始来源": "work/character-art/animation05/outfit-coat_quality.png",
+      "SHA256": "1505057f1cd46985b4d6b07c4ba2ae2114ba9aa0bf250860454e2e8919c054d7"
+    },
+    {
+      "归档": "outfit-cotton_short.png",
+      "原始来源": "work/character-art/animation05/outfit-cotton_short.png",
+      "SHA256": "71157cc82acfc5fb0146ab4b461ff86f6aa29ed531578f6bf33c1b14c66a38de"
+    },
+    {
+      "归档": "outfit-suit.png",
+      "原始来源": "work/character-art/animation05/outfit-suit.png",
+      "SHA256": "a775a8c6c1732ff757445b3e65d2cf827c6a51d9a9db181b7fd1013ad5da1dba"
+    },
+    {
+      "归档": "frames/walk-00.png",
+      "原始来源": "work/character-art/animation05/walk-00.png",
+      "SHA256": "1d878046edb07595eaa1cd7b056f7592135132d36eca448b306fb7d884b1f089"
+    },
+    {
+      "归档": "frames/walk-01.png",
+      "原始来源": "work/character-art/animation05/walk-01.png",
+      "SHA256": "e5952c3531676c5f46c8034b47de233bb35c61addfe63df768b71a3184b6ff2f"
+    },
+    {
+      "归档": "frames/walk-02.png",
+      "原始来源": "work/character-art/animation05/walk-02.png",
+      "SHA256": "6e798890d5cdf197c1e1f801b3e8232f25573e74faad1ed7224d73fcdf965103"
+    },
+    {
+      "归档": "frames/walk-03.png",
+      "原始来源": "work/character-art/animation05/walk-03.png",
+      "SHA256": "1437708935f3e5c8fb5482902469fd7aab7837c94595d2cd30d0fc846f7e5257"
+    },
+    {
+      "归档": "frames/walk-04.png",
+      "原始来源": "work/character-art/animation05/walk-04.png",
+      "SHA256": "5abdf2a394226f825329fea25b8d335ebc132cf9a0ac6bacff89cf7d6a5f06f4"
+    },
+    {
+      "归档": "frames/walk-05.png",
+      "原始来源": "work/character-art/animation05/walk-05.png",
+      "SHA256": "5c68ad58f54c1336fb240fbb6eafe9cfc8dbe976a6b4b21e01ada674ae96592f"
+    },
+    {
+      "归档": "frames/walk-06.png",
+      "原始来源": "work/character-art/animation05/walk-06.png",
+      "SHA256": "b2f789eccf9f1760970c1279c06e7235add42ba013d3cbcdb3558e6d2688fae9"
+    },
+    {
+      "归档": "frames/walk-07.png",
+      "原始来源": "work/character-art/animation05/walk-07.png",
+      "SHA256": "8bb32a28f45eafe0859c2d5e1f9ea19bfa8f8ea758ad657ef7ae7f1ac583b174"
+    },
+    {
+      "归档": "frames/walk-08.png",
+      "原始来源": "work/character-art/animation05/walk-08.png",
+      "SHA256": "95e4284835ea648ec17051773e5888f69da7366275785b325e54f67bffb2f2e9"
+    },
+    {
+      "归档": "frames/walk-09.png",
+      "原始来源": "work/character-art/animation05/walk-09.png",
+      "SHA256": "bfb29de66b3c8471a517291759ee540afeabe2dc2eca836ef35832b37f37209c"
+    },
+    {
+      "归档": "frames/walk-10.png",
+      "原始来源": "work/character-art/animation05/walk-10.png",
+      "SHA256": "bf37f2bdd7c465f4a16520a0c1762e67caf543fa2f4f9cf7cc21c3e3cd267039"
+    },
+    {
+      "归档": "frames/walk-11.png",
+      "原始来源": "work/character-art/animation05/walk-11.png",
+      "SHA256": "eb5ad0eae67580c737854a67e5dc019d52fe92b019581b5c640fa1e9839ec3ce"
+    },
+    {
+      "归档": "frames/walk-12.png",
+      "原始来源": "work/character-art/animation05/walk-12.png",
+      "SHA256": "e4804dec23f71b5fc8d7aec69babb9fb523711636320a8a2840965232c4eb8d9"
+    },
+    {
+      "归档": "frames/walk-13.png",
+      "原始来源": "work/character-art/animation05/walk-13.png",
+      "SHA256": "ad32f7d4b0d8251511cd3fd82028077228fda4f03877af134c3b8e1a10576102"
+    },
+    {
+      "归档": "frames/walk-14.png",
+      "原始来源": "work/character-art/animation05/walk-14.png",
+      "SHA256": "e8da31aa754458ffd08fc547007800c08a0e62834597fedf631b9c752def2ddd"
+    },
+    {
+      "归档": "frames/walk-15.png",
+      "原始来源": "work/character-art/animation05/walk-15.png",
+      "SHA256": "218b25d23de103432edf15305e39f23f131e71acfde931a44c845f6bf0be567a"
+    },
+    {
+      "归档": "frames/walk-16.png",
+      "原始来源": "work/character-art/animation05/walk-16.png",
+      "SHA256": "4c8313029df86e62e3e84f57b9210353ecbbfae733b716931a7f3bd3231cf848"
+    },
+    {
+      "归档": "frames/walk-17.png",
+      "原始来源": "work/character-art/animation05/walk-17.png",
+      "SHA256": "ed26e9553e6236ebc266eced13e51b5cf749f5a6f312fb42d5aab93caa6af3e7"
+    },
+    {
+      "归档": "frames/walk-18.png",
+      "原始来源": "work/character-art/animation05/walk-18.png",
+      "SHA256": "96021bb9ba636024e8dd94e66a6e6893f499e781e9a24c01b5133d9b5c36d319"
+    },
+    {
+      "归档": "frames/walk-19.png",
+      "原始来源": "work/character-art/animation05/walk-19.png",
+      "SHA256": "73b59516be5e16bcd36f02c284b5f4291b66122705cc57fe2c2cb5b88c68cc1c"
+    },
+    {
+      "归档": "frames/walk-20.png",
+      "原始来源": "work/character-art/animation05/walk-20.png",
+      "SHA256": "e914223b55526f62c1722a93ee13defbd2200e5132e3800af936a793226e1ab9"
+    },
+    {
+      "归档": "frames/walk-21.png",
+      "原始来源": "work/character-art/animation05/walk-21.png",
+      "SHA256": "af688af6d527e1983f7703ba6d0da01b8633cba13a4a6f3920639d9ae053f2b7"
+    },
+    {
+      "归档": "frames/walk-22.png",
+      "原始来源": "work/character-art/animation05/walk-22.png",
+      "SHA256": "8aebb27b3dd01cfa8fbb9c547f8ca6b9827a0621258cdc96dc24310fe140e753"
+    },
+    {
+      "归档": "frames/walk-23.png",
+      "原始来源": "work/character-art/animation05/walk-23.png",
+      "SHA256": "d26d2604ff45d7a08a148c1fd235c0445f37e7a2c823393edcb75342fbbb501d"
+    },
+    {
+      "归档": "frames/walk-24.png",
+      "原始来源": "work/character-art/animation05/walk-24.png",
+      "SHA256": "99bd9fb57382e0140b6ec4d81e10c4bf26d41b912d4225c980e0257e7676fd2b"
+    },
+    {
+      "归档": "frames/walk-25.png",
+      "原始来源": "work/character-art/animation05/walk-25.png",
+      "SHA256": "3db966c12f690704753aa7e536742b7837ffe614f2f1a08f01ccf05a19f9bb19"
+    },
+    {
+      "归档": "frames/walk-26.png",
+      "原始来源": "work/character-art/animation05/walk-26.png",
+      "SHA256": "92900dfe54486817935190e122d68c7681e4032f8f6f72e8e4fba15a8637b79d"
+    },
+    {
+      "归档": "frames/walk-27.png",
+      "原始来源": "work/character-art/animation05/walk-27.png",
+      "SHA256": "38d073661e28925f922b28ada9b6ce28ce92253c0e0d93a05731bcf4595cf413"
+    },
+    {
+      "归档": "frames/walk-28.png",
+      "原始来源": "work/character-art/animation05/walk-28.png",
+      "SHA256": "c8f3bcd2a6beebf46e13e1b791ff99df09660ec334421524d687bad986303093"
+    },
+    {
+      "归档": "frames/walk-29.png",
+      "原始来源": "work/character-art/animation05/walk-29.png",
+      "SHA256": "1fcb32ad7dfb59a0044993dc5ffc449cc0b251820cdb270c36d6b704b19b00f7"
+    },
+    {
+      "归档": "frames/walk-30.png",
+      "原始来源": "work/character-art/animation05/walk-30.png",
+      "SHA256": "ee9854c02663541d6d22c49c9fa7db75f379a863884ca8eb835563d687e8d7a0"
+    },
+    {
+      "归档": "frames/walk-31.png",
+      "原始来源": "work/character-art/animation05/walk-31.png",
+      "SHA256": "892e53e604e63acc37c7e7fb531cdb82c5e33723ea38aac15f8a29d2f9bfb54c"
+    },
+    {
+      "归档": "frames/walk-32.png",
+      "原始来源": "work/character-art/animation05/walk-32.png",
+      "SHA256": "00dc697754b0dbd624d59a07b58acd4292995d4e27ae9919262fccf72085f3e3"
+    },
+    {
+      "归档": "frames/walk-33.png",
+      "原始来源": "work/character-art/animation05/walk-33.png",
+      "SHA256": "0d871ee7f487f5f4c6fb8535fe2b5b5991de9638c1789053709c576fe3bed15b"
+    },
+    {
+      "归档": "frames/walk-34.png",
+      "原始来源": "work/character-art/animation05/walk-34.png",
+      "SHA256": "a27d7adb136bb1bdbe486c964b9793cccf9f89a0939e4179b35af3144dda1461"
+    },
+    {
+      "归档": "frames/walk-35.png",
+      "原始来源": "work/character-art/animation05/walk-35.png",
+      "SHA256": "914e567a27ac9e51f3626f1065cad01c9ee8a01c6a5e49faeea7493d081f17ab"
+    },
+    {
+      "归档": "frames/walk-36.png",
+      "原始来源": "work/character-art/animation05/walk-36.png",
+      "SHA256": "32864f7f41d9d46147418fb02ce5ba7592659e5975a71e11f2a505eaa400590b"
+    },
+    {
+      "归档": "frames/walk-37.png",
+      "原始来源": "work/character-art/animation05/walk-37.png",
+      "SHA256": "fb0fa3df55800de8f650bc3d4c4d4175e34b37551dfe17c9a3db53c767290b0a"
+    },
+    {
+      "归档": "frames/walk-38.png",
+      "原始来源": "work/character-art/animation05/walk-38.png",
+      "SHA256": "0a0f857d806d0981b594023cb9accfa46b89b933c00ec04deb599fb5376673c3"
+    },
+    {
+      "归档": "frames/walk-39.png",
+      "原始来源": "work/character-art/animation05/walk-39.png",
+      "SHA256": "c0d388b14972125ec2bf514412f19543f9d307fdc99298cdd748871b07c849f0"
+    },
+    {
+      "归档": "frames/walk-40.png",
+      "原始来源": "work/character-art/animation05/walk-40.png",
+      "SHA256": "99390737ae9d3238ac5ab158a9239b6fe110a0f122d46bd1db1cf0f2c4d84b59"
+    },
+    {
+      "归档": "frames/walk-41.png",
+      "原始来源": "work/character-art/animation05/walk-41.png",
+      "SHA256": "1f5e2051ceb38f046797b3c2510820d5e273b150f6864b638cd2e9962e0d1a5f"
+    },
+    {
+      "归档": "frames/walk-42.png",
+      "原始来源": "work/character-art/animation05/walk-42.png",
+      "SHA256": "c787445e6d5a4ace5d6bc77a70785cb16173e8fb656dc619f7ae6058264500df"
+    },
+    {
+      "归档": "frames/walk-43.png",
+      "原始来源": "work/character-art/animation05/walk-43.png",
+      "SHA256": "91d4cd4744029479e72650046fabdc3bbd51176c9d5cb40686c56bc700d1f05a"
+    },
+    {
+      "归档": "frames/walk-44.png",
+      "原始来源": "work/character-art/animation05/walk-44.png",
+      "SHA256": "4decac446d0e84fe640fd79f108bd8850c6bdcc3d04d22d116d3b2c8e021b6d1"
+    },
+    {
+      "归档": "frames/walk-45.png",
+      "原始来源": "work/character-art/animation05/walk-45.png",
+      "SHA256": "283c613a24deac39cee6998df6cb0049b098dfacd7a2abc8b36ab7f4b33e0145"
+    },
+    {
+      "归档": "frames/walk-46.png",
+      "原始来源": "work/character-art/animation05/walk-46.png",
+      "SHA256": "e44dd29c0620165d39171518333fc7ccba639bf5d3a449ae23abd39ac80140cd"
+    },
+    {
+      "归档": "frames/walk-47.png",
+      "原始来源": "work/character-art/animation05/walk-47.png",
+      "SHA256": "ba3636a669568c8be21aac3fd665741d6c27f5b2d67ccd19801a375fb0a73014"
+    },
+    {
+      "归档": "walk-contact.png",
+      "原始来源": "work/character-art/animation05/walk-contact.png",
+      "SHA256": "cbddeec2ab56e66eb0bafc8218d2d25bc7b6d57a66ece65625fcdf9232642333"
+    },
+    {
+      "归档": "frames/walk-side-00.png",
+      "原始来源": "work/character-art/animation05/walk-side-00.png",
+      "SHA256": "4e41f56aa855c56f087419bad4801e384e6e632c3906d38b4fbe91a7bc080c16"
+    },
+    {
+      "归档": "frames/walk-side-01.png",
+      "原始来源": "work/character-art/animation05/walk-side-01.png",
+      "SHA256": "3f2501843cb2497e515ae13c4ea5b439502b1d7fe5af25ceadcccec365c38576"
+    },
+    {
+      "归档": "frames/walk-side-02.png",
+      "原始来源": "work/character-art/animation05/walk-side-02.png",
+      "SHA256": "2ab681071a63528f1ea06be66e6d6c3bd569f08442253a0a843bb856e17e2ffd"
+    },
+    {
+      "归档": "frames/walk-side-03.png",
+      "原始来源": "work/character-art/animation05/walk-side-03.png",
+      "SHA256": "99e642fcf7ee9399d03c1f4a14654af89b9ef45e4e715aa2ee60c75f0b1828e2"
+    },
+    {
+      "归档": "frames/walk-side-04.png",
+      "原始来源": "work/character-art/animation05/walk-side-04.png",
+      "SHA256": "5b13a1d5e9c57531bd7bd88dbb60964e5309b4d78550517e01918322f183073b"
+    },
+    {
+      "归档": "frames/walk-side-05.png",
+      "原始来源": "work/character-art/animation05/walk-side-05.png",
+      "SHA256": "55308f4ab53cb0650816ff65f4d94746134979f26538aede79ceaa98199957e5"
+    },
+    {
+      "归档": "frames/walk-side-06.png",
+      "原始来源": "work/character-art/animation05/walk-side-06.png",
+      "SHA256": "97e8892278abec5a61eafa46d5fc8bf2708608383c1d7052e3c2f9b95da6164c"
+    },
+    {
+      "归档": "frames/walk-side-07.png",
+      "原始来源": "work/character-art/animation05/walk-side-07.png",
+      "SHA256": "e48e7f9fbcbb2260a4cf77cec686d4952be787f035b443a4a2cd8968203e5a72"
+    },
+    {
+      "归档": "frames/walk-side-08.png",
+      "原始来源": "work/character-art/animation05/walk-side-08.png",
+      "SHA256": "7f2aa41867194dd7991f639f2908890a759d40eb3f80a827afc118d4760ff777"
+    },
+    {
+      "归档": "frames/walk-side-09.png",
+      "原始来源": "work/character-art/animation05/walk-side-09.png",
+      "SHA256": "d2836a2c7c333b9a09b5f4466e2a800276f3bc071c545f24b2744ab0a417b1bc"
+    },
+    {
+      "归档": "frames/walk-side-10.png",
+      "原始来源": "work/character-art/animation05/walk-side-10.png",
+      "SHA256": "1bfa53f0e7de41b3348afc15d69ea9cd41313402f01d079697f08f8ed588a186"
+    },
+    {
+      "归档": "frames/walk-side-11.png",
+      "原始来源": "work/character-art/animation05/walk-side-11.png",
+      "SHA256": "096d2f5ca559fde2d32c0fd47d2f3b3093baba81c3769d628e32a6314a900f08"
+    },
+    {
+      "归档": "frames/walk-side-12.png",
+      "原始来源": "work/character-art/animation05/walk-side-12.png",
+      "SHA256": "a48ec56e5da91b447e09b77c6990d14597db8cdfd62e2cb1fd651da69e235a92"
+    },
+    {
+      "归档": "frames/walk-side-13.png",
+      "原始来源": "work/character-art/animation05/walk-side-13.png",
+      "SHA256": "47f2cda99967b07d627aa43ea4788c352115de5cd23d4f739504e47e136514e4"
+    },
+    {
+      "归档": "frames/walk-side-14.png",
+      "原始来源": "work/character-art/animation05/walk-side-14.png",
+      "SHA256": "dc29679cccae58433ffa54fc8ed2f5b3c3467ca56f1a3309c3ec6ecaaecff35d"
+    },
+    {
+      "归档": "frames/walk-side-15.png",
+      "原始来源": "work/character-art/animation05/walk-side-15.png",
+      "SHA256": "bb5a4e71f2b485d52f2a31a2b24166b26fb0f699333afcb3405be71e347c7798"
+    },
+    {
+      "归档": "frames/walk-side-16.png",
+      "原始来源": "work/character-art/animation05/walk-side-16.png",
+      "SHA256": "38866c57e2897e099fefd32f96df98ac9ccd8ff6c2bbd718cb78f7c26f5fa0a8"
+    },
+    {
+      "归档": "frames/walk-side-17.png",
+      "原始来源": "work/character-art/animation05/walk-side-17.png",
+      "SHA256": "522690197772c6f0f80b4e0ee1d2a3532989cd004f4d53995a35903e1057422e"
+    },
+    {
+      "归档": "frames/walk-side-18.png",
+      "原始来源": "work/character-art/animation05/walk-side-18.png",
+      "SHA256": "79fb6f3421fa92b8e9ae048454b2de72c5f7adf809bc04d67c4846e46d238496"
+    },
+    {
+      "归档": "frames/walk-side-19.png",
+      "原始来源": "work/character-art/animation05/walk-side-19.png",
+      "SHA256": "66d23d55b122d51fd6b3089c81bd0eeb46d2511b54e8e5c2e03ff8ad473eef20"
+    },
+    {
+      "归档": "frames/walk-side-20.png",
+      "原始来源": "work/character-art/animation05/walk-side-20.png",
+      "SHA256": "7953345def651a13d014151d7849d0bb1f2d9a1e593127937a7acac14ec7cb5c"
+    },
+    {
+      "归档": "frames/walk-side-21.png",
+      "原始来源": "work/character-art/animation05/walk-side-21.png",
+      "SHA256": "fd201556cb1b46439a5ac61d9d17dc1971c7c802c40f80786639533a0c41555f"
+    },
+    {
+      "归档": "frames/walk-side-22.png",
+      "原始来源": "work/character-art/animation05/walk-side-22.png",
+      "SHA256": "01db9bb07fa6716f7e72c9461f8e676d174010f875f53bdb764f7430cabe0c46"
+    },
+    {
+      "归档": "frames/walk-side-23.png",
+      "原始来源": "work/character-art/animation05/walk-side-23.png",
+      "SHA256": "bcba60db34f7fb72e4c38844078169a54e46887c125b18ce57f48f6149fb04fe"
+    },
+    {
+      "归档": "frames/walk-side-24.png",
+      "原始来源": "work/character-art/animation05/walk-side-24.png",
+      "SHA256": "270aeef4d6102b7d64a4ba523ab1fa2900acf9c2872284a95a95bc7344035822"
+    },
+    {
+      "归档": "frames/walk-side-25.png",
+      "原始来源": "work/character-art/animation05/walk-side-25.png",
+      "SHA256": "5b34dfb13f26491350f70fb70444b1407c761b516dfc1f486bbdd7d466099aa3"
+    },
+    {
+      "归档": "frames/walk-side-26.png",
+      "原始来源": "work/character-art/animation05/walk-side-26.png",
+      "SHA256": "fd1461b52bda391b48d40862bfe6734fa6dc131e64e2afd93ab9d35c52103ff5"
+    },
+    {
+      "归档": "frames/walk-side-27.png",
+      "原始来源": "work/character-art/animation05/walk-side-27.png",
+      "SHA256": "cf599db25b4c1663d26bd32d8270c60dddd603956f36dcc13c030f6f7cb96bc0"
+    },
+    {
+      "归档": "frames/walk-side-28.png",
+      "原始来源": "work/character-art/animation05/walk-side-28.png",
+      "SHA256": "94c94ad8a860f1fa8c5af6967d7e344b4bf92d1e0c8047ba3f7011fa85e60be3"
+    },
+    {
+      "归档": "frames/walk-side-29.png",
+      "原始来源": "work/character-art/animation05/walk-side-29.png",
+      "SHA256": "fa663568c8314722f3a8860f049f82110df179f17c64886b97aa1f5acda1903b"
+    },
+    {
+      "归档": "frames/walk-side-30.png",
+      "原始来源": "work/character-art/animation05/walk-side-30.png",
+      "SHA256": "9e510cd4f69589b3f2d3267f69727a98023fa37582f6c9d62341320dbefaa494"
+    },
+    {
+      "归档": "frames/walk-side-31.png",
+      "原始来源": "work/character-art/animation05/walk-side-31.png",
+      "SHA256": "6e1e5d9b3f33feb6922cd48a31c393882bcd4fe72ebb138f1977a6e981c9f8ab"
+    },
+    {
+      "归档": "frames/walk-side-32.png",
+      "原始来源": "work/character-art/animation05/walk-side-32.png",
+      "SHA256": "58ca884910c95e0ddb3855968f73b06fae532589609eb3a2006aa0b6f67e3dad"
+    },
+    {
+      "归档": "frames/walk-side-33.png",
+      "原始来源": "work/character-art/animation05/walk-side-33.png",
+      "SHA256": "64018ab2299105808f764501a8ead3b09c447752b31b48e87fc20bf48a3dc47a"
+    },
+    {
+      "归档": "frames/walk-side-34.png",
+      "原始来源": "work/character-art/animation05/walk-side-34.png",
+      "SHA256": "586a485e61060e92f7abd00c0e43109403cf454ac330c158aef972b9118e9040"
+    },
+    {
+      "归档": "frames/walk-side-35.png",
+      "原始来源": "work/character-art/animation05/walk-side-35.png",
+      "SHA256": "78634523a8e42fd4fbda99cf35a29c8dd2c71bd641daf8c83372872ac384d9b7"
+    },
+    {
+      "归档": "frames/walk-side-36.png",
+      "原始来源": "work/character-art/animation05/walk-side-36.png",
+      "SHA256": "d5634c859b77248eab3e083962995610f6c81e29561839c711e68c4dfeed6dfa"
+    },
+    {
+      "归档": "frames/walk-side-37.png",
+      "原始来源": "work/character-art/animation05/walk-side-37.png",
+      "SHA256": "b1c6f402eaaca9145b9e27dc18cf52322a36bd2541bf9f7141149a278dfce862"
+    },
+    {
+      "归档": "frames/walk-side-38.png",
+      "原始来源": "work/character-art/animation05/walk-side-38.png",
+      "SHA256": "0d7070c1e0fa87c82782fd8599e028e9be4822de5a17ce674ba86a2cf8614315"
+    },
+    {
+      "归档": "frames/walk-side-39.png",
+      "原始来源": "work/character-art/animation05/walk-side-39.png",
+      "SHA256": "f5bd015f5fed53140b6becbc6ceb33b44daa5c5f7ca4921203df53c4a4f486fd"
+    },
+    {
+      "归档": "frames/walk-side-40.png",
+      "原始来源": "work/character-art/animation05/walk-side-40.png",
+      "SHA256": "6cff09ee272cb1d03c0c7ceab99ba3ce518070b3528309683ea9d68e368c63bf"
+    },
+    {
+      "归档": "frames/walk-side-41.png",
+      "原始来源": "work/character-art/animation05/walk-side-41.png",
+      "SHA256": "fb1d260a39b2e4761a8ae48deecf134ee564194a110507e4c48f60d03fb637d4"
+    },
+    {
+      "归档": "frames/walk-side-42.png",
+      "原始来源": "work/character-art/animation05/walk-side-42.png",
+      "SHA256": "e501d999a868c4afa510e0c8805cfcfd9e7cbf58356f71668679a81736c010b9"
+    },
+    {
+      "归档": "frames/walk-side-43.png",
+      "原始来源": "work/character-art/animation05/walk-side-43.png",
+      "SHA256": "3496d59cdf00176c042ee309b9670d346375145511b56aa563d7c979e2984f42"
+    },
+    {
+      "归档": "frames/walk-side-44.png",
+      "原始来源": "work/character-art/animation05/walk-side-44.png",
+      "SHA256": "ffe9195fe1b3cd836878a5d37f8bc64f6e912c6dd76297aba25c2bef67917a5d"
+    },
+    {
+      "归档": "frames/walk-side-45.png",
+      "原始来源": "work/character-art/animation05/walk-side-45.png",
+      "SHA256": "88568f2aa26a2619ef7877a095e63bb7d3346865b30840f91ff15a4b0057d928"
+    },
+    {
+      "归档": "frames/walk-side-46.png",
+      "原始来源": "work/character-art/animation05/walk-side-46.png",
+      "SHA256": "6d6882c28c3d70a37fd52cfabb5bb2b0e08208c38fc0b09d221820ec19e7e94c"
+    },
+    {
+      "归档": "frames/walk-side-47.png",
+      "原始来源": "work/character-art/animation05/walk-side-47.png",
+      "SHA256": "c37beaaa12651d83caa2a219d3df88a5e6cc696d02b1337bfff5b9cac920141b"
+    },
+    {
+      "归档": "walk-side-contact.png",
+      "原始来源": "work/character-art/animation05/walk-side-contact.png",
+      "SHA256": "6afe3d7eb03504fd1b3edd8dc2d693b21a9f045c2c477175c4786d599dc9c0c7"
+    },
+    {
+      "归档": "walk-side.gif",
+      "原始来源": "work/character-art/animation05/walk-side.gif",
+      "SHA256": "431bef42d1011d694ecae4cb2b1fd0fde9d004cad1da6ea3b20e3f7665a74245"
+    },
+    {
+      "归档": "walk.gif",
+      "原始来源": "work/character-art/animation05/walk.gif",
+      "SHA256": "fdefcc103c92cfd0c2cb45b0bbd53e52e4c3ce0105461082030e9bf696d8e881"
+    },
+    {
+      "归档": "frames/work-00.png",
+      "原始来源": "work/character-art/animation05/work-00.png",
+      "SHA256": "f845dd3e92a79ccd5822d73fac8628a4bcb90823535a7501f81f52eac1b2fef6"
+    },
+    {
+      "归档": "frames/work-01.png",
+      "原始来源": "work/character-art/animation05/work-01.png",
+      "SHA256": "f4a2594150b3772160b5ef2c2255ff9cf45eb9af89a02c77778f3b6b530cd93d"
+    },
+    {
+      "归档": "frames/work-02.png",
+      "原始来源": "work/character-art/animation05/work-02.png",
+      "SHA256": "68fed0776077155daa10912e19a04ada907f75b5a889949bcee87f0496bccc7d"
+    },
+    {
+      "归档": "frames/work-03.png",
+      "原始来源": "work/character-art/animation05/work-03.png",
+      "SHA256": "61d4240df8ca51aa6ee37e8505d7b68a8109b05c09a927c1cc3bf4719c9066b7"
+    },
+    {
+      "归档": "frames/work-04.png",
+      "原始来源": "work/character-art/animation05/work-04.png",
+      "SHA256": "8f77cd5214198c8c8fa8e7ff4721344b48becf2a90eba8cd939f20c57bd7acdb"
+    },
+    {
+      "归档": "frames/work-05.png",
+      "原始来源": "work/character-art/animation05/work-05.png",
+      "SHA256": "24bdb37a1f214208b6292ed932836a862a01b01ceaa47daaf60e5c76fa4fdb27"
+    },
+    {
+      "归档": "frames/work-06.png",
+      "原始来源": "work/character-art/animation05/work-06.png",
+      "SHA256": "4545de6e541863e89e5c904351ee5266f0856a65f53bc5e51339f364f98761cf"
+    },
+    {
+      "归档": "frames/work-07.png",
+      "原始来源": "work/character-art/animation05/work-07.png",
+      "SHA256": "3c9941fa4c97f8ed0aca74d7cfe8207d8f01eb39b94d95f26c450b84ab1d4ba0"
+    },
+    {
+      "归档": "frames/work-08.png",
+      "原始来源": "work/character-art/animation05/work-08.png",
+      "SHA256": "ae17802662d4a26869187accb602c2a10c92ee14cdb5f226307d9aba3996c306"
+    },
+    {
+      "归档": "frames/work-09.png",
+      "原始来源": "work/character-art/animation05/work-09.png",
+      "SHA256": "fb64758ce1450b6f72ae331d9dc8c8bd7c5488e6b0cd838ab0eff0d63ad0b8a3"
+    },
+    {
+      "归档": "frames/work-10.png",
+      "原始来源": "work/character-art/animation05/work-10.png",
+      "SHA256": "818b1ecc7e92f3da489497b683807135dcf94b9bbb96a6f7e74011cb87e51a59"
+    },
+    {
+      "归档": "frames/work-11.png",
+      "原始来源": "work/character-art/animation05/work-11.png",
+      "SHA256": "11f34207547f868f60cddd478fc2f4e6324ba13806347b47026798cdd823d5c5"
+    },
+    {
+      "归档": "frames/work-12.png",
+      "原始来源": "work/character-art/animation05/work-12.png",
+      "SHA256": "ef10d7caa0b38a06773407ee61be9942d251411d3263ab7619b652b3bc6703d3"
+    },
+    {
+      "归档": "frames/work-13.png",
+      "原始来源": "work/character-art/animation05/work-13.png",
+      "SHA256": "8f27bead51d70baade571cbbf0ee90f7d0c226f1f4cadd994e339a5974b8895d"
+    },
+    {
+      "归档": "frames/work-14.png",
+      "原始来源": "work/character-art/animation05/work-14.png",
+      "SHA256": "dcb20dbb447b635230cd7e8386d4b5a761adec3a74a7e04b4fda92e6b0f8edbc"
+    },
+    {
+      "归档": "frames/work-15.png",
+      "原始来源": "work/character-art/animation05/work-15.png",
+      "SHA256": "6da7e6a5528ba75e9a5f9759ee03d1c0050835d45d688c022084fa3eaebbb705"
+    },
+    {
+      "归档": "frames/work-16.png",
+      "原始来源": "work/character-art/animation05/work-16.png",
+      "SHA256": "02e07d085deda79cccbbcbe30fbbafa3b73b02627f8c9373efa1132936e82394"
+    },
+    {
+      "归档": "frames/work-17.png",
+      "原始来源": "work/character-art/animation05/work-17.png",
+      "SHA256": "6507ba55676103806eebe559f7b50e141bd8b2b3613a66724fe9bee83e35bf6f"
+    },
+    {
+      "归档": "frames/work-18.png",
+      "原始来源": "work/character-art/animation05/work-18.png",
+      "SHA256": "763d795118fad8f312db0653e1ced9edea8c69e9d140ce06d1c294b54c9101cf"
+    },
+    {
+      "归档": "frames/work-19.png",
+      "原始来源": "work/character-art/animation05/work-19.png",
+      "SHA256": "0214739381e3beee21bfb385d11b7d1905d00c0020cc41d3da7c4a05c83aea77"
+    },
+    {
+      "归档": "frames/work-20.png",
+      "原始来源": "work/character-art/animation05/work-20.png",
+      "SHA256": "7c9f667fe151cb9676d27ebb328997b59289d5ade457bcabc7206795896d4432"
+    },
+    {
+      "归档": "frames/work-21.png",
+      "原始来源": "work/character-art/animation05/work-21.png",
+      "SHA256": "f6c052560e2c99918b560ab34281379c705f3aa98ec2d228c0b7a55f361c22bc"
+    },
+    {
+      "归档": "frames/work-22.png",
+      "原始来源": "work/character-art/animation05/work-22.png",
+      "SHA256": "22b0fe4d72e0f193a889acb77ca77da778f09098a22f772360bfbdd6f9e0c80e"
+    },
+    {
+      "归档": "frames/work-23.png",
+      "原始来源": "work/character-art/animation05/work-23.png",
+      "SHA256": "fbad4da15cbd904275963911613fd74438587bf38b156d1059c449c3b8d4a56e"
+    },
+    {
+      "归档": "work-contact.png",
+      "原始来源": "work/character-art/animation05/work-contact.png",
+      "SHA256": "cdb56ff85267ceb5ee00788717248b3a2ecf8ab371124848491d94d5c1757236"
+    },
+    {
+      "归档": "work.gif",
+      "原始来源": "work/character-art/animation05/work.gif",
+      "SHA256": "60b152f06eacfb13f272b20edafd8d1d9409cf37890a650acca282173f5dca4e"
+    }
+  ],
+  "源文件": [
+    {
+      "文件": "tools/sculpt_character_samples.py",
+      "SHA256": "3975ec45ef546fd83e785c4d6e8407442dc5f3c2bc863fe10e6e68b542f93b8e"
+    },
+    {
+      "文件": "tools/sculpt_player_b.py",
+      "SHA256": "8f569d54bb18977aee8ba52c74d0309aba267e49ab86944e6be982ee8038b524"
+    },
+    {
+      "文件": "tools/sculpt_npc_b.py",
+      "SHA256": "da34c3b0bd6dc4ddfcdd1f8ed230b4311cb66adb51c10741cb0a2ccf86f6c4b1"
+    },
+    {
+      "文件": "tools/sculpt_npc_wardrobe.py",
+      "SHA256": "57ae1b5e18a8d5155938d4f29bf4bb79ea949c1b8e838dd734002497373bda2b"
+    },
+    {
+      "文件": "tools/character-art-capture/capture.py",
+      "SHA256": "44798ddb62c4a3b1402cae921afe6a584d4d1a705afc290fa6150b0c5da92f53"
+    },
+    {
+      "文件": "tools/character-art-capture/compare_proportions.py",
+      "SHA256": "c2fae7859ab2c5ef80b65bddd6430877b33613d2cd9f94b12e2732122dc35a29"
+    },
+    {
+      "文件": "tools/character-art-capture/compare_static.py",
+      "SHA256": "fe390e39c5b82fd8c9259ce806c9016a6e0de6b46e50e62dcb722d777a463737"
+    },
+    {
+      "文件": "tools/character-art-capture/compose_animation.py",
+      "SHA256": "62a98b37402b391f8ff0b57c98289127bda8da9c508401b163559eb29313bb66"
+    },
+    {
+      "文件": "tools/character-art-capture/measure_static.py",
+      "SHA256": "f5022658d4a34bd983ad9f6d48cd055c365294cb955b951f4110c9bc5bf2b915"
+    },
+    {
+      "文件": "tools/character-art-capture/CharacterArtCapture.cs",
+      "SHA256": "6a56258544945eaeacf5f02ec7bdc2764feb9813e07d258bed90ae675466a8b0"
+    },
+    {
+      "文件": "Assets/Scripts/Game/Runtime/PlayerCharacterModel.cs",
+      "SHA256": "7d42721e0dfafa72e679d50b1b1e5c4bc66edee204f00364f7294633871096aa"
+    },
+    {
+      "文件": "Assets/Scripts/Game/Runtime/FigureMotion.cs",
+      "SHA256": "1e78f43638c223fe63cb9951493fdb007b19e28efbb0ab6fb5c66414321e366e"
+    },
+    {
+      "文件": "Assets/Scripts/Game/Runtime/AvatarPreview.cs",
+      "SHA256": "19066c5785f5d92628a03a793f4fa9e2bcdab0238792f733f59b23c7dac304eb"
+    },
+    {
+      "文件": "Assets/Scripts/Game/Runtime/NaturalFigure.cs",
+      "SHA256": "979ee379024d7fc7a40058dfc53dbd632124df494219a1afca50bfb9d3286547"
+    },
+    {
+      "文件": "Assets/Scripts/Game/Runtime/CityNpcClothing.cs",
+      "SHA256": "7fe486c535ba747090285d06931692087087830a44389ff0bbe0b6cb2d0a5905"
+    },
+    {
+      "文件": "Assets/Scripts/Game/Runtime/Mats.cs",
+      "SHA256": "0bef571e5ca6d789c8556b3e63ae4073ff7f3751887614e6d229215c737ef0ce"
+    },
+    {
+      "文件": "Assets/Scripts/Core/Session/CityClothingCatalog.cs",
+      "SHA256": "dad9683633444bc7e32c9b8ec3e9802709ceb5259dbba17937a82d91276f9352"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedCore.bytes",
+      "SHA256": "255c6f9c049a17dfa277b9bb65984f2598d1ef2807fc97d82830d8ab17db947d"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedCore.bytes.meta",
+      "SHA256": "0a029b13807eceb043cbdb00da4ba7a07f650b21c25d86bbd19881028917f743"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedCoreShort.bytes",
+      "SHA256": "f8ee0652e24fdda73e57b1a3eb4f3987e9553574ec02c4e1cd6fe5ff6e9f54e1"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedCoreShort.bytes.meta",
+      "SHA256": "9e0ddf1b35bf4da98989e65a0af0702e0b22fdbac105a27506013c9bf7681977"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedJacket.bytes",
+      "SHA256": "c3bf7515b64bd7b1783ff07ea2fb83ed4e8b852fa949789f8860aa21080b9996"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedJacket.bytes.meta",
+      "SHA256": "82226c778710b514ee8e3bba87a33eac97131a279534921482e0d4da9d9f2528"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedTrousers.bytes",
+      "SHA256": "4edcf5aa28f199517e2dc1250739394e54e6d0c1e553f43910c8a9cf60ba06cc"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-PaintedTrousers.bytes.meta",
+      "SHA256": "5118642293f260a86d353333c627252845048eff2146bb7d75acf7045604b3db"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcHead-baker.bytes",
+      "SHA256": "abea30ef0a9bce7c6cd582fc93fde4e916f1fca3e71ac53f541830de4f1b6fbd"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcHead-baker.bytes.meta",
+      "SHA256": "5942f16e687a84bfc4b151013e88f4d9317fe82ab9442b040a007dc44760710c"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcHead-twintail.bytes",
+      "SHA256": "da928baf3044d937315c4ffa890d3d7c31b6b714eb20f188320c128040a607ed"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcHead-twintail.bytes.meta",
+      "SHA256": "0b03f26e2f17bdb7c3414228eea8d1b5e413f32f359b99a67f7f04f6978b9daa"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcTop-chef.bytes",
+      "SHA256": "a62a01141ce263cd15fc9e7530deb4dca2b79ab6e892a93268580b05bdf7d01e"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcTop-chef.bytes.meta",
+      "SHA256": "d8134e39a1edcb3a1aeb56acc0c47e060479cd104eb4ea88643e2bdeb0607c0d"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcTop-singer.bytes",
+      "SHA256": "ee9c64228f23f1980036f8f20c0daca1488cde05b3de3ac241627e8f6f8b5aa5"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcTop-singer.bytes.meta",
+      "SHA256": "d02d94cfcf7addf1b8a2ad4651818e7d47d67d3f19f8f179eafe32e98997d380"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcBottom-chef.bytes",
+      "SHA256": "523206bedd902fede7144630245a0a3bcd79d5f872cb8f8f7a610c27492dda49"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcBottom-chef.bytes.meta",
+      "SHA256": "f6ffa8dad9ecd07784804e4f907c60989687f9bd2e0e258c635c7e0048ac3279"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcBottom-singer.bytes",
+      "SHA256": "c06230f98e466b06bbbee496cdf39df1889421087ad51108b5e1779a7bebd531"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerB-NpcBottom-singer.bytes.meta",
+      "SHA256": "445bcac90a7e761e38dd45f2b391796f527f0e0f1ab4e2eea734f892f1146628"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerPainted.shader",
+      "SHA256": "c639d8571481793e57fcc59f3abdbd6f2f1149417b1941fe1888e55010706cac"
+    },
+    {
+      "文件": "Assets/Resources/Characters/PlayerPainted.shader.meta",
+      "SHA256": "0f9fef6cf4956b3b236236d27c9bdb3d95f9e2ca6302d57577e89009b16354df"
+    },
+    {
+      "文件": "docs/art-direction/concept/characters-3d/three-character-proportion-locked-v3.png",
+      "SHA256": "b1a1e190a60a432d3d7e566da17a7aaf7727a0f4a79934fa798cd2137f57939c"
+    }
+  ]
+}

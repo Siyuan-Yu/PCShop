@@ -1,0 +1,34 @@
+{
+  "说明": "静态第12轮；Unity原图。概念方向认可不等于模型已通过95%验收。",
+  "分支": "art/experiment",
+  "基线提交": "a63f4ad45338813b7b894fd937021e99cbfa7b34",
+  "状态": "含未提交的人物修改；未运行测试套件、未打包、未上传。",
+  "截图": {
+    "00-concept-vs-static.png": "7bff4aec3b1f332387e1b40f1cfbff53f7852e5e3518bad51be5aeb999a81311",
+    "01-front.png": "76a28b21e857a74c66a7e68911e4f17f75e0f17a560820b3e9035b3edc40ad5a",
+    "02-three-quarter.png": "779f0a10c91988d6c388f7476e9ddf6561066380bc2edd4fd08ccebd84ede403",
+    "03-side.png": "7716c62dcda201437d58556215566fadc51f322f87a90227517f4bf0650e4832",
+    "04-back.png": "186395916400f78b90b3e03dc8eb9308a58d36e0150fefca98030996c7da69d5",
+    "05-game-angle-close.png": "5d0ffa78bb6b796fa1d24f3802ead5761a86c4323f681c93c65cb1dd610b4fc9",
+    "06-game-distance.png": "e251cff40fe35a1984cf14c3f247814575414b11dd4429b520bb8f5e30bd43f5",
+    "06b-street-static.png": "8661139e1e0261d303a69e71e042bcccf587c1f4502896e5c7ab8eb330ea467a",
+    "06c-street-default.png": "517c3a88c297f7147c1da1c41339d9c0acc6f8816f566ef695da227d05107a4d"
+  },
+  "源文件SHA256": {
+    "tools/sculpt_character_samples.py": "990f0703c628dce28d11ab1d8062302b6e30619852c7d3fc78315a0d84cc79b4",
+    "Assets/Resources/Characters/PlayerPainted.shader": "8b42e1d3b751c03d3c95f7bd06dc76b3465f920540d36b6461ba721ec80bd7e2",
+    "Assets/Scripts/Game/Runtime/PlayerCharacterModel.cs": "c82f4ba0b2a0be4262973a772a86ff6da4ab6e5ecb383376ead5f0f5a7fc9f0d",
+    "Assets/Scripts/Game/Runtime/NaturalFigure.cs": "831c21d9d9add0dff4649b7d94d0aa56654ca95d23a1fa6f2daf1af0213252f5",
+    "Assets/Scripts/Game/Runtime/CityNpcClothing.cs": "6f461cf917d2ec050f47b9916a15b89f47fd54df14815a50c73bcec39f225567",
+    "Assets/Resources/Characters/PlayerB-PaintedCore.bytes": "9c2b9f5cb86dde07f274f9a2009fcb9f95783788f058c457218ca8d11bc8ae19",
+    "Assets/Resources/Characters/PlayerB-PaintedCoreShort.bytes": "dc2bf12293ac8e65e0b379565abae8796df0664acbdcc4f1d1ee74e0916ccb44",
+    "Assets/Resources/Characters/PlayerB-PaintedJacket.bytes": "e9b858eb3b67de04f98bbfb02e204611478fb03f57b398203aa4573bbce58a45",
+    "Assets/Resources/Characters/PlayerB-PaintedTrousers.bytes": "6f059ef6fe74557bddf4abfcb781f7c6779db3e901e07dc561c9732c4e220381",
+    "Assets/Resources/Characters/PlayerB-NpcHead-baker.bytes": "7e80b4b9c1851fdd1e4754086447b9c07d72f87bc6e408f627447f462b8bfd6e",
+    "Assets/Resources/Characters/PlayerB-NpcHead-twintail.bytes": "3e19370bb02e59133576b4c43278086dc93702c1b9e67b161c1f48ea528fdd19",
+    "Assets/Resources/Characters/PlayerB-NpcTop-chef.bytes": "bfbcc0d31bedd020c2cb650ebd4064c779f0b1264f518e3a1237be09194687db",
+    "Assets/Resources/Characters/PlayerB-NpcTop-singer.bytes": "c74ff1e9b7e8846bf51291193699936ab9371c25728c06a4d85847e65404bbfa",
+    "Assets/Resources/Characters/PlayerB-NpcBottom-chef.bytes": "118145636ab031b24fadd9c8bd7391ee03909f2b066252ee62de3ce3156cf7e8",
+    "Assets/Resources/Characters/PlayerB-NpcBottom-singer.bytes": "ce237e2337ae14f5dc02cf32760b85d184f3155089c8c8190f5f5956b7fc7376"
+  }
+}
