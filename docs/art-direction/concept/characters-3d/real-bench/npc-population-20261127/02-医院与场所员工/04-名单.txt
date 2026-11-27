@@ -1,0 +1,5 @@
+life_leisure_staff_ferris_evening
+life_leisure_staff_fishing_evening
+life_leisure_staff_fishing_night
+life_leisure_staff_fitness_duty
+life_leisure_staff_golf_evening

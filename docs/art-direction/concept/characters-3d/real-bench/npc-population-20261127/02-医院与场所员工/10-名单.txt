@@ -1,0 +1,5 @@
+hospital_community_doctor_night
+hospital_garden_doctor_day
+hospital_garden_doctor_night
+hospital_outskirts_doctor_day
+hospital_outskirts_doctor_night

@@ -1,0 +1,5 @@
+life_leisure_staff_poker
+life_leisure_staff_restaurant_evening
+life_leisure_staff_restaurant_night
+life_leisure_staff_restaurant_tier2_day
+life_leisure_staff_restaurant_tier2_evening

@@ -1,0 +1,5 @@
+life_leisure_staff_bar_park
+life_leisure_staff_billiards
+life_leisure_staff_cinema_community
+life_leisure_staff_cinema_park
+life_leisure_staff_claw

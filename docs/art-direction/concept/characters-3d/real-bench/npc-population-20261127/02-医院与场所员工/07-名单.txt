@@ -1,0 +1,5 @@
+life_leisure_staff_ktv_tier4_night
+life_leisure_staff_oldmarket
+life_leisure_staff_pachinko_day
+life_leisure_staff_pachinko_evening
+life_leisure_staff_pachinko_night

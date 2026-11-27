@@ -1,0 +1,5 @@
+life_leisure_staff_ktv_evening
+life_leisure_staff_ktv_night
+life_leisure_staff_ktv_tier2_day
+life_leisure_staff_ktv_tier2_evening
+life_leisure_staff_ktv_tier2_night
