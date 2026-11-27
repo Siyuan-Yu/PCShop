@@ -12,6 +12,7 @@ for folder in ('Scripts','Resources','Art','Editor'):
         if target.exists() and target.stat().st_size==f.stat().st_size and abs(target.stat().st_mtime-f.stat().st_mtime)<.01:continue
         target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,target)
 shutil.copy2(Path(__file__).with_name('NpcPopulationCapture.cs'),project/'Assets/Editor/NpcPopulationCapture.cs')
+shutil.copy2(Path(__file__).with_name('NpcPopulationCapture.cs'),out/'复拍脚本.cs.txt')
 sources=list((root/'Assets/Resources/Characters').glob('*'))+[root/'Assets/Scripts/Game/Runtime'/n for n in ('Mats.cs','NaturalFigure.cs','NpcArtCatalog.cs','CityNpcClothing.cs','PlayerCharacterModel.cs','FigureMotion.cs')]+[Path(__file__).with_name('NpcPopulationCapture.cs')]
 (out/'复拍来源.json').write_text(json.dumps({'说明':'独立 Unity 工程，正式人物入口，原始截图无补画；无自动测试或发布构建。','sourceSha256':{str(f.relative_to(root)).replace('\\','/'):hashlib.sha256(f.read_bytes()).hexdigest() for f in sources if f.is_file() and f.suffix!='.meta'}},ensure_ascii=False,indent=2),encoding='utf-8')
 cmd=['D:/UnityEditor/2022.3.6f1/Editor/Unity.exe','-batchmode','-force-d3d11','-projectPath',str(project),'-executeMethod','NpcPopulationCapture.'+('Census' if a.census else 'Run'),'-logFile',str(out/'unity.log')]

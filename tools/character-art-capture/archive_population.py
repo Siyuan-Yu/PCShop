@@ -41,7 +41,7 @@ for start in range(0,len(strips),4):
     rows=strips[start:start+4];im=Image.new('RGB',(1200,520*len(rows)),'white')
     for i,row in enumerate(rows):im.paste(row,(0,520*i))
     im.save(dst/f'总览-{start//4+1:02}.jpg',quality=94)
-for name in ('网格记录.tsv','人口清单.tsv','角色列表.txt','复拍来源.json'):
+for name in ('网格记录.tsv','人口清单.tsv','角色列表.txt','复拍来源.json','复拍脚本.cs.txt'):
     if(src/name).exists():shutil.copy2(src/name,dst/name)
 extras=[]
 for file in src.glob('*.png'):

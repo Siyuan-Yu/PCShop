@@ -200,8 +200,13 @@ def coat_hem():
         for y in np.linspace(.43,.71,rows):
             t=(y-.43)/.28;rx=.211-.038*t;rz=.161-.055*t
             for a in np.linspace(.22,2*np.pi-.22,cols):
-                n=np.array([np.sin(a)/rx,.11,np.cos(a)/rz]);n/=np.linalg.norm(n)
-                p=np.array([rx*np.sin(a),y,rz*np.cos(a)])
+                # 与裤臀和上衣采用同类超椭圆截面，后侧两角不能被裤子顶穿。
+                exponent=2.7;sa,ca=np.sin(a),np.cos(a)
+                xx=np.sign(sa)*abs(sa)**(2/exponent);zz=np.sign(ca)*abs(ca)**(2/exponent)
+                n=np.array([np.sign(xx)*abs(xx)**(exponent-1)/rx,
+                    abs(xx)**exponent*.038/.28/rx+abs(zz)**exponent*.055/.28/rz,
+                    np.sign(zz)*abs(zz)**(exponent-1)/rz]);n/=np.linalg.norm(n)
+                p=np.array([rx*xx,y,rz*zz])
                 verts.append(p-(.004 if side<0 else 0)*n);normals.append(n*side)
         for row in range(rows-1):
             for col in range(cols-1):

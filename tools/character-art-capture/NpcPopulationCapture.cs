@@ -114,7 +114,16 @@ public static class NpcPopulationCapture
                 var place=game.World.Places[game.City.PlayerShop().Id];
                 // 人物排在镜头一侧的开阔位置，避免样板被屋顶遮挡；不改真实场景布局。
                 var cameraYaw=Quaternion.Euler(0,CameraRig.DefaultYaw,0);
-                stage.position=place.Entrance+Vector3.up*.02f-cameraYaw*Vector3.forward*5;
+                var streetPoint=place.Entrance;float nearest=float.PositiveInfinity;
+                foreach(var node in game.City.Map.Nodes)foreach(var edge in game.City.Map.NeighborsOf(node.Id))
+                {
+                    var a=StreetWorldBuilder.ToWorld(game.City.ViewPosition(node.Id));var b=StreetWorldBuilder.ToWorld(game.City.ViewPosition(edge.To));
+                    var ab=b-a;if(ab.sqrMagnitude<.01f)continue;
+                    var candidate=a+ab*Mathf.Clamp01(Vector3.Dot(place.Entrance-a,ab)/ab.sqrMagnitude);
+                    float distance=(candidate-place.Entrance).sqrMagnitude;
+                    if(distance<nearest){nearest=distance;streetPoint=candidate;}
+                }
+                stage.position=streetPoint+Vector3.up*.025f;
                 stage.rotation=cameraYaw;
                 var lighting=(DayNightLighting)typeof(GameController).GetField("_lighting",F).GetValue(game);data.renderPostProcessing=true;cam.farClipPlane=2000;
                 foreach(var state in new[]{("白天",720,false),("雨天",720,true),("夜间",1320,false)})

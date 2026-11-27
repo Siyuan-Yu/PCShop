@@ -1,0 +1,9 @@
+CommunityBloodNurse
+CommunityChildHelper
+CommunityLanternHost
+quarter_entry_neighbor
+quarter_entry_visitor
+quarter_shop_customer
+quarter_stop_commuter
+pond_walk_0
+pond_walk_1
