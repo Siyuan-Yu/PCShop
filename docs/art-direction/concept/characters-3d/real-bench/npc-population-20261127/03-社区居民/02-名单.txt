@@ -1,0 +1,5 @@
+resident_duma
+resident_fanglu
+resident_fuzhi
+resident_gaobo
+resident_guanghe
