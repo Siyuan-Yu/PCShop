@@ -1,0 +1,25 @@
+角色	模型	顶点	三角面	子网格	材质
+resident_baiming	Player B · NpcHead-painted_crop	13960	27212	5	PCShop/PlayerPainted
+resident_baiming	Player B · NpcTop-painted_utilityvest	9728	17482	4	PCShop/PlayerPainted
+resident_baiming	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
+resident_caihong	Player B · NpcHead-painted_fringe	15312	29912	5	PCShop/PlayerPainted
+resident_caihong	Player B · NpcTop-painted_track	9076	17030	4	PCShop/PlayerPainted
+resident_caihong	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
+resident_chenxia	Player B · NpcHead-painted_ponytail	15676	30632	5	PCShop/PlayerPainted
+resident_chenxia	Player B · NpcTop-painted_cardigan	11064	20146	4	PCShop/PlayerPainted
+resident_chenxia	Player B · NpcBottom-painted_longskirt	11430	21540	4	PCShop/PlayerPainted
+resident_dengyue	Player B · NpcHead-painted_bun	14914	29112	5	PCShop/PlayerPainted
+resident_dengyue	Player B · NpcTop-painted_vestbow	8760	16066	4	PCShop/PlayerPainted
+resident_dengyue	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
+resident_dongyu	Player B · NpcHead-painted_crop	13960	27212	5	PCShop/PlayerPainted
+resident_dongyu	Player B · NpcTop-painted_windbreaker	10404	19670	5	PCShop/PlayerPainted
+resident_dongyu	Player B · NpcBottom-painted_pants	6970	13900	3	PCShop/PlayerPainted
+landlady	Player B · NpcHead-painted_curly	15312	29912	5	PCShop/PlayerPainted
+landlady	Player B · NpcTop-painted_landlady	10964	20138	4	PCShop/PlayerPainted
+landlady	Player B · NpcBottom-painted_longskirt	11430	21540	4	PCShop/PlayerPainted
+hospital_garden_doctor_day	Player B · NpcHead-painted_sidepony	15686	30630	5	PCShop/PlayerPainted
+hospital_garden_doctor_day	Player B · NpcTop-painted_labcoat	21155	38222	6	PCShop/PlayerPainted
+hospital_garden_doctor_day	Player B · NpcBottom-painted_pencilskirt	11430	21540	4	PCShop/PlayerPainted
+hospital_park_doctor_day	Player B · NpcHead-painted_curly	15312	29912	5	PCShop/PlayerPainted
+hospital_park_doctor_day	Player B · NpcTop-painted_labcoat	21155	38222	6	PCShop/PlayerPainted
+hospital_park_doctor_day	Player B · NpcBottom-painted_pencilskirt	11430	21540	4	PCShop/PlayerPainted

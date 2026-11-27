@@ -1,0 +1,5 @@
+resident_baiming
+resident_caihong
+resident_chenxia
+resident_dengyue
+resident_dongyu

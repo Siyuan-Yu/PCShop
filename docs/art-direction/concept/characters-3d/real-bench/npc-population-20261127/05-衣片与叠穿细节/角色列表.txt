@@ -1,0 +1,8 @@
+resident_baiming
+resident_caihong
+resident_chenxia
+resident_dengyue
+resident_dongyu
+landlady
+hospital_garden_doctor_day
+hospital_park_doctor_day

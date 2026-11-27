@@ -111,7 +111,11 @@ public static class NpcPopulationCapture
                 {foreach(var fig in figs)fig.transform.Find("Visual/Torso/Head").localRotation=turn.Item2;Photo(cam,turn.Item1);}
                 foreach(var fig in figs)fig.transform.Find("Visual/Torso/Head").localRotation=Quaternion.identity;
                 game.World.Root.SetActive(true);foreach(var p in lamps)if(p.light!=null)p.light.enabled=p.on;
-                var place=game.World.Places[game.City.PlayerShop().Id];stage.position=place.Entrance+Vector3.up*.02f-place.Root.transform.forward*3;stage.rotation=place.Root.transform.rotation;
+                var place=game.World.Places[game.City.PlayerShop().Id];
+                // 人物排在镜头一侧的开阔位置，避免样板被屋顶遮挡；不改真实场景布局。
+                var cameraYaw=Quaternion.Euler(0,CameraRig.DefaultYaw,0);
+                stage.position=place.Entrance+Vector3.up*.02f-cameraYaw*Vector3.forward*5;
+                stage.rotation=cameraYaw;
                 var lighting=(DayNightLighting)typeof(GameController).GetField("_lighting",F).GetValue(game);data.renderPostProcessing=true;cam.farClipPlane=2000;
                 foreach(var state in new[]{("白天",720,false),("雨天",720,true),("夜间",1320,false)})
                 {
