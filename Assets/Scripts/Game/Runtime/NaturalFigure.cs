@@ -30,17 +30,12 @@ namespace PCShopSell.Game.Runtime
             PrefersSkirt = prefersSkirt;
         }
 
-        internal static FigureAppearance ForPerson(string id) => id switch
-        {
-            "keeper_phone" => FigureAppearance.PhoneClerk,
-            "res_coder" => FigureAppearance.Classmate,
-            "res_flower" => FigureAppearance.Florist,
-            "life_coach" => FigureAppearance.Coach,
-            _ => FigureAppearance.Npc
-        };
+        internal static FigureAppearance ForPerson(string id) => FigureAppearance.Npc;
 
         internal static NpcLook Select(string id, string slot, Color baseSkin, Color clothing)
         {
+            var art=NpcArtCatalog.Find(id);
+            if(art!=null)return new NpcLook(art.head,ArtDirection.Hex(art.skin),ArtDirection.Hex(art.hair),art.height,art.width,art.bottom.Contains("skirt")||art.bottom=="singer");
             uint hash = StableHash(id ?? slot, clothing, id == null);
             string head;
             if (id != null && PortraitHeads.TryGetValue(id, out string portraitHead))
@@ -76,7 +71,9 @@ namespace PCShopSell.Game.Runtime
             if (id == null) skin = Color.Lerp(baseSkin, skin, .78f);
             bool skirt = slim && (id is "life_ning" or "life_singer" or "life_teacher" or "resident_yujia" or "resident_zengyu"
                 || id == null && (hash >> 16) % 3 == 0);
-            return new NpcLook(head, skin, ArtDirection.Hex(hair), height, width, skirt);
+            // 无名街头行人、商店顾客和临时雇员也使用同一批 PBM2 网格。
+            if(head=="tied")head="bun";
+            return new NpcLook("painted_"+head, skin, ArtDirection.Hex(hair), height, width, skirt);
         }
 
         private static uint StableHash(string key, Color clothing, bool includeColor)

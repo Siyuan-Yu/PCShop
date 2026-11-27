@@ -100,6 +100,22 @@ Shader "PCShop/PlayerPainted"
     half ndl=dot(n,key.direction);
     half band=smoothstep(.20h,.63h,ndl);
     half3 base=_BaseColor.rgb;
+    if(_SurfaceKind==13)
+    {
+     // 小花纹沿衣服静止坐标随骨骼运动；保持大色块可读，远处自动淡出。
+     float2 q=v.o.xy*26;float2 cell=floor(q);float2 flower=frac(q+float2(fmod(cell.y,2)*.5,0))-.5;
+     half petal=1-smoothstep(.13,.20,length(flower)*(1+.24*cos(atan2(flower.y,flower.x)*5)));
+     half leaf=1-smoothstep(.07,.12,length((flower-float2(.18,-.16))*float2(.7,1.7)));
+     half fade=1-saturate(max(length(ddx(q)),length(ddy(q)))*1.8);
+     base=lerp(base,base*half3(1.05,.60,.63),petal*fade*.55);
+     base=lerp(base,base*half3(.55,.82,.55),leaf*fade*.45);
+    }
+    if(_SurfaceKind==14)
+    {
+     float2 q=frac(v.o.xy*float2(13,18))-.5;
+     half diamond=1-smoothstep(.30,.34,abs(q.x)+abs(q.y));
+     base*=lerp(1,.64,diamond*.65);
+    }
     if(_SurfaceKind==11 && v.layer.y>.5h)base=half3(.0343h,.0296h,.0356h);
     if(v.layer.y>1.5h)base=half3(.0409h,.0296h,.0232h);
     bool skin=_SurfaceKind==1 || _SurfaceKind==12;

@@ -1,0 +1,5 @@
+staff_gpu2
+staff_mall
+staff_mall2
+staff_mem
+staff_psu

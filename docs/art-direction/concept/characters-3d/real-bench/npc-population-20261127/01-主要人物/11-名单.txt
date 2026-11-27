@@ -1,0 +1,5 @@
+res_student
+res_tea
+res_wang
+staff_cpu
+staff_gpu

@@ -312,6 +312,12 @@ namespace PCShopSell.Game.Runtime
         private static GameObject BuildFigure(Transform parent, string name, Color body, Color head,
             float scale, FigureAppearance appearance, string personId, string appearanceSeed)
         {
+            // 足球练习等仍传枚举的入口也统一到人物身份，避免出现旧版教练/店员。
+            if(appearance!=FigureAppearance.Npc&&appearance!=FigureAppearance.Player)
+            {
+                personId=appearance switch {FigureAppearance.PhoneClerk=>"keeper_phone",FigureAppearance.Classmate=>"res_coder",FigureAppearance.Florist=>"res_flower",_=>"life_coach"};
+                appearance=FigureAppearance.Npc;
+            }
             var npc = appearance == FigureAppearance.Npc
                 ? NpcLook.Select(personId, appearanceSeed ?? name, head, body) : default;
             float width = 1f;
@@ -345,7 +351,9 @@ namespace PCShopSell.Game.Runtime
                     _ => "jacket"
                 };
                 Color accent = cut == "patrol" ? ArtDirection.Hex("DBC84C") : ArtDirection.Brass;
-                model.DressNpc(cut, body, ArtDirection.Hex("3E4350"), ArtDirection.Hex("E5DACC"), accent);
+                var art=NpcArtCatalog.Find(personId);
+                if(art!=null)art.Dress(model);
+                else model.DressNpc("painted_jacket", body, ArtDirection.Hex("3E4350"), ArtDirection.Hex("E5DACC"), accent);
             }
             return root;
         }

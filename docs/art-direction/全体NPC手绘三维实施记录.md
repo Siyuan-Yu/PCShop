@@ -1,0 +1,64 @@
+# 全体 NPC 手绘三维实施记录
+
+更新日期：2026-11-27。工作分支：`art/experiment`。
+
+本次用户明确要求把全体 NPC 按三人母版连续做完，并允许分批提交上传。分批是存档节点，不是等待下一次授权的停止点。本次未要求自动测试或发布包，因此仅做 Unity 编辑器编译、正式入口实机复拍和人工画面对照。
+
+## 标准和范围
+
+- 身体比例沿用[三名人物母版](三名人物样本迭代记录.md)和用户指定的下排样板，约 4.5–5 头身。保留较直的躯干、四肢长度、手脚大小；不从原立绘复制写实长腿比例。
+- 身份由原有 `PortraitsAnime` 立绘决定：发型、服装结构、主色和职业配件逐人登记。立绘、CG、UI 和场景布局没有在本次重画。
+- 实际运行时 `CityLifeCatalog.People` 共 179 人，包括 178 个正式立绘身份以及调试伙伴 `life_invitation_test`。另外登记警务、维修、屋顶工人、走失儿童和两位现场裁缝，共 185 份外观配置。
+- 无名街头行人、顾客、临时雇员走稳定种子组合；所有组合只引用新 PBM2 网格。传旧 `FigureAppearance` 枚举的手机店员、程序员、花店人物和足球练习教练也转到新入口。
+- 主角、面包师、歌手的已验收几何文件保持不变；本次新增 `painted_` 系列，共 30 个头型、28 个上衣结构、4 个下装结构，加上原有面包师、歌手组合供全员使用。
+
+## 分批记录
+
+| 批次 | 数量 | 状态 | 实机档案 |
+|---|---:|---|---|
+| 三人基准 | 主角与 2 NPC | 已提交上传 `bd15e05` | [三人记录](三名人物样本迭代记录.md) |
+| 主要人物、职业人物、临时角色 | 76 | 已完成模型、正侧背、游戏俯角、行走及坐姿复拍 | [第一批检阅页](concept/characters-3d/real-bench/npc-population-20261127/01-主要人物/index.html) |
+| 医院昼夜班和娱乐场所员工 | 52 | 已接入，正在逐组复拍核对 | 待归档 |
+| 社区居民 | 57 | 已接入，待逐组复拍核对 | 待归档 |
+| 无名人群和环境灯光 | 动态组合 | 待最终复拍 | 待归档 |
+
+## 实现与本轮修正
+
+`NpcArtCatalog.json` 是固定人物唯一的三维外观登记表。`NpcArtCatalog.cs` 同时供初次生成和 `CityNpcClothing` 使用，避免进入店铺、室内或不同季节后丢掉职业服装。固定人物以立绘衣着为准；未知动态人物仍可按天气选择共享款式。
+
+新增发型包括长短发、侧分、卷发、发髻、马尾、侧马尾、辫子、眼镜、耳机和帽子。使用真实连续曲面和薄布结构，没有正面人物图贴到模型上。衣服包括白大褂、敞开西装、开衫、针织背心、围裙、厨师服、连帽外套、反光外套、运动衣及职业工牌。花纹和针织纹使用随蒙皮运动的静止坐标，避免游动。
+
+第一批内部审片修了三轮：
+
+1. 平衣片简化后，圆角法线跨大三角面产生碎光；改成正反面和切边独立法线的真实薄片。
+2. 背心 V 领的布尔开口方向错误，导致缺面；修正方向并补入衬衫。
+3. 白大褂的几张平片改成敞开的连续衣摆，减少裤腿相交；坐下时前摆随大腿，后摆保持垂下。
+4. 裙装膝部的内层描边壳产生黑色细刺；取消被衣服遮盖的腿部内壳，延长实际皮肤网格并收窄上端，保留鞋和外侧可见结构。
+5. 围裙与裙子叠穿时给下摆留出真实间隙；帽子下的头发独立保持深色。
+
+头部、服装、下装仍共用三套 `SkinnedMeshRenderer`。描边沿用三人母版：合并在同一子网格的反向壳，不增加描边 Renderer 或材质批次。网格数量记录包含描边顶点。没有把 Renderer 数量等同于 DrawCall 数量，也没有以截图推断低配设备帧率。
+
+## 复拍来源与边界
+
+每组 5 人，独立 Unity 工程内调用正式 `Prims.FigureForPerson`、`CityNpcClothing` 与 `FigureMotion`，渲染 2400×1350。正面、侧面、背面使用俯角 8°，游戏俯角查看使用 35°。白底棚拍为近距离查错；最终另拍正式街道的默认游玩距离。原始 PNG 不补画，立绘对照页只裁切排版；GIF 从实际行走帧编码。
+
+`复拍来源.json` 在启动该轮 Unity 前记录代码、着色器和人物资源的 SHA-256。`角色列表.txt` 和逐组名单对应每一位人物。`网格记录.tsv` 保存实际加载的网格、顶点、三角面、子网格和材质着色器。
+
+“95%”是用户的视觉目标，不能由本轮覆盖率或此前三人正面轮廓 IoU 代替。这里记录实际覆盖和可复查画面，不虚构整体美术相似度分数。
+
+## 换设备继续操作
+
+1. 拉取 `art/experiment`，资源已经烘焙进 `Assets/Resources/Characters`；正常运行不需要 Python。
+2. 修改人物身份：编辑 `tools/build_npc_art_catalog.py` 对应行，再执行它重建 JSON。主色、内搭、饰色、下装、发型和款式在同一行。
+3. 修改模型：使用 `tools/sculpt_npc_population.py --kind heads|tops|bottoms --names ...`；它继承 `sculpt_character_samples.py` 的耳手、比例、骨架和 PBM2 格式，不重写三人母版资源。依赖 numpy、scipy、scikit-image、fast-simplification。
+4. `work/npc-art/sculpt-cache` 是可删除的本地中间缓存；若母版生成代码改变，删除该缓存再重烘。不要复用改变前的缓存。
+5. 复拍须用独立 Unity 工程，不能对正在编辑的主工程运行批处理。先前一进程退出，再开始下一轮。
+
+```powershell
+python tools/build_npc_art_catalog.py
+& work/character-art/venv/Scripts/python.exe tools/sculpt_npc_population.py --kind all
+python tools/character-art-capture/population_capture.py --project <独立复拍工程> --output work/npc-art/01-主要人物
+python tools/character-art-capture/archive_population.py work/npc-art/01-主要人物 docs/art-direction/concept/characters-3d/real-bench/npc-population-20261127/01-主要人物
+```
+
+`population_capture.py --census` 仅导出实际角色名单；`--all-frames` 保留 24 张连续行走帧，否则保留周期中的 4 帧。没有调用自动测试框架或发布构建入口。

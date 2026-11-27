@@ -29,7 +29,7 @@ namespace PCShopSell.Game.Runtime
 
         internal void Build(Transform visual, Transform torso, FigureAppearance appearance, NpcLook npc)
         {
-            PaintedSample = appearance == FigureAppearance.Player || npc.Head is "baker" or "twintail";
+            PaintedSample = appearance == FigureAppearance.Player || npc.Head is "baker" or "twintail" || npc.Head?.StartsWith("painted_",StringComparison.Ordinal)==true;
             _bones = new Transform[18];
             _bones[0] = visual;
             _bones[1] = torso;
@@ -149,17 +149,28 @@ namespace PCShopSell.Game.Runtime
             Apply(_legs, shortSleeve ? "shorts" : cut == "paintedJacket" ? "PaintedTrousers" : "trousers");
         }
 
-        internal void DressNpc(string cut, Color shirt, Color trousers, Color layer, Color accent)
+        internal void DressNpc(string cut, Color shirt, Color trousers, Color layer, Color accent, string bottom=null)
         {
+            bool population=cut.StartsWith("painted_",StringComparison.Ordinal);
+            string style=population?cut.Substring(8):cut;
             bool uniform = cut is "uniform" or "apron" or "patrol";
             string bottoms = cut is "singer" or "chef" ? cut : _prefersSkirt && !uniform && cut != "coat" ? "skirt"
                 : cut == "short" ? "shorts" : "pants";
+            if(bottom!=null)bottoms=bottom;
+            else if(population)bottoms="painted_"+(_prefersSkirt?"skirt":"pants");
             _paint[(int)Paint.Top] = PlayerPaint(shirt, .14f, !PaintedSample ? 0 : cut == "chef" ? 6 : cut == "singer" ? 8 : 0);
-            Color trim = cut == "patrol" ? accent : cut is "apron" or "chef" or "singer" ? layer : Color.Lerp(shirt, layer, .32f);
+            Color trim = style == "patrol" ? accent : style is "apron" or "apronbow" or "chef" or "singer" or "waistapron" or "hoodie" or "windbreaker" ? layer : Color.Lerp(shirt, layer, .32f);
             _paint[(int)Paint.Trim] = PlayerPaint(trim, .14f, PaintedSample && cut == "chef" ? 7 : 0);
             _paint[(int)Paint.Pants] = PlayerPaint(trousers, .10f, !PaintedSample ? 0 : cut == "singer" ? 9 : 10);
             _paint[(int)Paint.Cream] = PlayerPaint(cut == "singer" ? accent : cut == "chef" ? ArtDirection.Hex("DAB36A") : layer, .12f);
             _paint[(int)Paint.Tie] = PlayerPaint(accent, .22f);
+            if(population)
+            {
+                int surface=style is "floral" or "floralblazer" or "flowerblouse" ? 13 : style=="knitvest"?14 : style is "jacket" or "workjacket" or "workbadge"?5:0;
+                _paint[(int)Paint.Top]=PlayerPaint(shirt,.12f,surface);
+                _paint[(int)Paint.Trim]=PlayerPaint(trim,.12f,style is "apron" or "apronbow" or "waistapron"?7:0);
+                _paint[(int)Paint.Pants]=PlayerPaint(trousers,.10f,bottoms.Contains("skirt")?9:10);
+            }
             Apply(_top, "NpcTop-" + cut);
             Apply(_legs, "NpcBottom-" + bottoms);
         }
@@ -369,7 +380,7 @@ namespace PCShopSell.Game.Runtime
             mesh.subMeshCount = paints.Count;
             for (int i = 0; i < paints.Count; i++) mesh.SetTriangles(triangles[paints[i]], i, false);
             mesh.RecalculateBounds();
-            if (PaintedSample) AddSeatedCloth(mesh, positions, normals, weights, cloth, id == "NpcBottom-singer");
+            if (PaintedSample) AddSeatedCloth(mesh, positions, normals, weights, cloth, id == "NpcBottom-singer" || id.Contains("skirt") || id.EndsWith("labcoat",StringComparison.Ordinal));
             model = new ModelMesh { Mesh = mesh, Paints = paints.ToArray() };
             Meshes[cacheKey] = model;
             return model;

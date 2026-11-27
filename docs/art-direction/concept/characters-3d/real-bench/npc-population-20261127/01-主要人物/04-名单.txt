@@ -1,0 +1,5 @@
+life_coach
+life_cousin
+life_creator
+life_curator
+life_designer

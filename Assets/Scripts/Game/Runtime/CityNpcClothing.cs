@@ -89,6 +89,8 @@ namespace PCShopSell.Game.Runtime
             if (model == null) return;
 
             figure.AddComponent<CityNpcClothing>();
+            var art=NpcArtCatalog.Find(personId);
+            if(art!=null){art.Dress(model);return;}
             double temperature = session.CityOutdoorTemperature(session.Clock.Today.TotalDays * 1440L + 8 * 60);
             uint hash = 0;
             foreach (char c in personId) hash = unchecked(hash * 31 + c);
@@ -117,7 +119,9 @@ namespace PCShopSell.Game.Runtime
             if (personId == "staff_mall") palette = new Palette("B39A8E", "53444B", "DDC6A3", "3F3742");
             if (personId == "res_baker") palette = new Palette("EBD6BE", "774B3E", "5B4033", "514C47");
             if (personId == "life_singer") palette = new Palette("C36763", "423C3F", "D0C3B3", "423C3D");
-            model.DressNpc(cut, palette.Top, palette.Trousers, palette.Layer, palette.Accent);
+            // 未登记的动态角色也只能取新结构，不能因季节分支退回旧比例。
+            string shared=cut=="short"?"polo":cut=="track"?"track":cut=="formal"?"formal":"jacket";
+            model.DressNpc("painted_"+shared, palette.Top, palette.Trousers, palette.Layer, palette.Accent);
         }
     }
 }

@@ -1,0 +1,5 @@
+res_grandpa
+res_mom
+res_pharm
+res_pupil
+res_rider

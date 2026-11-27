@@ -1,0 +1,5 @@
+li
+life_bartender
+life_chef
+life_clothier
+life_clothsupplier
