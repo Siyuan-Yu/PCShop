@@ -160,8 +160,10 @@ namespace PCShopSell.Tests
                 typeof(PCShopSell.Game.GameController).GetProperty("City").SetValue(controller,s.City);
                 var existingEventSystem=UnityEngine.EventSystems.EventSystem.current;
                 var ui=new PCShopSell.Game.UI.GameUi(controller);
-                UnityEngine.UI.Button Button(string caption)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Button>())
-                    .Single(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text==caption);
+                UnityEngine.UI.Button Button(string caption)=>ui.Canvases.SelectMany(c=>c.transform.Cast<Transform>())
+                    .Last(t=>t.name.StartsWith("Window_")).GetComponentsInChildren<UnityEngine.UI.Button>()
+                    .Single(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text==caption
+                        && !b.transform.parent.name.StartsWith("BuyerFacetBar_"));
                 UnityEngine.UI.Button[] CategoryButtons()=>ui.Canvases.Select(c=>c.transform.Find("Window_商品分类"))
                     .Single(t=>t!=null).GetComponentsInChildren<UnityEngine.UI.Button>()
                     .Where(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text!="关闭").ToArray();
@@ -226,7 +228,7 @@ namespace PCShopSell.Tests
                     Button("全部 ▾").onClick.Invoke();
                     CollectionAssert.AreEquivalent(shopCategories, CategoryButtons().Select(b => b.GetComponentInChildren<UnityEngine.UI.Text>().text));
                     Assert.IsTrue(ui.CloseTopWindow());
-                    Button("本店商品  ▼").onClick.Invoke();
+                    Button(source.Name+"  ▼").onClick.Invoke();
                     Button(source.Name).onClick.Invoke();
                     Button("全部 ▾").onClick.Invoke();
                     var clothingCategories=new[]{"全部"}.Concat(s.EmployeePurchaseCatalog().Where(o=>o.Source.Id==source.Id).Select(o=>o.Category)).Distinct().ToArray();
@@ -234,7 +236,7 @@ namespace PCShopSell.Tests
                     string clothingCategory=clothingCategories.First(c=>c!="全部");
                     CategoryButtons().Single(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text==clothingCategory).onClick.Invoke();
                     Assert.IsNotNull(Button(source.Name+"  ▼"),"点击商品分类不能把已选货源重置为全部");
-                    var electronics=s.EmployeePurchaseCatalog().First(o=>o.Kind==PurchaseGoodsKind.Part).Source;
+                    var electronics=s.PurchaseDestination(s.EmployeePurchaseCatalog().First(o=>o.Kind==PurchaseGoodsKind.Part).Source);
                     Button(source.Name+"  ▼").onClick.Invoke();
                     Button(electronics.Name).onClick.Invoke();
                     Assert.IsNotNull(Button("全部 ▾"),"切换到不包含旧分类的货源时，分类应回到全部");
@@ -257,10 +259,10 @@ namespace PCShopSell.Tests
                     Assert.IsNotNull(Button(source.Name+"  ▼"),"完成后删除草稿，也必须恢复上次的浏览货源");
                     AssertFixedLayout();
                     Button(source.Name+"  ▼").onClick.Invoke();
-                    Button("本店商品").onClick.Invoke();
+                    Button("全部货源").onClick.Invoke();
                     ui.CloseAllWindows();
                     ui.OpenEmployeePurchase(s.MainShop.Buyer.Id);
-                    Assert.IsNotNull(Button("本店商品  ▼"));
+                    Assert.IsNotNull(Button("全部货源  ▼"));
                 }
                 finally
                 {
@@ -279,7 +281,7 @@ namespace PCShopSell.Tests
             {
                 string id = s.MainShop.Buyer.Id;
                 var plan = Mixed(s);
-                Assert.AreEqual(3, plan.Items.Select(x => x.SourceId).Distinct().Count());
+                Assert.AreEqual(2, plan.Items.Select(x => x.SourceId).Distinct().Count(), "电子市场配件共用统一货源，饮料使用独立货源");
                 Assert.True(s.ConfigureEmployeePurchase(id, plan));
                 var q = s.QuoteEmployeePurchase(id);
                 Assert.IsNull(q.Error, q.Error);
@@ -293,7 +295,7 @@ namespace PCShopSell.Tests
                 using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                 {
                     var trip = loaded.EmployeePurchaseTrips.Single();
-                    Assert.AreEqual(3, trip.Items.Select(x => x.SourceId).Distinct().Count());
+                    Assert.AreEqual(2, trip.Items.Select(x => x.SourceId).Distinct().Count());
                     loaded.AdvanceClock((int)(Math.Max(trip.DeliveryAt, trip.ReturnAt) - loaded.Clock.Now.TotalMinutes + 1));
                     Assert.AreEqual(cpu + 1, loaded.MainShop.Sim.Stock.CountAll(PartCatalog.Get("cpu0")));
                     Assert.AreEqual(ram + 1, loaded.MainShop.Sim.Stock.CountAll(PartCatalog.Get("ram0")));
@@ -389,14 +391,14 @@ namespace PCShopSell.Tests
                 var offers = s.EmployeePurchaseCatalog();
                 var cheap = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu0");
                 var dear = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu1");
-                var plan = new EmployeePurchasePlan { Transport = VehicleKind.Walk, Items = new[] { cheap.Line(5), dear.Line(5) } };
+                var plan = new EmployeePurchasePlan { Transport = VehicleKind.Taxi, Items = new[] { cheap.Line(5), dear.Line(5) } };
                 var id = s.MainShop.Buyer.Id; Assert.True(s.ConfigureEmployeePurchase(id, plan));
-                var full = s.QuoteEmployeePurchase(id);
-                Money wallet = cheap.Price * 2 + full.Travel + full.Freight + Money.FromYuan(1);
-                var reserve=s.GetCityCashReserve(s.RestockReserveDays).Total;
-                Wallet(s, reserve+wallet); var q = s.QuoteEmployeePurchase(id);
+                var twoItems = s.EstimateEmployeePurchase(id, new EmployeePurchasePlan { Transport = VehicleKind.Taxi, Items = new[] { cheap.Line(2) } });
+                Assert.IsNull(twoItems.Error);
+                Money wallet = twoItems.Total + Money.FromYuan(1);
+                Wallet(s, wallet); var q = s.QuoteEmployeePurchase(id);
                 Assert.IsNull(q.Error); Assert.AreEqual(wallet, q.Budget); Assert.Less(q.Total.Cents, q.RequiredTotal.Cents);
-                Assert.True(s.DispatchEmployeePurchase(id)); Assert.AreEqual(reserve+Money.FromYuan(1), s.Ledger.Balance);
+                Assert.True(s.DispatchEmployeePurchase(id)); Assert.AreEqual(Money.FromYuan(1), s.Ledger.Balance);
                 var trip = s.EmployeePurchaseTrips.Single(); Assert.AreEqual(1, trip.Items.Length);
                 Assert.AreEqual("cpu0", trip.Items[0].PartId); Assert.AreEqual(2, trip.Items[0].Count);
                 Assert.AreEqual(0, trip.ChangeCents,"unused cash now stays in the shared wallet rather than being issued then refunded");
@@ -405,8 +407,8 @@ namespace PCShopSell.Tests
                     loaded.EventsEnabled = false;
                     var copy = loaded.EmployeePurchaseTrips.Single(); Assert.AreEqual(0, copy.ChangeCents);
                     loaded.AdvanceClock((int)(System.Math.Max(copy.ReturnAt, copy.DeliveryAt) - loaded.Clock.Now.TotalMinutes + 1));
-                    Assert.AreEqual(reserve+Money.FromYuan(1), loaded.Ledger.Balance);
-                    loaded.AdvanceClock(1); Assert.AreEqual(reserve+Money.FromYuan(1), loaded.Ledger.Balance);
+                    Assert.AreEqual(Money.FromYuan(1), loaded.Ledger.Balance);
+                    loaded.AdvanceClock(1); Assert.AreEqual(Money.FromYuan(1), loaded.Ledger.Balance);
                 }
             }
         }
@@ -418,14 +420,14 @@ namespace PCShopSell.Tests
                 var dear = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu2");
                 var cheap = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu0");
                 var id = s.MainShop.Buyer.Id;
-                Assert.True(s.ConfigureEmployeePurchase(id, new EmployeePurchasePlan { Transport = VehicleKind.Walk, Items = new[] { dear.Line(1), cheap.Line(1) } }));
-                var full = s.QuoteEmployeePurchase(id);
-                var reserve=s.GetCityCashReserve(s.RestockReserveDays).Total;
-                Wallet(s, reserve+cheap.Price + full.Travel + full.Freight);
+                Assert.True(s.ConfigureEmployeePurchase(id, new EmployeePurchasePlan { Transport = VehicleKind.Taxi, Items = new[] { dear.Line(1), cheap.Line(1) } }));
+                var oneItem = s.EstimateEmployeePurchase(id, new EmployeePurchasePlan { Transport = VehicleKind.Taxi, Items = new[] { cheap.Line(1) } });
+                Assert.IsNull(oneItem.Error);
+                Wallet(s, oneItem.Total);
                 Assert.True(s.DispatchEmployeePurchase(id));
                 var items = s.EmployeePurchaseTrips.Single().Items;
                 Assert.AreEqual(1, items.Length); Assert.AreEqual("cpu0", items[0].PartId);
-                Assert.GreaterOrEqual(s.Ledger.Balance.Cents,reserve.Cents);
+                Assert.AreEqual(Money.Zero, s.Ledger.Balance, "明确采购清单按实有现金执行，不另扣未来账单预估准备金");
             }
         }
         [Test] public void Complete_NextDayEligibilityAndOrderSurviveJsonSave()

@@ -1,0 +1,7 @@
+[
+  {
+    "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.SalaryChangeDuringShiftPreservesCurrentPayrollThroughReload",
+    "message": "  Expected: 180\n  But was:  120\n",
+    "stack": "at PCShopSell.Tests.CompanyWellbeingRegressionTests.SalaryChangeDuringShiftPreservesCurrentPayrollThroughReload () [0x000ac] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CompanyWellbeingRegressionTests.cs:167\n"
+  }
+]

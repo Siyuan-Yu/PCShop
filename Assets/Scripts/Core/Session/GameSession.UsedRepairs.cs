@@ -14,8 +14,8 @@ namespace PCShopSell.Core.Session
             && !(item.MarketReferencePrice > 0 && item.MarketGrade == 0)
             && (item.Condition == UsedCondition.Flawed || item.Condition == UsedCondition.Broken);
 
-        public static double UsedRepairSpeed(Employee worker) => .5 +
-            (.6 * Math.Clamp(worker.Dexterity, 0, 100) + .4 * Math.Clamp(worker.Intelligence, 0, 100)) / 100;
+        public static double UsedRepairSpeed(Employee worker) => (.5 +
+            (.6 * Math.Clamp(worker.Dexterity, 0, 100) + .4 * Math.Clamp(worker.Intelligence, 0, 100)) / 100) * EmployeeWorkRate(worker);
         public static double UsedRepairSuccessChance(Employee worker) => .5 + .004 *
             (.4 * Math.Clamp(worker.Dexterity, 0, 100) + .6 * Math.Clamp(worker.Intelligence, 0, 100));
         public static long UsedRepairMaterialCost(UsedItem item)

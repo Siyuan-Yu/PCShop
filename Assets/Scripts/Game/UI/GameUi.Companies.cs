@@ -12,7 +12,7 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private static readonly string[] CompanyPages = { "总览", "公司部门", "人事管理", "统计" };
+        private static readonly string[] CompanyPages = { "总览", "公司部门", "人事管理", "统计", "股权与治理" };
         private static readonly string[] DepartmentPurpose = { "招聘与带教", "产品与流程", "账目与预算", "门店口碑", "宣传引流" };
         private static readonly string[] DepartmentAuthority =
             { "核准招聘与排班请求", "选研发方向并批准拨款", "核定单项开支上限", "批准服务整改", "批准宣传投放" };
@@ -49,13 +49,15 @@ namespace PCShopSell.Game.UI
 
         private void BuildCompanyWorkspace(Window window)
         {
-            var body = PhoneFlexibleScroll(window.Content, "CompanyWorkspaceContent");
+            var body = _companyPage==2||_companyPage==4 ? Ui.Rect(window.Content,"CompanyWorkspaceContent") : PhoneFlexibleScroll(window.Content, "CompanyWorkspaceContent");
+            if(_companyPage==2||_companyPage==4){Ui.VList(body,6,0);Ui.Size(body).GetComponent<LayoutElement>().flexibleHeight=1;}
             var companies = S.Companies.ToArray();
             if (companies.Length == 0)
             {
                 Line(body, "暂无公司", 23, Ui.Accent);
                 Para(body, "到湖城企业服务中心办理公司登记。", 17);
                 CompanyCenterLink(body);
+                CompanyButton(body,"上市公司股权与治理",()=>OpenCompanyGovernance());
                 return;
             }
             var company = companies.FirstOrDefault(c => c.BrandId == _workspaceCompany) ?? companies[0];
@@ -83,12 +85,17 @@ namespace PCShopSell.Game.UI
                 case 1: BuildCompanyDepartments(body, window, company); break;
                 case 2: BuildCompanyRoster(body, window, company); break;
                 case 3: BuildCompanyStatistics(body, company); break;
+                case 4: BuildGovernanceWorkspace(body,window,S.CompanyTicker(company),false); break;
                 default: BuildCompanyOverview(body, window, company); break;
             }
         }
 
         private void BuildCompanyOverview(Transform body, Window window, CompanyRecord company)
         {
+            var staffRows=S.CompanyRoster(company).ToArray();foreach(var employee in staffRows)S.EmployeeWellbeingOf(employee.Person.Id);
+            var team=Ui.Row(body,34,8);
+            Ui.Size(Ui.Label(team,$"员工 {staffRows.Length} 人 · 平均满意度 {(staffRows.Length==0?0:staffRows.Average(r=>r.Person.Wellbeing.Satisfaction)):0}",17,color:Ui.Dim),0,34,1);
+            Ui.Size(Ui.Button(team,"需处理 "+staffRows.Count(r=>S.EmployeeNeedsAttention(r.Person)),()=>{_companyPage=2;_companyAttentionOnly=true;_companyUnit=null;_companyPerson=null;window.RequestRebuild();},16,Ui.ButtonSecondary),150,34);
             var accounting = CompanyCard(body, "资金与经营");
             Line(accounting, "公司周转金　" + Money.FromCents(company.ReserveCents), 22);
             CompanyButton(accounting, "投入周转金", () => OpenCompanyNumber("投入公司周转金", "注入金额（元）",
@@ -111,9 +118,10 @@ namespace PCShopSell.Game.UI
             if (company.ListedDay >= 0)
             {
                 string ticker = S.CompanyTicker(company);
-                long shares = S.CompanyFounderHolding(company) + S.CityInvestmentUnits(ticker);
-                Line(listing, $"报价 {S.CityInvestmentPrice(ticker)} · 持股 {shares:N0} / {GameSession.CompanyTotalShares:N0}", 18);
+                long shares = S.CompanyPlayerShares(company);
+                Line(listing, $"报价 {S.CityInvestmentPrice(ticker)} · 持股 {shares:N0} / {S.CompanyShareCapital(company):N0}", 18);
                 CompanyButton(listing, "前往股市", OpenCityInvestments);
+                CompanyButton(listing,"股东名册 / 董事会 / 控制权",()=>{_companyPage=4;window.Rebuild();});
             }
             else
             {
@@ -148,6 +156,8 @@ namespace PCShopSell.Game.UI
 
         private void BuildCompanyDepartments(Transform body, Window window, CompanyRecord company)
         {
+            if(!S.PlayerManagesCompany(company))
+            {Line(body,"公司部门由现任总经理负责",20,Ui.Accent);Line(body,"你可以从董事会查阅内部摘要、提出议案和任免经理。",16,Ui.Dim);CompanyButton(body,"股权与治理",()=>{_companyPage=4;window.Rebuild();});return;}
             var selector = Ui.Row(body, 52, 7);
             foreach (CompanyDepartment department in Enum.GetValues(typeof(CompanyDepartment)))
             {
@@ -210,6 +220,8 @@ namespace PCShopSell.Game.UI
                 Line(staff, $"{assignment.Person.Name} · {DepartmentPosition(selected)}", 18, Ui.Accent);
                 Line(staff, selected.Leader ? DepartmentAuthority[(int)current.Department] : DepartmentWork[(int)current.Department], 16);
                 Line(staff, $"{Ui.Hm(assignment.Person.ShiftStart)}–{Ui.Hm(assignment.Person.ShiftEnd)} · 日薪 {assignment.Person.DailyWage}", 16, Ui.Dim);
+                BuildEmployeeMorale(staff,assignment.Person,window);
+                CompanyButton(staff,"员工档案 / 处理请求",()=>ShowEmployeeProfile(assignment.Person.Id));
                 CompanyButton(staff, "调整岗位", () => OpenCompanyPostOptions(window, company, assignment),
                     S.PendingCompanyPostOf(assignment.Person.Id) != null ? "已有待生效安排" : null);
             }
@@ -247,7 +259,7 @@ namespace PCShopSell.Game.UI
             if (state.Department == CompanyDepartment.Personnel)
             {
                 CompanyButton(panel, "核准招聘", () => OpenCompanyRecruiting(company), leaderBlocker);
-                CompanyButton(panel, "处理排班请求", () => OpenCompanyShiftRequests(window, company), leaderBlocker);
+                CompanyButton(panel, "员工请求 · "+S.CompanyRoster(company).Count(r=>S.EmployeeNeedsAttention(r.Person)), () => OpenCompanyShiftRequests(window, company), leaderBlocker);
             }
             if (state.Department == CompanyDepartment.Marketing)
             {
@@ -363,30 +375,37 @@ namespace PCShopSell.Game.UI
         private void BuildCompanyRoster(Transform body, Window window, CompanyRecord company)
         {
             var all = S.CompanyRoster(company).ToArray();
+            foreach(var employee in all)S.EmployeeWellbeingOf(employee.Person.Id);
             var groups = Ui.Row(body, 38, 7);
             int management = all.Count(r => S.CompanyPostOf(r.Person.Id)?.Leader == true);
-            Ui.Tab(groups, $"管理岗 {management}", () => { _companyManagers = true; _companyPerson = null; window.Rebuild(); }, _companyManagers);
-            Ui.Tab(groups, $"普通岗 {all.Length - management}", () => { _companyManagers = false; _companyPerson = null; window.Rebuild(); }, !_companyManagers);
+            Ui.Tab(groups, $"管理岗 {management}", () => { _companyAttentionOnly=false;_companyManagers = true; _companyPerson = null; window.Rebuild(); }, _companyManagers&&!_companyAttentionOnly);
+            Ui.Tab(groups, $"普通岗 {all.Length - management}", () => { _companyAttentionOnly=false;_companyManagers = false; _companyPerson = null; window.Rebuild(); }, !_companyManagers&&!_companyAttentionOnly);
+            Ui.Tab(groups,"员工请求 "+all.Count(r=>S.EmployeeNeedsAttention(r.Person)),()=>{_companyAttentionOnly=true;_companyPerson=null;window.Rebuild();},_companyAttentionOnly);
             Ui.Size(Ui.Button(groups, _companyUnit == null ? "全部部门与门店" : "清除工作单位筛选",
                 () => { if (_companyUnit == null) OpenCompanyUnitFilter(window, company); else { _companyUnit = null; window.Rebuild(); } }, 16), 210, 34);
-            var roster = all.Where(r => (S.CompanyPostOf(r.Person.Id)?.Leader == true) == _companyManagers
+            var roster = all.Where(r => (_companyAttentionOnly?S.EmployeeNeedsAttention(r.Person):(S.CompanyPostOf(r.Person.Id)?.Leader == true) == _companyManagers)
                 && (_companyUnit == null || _companyUnit == CompanyUnitId(r))).ToArray();
+            if(!roster.Any(r=>r.Person.Id==_companyPerson))_companyPerson=roster.FirstOrDefault()?.Person.Id;
             var layout = Ui.Row(body, -1, 10);
-            var list = CompanyCard(layout, $"公司名册 · {roster.Length} / {all.Length} 人", 1.15f);
+            Ui.Size(layout).GetComponent<LayoutElement>().flexibleHeight=1;
+            var listShell = CompanyCard(layout, $"公司名册 · {roster.Length} / {all.Length} 人", .85f);
+            var list=PhoneFlexibleScroll(listShell,"CompanyRosterList");
             foreach (var group in roster.Select((row, i) => (row, i)).GroupBy(x => x.i / 3))
             {
-                var row = Ui.Row(list, 48, 6);
+                var row = Ui.Row(list, 88, 6);
                 foreach (var entry in group)
                 {
                     var employee = entry.row.Person;
-                    var tile = Ui.Row(row, 46, 4);
-                    Ui.Size(tile, 0, 46, 1);
+                    var tile = Ui.Rect(row,"CompanyEmployee_"+employee.Id);Ui.VList(tile,3,3);
+                    Ui.Size(tile, 0, 88, 1);
                     Action show = () => { _companyPerson = employee.Id; window.Rebuild(); };
-                    PortraitThumb(tile, S.PersonIdOf(employee), 38, show);
-                    Ui.Size(Ui.Button(tile, employee.Name, show, 15, Ui.SelectedButton(employee.Id == _companyPerson)), 0, 35, 1);
+                    var face=Ui.Row(tile,40,4);PortraitThumb(face, S.PersonIdOf(employee), 38, show);
+                    Ui.Size(Ui.Button(face, employee.Name, show, 14, Ui.SelectedButton(employee.Id == _companyPerson)), 0, 35, 1);
+                    BuildEmployeeMorale(tile,employee,window,compact:true);
                 }
             }
-            var detail = CompanyCard(layout, "员工档案", 1);
+            var detailShell = CompanyCard(layout, "员工档案", 1.25f);
+            var detail=PhoneFlexibleScroll(detailShell,"CompanyEmployeeDetail");
             var current = roster.FirstOrDefault(x => x.Person.Id == _companyPerson) ?? roster.FirstOrDefault();
             if (current == null) { Line(detail, "该范围暂无员工", 17, Ui.Dim); return; }
             Line(detail, current.Person.Name + "　" + CompanyCurrentPosition(current), 20, Ui.Accent);
@@ -397,6 +416,8 @@ namespace PCShopSell.Game.UI
             Line(detail, (managedStore == null ? "工作单位　" : "分管门店　") +
                 (assignedShop == null ? CompanyCurrentPosition(current) : S.ShopTitle(assignedShop)), 17);
             Line(detail, $"班次　{Ui.Hm(current.Person.ShiftStart)}–{Ui.Hm(current.Person.ShiftEnd)}　日薪 {current.Person.DailyWage}", 16);
+            BuildEmployeeWellbeingDetails(detail,current,window);
+            if(!S.PlayerManagesEmployee(current.Person.Id)){Line(detail,"该员工由公司管理层安排",16,Ui.Dim);return;}
             if (S.PendingCompanyPostOf(current.Person.Id) != null)
                 CompanyButton(detail, "撤回待生效安排", () =>
                 {
@@ -407,6 +428,7 @@ namespace PCShopSell.Game.UI
             {
                 if (S.TrainCompanyEmployee(company.BrandId, current.Person.Id)) window.Rebuild();
             }, S.CompanyDepartmentLeader(company, CompanyDepartment.Personnel) == null ? "请先任命人事部负责人" : null);
+            Ui.Size(Ui.Button(detail,"辞退…",()=>ConfirmAction("辞退公司员工","结清工资和加班费，解除雇佣及公司职务；原岗位将出现空缺。","确认辞退",()=>{S.DismissEmployee(current.Person.Id);window.RequestRebuild();},danger:true),16,Ui.ButtonDanger),-1,36);
         }
 
         private string CompanyUnitId(EmployeeAssignment row)
@@ -512,18 +534,15 @@ namespace PCShopSell.Game.UI
 
         private void OpenCompanyShiftRequests(Window parent, CompanyRecord company)
         {
-            OpenWindow("处理排班请求", 660, 530, w =>
+            OpenWindow("员工请求", 760, 600, w =>
             {
-                var requests = S.CompanyRoster(company).Where(x =>
-                    GameSession.ShiftMinutes(x.Person.ShiftStart, x.Person.ShiftEnd) > 600 && x.Person.Schedule?.PendingAt < 0).ToArray();
-                if (requests.Length == 0) Line(w.Content, "暂无需要调整的长班次", 17, Ui.Dim);
-                foreach (var row in requests)
+                var list=PhoneFlexibleScroll(w.Content,"CompanyRequestsList");
+                var requests = S.CompanyRoster(company).Where(x=>S.EmployeeNeedsAttention(x.Person)).ToArray();
+                if(requests.Length==0)Line(list,"暂无需处理员工",17,Ui.Dim);
+                foreach(var row in requests)
                 {
-                    int end = (row.Person.ShiftStart + 600) % 1440;
-                    CompanyButton(w.Content, $"{row.Person.Name} · 调整下次班次至 {Ui.Hm(end)}", () =>
-                    {
-                        if (S.SetEmployeeShift(row.Person.Id, row.Person.ShiftStart, end)) { w.Close(); parent.Rebuild(); }
-                    });
+                    CompanyButton(list,row.Person.Name+" · "+S.EmployeeAttentionLabel(row.Person),()=>
+                    {_companyPage=2;_companyPerson=row.Person.Id;_companyAttentionOnly=true;_companyUnit=null;w.Close();parent.Rebuild();});
                 }
             });
         }

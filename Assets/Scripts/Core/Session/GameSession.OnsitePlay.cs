@@ -421,7 +421,7 @@ namespace PCShopSell.Core.Session
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束当前活动";
             long now = Clock.Now.TotalMinutes;
             if (now > activity.ScheduledStart + CityArrivalWindowMinutes) return "已超过约定的到场时间";
-            if (NpcVenueStaffingBlocker(CurrentPlace) is string staffing) return staffing;
+            if (NpcVenueStaffingBlocker(CurrentPlace,activity) is string staffing) return staffing;
             if (OnsiteNumber(activity.DefinitionId) == 56 && activity.Participants.Length == 0) return "这场球缺少同行者";
             if (!OnsiteCompanionsPresent(activity))
                 return "等同行者到齐后开始";

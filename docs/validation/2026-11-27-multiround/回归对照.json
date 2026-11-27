@@ -1,0 +1,582 @@
+{
+  "uniqueCases": 1806,
+  "counts": {
+    "Passed": 1539,
+    "Failed": 266,
+    "Timeout": 1
+  },
+  "recovered": [
+    "PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce",
+    "PCShopSell.Tests.CityAssetIntegrationTests.EquityFullLiquidationClearsCostAndCannotRoundTripProfit",
+    "PCShopSell.Tests.CityAssetIntegrationTests.EquityHistoryHoldingsAndRandomContinuationSurviveSaveLoad",
+    "PCShopSell.Tests.CityAssetIntegrationTests.StockBatchValidatesEveryOrderBeforeSellingAndUsesSaleProceedsForPurchase",
+    "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")",
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)",
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)",
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)",
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)",
+    "PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength",
+    "PCShopSell.Tests.ClassmateDinnerTests.ClassmateDinnerCompletesAfterChoosingMealAndKeepsContactAfterReload",
+    "PCShopSell.Tests.HomeWorkbenchTests.MiHomeWorkbenchCanBeInstalledInEitherResidenceAndUsedFromBoth",
+    "PCShopSell.Tests.HomeWorkbenchTests.WorkbenchHasFiveRealPagesAndInlinePriceChangesActualShop",
+    "PCShopSell.Tests.HomeWorkbenchTests.WorkbenchStockTradingRequiresTheSecuritiesApp",
+    "PCShopSell.Tests.MenuLocalizationTests.LoadSlotInspection_DistinguishesSlotsAndBackupWithoutLoadingGame",
+    "PCShopSell.Tests.OnsitePlayTests.AFlightCanBeSavedAndResumedWithoutRerollingItsLanding",
+    "PCShopSell.Tests.OnsitePlayTests.BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses",
+    "PCShopSell.Tests.OnsitePlayTests.BasketballUsesActualAimPowerFlightAndDistinctTrainingModes",
+    "PCShopSell.Tests.OnsitePlayTests.BasketballUsesTheNewShotPositionAfterReload",
+    "PCShopSell.Tests.OnsitePlayTests.GolfClubPowerAndAngleChangeRealLandingAndFiveShotsComplete",
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(0,600)",
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(1,2400)",
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(2,0)",
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(3,1800)",
+    "PCShopSell.Tests.OnsitePlayTests.GroupTopicsBindTheActualPersonAndCannotBeSpammed",
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)",
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)",
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)",
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)",
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)",
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)",
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)",
+    "PCShopSell.Tests.OnsitePlayTests.LeavingTastingEarlyDoesNotChargeTheReservedTime",
+    "PCShopSell.Tests.OnsitePlayTests.MixedDrinkAndRemainingTasteTimeSurviveJson",
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,0,True)",
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(0,0,0,False)",
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,1,0,False)",
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,1,False)",
+    "PCShopSell.Tests.OnsitePlayTests.NewFloorNeedsAllThreeExercisesAndActualFeedback",
+    "PCShopSell.Tests.OnsitePlayTests.OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime",
+    "PCShopSell.Tests.OnsitePlayTests.PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat",
+    "PCShopSell.Tests.OnsitePlayTests.StandingStillDoesNotCompleteTheMissingOnsiteTask",
+    "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(0,True)",
+    "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(1,False)",
+    "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(2,False)",
+    "PCShopSell.Tests.OnsitePlayTests.TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce",
+    "PCShopSell.Tests.OnsitePlayTests.TeacherGameNeedsFivePhysicalPossessions",
+    "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_court_mid\",54,300)"
+  ],
+  "previouslyPassedNowNotPassed": [],
+  "codeFingerprints": {
+    "regression-01": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-02": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-03": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-04": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-05": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-06": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-07": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-08": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-04-events-supplement": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-09": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-10": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-11": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-12": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-04-rest-and-photo": "ebfe2bd32b9effa1d1a3d444d9aeb98e0b0d6ff3029105c4aea5ca86c01846ea",
+    "regression-13": "99a859b92fa191ed29101721b41332ed00403ac3f5bdc6fae3b518cfe34b9393",
+    "regression-12-remaining": "ebfe2bd32b9effa1d1a3d444d9aeb98e0b0d6ff3029105c4aea5ca86c01846ea"
+  },
+  "productionFingerprints": {
+    "regression-01": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-02": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-03": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-04": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-05": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-06": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-07": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-08": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-04-events-supplement": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-09": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-10": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-11": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-12": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-04-rest-and-photo": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-13": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41",
+    "regression-12-remaining": "c981867a7e05f0dcbcd4190733b75205fd2aec6130c62e761dfe80d6e9599f41"
+  },
+  "testFingerprints": {
+    "regression-01": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-02": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-03": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-04": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-05": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-06": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-07": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-08": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-04-events-supplement": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-09": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-10": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-11": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-12": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-04-rest-and-photo": "6cdec567b31da730cba163eaf06eb4315f757c814e226d42ef90f811c0d80038",
+    "regression-13": "5cb47a2860fb0a7f98e4676f403d53b502794e50d07e029b35a31fa6e847a9e5",
+    "regression-12-remaining": "6cdec567b31da730cba163eaf06eb4315f757c814e226d42ef90f811c0d80038"
+  },
+  "groups": {
+    "AgencyDistrictViewTests": {
+      "Passed": 8,
+      "Failed": 1
+    },
+    "AnimePortraitTests": {
+      "Failed": 1,
+      "Passed": 2
+    },
+    "BankTests": {
+      "Failed": 2,
+      "Passed": 14
+    },
+    "BrandAmbassadorTests": {
+      "Passed": 5,
+      "Failed": 1
+    },
+    "BrandBusinessTests": {
+      "Passed": 20,
+      "Failed": 2
+    },
+    "BrandShowcaseArtTests": {
+      "Passed": 4
+    },
+    "BrandStoryTests": {
+      "Passed": 16
+    },
+    "BrandStoryUiTests": {
+      "Failed": 1,
+      "Passed": 1
+    },
+    "BuildingBoundsTests": {
+      "Passed": 5
+    },
+    "BusinessRegressionTests": {
+      "Passed": 26,
+      "Failed": 4
+    },
+    "BuyerHistoryTests": {
+      "Passed": 4,
+      "Failed": 1
+    },
+    "CampaignTests": {
+      "Passed": 13
+    },
+    "CartDefaultTests": {
+      "Passed": 5
+    },
+    "CheckoutPatienceTests": {
+      "Passed": 8
+    },
+    "CityActivityTests": {
+      "Failed": 4,
+      "Passed": 11
+    },
+    "CityAssetIntegrationTests": {
+      "Passed": 11
+    },
+    "CityClimateTests": {
+      "Passed": 9
+    },
+    "CityClothingTests": {
+      "Failed": 1,
+      "Passed": 13
+    },
+    "CityFinanceTests": {
+      "Passed": 6
+    },
+    "CityLayoutTests": {
+      "Passed": 5
+    },
+    "CityLayoutV7Tests": {
+      "Passed": 2,
+      "Failed": 4
+    },
+    "CityProcurementTests": {
+      "Passed": 9
+    },
+    "CityRetailTests": {
+      "Passed": 6,
+      "Failed": 2
+    },
+    "CityServiceTests": {
+      "Passed": 2
+    },
+    "CityStoryTests": {
+      "Passed": 7,
+      "Failed": 1
+    },
+    "CityTravelTimingTests": {
+      "Passed": 21
+    },
+    "CityVisitSaveTests": {
+      "Passed": 1
+    },
+    "ClassmateDinnerTests": {
+      "Passed": 2
+    },
+    "CompanyWellbeingRegressionTests": {
+      "Passed": 25
+    },
+    "CompetitionContextTests": {
+      "Passed": 23,
+      "Failed": 3
+    },
+    "CustomDestinationTests": {
+      "Failed": 1,
+      "Passed": 2
+    },
+    "DisplaySettingsTests": {
+      "Passed": 2
+    },
+    "DistrictCommerceTests": {
+      "Failed": 4,
+      "Passed": 4
+    },
+    "DistrictDetailTests": {
+      "Failed": 5,
+      "Passed": 2
+    },
+    "DistrictProgressionTests": {
+      "Passed": 25,
+      "Failed": 8
+    },
+    "DistrictUiTests": {
+      "Passed": 8,
+      "Failed": 2
+    },
+    "EmployeeAssignmentTests": {
+      "Passed": 8
+    },
+    "EnergyPayrollTests": {
+      "Passed": 23,
+      "Failed": 1
+    },
+    "EventScriptTests": {
+      "Passed": 20
+    },
+    "EventSystemTests": {
+      "Passed": 10,
+      "Timeout": 1
+    },
+    "ExhibitionCustomerBatchTests": {
+      "Passed": 20
+    },
+    "ExpoAcceptanceTests": {
+      "Failed": 2,
+      "Passed": 4
+    },
+    "FastFoodTests": {
+      "Passed": 11
+    },
+    "FigureMotionTests": {
+      "Failed": 5,
+      "Passed": 4
+    },
+    "FinanceEventBatchTests": {
+      "Passed": 22
+    },
+    "FishingTests": {
+      "Passed": 24,
+      "Failed": 25
+    },
+    "FixtureTests": {
+      "Passed": 9,
+      "Failed": 7
+    },
+    "FoodAndFridgeTests": {
+      "Passed": 20
+    },
+    "FoodExpiryTests": {
+      "Passed": 13
+    },
+    "GameClockTests": {
+      "Passed": 10
+    },
+    "GameDateTests": {
+      "Passed": 8
+    },
+    "GameSessionTests": {
+      "Passed": 26,
+      "Failed": 4
+    },
+    "GameTimestampTests": {
+      "Passed": 4
+    },
+    "GoodsTests": {
+      "Passed": 8
+    },
+    "HomeSleepNavigationTests": {
+      "Passed": 15
+    },
+    "HomeTests": {
+      "Passed": 45,
+      "Failed": 3
+    },
+    "HomeWorkbenchTests": {
+      "Passed": 13
+    },
+    "IndustrialArtTests": {
+      "Passed": 4,
+      "Failed": 1
+    },
+    "InteractionFlowTests": {
+      "Passed": 7,
+      "Failed": 1
+    },
+    "InteractionRevisionTests": {
+      "Passed": 9
+    },
+    "KolStreamingTests": {
+      "Passed": 22
+    },
+    "LedgerTests": {
+      "Passed": 8
+    },
+    "LifeEventBatchTests": {
+      "Passed": 20
+    },
+    "LifeGrowthTests": {
+      "Passed": 4
+    },
+    "MarketTests": {
+      "Passed": 3
+    },
+    "MarkupRangeTests": {
+      "Failed": 3,
+      "Passed": 8
+    },
+    "McnIntroductionTests": {
+      "Passed": 7
+    },
+    "McnRecruitmentTests": {
+      "Passed": 3,
+      "Failed": 1
+    },
+    "MenuLocalizationTests": {
+      "Passed": 5
+    },
+    "MoneyEventBatchTests": {
+      "Passed": 20
+    },
+    "MoneyTests": {
+      "Passed": 5
+    },
+    "MultiShopTests": {
+      "Passed": 15,
+      "Failed": 1
+    },
+    "NarrativeContentTests": {
+      "Passed": 6,
+      "Failed": 2
+    },
+    "NeighborhoodEventTests": {
+      "Passed": 21
+    },
+    "NpcTests": {
+      "Passed": 18,
+      "Failed": 1
+    },
+    "OldMarketTests": {
+      "Passed": 16
+    },
+    "OnsitePlayTests": {
+      "Passed": 44
+    },
+    "OutdoorBatchTests": {
+      "Passed": 23,
+      "Failed": 11
+    },
+    "PackTests": {
+      "Passed": 20
+    },
+    "PathfinderTests": {
+      "Passed": 5
+    },
+    "PathWalkerTests": {
+      "Passed": 5
+    },
+    "PerformanceRegressionTests": {
+      "Passed": 2
+    },
+    "PlayerWorkTests": {
+      "Failed": 8,
+      "Passed": 15
+    },
+    "PurchasePlanTests": {
+      "Passed": 12,
+      "Failed": 4
+    },
+    "QuarterlyExpoSceneTests": {
+      "Passed": 12
+    },
+    "QuarterlyExpoTests": {
+      "Passed": 13
+    },
+    "QuestTests": {
+      "Passed": 38,
+      "Failed": 3
+    },
+    "RacingEventBatchTests": {
+      "Passed": 15,
+      "Failed": 1
+    },
+    "RacingTests": {
+      "Passed": 42
+    },
+    "RealtyTests": {
+      "Failed": 2,
+      "Passed": 12
+    },
+    "ResidentialAgencyTests": {
+      "Passed": 3,
+      "Failed": 1
+    },
+    "ResidentialPropertyTests": {
+      "Passed": 8
+    },
+    "ResidentTests": {
+      "Passed": 5
+    },
+    "RestaurantDrinkTests": {
+      "Passed": 9
+    },
+    "RetroPortraitTests": {
+      "Passed": 3
+    },
+    "RoadSurfaceTests": {
+      "Failed": 1,
+      "Passed": 6
+    },
+    "RomanceConversationTests": {
+      "Passed": 5
+    },
+    "SaveGhostStateTests": {
+      "Passed": 4
+    },
+    "SaveStoreFallbackTests": {
+      "Passed": 3
+    },
+    "ShelfItemCapacityTests": {
+      "Passed": 16,
+      "Failed": 1
+    },
+    "ShelfTests": {
+      "Passed": 12,
+      "Failed": 1
+    },
+    "ShopCompetitionTests": {
+      "Failed": 13,
+      "Passed": 1
+    },
+    "ShopCoreGameplayTests": {
+      "Passed": 57,
+      "Failed": 11
+    },
+    "ShopDockInteractionTests": {
+      "Failed": 2,
+      "Passed": 5
+    },
+    "ShopEventBatchTests": {
+      "Passed": 20,
+      "Failed": 2
+    },
+    "ShopFootfallTests": {
+      "Passed": 9,
+      "Failed": 4
+    },
+    "ShopManageTests": {
+      "Passed": 4,
+      "Failed": 6
+    },
+    "ShopSimulationTests": {
+      "Passed": 26
+    },
+    "ShopUpgradeTests": {
+      "Passed": 8
+    },
+    "SimplifiedShoppingTests": {
+      "Passed": 5
+    },
+    "SleepPerformanceTests": {
+      "Passed": 2,
+      "Failed": 1
+    },
+    "SocialEventBatchTests": {
+      "Passed": 17,
+      "Failed": 19
+    },
+    "SocialTests": {
+      "Failed": 4,
+      "Passed": 27
+    },
+    "VenueAccessRegressionTests": {
+      "Passed": 3
+    },
+    "VenueBusinessTests": {
+      "Passed": 6,
+      "Failed": 2
+    },
+    "VenueSponsorshipAndStoryTests": {
+      "Passed": 10
+    },
+    "WarehouseBoxInteractionTests": {
+      "Failed": 2,
+      "Passed": 3
+    },
+    "WarehouseCapacityTests": {
+      "Passed": 12,
+      "Failed": 1
+    },
+    "WholesaleMinimumTests": {
+      "Passed": 11,
+      "Failed": 2
+    },
+    "WorkforceTests": {
+      "Passed": 16,
+      "Failed": 7
+    },
+    "WorkshopRegressionTests": {
+      "Failed": 6,
+      "Passed": 16
+    },
+    "WorldMapTests": {
+      "Passed": 4
+    },
+    "SteerTests": {
+      "Passed": 21,
+      "Failed": 5
+    },
+    "StockAndCatalogTests": {
+      "Passed": 6
+    },
+    "SupplierPlanAllocationTests": {
+      "Passed": 14
+    },
+    "TimeControllerTests": {
+      "Passed": 8
+    },
+    "TravelTests": {
+      "Passed": 8
+    },
+    "UiCleanupTests": {
+      "Failed": 40,
+      "Passed": 34
+    },
+    "UnifiedClockAndWeightTests": {
+      "Passed": 9,
+      "Failed": 1
+    }
+  },
+  "runTags": [
+    "regression-01",
+    "regression-02",
+    "regression-03",
+    "regression-04",
+    "regression-05",
+    "regression-06",
+    "regression-07",
+    "regression-08",
+    "regression-04-events-supplement",
+    "regression-09",
+    "regression-10",
+    "regression-11",
+    "regression-12",
+    "regression-04-rest-and-photo",
+    "regression-13",
+    "regression-12-remaining"
+  ]
+}

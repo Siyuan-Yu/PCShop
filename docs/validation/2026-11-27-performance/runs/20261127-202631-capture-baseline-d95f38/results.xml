@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:10Z" duration="15.7182538">
+  <test-suite type="TestSuite" id="3145" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1845" result="Passed" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:10Z" duration="15.718254" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="5286" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1845" result="Passed" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:10Z" duration="15.685016" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33148" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="5287" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1845" result="Passed" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:10Z" duration="15.662806" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="SetUpFixture" id="4402" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1845" result="Passed" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:10Z" duration="15.633581" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="4891" name="SimulationPerformanceCapture" fullname="PCShopSell.Tests.SimulationPerformanceCapture" classname="PCShopSell.Tests.SimulationPerformanceCapture" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:10Z" duration="15.569126" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="4895" name="SameInitialSaveMustProduceIdenticalFinalSave" fullname="PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave" classname="PCShopSell.Tests.SimulationPerformanceCapture" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:10Z" duration="15.567762" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4892" name="SameInitialSaveMustProduceIdenticalFinalSave(&quot;sleep&quot;)" fullname="PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(&quot;sleep&quot;)" methodname="SameInitialSaveMustProduceIdenticalFinalSave" classname="PCShopSell.Tests.SimulationPerformanceCapture" runstate="Runnable" seed="1901005673" result="Passed" start-time="2026-11-27 12:26:54Z" end-time="2026-11-27 12:27:00Z" duration="6.146502" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave("sleep")
+sleep	ms=5588.05	allocated_bytes=-1	gen0=5	people=197	day=2	minute=480
+REGRESSION DONE PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave("sleep") Passed
+]]></output>
+              </test-case>
+              <test-case id="4893" name="SameInitialSaveMustProduceIdenticalFinalSave(&quot;faint&quot;)" fullname="PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(&quot;faint&quot;)" methodname="SameInitialSaveMustProduceIdenticalFinalSave" classname="PCShopSell.Tests.SimulationPerformanceCapture" runstate="Runnable" seed="1640825004" result="Passed" start-time="2026-11-27 12:27:00Z" end-time="2026-11-27 12:27:04Z" duration="3.702521" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave("faint")
+faint	ms=3414.44	allocated_bytes=-1	gen0=3	people=197	day=1	minute=1231
+REGRESSION DONE PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave("faint") Passed
+]]></output>
+              </test-case>
+              <test-case id="4894" name="SameInitialSaveMustProduceIdenticalFinalSave(&quot;hospital&quot;)" fullname="PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(&quot;hospital&quot;)" methodname="SameInitialSaveMustProduceIdenticalFinalSave" classname="PCShopSell.Tests.SimulationPerformanceCapture" runstate="Runnable" seed="1239499719" result="Passed" start-time="2026-11-27 12:27:04Z" end-time="2026-11-27 12:27:10Z" duration="5.706165" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave("hospital")
+hospital	ms=5395.55	allocated_bytes=-1	gen0=4	people=197	day=2	minute=480
+REGRESSION DONE PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave("hospital") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

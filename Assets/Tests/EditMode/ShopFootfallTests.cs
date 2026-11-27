@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -63,7 +63,8 @@ namespace PCShopSell.Tests
             using(var small=Session(City(1000,1000)))using(var large=Session(City(50,50,"large")))
             {
                 double a=small.PlayerShop.ArrivalRatePerMinute(small.Clock.Now),b=large.PlayerShop.ArrivalRatePerMinute(large.Clock.Now);
-                double ratio=(double)large.FootfallOf(large.PlayerShopPlace).DailyPassers/small.FootfallOf(small.PlayerShopPlace).DailyPassers;
+                // 客流已按街道需求归一化；比较真实入店需求，不能再把路过人数直接当入店率。
+                double ratio=large.ShopArrivalDemand(large.PlayerShopPlace)/small.ShopArrivalDemand(small.PlayerShopPlace);
                 Assert.AreEqual(ratio,b/a,1e-9);Assert.Greater(b,a);
             }
         }
@@ -85,7 +86,10 @@ namespace PCShopSell.Tests
                 shop.PlayerPresent = true;
                 live.Clock.Restore(live.Clock.Today, ShopSimulation.DefaultOpenMinute);
                 live.Clock.Advance(ShopSimulation.DefaultCloseMinute - ShopSimulation.DefaultOpenMinute);
-                Assert.That(shop.TodayCustomers, Is.EqualTo(estimate).Within(2));
+                // 当前设计：店主现场值守给客流 +20%；新店中介预估没有这个现场加成。
+                double onSiteEstimate=estimate*(1+ShopSimulation.OwnerOnSiteBonus);
+                Assert.That(live.ExpectedDailyShopEntrants(live.PlayerShopPlace), Is.EqualTo(onSiteEstimate).Within(1e-9));
+                Assert.That(shop.TodayCustomers, Is.EqualTo(onSiteEstimate).Within(2));
 
                 shop.Reputation = 60;
                 Assert.Greater(live.StreetTrafficMultiplier(live.PlayerShopPlace.StreetId), 1);
@@ -174,7 +178,10 @@ namespace PCShopSell.Tests
                     typeof(GameUi).GetMethod("BuildAgencyDetail",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(ui,new object[]{detail.GetComponent<RectTransform>(),s.PlayerShopPlace,1,null});
                     var texts=detail.GetComponentsInChildren<Text>();
                     StringAssert.Contains($"{s.ExpectedDailyShopEntrants(s.PlayerShopPlace):N0}",texts.Single(t=>t.name=="AgencyDailyEntrants").text);
-                    Assert.True(texts.Any(t=>t.text.Contains("距最近地铁 100 米")));Assert.True(texts.Any(t=>t.text.Contains("距最近住宅 500 米")));
+                    // 当前界面把距离放入商圈详情。沿真实按钮打开，验证信息仍可访问。
+                    detail.GetComponentsInChildren<Button>().Single(b=>b.GetComponentInChildren<Text>()?.text=="商圈详情与试算 ›").onClick.Invoke();
+                    var notes=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).ToArray();
+                    Assert.True(notes.Any(t=>t.text.Contains("距最近地铁 100 米")));Assert.True(notes.Any(t=>t.text.Contains("距最近住宅 500 米")));
                     Assert.False(texts.Any(t=>t.text.Contains("地段客流 ×")||t.text.Contains("条越长")));
                 }
                 finally

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 12:18:40Z" end-time="2026-11-27 12:18:47Z" duration="6.6556616">
+  <test-suite type="TestSuite" id="3142" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:18:40Z" end-time="2026-11-27 12:18:47Z" duration="6.655662" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="5280" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:18:40Z" end-time="2026-11-27 12:18:47Z" duration="6.620995" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="44012" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="5281" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:18:40Z" end-time="2026-11-27 12:18:47Z" duration="6.596693" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="SetUpFixture" id="4399" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:18:40Z" end-time="2026-11-27 12:18:47Z" duration="6.572952" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="4888" name="SimulationHotspotTests" fullname="PCShopSell.Tests.SimulationHotspotTests" classname="PCShopSell.Tests.SimulationHotspotTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-11-27 12:18:40Z" end-time="2026-11-27 12:18:47Z" duration="6.531617" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="4889" name="ProfileSleep" fullname="PCShopSell.Tests.SimulationHotspotTests.ProfileSleep" methodname="ProfileSleep" classname="PCShopSell.Tests.SimulationHotspotTests" runstate="Runnable" seed="1636074795" result="Passed" start-time="2026-11-27 12:18:40Z" end-time="2026-11-27 12:18:47Z" duration="6.521554" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SimulationHotspotTests.ProfileSleep
+TOTAL=5908.1111
+TickCityPeople=5297.8082
+TickCityClimate=208.5989
+SettleEmployeeWellbeing=42.7474
+UpdateEmployeePurchases=41.9442
+TickEmployeePayroll=36.7704
+TickEventFollowups=32.7484
+UpdateBody=27.5621999999999
+TickHomeWorkbench=27.4797999999998
+CheckCalendarReminders=18.5137
+TickKolStreams=16.6554
+NormalizeWarehouses=14.0619
+TickCityRetail=11.7063
+TickVenueBusinesses=7.65579999999998
+TickCityStories=6.33239999999999
+TickCityAssets=5.3258000000001
+TickCityActivities=5.11229999999996
+DeliverCouriers=5.09409999999998
+TickDistrictNarrative=3.71839999999998
+TickSpecialBusinesses=2.7062
+TickModelCommissions=2.56660000000002
+TickPetShopStaff=2.44190000000001
+TickVenueSponsorships=2.26039999999998
+PreparePetVisits=1.81399999999995
+TickBrandDeliveries=1.30659999999998
+DeliverDirect=1.26539999999998
+UpdateImpoundedVehicles=1.0668
+TickCompanyWork=0.91659999999996
+DeliverOnlineOrders=0.850999999999973
+CheckAppointments=0.736299999999984
+CheckHomeVisits=0.532399999999978
+UpdateCooking=0.485999999999998
+TickEnergyExhaustion=0.457899999999998
+RefreshRecruitmentCandidates=0.287199999999998
+ExpireCandidates=0.258499999999999
+REGRESSION DONE PCShopSell.Tests.SimulationHotspotTests.ProfileSleep Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

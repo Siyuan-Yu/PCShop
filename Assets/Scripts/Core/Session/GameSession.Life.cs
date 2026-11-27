@@ -54,13 +54,16 @@ namespace PCShopSell.Core.Session
 
         public bool ReceiveOutpatientCare()
         {
+            if (IsTimeAdvancing) return false;
             var hospital = CurrentPlace;
             if (hospital?.Business != HospitalBusiness || IsGameOver) return false;
             if (!Ledger.TryDebit(Clock.Today, "医疗", OutpatientFee, hospital.Name + "门诊")) return Fail($"现金不足，门诊需 {OutpatientFee}。");
-            RecoverAt(hospital, OutpatientMinutes);
-            _fluIllUntil = 0;
-            Player.Health = Math.Min(100, Player.Health + OutpatientHealthRecovery);
-            Show("门诊结束", $"已支付门诊费 {OutpatientFee}，用时 {OutpatientMinutes} 分钟。当前健康 {Player.Health:0.#}/100。");
+            RecoverAt(hospital, OutpatientMinutes, () =>
+            {
+                _fluIllUntil = 0;
+                Player.Health = Math.Min(100, Player.Health + OutpatientHealthRecovery);
+                Show("门诊结束", $"已支付门诊费 {OutpatientFee}，用时 {OutpatientMinutes} 分钟。当前健康 {Player.Health:0.#}/100。");
+            });
             return true;
         }
 
@@ -94,27 +97,28 @@ namespace PCShopSell.Core.Session
 
         private bool SleepMinutes(int minutes)
         {
+            if (IsTimeAdvancing) return false;
             if (!CanSleepAt(CurrentPlace)) return Fail("只能在可入住的自家住宅睡觉。");
-            SleepFor(minutes);
-            Say($"睡了 {minutes / 60.0:0.#} 小时。过去24小时已睡 {SleepHoursLast24:0.#}/8 小时。");
+            SleepFor(minutes, () => Say($"睡了 {minutes / 60.0:0.#} 小时。过去24小时已睡 {SleepHoursLast24:0.#}/8 小时。"));
             return true;
         }
 
         /// <summary>在家睡到下一个早上8:00；白天也可以选择任意睡眠时长。</summary>
         public bool Sleep()
         {
+            if (IsTimeAdvancing) return false;
             if (!CanSleepAt(CurrentPlace)) return Fail("只能在可入住的自家住宅睡觉。");
             int minutes = NightWorkRest ? NightRestMinutes : Clock.MinutesUntil(WakeUpMinute);
             if (minutes <= 0) minutes = 480;
-            SleepFor(minutes);
             double hours = minutes / 60.0;
-            Say($"睡了 {hours:0.#} 小时。" + (Player.SleepDebt > 0.5 ? $"还欠 {Player.SleepDebt:0.#} 小时觉，精力上限降低。" : ""));
+            SleepFor(minutes, () => Say($"睡了 {hours:0.#} 小时。" + (Player.SleepDebt > 0.5 ? $"还欠 {Player.SleepDebt:0.#} 小时觉，精力上限降低。" : "")));
             return true;
         }
 
         /// <summary>在家小睡 2 小时。</summary>
         public bool Nap()
         {
+            if (IsTimeAdvancing) return false;
             if (!CanSleepAt(CurrentPlace)) return Fail("只能在可入住的自家住宅小睡。");
             SleepFor(120);
             return true;
@@ -131,27 +135,93 @@ namespace PCShopSell.Core.Session
 
         public event Action<long> ResidenceSleepFinished;
 
-        private void SleepFor(int minutes)
+        // Core callers remain synchronous by default. The game controller explicitly opts in.
+        public bool DeferRestAdvances { get; set; }
+        public bool IsTimeAdvancing => _restAdvance != null;
+        public string TimeAdvanceError { get; private set; }
+        public string TimeAdvanceLabel { get; private set; }
+        public double TimeAdvanceProgress => _restMinutes <= 0 ? 0 :
+            Math.Min(1, (Clock.Now.TotalMinutes - _restStart) / (double)_restMinutes);
+        public event Action TimeAdvanceStarted;
+        private IEnumerator<int> _restAdvance;
+        private Action _restFinished;
+        private long _restStart;
+        private int _restMinutes, _timeAdvanceGeneration;
+
+        private void AdvanceRest(int minutes, string label, Action finished)
+        {
+            if (!DeferRestAdvances)
+            {
+                AdvanceClock(minutes);
+                finished();
+                return;
+            }
+            if (IsTimeAdvancing) throw new InvalidOperationException("休息结算期间不能重复启动结算。");
+            _timeAdvanceGeneration++;
+            _restStart = Clock.Now.TotalMinutes;
+            _restMinutes = minutes;
+            TimeAdvanceLabel = label;
+            TimeAdvanceError = null;
+            _restFinished = finished;
+            _restAdvance = AdvanceClockSteps(minutes);
+            TimeAdvanceStarted?.Invoke();
+        }
+
+        /// <summary>保持每分钟原有结算顺序；到达预算后让出主线程。单分钟不能截断。</summary>
+        public void PumpTimeAdvance(double budgetMilliseconds)
+        {
+            if (_restAdvance == null || TimeAdvanceError != null) return;
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            try
+            {
+                do
+                {
+                    if (!_restAdvance.MoveNext())
+                    {
+                        var finished = _restFinished;
+                        // Keep saving blocked through the completion callback as well.
+                        finished?.Invoke();
+                        _restAdvance.Dispose();
+                        _restAdvance = null;
+                        _restFinished = null;
+                        return;
+                    }
+                }
+                while ((System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0
+                    / System.Diagnostics.Stopwatch.Frequency < Math.Max(0, budgetMilliseconds));
+            }
+            catch
+            {
+                // Do not allow a partly settled world to overwrite a valid save.
+                TimeAdvanceError = "结算遇到异常，请重启游戏并读取最近存档。";
+                throw;
+            }
+        }
+
+        private void SleepFor(int minutes, Action finished = null)
         {
             if (minutes <= 0) return;
             var residence = CurrentPlace;
             long start = Clock.Now.TotalMinutes;
             ClearEnergyExhaustion();
             _sleeping = true;
-            AdvanceClock(minutes);
-            _sleeping = false;
-            RefreshDistrictNarrative();
-            _sleepHistory.Add(new[] { start, Clock.Now.TotalMinutes });
-            _sleepHistory.RemoveAll(span => span[1] <= Clock.Now.TotalMinutes - 1440);
-            RecordOpeningStaffRest();
-            Player.SleepDebt = Math.Max(0, 8 - SleepHoursLast24);
-            if (SleepHoursLast24 >= 8 - 1e-9) Player.Energy = Player.MaxEnergy;
-            Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy);
-            FinishCityClimateSleep(minutes);
-            SynchronizeEnergyExhaustion();
-            long duration = Clock.Now.TotalMinutes - start;
-            if (duration > 0 && !IsGameOver && CurrentPlace == residence && CanSleepAt(residence))
-                ResidenceSleepFinished?.Invoke(duration);
+            AdvanceRest(minutes, "正在休息", () =>
+            {
+                _sleeping = false;
+                RefreshDistrictNarrative();
+                _sleepHistory.Add(new[] { start, Clock.Now.TotalMinutes });
+                _sleepHistory.RemoveAll(span => span[1] <= Clock.Now.TotalMinutes - 1440);
+                RecordOpeningStaffRest();
+                Player.SleepDebt = Math.Max(0, 8 - SleepHoursLast24);
+                if (SleepHoursLast24 >= 8 - 1e-9) Player.Energy = Player.MaxEnergy;
+                Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy);
+                FinishCityClimateSleep(minutes);
+                SynchronizeEnergyExhaustion();
+                long duration = Clock.Now.TotalMinutes - start;
+                if (duration > 0 && !IsGameOver && CurrentPlace == residence && CanSleepAt(residence))
+                    ResidenceSleepFinished?.Invoke(duration);
+                finished?.Invoke();
+            });
         }
 
         private void UpdateBody(int minutes)
@@ -199,45 +269,52 @@ namespace PCShopSell.Core.Session
             _sleeping = true;
             // The former 04:00 -> noon recovery was eight hours. Keep that duration
             // when exhaustion can happen in daytime, instead of forcing a 23-hour sleep.
-            AdvanceClock(480);
-            _sleeping = false;
-            RefreshDistrictNarrative();
-            Player.Health = Math.Max(0, Player.Health - 10);
-            Player.SleepDebt = Math.Min(8, Player.SleepDebt + 3);
-            Player.Energy = Math.Min(Player.MaxEnergy, 55);
-            ClearEnergyExhaustion();
-            Show("你晕倒了", "精力耗尽后连续清醒四小时，你因疲劳晕倒，被送回出租屋休息。身体和欠觉按原有规则恢复。");
+            AdvanceRest(480, "正在恢复体力", () =>
+            {
+                _sleeping = false;
+                RefreshDistrictNarrative();
+                Player.Health = Math.Max(0, Player.Health - 10);
+                Player.SleepDebt = Math.Min(8, Player.SleepDebt + 3);
+                Player.Energy = Math.Min(Player.MaxEnergy, 55);
+                ClearEnergyExhaustion();
+                Show("你晕倒了", "精力耗尽后连续清醒四小时，你因疲劳晕倒，被送回出租屋休息。身体和欠觉按原有规则恢复。");
+            });
         }
 
         private void Hospitalize()
         {
             var hospital = NearbyHospital();
             bool covered = HasHospitalCoverage;
-            RecoverAt(hospital, HospitalDays * GameTimestamp.MinutesPerDay - Clock.MinuteOfDay + WakeUpMinute);
-            Money bill = HospitalPerDay * HospitalDays;
-            var medicalCharge = Ledger.ForceDebit(Clock.Today, "医疗", bill, (hospital?.Name ?? "") + "住院");
-            var reimbursed = ReimburseEventHospital(medicalCharge, covered);
-            Player.Health = 80;
-            Player.Hunger = 70;
-            Player.Energy = Player.MaxEnergy;
-            Player.SleepDebt = 0;
-            Show("住院了", $"长期挨饿、透支，你病倒了。住院 {HospitalDays} 天，医药费 {bill}。"
-                + (reimbursed.IsPositive ? $"保险已报销 {reimbursed}，自付 {bill - reimbursed}。" : "")
-                + (hospital == null ? "" : $"你现在在{hospital.Name}门口。"));
+            RecoverAt(hospital, HospitalDays * GameTimestamp.MinutesPerDay - Clock.MinuteOfDay + WakeUpMinute, () =>
+            {
+                Money bill = HospitalPerDay * HospitalDays;
+                var medicalCharge = Ledger.ForceDebit(Clock.Today, "医疗", bill, (hospital?.Name ?? "") + "住院");
+                var reimbursed = ReimburseEventHospital(medicalCharge, covered);
+                Player.Health = 80;
+                Player.Hunger = 70;
+                Player.Energy = Player.MaxEnergy;
+                Player.SleepDebt = 0;
+                Show("住院了", $"长期挨饿、透支，你病倒了。住院 {HospitalDays} 天，医药费 {bill}。"
+                    + (reimbursed.IsPositive ? $"保险已报销 {reimbursed}，自付 {bill - reimbursed}。" : "")
+                    + (hospital == null ? "" : $"你现在在{hospital.Name}门口。"));
+            });
         }
 
-        private void RecoverAt(Place hospital, int minutes)
+        private void RecoverAt(Place hospital, int minutes, Action finished)
         {
             MoveForCare(hospital ?? Home);
             _sleeping = true;
-            try { AdvanceClock(minutes); }
-            finally { _sleeping = false; }
-            if (hospital != null)
+            AdvanceRest(minutes, "正在接受治疗", () =>
             {
-                CurrentPlace = null;
-                _free = StandOf(hospital);
-            }
-            RefreshDistrictNarrative();
+                _sleeping = false;
+                if (hospital != null)
+                {
+                    CurrentPlace = null;
+                    _free = StandOf(hospital);
+                }
+                RefreshDistrictNarrative();
+                finished();
+            });
         }
     }
 }

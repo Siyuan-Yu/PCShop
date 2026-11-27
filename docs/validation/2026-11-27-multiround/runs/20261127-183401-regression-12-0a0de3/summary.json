@@ -1,0 +1,14 @@
+{
+  "tag": "regression-12",
+  "filter": "^PCShopSell.Tests.SleepPerformanceTests\\.;^PCShopSell.Tests.SocialEventBatchTests\\.;^PCShopSell.Tests.SocialTests\\.;^PCShopSell.Tests.SteerTests\\.;^PCShopSell.Tests.StockAndCatalogTests\\.;^PCShopSell.Tests.SupplierPlanAllocationTests\\.;^PCShopSell.Tests.TimeControllerTests\\.;^PCShopSell.Tests.TravelTests\\.;^PCShopSell.Tests.UiCleanupTests\\.;^PCShopSell.Tests.UnifiedClockAndWeightTests\\.",
+  "started": "2026-11-27T18:34:01.1818984+08:00",
+  "seconds": 240.18,
+  "timeout": true,
+  "exitCode": -1,
+  "result": "Timeout",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-regression-20261127\\20261127-183401-regression-12-0a0de3"
+}

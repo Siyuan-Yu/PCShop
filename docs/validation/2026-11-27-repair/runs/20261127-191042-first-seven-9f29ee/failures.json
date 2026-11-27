@@ -1,0 +1,107 @@
+[
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce",
+    "message": "System.NullReferenceException : Object reference not set to an instance of an object",
+    "stack": "  at PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce () [0x00175] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:403 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome () [0x00030] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:268\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload",
+    "message": "  请先领取上一次淘到的旧物。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.CompleteLeadOuting (PCShopSell.Core.Session.GameSession s, System.Int32 index, System.Boolean remote) [0x002df] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:101\nat PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload () [0x002ff] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:596\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses",
+    "message": "  residence_s_oldhomes_01\n  Expected: less than 3\n  But was:  3\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses () [0x00108] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:669\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource",
+    "message": "System.InvalidOperationException : Sequence contains no matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.PurchasePlanTests.<EmployeePurchaseWindowReopensAtTheLastBrowsedSource>g__Button|6_0 (System.String caption, PCShopSell.Tests.PurchasePlanTests+<>c__DisplayClass6_1& ) [0x0000d] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:163 \n  at PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource () [0x00230] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:229 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule(\"restaurant\",12)",
+    "message": "System.Reflection.AmbiguousMatchException : Ambiguous match found.",
+    "stack": "  at System.RuntimeType.GetMethodImplCommon (System.String name, System.Int32 genericParameterCount, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, System.Reflection.CallingConventions callConv, System.Type[] types, System.Reflection.ParameterModifier[] modifiers) [0x00050] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at System.RuntimeType.GetMethodImpl (System.String name, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, System.Reflection.CallingConventions callConv, System.Type[] types, System.Reflection.ParameterModifier[] modifiers) [0x00000] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at System.Type.GetMethod (System.String name, System.Reflection.BindingFlags bindingAttr) [0x0000e] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule (System.String kind, System.Int32 minutes) [0x00051] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCompetitionTests.cs:174 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule(\"secondhand\",45)",
+    "message": "System.Reflection.AmbiguousMatchException : Ambiguous match found.",
+    "stack": "  at System.RuntimeType.GetMethodImplCommon (System.String name, System.Int32 genericParameterCount, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, System.Reflection.CallingConventions callConv, System.Type[] types, System.Reflection.ParameterModifier[] modifiers) [0x00050] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at System.RuntimeType.GetMethodImpl (System.String name, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, System.Reflection.CallingConventions callConv, System.Type[] types, System.Reflection.ParameterModifier[] modifiers) [0x00000] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at System.Type.GetMethod (System.String name, System.Reflection.BindingFlags bindingAttr) [0x0000e] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule (System.String kind, System.Int32 minutes) [0x00051] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCompetitionTests.cs:174 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.FishPreorderUsesRealIngredientsAndAwardsStandingOnceWhenDelivered",
+    "message": "  Expected: String containing \"后仓缺大米 0.25 千克\"\n  But was:  \"冰箱缺大米 0.25 千克。冰箱缺青菜 1 份、鲫鱼 1 条。\"\n",
+    "stack": "at NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.ShopCoreGameplayTests.FishPreorderUsesRealIngredientsAndAwardsStandingOnceWhenDelivered () [0x000dd] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:207\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.KitchenColdStorageMovesActualPurchasedBatchesWithoutDuplication",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.KitchenColdStorageMovesActualPurchasedBatchesWithoutDuplication () [0x000c3] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:1089\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.RestaurantButtonQueuesActualOwnerMovementAndPausingFreezesIt",
+    "message": "  Expected: not equal to (605.00, 0.00, -399.10)\n  But was:  (605.00, 0.00, -399.10)\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.RestaurantButtonQueuesActualOwnerMovementAndPausingFreezesIt () [0x0025f] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:873\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.RestaurantRiceMovesBetweenBackpackWarehouseAndFridge",
+    "message": "  Expected: 1\n  But was:  2.0d\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.RestaurantRiceMovesBetweenBackpackWarehouseAndFridge () [0x0008b] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:1146\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.ServingPicksUpFromStoveThenDeliversToTable",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.ServingPicksUpFromStoveThenDeliversToTable () [0x00273] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:816\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.SpecialCounterBuildsActualControlsAndSpecialFurnitureHasVisibleModels(\"restaurant\",False)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.SpecialCounterBuildsActualControlsAndSpecialFurnitureHasVisibleModels (System.String kind, System.Boolean renovating) [0x000f3] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:1069\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.SpecialCounterBuildsActualControlsAndSpecialFurnitureHasVisibleModels(\"restaurant\",True)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.SpecialCounterBuildsActualControlsAndSpecialFurnitureHasVisibleModels (System.String kind, System.Boolean renovating) [0x000f3] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:1069\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.UsedBuyerVisiblyWalksFromStreetToShelfThenHoldsGoodsAtCheckout",
+    "message": "  顾客应从二手货架拿货并排队结账\n  Expected: 1\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.WaitForUsedBuyer (PCShopSell.Core.Session.GameSession s) [0x000a7] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:403\nat PCShopSell.Tests.ShopCoreGameplayTests.UsedBuyerVisiblyWalksFromStreetToShelfThenHoldsGoodsAtCheckout () [0x0008d] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:634\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt () [0x0029f] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:564\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.WaiterModelFollowsWorkRouteAndCarriesMealBeforeCustomerEats",
+    "message": "  任务应沿真实路线完成，而不是永久等待\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.Until (PCShopSell.Core.Session.GameSession s, System.Func`1[TResult] done, System.Int32 minutes) [0x00025] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:781\nat PCShopSell.Tests.ShopCoreGameplayTests.WaiterModelFollowsWorkRouteAndCarriesMealBeforeCustomerEats () [0x002a4] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:899\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.AssemblerRespectsShiftAndKeepsExperienceAcrossSave",
+    "message": "  Expected: greater than 0\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.AssemblerRespectsShiftAndKeepsExperienceAcrossSave () [0x000e2] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:183\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.DisplayAssemblyDoesNotEraseAssetValue",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.DisplayAssemblyDoesNotEraseAssetValue () [0x0002e] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:87\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.LateOrderCannotBePaidBeforeAssemblyTime",
+    "message": "  Expected: 6\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.LateOrderCannotBePaidBeforeAssemblyTime () [0x0004c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:62\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.ShopHoursDropdown_SurvivesLiveRefreshAndCommitsSelection",
+    "message": "System.FormatException : Input string was not in a correct format.",
+    "stack": "  at System.Number.ThrowOverflowOrFormatException (System.Boolean overflow, System.String overflowResourceKey) [0x0001a] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at System.Number.ParseInt32 (System.ReadOnlySpan`1[T] value, System.Globalization.NumberStyles styles, System.Globalization.NumberFormatInfo info) [0x00016] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at System.Int32.Parse (System.String s) [0x00016] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at PCShopSell.Tests.WorkshopRegressionTests+<ShopHoursDropdown_SurvivesLiveRefreshAndCommitsSelection>d__16.MoveNext () [0x0057b] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:353 \n  at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0004e] in .\\Library\\PackageCache\\com.unity.test-framework@1.1.33\\UnityEngine.TestRunner\\NUnitExtensions\\Attributes\\TestEnumerator.cs:46 "
+  }
+]

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:24:49Z" duration="1146.0868404">
+  <test-suite type="TestSuite" id="3123" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1829" result="Passed" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:24:49Z" duration="1146.086840" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="5242" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/PCShop-main-build-5f4a412c/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1829" result="Passed" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:24:49Z" duration="1146.061712" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="37772" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="5243" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1829" result="Passed" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:24:49Z" duration="1146.048740" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="SetUpFixture" id="4366" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1829" result="Passed" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:24:49Z" duration="1146.035297" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="4050" name="LongSessionRegressionTests" fullname="PCShopSell.Tests.LongSessionRegressionTests" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:24:49Z" duration="1145.993281" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="4053" name="ResumeArchivedStressCheckpointToTarget" fullname="PCShopSell.Tests.LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:24:49Z" duration="1145.991845" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4051" name="ResumeArchivedStressCheckpointToTarget(914,365)" fullname="PCShopSell.Tests.LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget(914,365)" methodname="ResumeArchivedStressCheckpointToTarget" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" seed="1160069168" result="Passed" start-time="2026-11-27 10:05:43Z" end-time="2026-11-27 10:06:20Z" duration="37.061057" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget(914,365)
+REGRESSION DONE PCShopSell.Tests.LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget(914,365) Passed
+]]></output>
+              </test-case>
+              <test-case id="4052" name="ResumeArchivedStressCheckpointToTarget(7,1095)" fullname="PCShopSell.Tests.LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget(7,1095)" methodname="ResumeArchivedStressCheckpointToTarget" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" seed="2095438135" result="Passed" start-time="2026-11-27 10:06:20Z" end-time="2026-11-27 10:24:49Z" duration="1108.921236" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget(7,1095)
+REGRESSION DONE PCShopSell.Tests.LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget(7,1095) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

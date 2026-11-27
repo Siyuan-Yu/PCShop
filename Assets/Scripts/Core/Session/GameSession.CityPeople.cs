@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using PCShopSell.Core.Common;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Time;
@@ -18,20 +19,22 @@ namespace PCShopSell.Core.Session
         // Exact positions preserve commute decisions while avoiding a full route allocation
         // every minute that a resident stays at the same doorway.
         private readonly Dictionary<(double x,double y,string target,bool inside),long> _cityCommuteMinutes = new Dictionary<(double,double,string,bool),long>();
+        private readonly Queue<(double x,double y,string target,bool inside)> _cityCommuteOrder = new();
         private int _cityCommuteNodeCount = -1;
         private long EstimateCityCommute(CityPersonState person,string target,long now)
         {
             if(_cityCommuteNodeCount!=City.Map.NodeCount)
             {
-                _cityCommuteMinutes.Clear();_cityPathCache.Clear();
+                _cityCommuteMinutes.Clear();_cityCommuteOrder.Clear();_cityPathCache.Clear();
                 _cityCommuteNodeCount=City.Map.NodeCount;
             }
             var key=(person.X,person.Y,target,person.LocationPlaceId!=null);
             if(_cityCommuteMinutes.TryGetValue(key,out long minutes))return minutes;
             var route=PlanCityRoute(person,target,now);
             minutes=route==null?-1:route.ArriveMinute-now;
-            if(_cityCommuteMinutes.Count>=4096)_cityCommuteMinutes.Clear();
+            if(_cityCommuteMinutes.Count>=4096)_cityCommuteMinutes.Remove(_cityCommuteOrder.Dequeue());
             _cityCommuteMinutes[key]=minutes;
+            _cityCommuteOrder.Enqueue(key);
             return minutes;
         }
         public IReadOnlyCollection<CityPersonState> CityPeople => _cityPeople.Values;
@@ -102,9 +105,13 @@ namespace PCShopSell.Core.Session
         private bool StreetServicePlace(string placeId) => City.IsLakeCity && City.HasPlace(placeId)
             && (City.GetPlace(placeId).Kind == PlaceKind.Agency
                 || City.GetPlace(placeId).Business == "venue_expo");
+        private readonly Dictionary<string, List<CityPersonState>> _streetServiceGroups = new Dictionary<string, List<CityPersonState>>();
+        private static readonly Comparison<CityPersonState> StreetPersonOrder =
+            (a, b) => StringComparer.Ordinal.Compare(a.PersonId, b.PersonId);
         private void PositionStreetServicePeople()
         {
-            var groups = new Dictionary<string, List<CityPersonState>>();
+            var groups = _streetServiceGroups;
+            foreach (var members in groups.Values) members.Clear();
             foreach (var person in _cityPeople.Values)
             {
                 if (person.Route != null) continue;
@@ -120,13 +127,15 @@ namespace PCShopSell.Core.Session
             }
             foreach (var group in groups)
             {
+                if (group.Value.Count == 0) continue;
                 var point = City.ViewPosition(group.Key);
-                var people = group.Value.OrderBy(p => p.PersonId, StringComparer.Ordinal).ToArray();
-                for (int i = 0; i < people.Length; i++)
+                var people = group.Value;
+                people.Sort(StreetPersonOrder);
+                for (int i = 0; i < people.Count; i++)
                 {
                     // Keep one person at the navigation anchor and give everyone else
                     // a distinct spot within the meeting radius, clear of nearby doors.
-                    double angle = 2 * Math.PI * (i - 1) / Math.Max(1, people.Length - 1);
+                    double angle = 2 * Math.PI * (i - 1) / Math.Max(1, people.Count - 1);
                     people[i].X = point.X + (i == 0 ? 0 : (float)(2.8 * Math.Cos(angle)));
                     people[i].Y = point.Y + (i == 0 ? 0 : (float)(2.8 * Math.Sin(angle)));
                 }
@@ -351,13 +360,24 @@ namespace PCShopSell.Core.Session
         private bool CityNpcWorkAllowed(Place work, string homeId) => work != null && (!City.IsLakeCity
             || City.HasPlace(homeId) && DistrictTierOf(work) <= DistrictTierOf(City.GetPlace(homeId)));
 
+        private readonly Dictionary<(string work, string authoredHome, string home), string> _npcWorkplaceCache = new();
+        private int _npcWorkplacePlaceCount = -1;
         private string CityNpcWorkplace(CityPersonDefinition definition, string homeId)
         {
             if (definition == null || definition.Recruitable || definition.WorkId == null) return null;
+            // 地点及其街区归属固定，住处或定义变动会形成新键；新增地点使旧查询失效。
+            // 不缓存营业、空置、在岗状态，这些仍在每个模拟分钟检查。
+            if (_npcWorkplacePlaceCount != City.Places.Count)
+            {
+                _npcWorkplaceCache.Clear();
+                _npcWorkplacePlaceCount = City.Places.Count;
+            }
+            var key = (definition.WorkId, definition.HomeId, homeId);
+            if (_npcWorkplaceCache.TryGetValue(key, out var cached)) return cached;
             string workId = definition.WorkId == definition.HomeId ? homeId : definition.WorkId;
             if (!City.HasPlace(workId)) return null;
             var work = City.GetPlace(workId);
-            return CityNpcWorkAllowed(work, homeId) ? work.Id : null;
+            return _npcWorkplaceCache[key] = CityNpcWorkAllowed(work, homeId) ? work.Id : null;
         }
 
         public string PersonIdOf(Employee e)
@@ -406,24 +426,32 @@ namespace PCShopSell.Core.Session
             }
             EnsureCityEmployee(e);
         }
+        private readonly Dictionary<string, EmployeeAssignment> _cityTickJobs = new Dictionary<string, EmployeeAssignment>();
+        private readonly Dictionary<string, Employee> _cityTickCandidates = new Dictionary<string, Employee>();
+        private readonly List<CityPersonState> _cityTickPeople = new List<CityPersonState>();
         private void TickCityPeople(long now)
         {
             InitializeCityPeople();
             // Employees builds assignment records; doing that per resident multiplied
             // all roster work by the city population on every simulated minute.
-            var jobs = new Dictionary<string, EmployeeAssignment>();
+            var jobs = _cityTickJobs;
+            jobs.Clear();
             foreach (var row in Employees)
             {
                 string person = PersonIdOf(row.Person);
                 if (!jobs.ContainsKey(person)) jobs.Add(person, row);
             }
-            var candidates = new Dictionary<string, Employee>();
+            var candidates = _cityTickCandidates;
+            candidates.Clear();
             foreach (var candidate in _candidates)
             {
                 string person = PersonIdOf(candidate);
                 if (!candidates.ContainsKey(person)) candidates.Add(person, candidate);
             }
-            foreach(var p in _cityPeople.Values.ToArray())
+            // Preserve the minute's snapshot when arrivals add people during processing.
+            _cityTickPeople.Clear();
+            _cityTickPeople.AddRange(_cityPeople.Values);
+            foreach(var p in _cityTickPeople)
             {
                 var d=CityPerson(p.PersonId); if(d==null)continue;
                 jobs.TryGetValue(p.PersonId,out var employment);
@@ -475,7 +503,8 @@ namespace PCShopSell.Core.Session
                 if(candidate!=null && CandidateAvailable(candidate)) {target=PlayerShopPlace.Id;desiredTask=CityPersonTask.Waiting;p.TaskLabel="等待面试";}
                 if (candidate == null)
                 {
-                    string outing = CityOutingDestination(p, employee != null, shift, now);
+                    string outing;
+                    using (RuntimePerformanceProbe.Measure("Npc.Outing")) outing = CityOutingDestination(p, employee != null, shift, now);
                     if (outing != null)
                     {
                         target = outing;
@@ -488,15 +517,17 @@ namespace PCShopSell.Core.Session
                 {
                     int start=employee?.ShiftStart??d.WorkStart;
                     int delta=(start-Clock.MinuteOfDay+1440)%1440;
-                    long commute=EstimateCityCommute(p,p.WorkPlaceId,now);
+                    long commute;
+                    using (RuntimePerformanceProbe.Measure("Npc.Commute")) commute=EstimateCityCommute(p,p.WorkPlaceId,now);
                     if(commute>=0 && delta>0 && delta<=commute+3
                         &&(employee==null?AuthoredCityWorkAt(p,now+delta)
-                            :p.WorkPlaceId==p.HomePlaceId||CityVenueFits(City.GetPlace(p.WorkPlaceId),now+delta,1)))
+                            :employee.OnDuty(new GameTimestamp(now+delta))&&(p.WorkPlaceId==p.HomePlaceId||CityVenueFits(City.GetPlace(p.WorkPlaceId),now+delta,1))))
                     {target=p.WorkPlaceId;desiredTask=CityPersonTask.Waiting;p.LeisureTargetId=null;p.LeisureNextMove=0;}
                 }
                 if(target!=null && City.HasPlace(target) && p.LocationPlaceId!=target)
                 {
-                    var route=PlanCityRoute(p,target,now);
+                    CityRoute route;
+                    using (RuntimePerformanceProbe.Measure("Npc.Route")) route=PlanCityRoute(p,target,now);
                     if(route!=null) {p.Route=route;p.LocationPlaceId=null;p.Task=CityPersonTask.Travelling;p.TaskLabel=route.Transport==VehicleKind.Taxi?"搭乘出租车出行（个人支付）":"步行前往";}
                     else {p.TaskLabel="路线暂不可达";}
                 }
@@ -616,6 +647,16 @@ namespace PCShopSell.Core.Session
             bool TryPlanVisit(Place place)
             {
                 if (DistrictAccessBlocker(place) != null || !IsPlaceOpen(place)) return false;
+                if (City.HasUniformRoadScale)
+                {
+                    // 直线乘统一路程比例，是任何真实路线的下界。连最快的普通交通都来不及，
+                    // 就不必为注定无法成行的候选目的地搜索整张路网。
+                    string streetNode = StreetServicePlace(place.Id) ? CommunityStreetNode(place) : null;
+                    var end = streetNode == null ? StandOf(place) : City.ViewPosition(streetNode);
+                    double minimumMeters = DistanceCity(new MapPoint(person.X, person.Y), end) * City.TravelDistanceScale;
+                    int minimumTravel = CityTravelTiming.NpcMinutes(minimumMeters, Vehicles.Taxi);
+                    if (now + minimumTravel + minimumStay > windowEnd) return false;
+                }
                 long travel = EstimateCityCommute(person, place.Id, now);
                 if (travel < 0) return false;
                 long arrival = now + travel;
@@ -681,7 +722,7 @@ namespace PCShopSell.Core.Session
             string id=PersonIdOf(e);var p=CityPersonState(id);
             return p!=null && p.Route==null && p.LocationPlaceId==shop.Place.Id && string.IsNullOrEmpty(p.ActivityId);
         }
-        public bool CityPlayerCanWork(OwnedShop shop) => shop!=null&&CurrentPlace==shop.Place&&!CityActivityExclusive&&!IsWorking&&!_sleeping;
+        public bool CityPlayerCanWork(OwnedShop shop) => shop!=null&&PlayerManagesShop(shop)&&CurrentPlace==shop.Place&&!CityActivityExclusive&&!IsWorking&&!_sleeping;
         public string CityServiceReason(OwnedShop shop)
         {
             if(shop==null)return "未开店";

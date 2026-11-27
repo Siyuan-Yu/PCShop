@@ -1,0 +1,1203 @@
+﻿用例,最新状态,轮次,失败说明,首次结果,记录数,证据目录,复核分类
+PCShopSell.Tests.AgencyDistrictViewTests.AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened,Failed,repair-wide-01,System.InvalidOperationException : Sequence contains no matching element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings,Failed,repair-wide-01,"  keeper_mall
+  Expected: 512
+  But was:  1024
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BankTests.BankLoan_AvailableAtNightOnWeekends,Failed,repair-wide-01,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BankTests.ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival,Failed,repair-wide-01,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BrandAmbassadorTests.OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify,Failed,repair-wide-01,"  Expected: not collection containing ""qiao""
+  But was:  < ""momo"", ""ake"", ""qiao"" >
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding,Failed,repair-wide-01,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold,Failed,repair-wide-01,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture,Failed,repair-wide-01,"  Expected: ¥999,220
+  But was:  ¥873,220
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract,Failed,repair-wide-01,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+"PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(""cars"")",Failed,repair-wide-01,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191548-repair-wide-01-ade035,待逐项复核
+PCShopSell.Tests.BuyerHistoryTests.StoreBuyersShowOnlyThisStoreAndReturnToOverviewAfterEditing,Failed,repair-wide-02,System.InvalidOperationException : Sequence contains no matching element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191733-repair-wide-02-7fb994,待逐项复核
+PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks,Failed,performance-regression,"  racer_0 working in closed race_0 at 第1年1月6日 10:00
+  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-203257-performance-regression-7c97a7,待逐项复核
+PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302),Failed,performance-regression,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-203257-performance-regression-7c97a7,待逐项复核
+PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422),Failed,performance-regression,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-203257-performance-regression-7c97a7,待逐项复核
+PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60),Failed,performance-regression,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-203257-performance-regression-7c97a7,待逐项复核
+PCShopSell.Tests.CityClothingTests.ClothingCatalogHasDistinctAffordableWarmAndLuxuryCoolChoices,Failed,repair-wide-02,"  Expected: 280
+  But was:  266
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191733-repair-wide-02-7fb994,待逐项复核
+PCShopSell.Tests.CityLayoutV7Tests.ConfirmedPlanHasFourAgencyDistrictsAndNoStarterShopStation,Failed,repair-wide-03,"  Expected: 8
+  But was:  18
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+PCShopSell.Tests.CityLayoutV7Tests.LayoutMigrationDoesNotReplayCashOrDuplicateAssetsAndThenIsIdempotent,Failed,repair-wide-03,"  Expected: 8
+  But was:  18
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+PCShopSell.Tests.CityLayoutV7Tests.MetroTravelsToChosenStationRatherThanLastEnumeratedStation,Failed,repair-wide-03,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+PCShopSell.Tests.CityLayoutV7Tests.ResidentialSceneryHasMultipleRowsAndDoesNotCollapseToFourApartmentBlocks,Failed,repair-wide-03,"  s_oldhomes
+  Expected: greater than or equal to 45
+  But was:  26
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash,Failed,repair-wide-03,"  Expected: 1
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+PCShopSell.Tests.CityRetailTests.ModelsUseTheRealGoodsStockAndDistinctSeriesShelves,Failed,repair-wide-03,"  Expected: 12
+  But was:  16
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute,Failed,performance-regression,"  Expected: Taxi
+  But was:  Walk
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-203257-performance-regression-7c97a7,待逐项复核
+PCShopSell.Tests.CompetitionContextTests.ClothingPriceWarNamesTheActualRivalAndTemporarilyDiscountsOnlyThePromotedProduct,Failed,repair-wide-03,"  Expected: ¥915
+  But was:  ¥854
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+"PCShopSell.Tests.CompetitionContextTests.SpecialShopReferralKeepsItsQuotedInventoryAndConsumesItOnDelivery(""restaurant"")",Failed,repair-wide-03,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+"PCShopSell.Tests.CompetitionContextTests.StudentDiscountOrderUsesTheStoreInventoryAndAddsAwareness(""restaurant"",""produce:veg"")",Failed,repair-wide-03,"  Expected: not null
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191821-repair-wide-03-6d8c0a,待逐项复核
+PCShopSell.Tests.CustomDestinationTests.GoingNowUsesTheSelectedDestinationAndLeavesTheShortcutAlone,Failed,repair-wide-04,"  Expected: String containing ""约 45 分钟""
+  But was:  ""出行 · 打车 · 约 <b><color=#79532B>45 分钟</color></b> · <b><color=#79532B>¥10</color></b>""
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191911-repair-wide-04-3720d7,待逐项复核
+PCShopSell.Tests.DistrictUiTests.ResidenceDoorShowsAllResidentsBeforeCheckingEntry,Failed,repair-wide-04,"  Expected: False
+  But was:  True
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191911-repair-wide-04-3720d7,待逐项复核
+PCShopSell.Tests.DistrictUiTests.ThreeCheatButtonsLeadToChatAndCannotCompleteMeetingRemotely,Failed,repair-wide-04,"  Expected: False
+  But was:  True
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191911-repair-wide-04-3720d7,待逐项复核
+PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce,Failed,repair-wide-04,"  Expected: not null
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-191911-repair-wide-04-3720d7,待逐项复核
+PCShopSell.Tests.ExpoAcceptanceTests.OldAcceptanceSaveCanAddRealShopsAndHousingWithoutLosingBookedExpoOrDuplicatingCosts,Failed,repair-wide-05,"  Expected: 50
+  But was:  100
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.ExpoAcceptanceTests.ProtectedBuildingsRejectStaleListingsAndPropertyTransactions,Failed,repair-wide-05,"  Expected: 6
+  But was:  11
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FigureMotionTests.ClothesFollowTorso_AndRecolorBothLegSegments,Failed,repair-wide-05,"  Expected: not null
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FigureMotionTests.PausingFreezesPose_AndResumingContinuesMovement,Failed,repair-wide-05,"  Expected: greater than 2.0f
+  But was:  0.0f
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FigureMotionTests.Walking_AlternatesFeetAndArms_AndKeepsSupportFootOnFloor,Failed,repair-wide-05,"  left shoe must not penetrate the floor
+  Expected: greater than or equal to -0.00200000009f
+  But was:  -0.0102300514f
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+"PCShopSell.Tests.FigureMotionTests.WorkActionsMoveTheArmsAndToolWhileStandingStill(Assemble,""AssemblyScrewdriver"")",Failed,repair-wide-05,System.NullReferenceException : Object reference not set to an instance of an object,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+"PCShopSell.Tests.FigureMotionTests.WorkActionsMoveTheArmsAndToolWhileStandingStill(Cook,""CookingSpatula"")",Failed,repair-wide-05,System.NullReferenceException : Object reference not set to an instance of an object,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FixtureTests.BuyAndPlaceFixtures_ShopOpensTheDayAfter,Failed,repair-wide-05,"  Expected: 1
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FixtureTests.Catalog_HasShelfTiers_AndTheOtherFixtures,Failed,repair-wide-05,"  保留三档通用货架，新增服装衣架与折叠陈列架
+  Expected: 5
+  But was:  3
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FixtureTests.ChattingWithTheAgent_LowersTheSigningCost,Failed,repair-wide-05,"  Expected: not null
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FixtureTests.FixtureChecklist_CountsPlacedOwnedAndShipping,Failed,repair-wide-05,"  房东送了一个收银台
+  Expected: 1
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FixtureTests.MallQuest_AnyPurchase_RewardsCpuAndGpu,Failed,repair-wide-05,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FixtureTests.RentQuestReward_GivesAShelfAndCounter_SoABrokePlayerCanStillOpen,Failed,repair-wide-05,"  Expected: 1
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.FixtureTests.StoringTheCounter_ClosesTheShopAgain,Failed,repair-wide-05,"  Expected: 1
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192230-repair-wide-05-7af7f6,待逐项复核
+PCShopSell.Tests.GameSessionTests.Online_FromPhoneAnywhere_DeliveredNextMorning,Failed,repair-wide-06,"  还没发现这家
+  Expected: False
+  But was:  True
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.GameSessionTests.Police_CatchesTricycleInSight,Failed,repair-wide-06,"  Expected: ""被交警抓到了""
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.GameSessionTests.RealLayout_MatchesDesign,Failed,repair-wide-06,"  保留原商业街18间商铺及独立中介/车行
+  Expected: 18
+  But was:  29
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.GameSessionTests.ShopLocationUsesEstimatedDailyPassingPeople,Failed,repair-wide-06,"  Expected: 0.46666666666666667d +/- 1.0000000000000001E-09d
+  But was:  0.25992553847978317d
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.HomeTests.Courier_CarFull_CallsNextCar_EachWithFee,Failed,repair-wide-06,System.NullReferenceException : Object reference not set to an instance of an object,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup,Failed,repair-wide-06,"  进了临时存放要说清楚能放几天
+  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.HomeTests.Mall_TruckCanDeliverToTheShop_AndSurvivesSave,Failed,repair-wide-06,"  Expected: collection containing ""货车到店里了""
+  But was:  < ""快递到了"", ""你晕倒了"" >
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.IndustrialArtTests.NavigationArtworkPreservesTextActionAndHitTarget,Failed,repair-wide-06,"  Expected: not null
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.InteractionFlowTests.RecruitWithAssignment_RejectsOccupiedRole_WithoutHiringOrRemovingCandidate,Failed,repair-wide-06,"  Expected: False
+  But was:  True
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192555-repair-wide-06-ae292e,待逐项复核
+PCShopSell.Tests.MarkupRangeTests.ShopSliderAndRestaurantMenuReachThree_AndMenuShowsZeroIntent,Failed,repair-wide-07,"  Expected: 3
+  But was:  1.1499999999999999d
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192636-repair-wide-07-5d5ada,待逐项复核
+PCShopSell.Tests.McnRecruitmentTests.SignedThroughPhoneThenAssignedAfterSaveWithoutChargingASecondFee,Failed,repair-wide-07,"  Expected: null
+  But was:  ""acceptance-expo""
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192636-repair-wide-07-5d5ada,待逐项复核
+PCShopSell.Tests.MultiShopTests.Rent_IsChargedForEveryShop,Failed,repair-wide-08,"  两家店的月租都扣
+  Expected: 500000
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+PCShopSell.Tests.NarrativeContentTests.PopulationHasStableCompleteDistinctProfiles,Failed,repair-wide-08,"  Expected: 124
+  But was:  178
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+PCShopSell.Tests.NarrativeContentTests.RelationsHaveValidEndpointsAndNoIsolatedProductionPerson,Failed,repair-wide-08,"  Isolated: res_bank_night
+  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+PCShopSell.Tests.NpcTests.Lin_DoesNotBailOutWithoutFriendship,Failed,repair-wide-08,"  交情不够就是普通破产
+  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+PCShopSell.Tests.OutdoorBatchTests.GuardDeliveryConsumesRealFoodOnceWithoutTakingTheGuardAway,Failed,repair-wide-08,"  Expected: Running
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+"PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(65,0,480)",Failed,repair-wide-08,"  Expected: Completed
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+"PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(66,1,0)",Failed,repair-wide-08,"  Expected: Running
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+"PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(67,0,480)",Failed,repair-wide-08,"  Expected: Completed
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+"PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(65,1,960)",Failed,repair-wide-08,"  Expected: Completed
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+"PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(65,3,2400)",Failed,repair-wide-08,"  Expected: Completed
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+"PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(67,3,2400)",Failed,repair-wide-08,"  Expected: Completed
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-192854-repair-wide-08-a837f7,待逐项复核
+PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty,Failed,repair-wide-09,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193250-repair-wide-09-e1bae3,待逐项复核
+PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay,Failed,repair-wide-09,"  首月 + 押金 + 中介费当场付
+  Expected: 19400000
+  But was:  19500000
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193250-repair-wide-09-e1bae3,待逐项复核
+PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent,Failed,repair-wide-09,"  首月 + 押金 + 中介费 + 搬家费（旧店没押金）
+  Expected: 60800
+  But was:  50800
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193250-repair-wide-09-e1bae3,待逐项复核
+PCShopSell.Tests.ResidentialAgencyTests.RentingThenBuyingExistingHomeDoesNotChargeMovingFeeTwice,Failed,repair-wide-10,"  Expected: 100330000
+  But was:  100422000
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193536-repair-wide-10-6a88aa,待逐项复核
+PCShopSell.Tests.RoadSurfaceTests.ActualCityRoadCentersStayCoveredAndPavementDoesNotCoverThem,Failed,repair-wide-10,"  Expected: 4
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193536-repair-wide-10-6a88aa,待逐项复核
+PCShopSell.Tests.ShelfItemCapacityTests.InventoryAndShelfDetailsShowBothLimits_EvenBeforeChoosingCategory,Failed,repair-wide-10,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193536-repair-wide-10-6a88aa,待逐项复核
+PCShopSell.Tests.ShelfTests.ShelfKinds_Goods_GroupSimilarGifts,Failed,repair-wide-11,"  visit_hamper 要有对应的货架类
+  Expected: not null
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+PCShopSell.Tests.ShopDockInteractionTests.CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours,Failed,repair-wide-11,System.InvalidOperationException : Sequence contains no matching element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue,Failed,repair-wide-11,"  Expected: String containing ""尚未启用定期采购""
+  But was:  ""<b>本店小顾</b> · 进货员
+在店待命 · <b><color=#934638>未安排进货</color></b>
+班次 09:00—21:00 · 日薪 ¥140""
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+PCShopSell.Tests.ShopEventBatchTests.LeafletUsesTheSameRealCompetitionAndCannotBeAppliedAgainThroughTheOldEvent,Failed,repair-wide-11,"  Expected: ¥752
+  But was:  ¥702
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier,Failed,repair-wide-11,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(""computer"")",Failed,repair-wide-11,"  Expected: 35.176654859117285d +/- 2
+  But was:  42
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(""pet"")",Failed,repair-wide-11,"  Expected: 35.176654859117285d +/- 2
+  But was:  42
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize,Failed,repair-wide-11,"  Expected: 12.745614035087719d +/- 1.0000000000000001E-09d
+  But was:  9.1789416687588119d
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(""clothing"")",Failed,repair-wide-11,System.InvalidOperationException : Sequence contains more than one element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(""computer"")",Failed,repair-wide-11,System.InvalidOperationException : Sequence contains more than one element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(""flowers"")",Failed,repair-wide-11,System.InvalidOperationException : Sequence contains more than one element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(""food"")",Failed,repair-wide-11,System.InvalidOperationException : Sequence contains more than one element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(""models"")",Failed,repair-wide-11,System.InvalidOperationException : Sequence contains more than one element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(""produce"")",Failed,repair-wide-11,System.InvalidOperationException : Sequence contains more than one element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193615-repair-wide-11-4abdf5,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.AudioInspectionRemainsSelectableBelowThresholdAndPaysOnlyOnceAtCompletion(100,True)",Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Failed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.AudioInspectionRemainsSelectableBelowThresholdAndPaysOnlyOnceAtCompletion(49,False)",Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Failed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.CelebrationUsesRealWinGuestsAndCosts3000ForTheWholeTable,Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.ConfirmedAppointmentStartsFromPausedReceptionAndChargesOnlyOnce(""act_dinner_linhe"",1000)",Failed,repair-wide-12,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.ConfirmedAppointmentStartsFromPausedReceptionAndChargesOnlyOnce(""act_expo_curator"",0)",Failed,repair-wide-12,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.ConfirmedAppointmentStartsFromPausedReceptionAndChargesOnlyOnce(""act_ktv_singer"",0)",Failed,repair-wide-12,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.ConfirmedAppointmentStartsFromPausedReceptionAndChargesOnlyOnce(""act_oldmarket_guwen"",0)",Failed,repair-wide-12,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.EveryOrdinaryActivityGetsTwiceTheConsumptionChoicesWithHigherTiers,Failed,repair-wide-12,"  hotpot
+  Expected: 2
+  But was:  1
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.FamilyGiftIsARealItemAndCancellationDoesNotConsumeIt(False),Failed,repair-wide-12,"  Expected: String containing ""礼盒""
+  But was:  <string.Empty>
+",Failed,3,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.InvitationsSettleAtTheirRealVenue(""act_dinner_chef"",""life_chef"",45,0)",Failed,repair-wide-12,"  Expected: Completed
+  But was:  Running
+",Failed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.InvitationsSettleAtTheirRealVenue(""act_dinner_farm"",""keeper_farm"",47,0)",Failed,repair-wide-12,"  Expected: Completed
+  But was:  Running
+",Failed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.InvitationsSettleAtTheirRealVenue(""act_dinner_linhe"",""resident_linhe"",46,1000)",Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Failed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.InvitationsSettleAtTheirRealVenue(""act_ktv_fuzhi"",""resident_fuzhi"",49,-1500)",Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Failed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+"PCShopSell.Tests.SocialEventBatchTests.InvitationsSettleAtTheirRealVenue(""act_ktv_luoya"",""resident_luoya"",50,0)",Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Passed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.KaraokeVenuesAreOpenAllDayAndAcceptAnAppointmentAcrossMidnight,Failed,repair-wide-12,"  街坊歌房 at 0
+  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.LeavingAudioWorkEarlyDoesNotPayAndChefStoryWaitsForCompletion,Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Failed,4,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.LinheTreatCosts2000AndDecliningNeverChangesRelations,Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.RetriedCelebrationCannotReuseTheSameWinAfterCompletion,Failed,repair-wide-12,"  Expected: Running
+  But was:  Gathering
+",Passed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialEventBatchTests.WenYinCanBookAndFinishKaraokeInTheMorningBeforeHerShift(False),Failed,repair-wide-12,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialTests.Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation,Failed,repair-wide-12,"   | minute=20177 start=8340 activity=Gathering li phase=Waiting selected=Taxi place=life_restaurant task=Waiting activityId=activity_1 route= arrival= mode=
+  Expected: Running
+  But was:  Gathering
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialTests.Roster_ExtraStaffShareTheTier,Failed,repair-wide-12,System.NullReferenceException : Object reference not set to an instance of an object,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialTests.SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes,Failed,repair-wide-12,"  Expected: 10
+  But was:  0
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.SocialTests.StartingContactsAndFirstConversationDetermineWhoCanSendInvitations,Failed,repair-wide-12,"  Expected: equivalent to < ""res_coder"", ""lin"", ""jie"", ""landlady"", ""res_cook"", ""res_grandpa"" >
+  But was:  < ""landlady"", ""jie"", ""lin"", ""res_cook"", ""res_grandpa"", ""res_coder"", ""life_chef"", ""life_cousin"" >
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.UiCleanupTests.AmbassadorActionsAppearOnlyAfterUnlockingTheCommunity,Failed,final-regression,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.BrandCreationAndMcnContractFollowSeparateDialogs,Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.BrandWindowIsIndependentFromBusinessNavigation,Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.BusinessPagesReuseOneWindowAndReleaseTheirSinglePauseHold,Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.DeferredWindowRefreshKeepsThePressedButtonAndHoverDoesNotChangeItsTint,Failed,final-regression,"  Expected: RGBA(1.000, 1.000, 1.000, 1.000)
+  But was:  RGBA(1.080, 1.080, 1.080, 1.000)
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.FarmMarketOpensWholesaleAndAcceptsExactBagCounts,Failed,final-regression,"  Expected: ¥9.75
+  But was:  ¥10.05
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.FishChoicesAndPreordersShowTheirEffectsAndDeadline,Failed,final-regression,"  Expected: String containing ""交期 第1年1月23日 10:00""
+  But was:  ""作弊
+
+
+暂停
+0.5×
+1×
+2×
+4×
+
+
+收起功能栏 ▴  Tab
+通知
+N
+菜单
+Esc
+我的
+M
+背包
+B
+手机
+P
+联系人
+K
+任务
+R
+日程
+C
+经营
+H
+物价
+I
+股市
+J
+品牌
+L
+赛车
+T
+出行：
+步行
+打车
+小电驴
+三轮车
+小轿车
+
+快捷前往：
+城郊老破小出…
+▾
+前往 我的电脑店
+▾
+前往 农贸市场
+▾
+前往 房产中介
+▾
+选择目的地
+▾
+叫货车
+
+我的餐馆
+改名
+● 已关门
+柜台
+库存
+定价
+订单
+装修
+员工
+鱼餐预订 1 / 2
+厨师按交期<b><color=#79532B>优先制作备齐的预订</color></b>，做好后由在岗员工自动交付收款。
+青菜炒饭 + 鳜鱼 · ¥4,072 · 交付名望 +0.65
+剩余 7 天 · 少见
+冰箱缺大米 0.25 千克。冰箱缺青菜 1 份、鳜鱼 1 条。背包已有鳜鱼，可以存进门店冰箱。
+备料投锅
+打开冰箱
+拒绝预订
+离开店铺
+暂不能开业
+缺少：餐馆炒锅灶台、餐馆餐桌、冰箱
+送货时请选择这家店。
+前往家具城""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.FurnitureBuyback_UsesSelectedShopAndShowsArrivalWithoutClosingWindow,Failed,final-regression,"  Expected: String containing ""货车在途""
+  But was:  ""作弊
+
+
+暂停
+0.5×
+1×
+2×
+4×
+
+
+收起功能栏 ▴  Tab
+通知
+N
+菜单
+Esc
+我的
+M
+背包
+B
+手机
+P
+联系人
+K
+任务
+R
+日程
+C
+经营
+H
+物价
+I
+股市
+J
+品牌
+L
+赛车
+T
+出行：
+步行
+打车
+小电驴
+三轮车
+小轿车
+
+快捷前往：
+城郊老破小出…
+▾
+前往 我的电脑店
+▾
+前往 农贸市场
+▾
+前往 房产中介
+▾
+选择目的地
+▾
+叫货车
+
+家具城
+时间已暂停
+关闭
+在这里打工
+家具城长白班 · ¥155/班
+店内在场人物
+此刻没有其他人在场。
+商品购买 · 营业中 · 每天 9:00–21:00 · 每款每单限购 50 件
+家具回收
+适用店铺
+全部
+宠物用品店
+电脑店
+模型手办店
+服装店
+二手旧物店
+餐馆
+货架
+<size=14><color=#655E52>每件 40 千克 · 每架最多20件、60千克，任一达到上限即停止陈列。每架摆一种货，多余商品留在后仓。</color></size>
+¥300
+0
+50
+−
+0
+数量
++
+加固货架
+<size=14><color=#655E52>每件 55 千克 · 每架最多30件、100千克，任一达到上限即停止陈列。每架摆一种货，多余商品留在后仓。</color></size>
+¥700
+0
+50
+−
+0
+数量
++
+重型货架
+<size=14><color=#655E52>每件 90 千克 · 每架最多40件、160千克，任一达到上限即停止陈列。多余商品留在不限容量的后仓。</color></size>
+¥1,500
+0
+50
+−
+0
+数量
++
+收银台
+<size=14><color=#655E52>每件 60 千克 · 顾客结账的地方，没有它开不了业。</color></size>
+¥600
+0
+50
+−
+0
+数量
++
+展示台
+<size=14><color=#655E52>每件 50 千克 · 可选择展示电脑整机、服装或其他商品。电脑占两个机位，其他商品可摆1–6件。</color></size>
+¥900
+0
+50
+−
+0
+数量
++
+装机操作台
+<size=14><color=#655E52>每件 45 千克 · 接装机订单、拆装整机都在这张台子上。</color></size>
+¥500
+0
+50
+−
+0
+数量
++
+<b>购物车</b>　还是空的
+货款 ¥0　运费 ¥0
+<b>¥0</b>
+购物车是空的
+离开家具城
+家具城 · 家具回收
+时间已暂停
+关闭
+回收单价 · 家具标价 × 40%
+取货门店
+我的宠物用品店·二店
+门店后仓
+可回收 0 件
+家具
+回收单价
+数量
+这个后仓没有可回收的家具。
+等待回收
+2 件
+我的宠物用品店·二店后仓 → 家具城
+1 辆面包车 · 56 千克 · 约 26 分钟
+单门冰箱 ×2
+¥1,039.20
+回收款 · 到货到账
+¥1,039.20
+运费 · 已支付
+-¥32
+预计净收入
+¥1,007.20
+等待家具城收货
+家具已出库，全部送达后结算。""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.FurnitureFilterRoutesSharedCounterToMatchingShopAtCheckout,Failed,final-regression,"  Expected: RGBA(0.722, 0.506, 0.165, 1.000)
+  But was:  RGBA(0.957, 0.937, 0.902, 1.000)
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.HomeWorkbenchButtonExplainsMissingEquipmentAndLocation,Failed,final-regression,"  Expected: String containing ""在任一可入住的自家住宅摆放居家办公台""
+  But was:  ""居家工作台 · 到收货的住处安装""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.HouseMoveShowsFullCostAndDoesNotChargeBeforeConfirmation,Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.HudUsesOneFunctionRowAndKeepsSystemButtonsAboveIt,Failed,final-regression,"  Expected: RGBA(0.722, 0.506, 0.165, 1.000)
+  But was:  RGBA(0.478, 0.447, 0.408, 1.000)
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.InsuranceTermsReturnToTheSameOfferAndPurchaseOnlyChargesOnce(False),Failed,final-regression,"  Expected: String containing ""报销80%""
+  But was:  ""作弊
+
+
+暂停
+0.5×
+1×
+2×
+4×
+
+
+收起功能栏 ▴  Tab
+通知
+N
+菜单
+Esc
+我的
+M
+背包
+B
+手机
+P
+联系人
+K
+任务
+R
+日程
+C
+经营
+H
+物价
+I
+股市
+J
+品牌
+L
+赛车
+T
+出行：
+步行
+打车
+小电驴
+三轮车
+小轿车
+
+快捷前往：
+城郊老破小出…
+▾
+前往 我的电脑店
+▾
+批发市场
+▾
+前往 房产中介
+▾
+选择目的地
+▾
+叫货车
+
+住院保险
+时间已暂停
+查看条款
+一次投保保障<b><color=#79532B>360天</color></b>。有效期内入院按实际住院费用报销<b><color=#79532B>80%</color></b>，不封顶，门诊费用不报销。到期后保障结束，不会自动扣款。提前续保从原到期日接续。
+返回上一页""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.InsuranceTermsReturnToTheSameOfferAndPurchaseOnlyChargesOnce(True),Failed,final-regression,"  Expected: String containing ""报销80%""
+  But was:  ""作弊
+
+
+暂停
+0.5×
+1×
+2×
+4×
+
+
+收起功能栏 ▴  Tab
+通知
+N
+菜单
+Esc
+我的
+M
+背包
+B
+手机
+P
+联系人
+K
+任务
+R
+日程
+C
+经营
+H
+物价
+I
+股市
+J
+品牌
+L
+赛车
+T
+出行：
+步行
+打车
+小电驴
+三轮车
+小轿车
+
+快捷前往：
+城郊老破小出…
+▾
+前往 我的电脑店
+▾
+批发市场
+▾
+前往 房产中介
+▾
+选择目的地
+▾
+叫货车
+
+住院保险
+时间已暂停
+查看条款
+一次投保保障<b><color=#79532B>360天</color></b>。有效期内入院按实际住院费用报销<b><color=#79532B>80%</color></b>，不封顶，门诊费用不报销。到期后保障结束，不会自动扣款。提前续保从原到期日接续。
+返回上一页""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+"PCShopSell.Tests.UiCleanupTests.LeisureReceptionShowsTheEmployeeAndAVisitorWhoIsActuallyThere(""life_poker"",""life_leisure_staff_poker"",""Leisure_leisure_poker"")",Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.MarketOpensCurrentPriceReportAndCanBrowseHistoryAndGroups,Failed,final-regression,"  Expected: String containing ""本期只有一份报价""
+  But was:  ""作弊
+
+
+暂停
+0.5×
+1×
+2×
+4×
+
+
+收起功能栏 ▴  Tab
+通知
+N
+菜单
+Esc
+我的
+M
+背包
+B
+手机
+P
+联系人
+K
+任务
+R
+日程
+C
+经营
+H
+物价
+I
+股市
+J
+品牌
+L
+赛车
+T
+出行：
+步行
+打车
+小电驴
+三轮车
+小轿车
+
+快捷前往：
+城郊老破小出…
+▾
+前往 我的电脑店
+▾
+批发市场
+▾
+前往 房产中介
+▾
+选择目的地
+▾
+叫货车
+
+物价
+时间已暂停
+关闭
+价格走势
+行业动态
+竞争事件
+模型目录
+订阅物价信息
+经济简报
+实时报价 · 第1年1月1日  10:00    |    对比昨日 / 7 日前
+今日变化
+<color=#3F5F47>↑ 0</color>     <color=#934638>↓ 0</color>     — 0
+暂无相邻基准日记录
+↑ 最大变化
+—
+暂无符合条件的品类
+↓ 最大变化
+—
+暂无符合条件的品类
+缺少相邻基准日记录，变化显示 —；仍可查看已有报价与历史走势。
+今日变化
+商品与生活
+电脑配件
+房产与租金
+模型行情
+品类
+参考报价
+较昨日
+较 7 日前
+本期暂无可比较的变化。
+查看商品与生活
+选择左侧品类查看详情。
+模型系列与房产显示指数，其他商品显示元。
+查看具体商品
+查看我的资产""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.OnlineOrdersUseTypedQuantitiesForPartsAndParcels,Failed,final-regression,"  Expected: RGBA(0.722, 0.506, 0.165, 1.000)
+  But was:  RGBA(0.969, 0.953, 0.925, 1.000)
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.OpeningFacilityTaskOnlyShowsRemainingItemsAndUsesOutlinedAction,Failed,final-regression,"  Expected: RGBA(0.898, 0.922, 0.867, 1.000)
+  But was:  RGBA(0.478, 0.447, 0.408, 1.000)
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.PachinkoSettlementOpensOnceAndCanBeViewedAgain,Failed,final-regression,"  Expected: True
+  But was:  False
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.ParkShortcutOpensParkSectionInsteadOfFinanceOverview,Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.ParkWalkTopicsOpenDialogueAndReturnToTheUnsettledWalk,Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.PersonalPanelKeepsTheSameWindowAndSharesPhoneContacts,Failed,final-regression,"  Expected is <System.String[3]>, actual is <System.String[19]>
+  Values differ at index [3]
+  Extra:    < ""人物资料"", ""发消息"", ""人物资料""... >",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.ProcurementUsesCurrentBranchAndBackKeepsSearchAndDestination,Failed,final-regression,System.InvalidOperationException : Sequence contains no matching element,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.PropertyShortcutFiltersTheActualSelectedUnit,Failed,final-regression,System.NullReferenceException : Object reference not set to an instance of an object,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.QuickStockBulkOrdersUseAllAffordableLotsAndLiquidateThePosition,Failed,final-regression,"  Expected: Bold
+  But was:  Normal
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.RacingAndNoticeHudShortcutsOpenTheirPanels,Failed,final-regression,System.NullReferenceException : Object reference not set to an instance of an object,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.RestaurantFoodStorageShowsAllThreeSourcesAndTransfersWarehouseRice,Failed,final-regression,System.NullReferenceException : Object reference not set to an instance of an object,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.SharedButtonSkinKeepsFillBorderAndCaptionInSync,Failed,final-regression,System.NullReferenceException : Object reference not set to an instance of an object,Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.SoloParkWalkHasFreeRoutesAndNoPurchaseOrConversationControls(0),Failed,final-regression,"  Expected: not null
+  But was:  null
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.SoloParkWalkHasFreeRoutesAndNoPurchaseOrConversationControls(1),Failed,final-regression,"  Expected: not null
+  But was:  null
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+"PCShopSell.Tests.UiCleanupTests.SpecialStoreCounterPricingAndOrdersOrRecordsHaveDistinctControls(""restaurant"")",Failed,final-regression,"  Expected: String containing ""当前桌单 2 单""
+  But was:  ""作弊
+
+
+暂停
+0.5×
+1×
+2×
+4×
+
+
+收起功能栏 ▴  Tab
+通知
+N
+菜单
+Esc
+我的
+M
+背包
+B
+手机
+P
+联系人
+K
+任务
+R
+日程
+C
+经营
+H
+物价
+I
+股市
+J
+品牌
+L
+赛车
+T
+出行：
+步行
+打车
+小电驴
+三轮车
+小轿车
+
+快捷前往：
+城郊老破小出…
+▾
+前往 我的电脑店
+▾
+批发市场
+▾
+前往 房产中介
+▾
+选择目的地
+▾
+叫货车
+
+我的餐馆
+改名
+● 已关门
+柜台
+库存
+定价
+订单
+装修
+员工
+鱼餐预订 0 / 2
+当前没有鱼餐预订。
+离开店铺
+暂不能开业
+缺少：餐馆炒锅灶台、餐馆餐桌、冰箱
+送货时请选择这家店。
+前往家具城""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+"PCShopSell.Tests.UiCleanupTests.SportVenueKeepsRosterBesideCompactPassOptions(""life_court_mid"")",Failed,final-regression,"  Expected: 4
+  But was:  5
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.StockDraftCyclesLotsAndConfirmsBeforeUsingReserve,Failed,final-regression,"  Expected: String containing ""成交会动用预留资金""
+  But was:  ""作弊
+
+
+暂停
+0.5×
+1×
+2×
+4×
+
+
+收起功能栏 ▴  Tab
+通知
+N
+菜单
+Esc
+我的
+M
+背包
+B
+手机
+P
+联系人
+K
+任务
+R
+日程
+C
+经营
+H
+物价
+I
+股市
+J
+品牌
+L
+赛车
+T
+出行：
+步行
+打车
+小电驴
+三轮车
+小轿车
+
+快捷前往：
+城郊老破小出…
+▾
+前往 我的电脑店
+▾
+批发市场
+▾
+前往 房产中介
+▾
+选择目的地
+▾
+叫货车
+
+证券
+时间已暂停
+关闭
+可用现金
+¥5,000,000
+持仓市值
+¥0
+总浮动盈亏  ¥0
+已实现盈亏  ¥0
+花园开放后可买入 · 旧仓可卖出或平仓
+下次报价 第1年1月16日 13:00
+返回手机
+走势图
+交易所 · 1
+新闻
+买入
+做空
+只看自选
+?
+公司
+股价
+×1 股
+涨跌
+我的持股
+持股比例
+成本价
+待成交
+☆
+<b>城芯算力</b>
+<size=11><color=#615951>硬件</color></size>
+¥68
+0.00%
+0
+0%
+—
+−
++1
++
+…
+☆
+<b>晴川生活</b>
+<size=11><color=#615951>零售</color></size>
+¥42
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>星桥文创</b>
+<size=11><color=#615951>文创</color></size>
+¥53
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>兴华电脑城</b>
+<size=11><color=#615951>硬件</color></size>
+¥76
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>潮流服饰</b>
+<size=11><color=#615951>服装</color></size>
+¥36
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>纸风车潮玩</b>
+<size=11><color=#615951>文创</color></size>
+¥58
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>禾味餐饮</b>
+<size=11><color=#615951>餐饮</color></size>
+¥28
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>青禾汽车</b>
+<size=11><color=#615951>汽车</color></size>
+¥88
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>丰运物流</b>
+<size=11><color=#615951>物流</color></size>
+¥32
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>暖爪宠物</b>
+<size=11><color=#615951>宠物</color></size>
+¥24
+0.00%
+0
+0%
+—
+−
+—
++
+…
+☆
+<b>云帆技术服务公司</b>
+<size=11><color=#615951>软件与信息技术服务</color></size>
+¥46
+0.00%
+0
+0%
+—
+−
+—
++
+…
+城芯算力 · 硬件
+☆
+股权与治理
+折线
+K线
+算力设备制造与销售，受硬件价格和渠道订单影响。
+最近每股分红 ¥0
+持仓成本
+—
+浮动盈亏
+—
+昨日营收
+—
+成交明细
+现金净变动
+-¥68.14
+佣金 0.2% · ¥0.14
+未完成 · 成交 1 笔 · 城芯算力 · 花园开放后解锁公司股权与治理
+清空
+成交！""
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.TruckItemFilterUsesTheSameTypeForBackpackAndStockAndKeepsTheLoad,Failed,final-regression,"  Expected: RGBA(0.722, 0.506, 0.165, 1.000)
+  But was:  RGBA(0.957, 0.937, 0.902, 1.000)
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UiCleanupTests.UsedDelegationIsAlwaysVisibleAndCanBeEditedOnTheCounter,Failed,final-regression,"  Expected: RGBA(0.898, 0.922, 0.867, 1.000)
+  But was:  RGBA(0.957, 0.937, 0.902, 1.000)
+",Failed,2,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194313-final-regression-63a6c2,待逐项复核
+PCShopSell.Tests.UnifiedClockAndWeightTests.LegacyRiceStorageAndCourierConvertOnce_WithoutChangingCashOrFood,Failed,repair-wide-12,"  Expected: 8
+  But was:  12.0d
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-193707-repair-wide-12-679b61,待逐项复核
+PCShopSell.Tests.VenueBusinessTests.LeasePreservesPurposeAndCannotBeChangedToRetailOrOrdinaryInterior,Failed,repair-wide-13,"System.ArgumentException : The actual value must be an IEnumerable
+Parameter name: actual",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.VenueBusinessTests.OwnerUsesRealActivityForFreeWithTimeAndEnergyCost,Failed,repair-wide-13,"  Expected: Completed
+  But was:  Running
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WarehouseBoxInteractionTests.BAndBoxInteractionUseSameFixedWindowWithBackpackAboveWarehouse(False),Failed,repair-wide-13,"  Expected: less than 1
+  But was:  1
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WarehouseBoxInteractionTests.BAndBoxInteractionUseSameFixedWindowWithBackpackAboveWarehouse(True),Failed,repair-wide-13,"  Expected: less than 1
+  But was:  1
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WarehouseCapacityTests.WarehouseUiUsesOneTilePerStackAndOpensWithBackpack,Failed,repair-wide-13,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WholesaleMinimumTests.RestaurantWholesaleDeliversToWarehouseWhenFridgeIsMissingOrFull(False),Failed,repair-wide-13,"  String lengths are both 5. Strings differ at index 1.
+  Expected: ""stock""
+  But was:  ""shelf""
+  ------------^
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WholesaleMinimumTests.RestaurantWholesaleDeliversToWarehouseWhenFridgeIsMissingOrFull(True),Failed,repair-wide-13,"  String lengths are both 5. Strings differ at index 1.
+  Expected: ""stock""
+  But was:  ""shelf""
+  ------------^
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+"PCShopSell.Tests.WorkforceTests.ImpoundedPurchaseVehicleUsesFallbackWithoutChangingThePlan(False,Walk)",Failed,repair-wide-13,"  Expected: Walk
+  But was:  Taxi
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+"PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(""quota"")",Failed,repair-wide-13,"  Expected: not null
+  But was:  null
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WorkforceTests.OverweightPurchase_UnloadsAndContinuesSameDayAfterLoadingSave,Failed,repair-wide-13,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole,Failed,repair-wide-13,"  Expected: False
+  But was:  True
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WorkforceTests.Transfer_LeavesTodayUntouched_AndMovesTomorrowAfterJson(Assembler),Failed,repair-wide-13,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WorkforceTests.TricyclesAreImpoundedAndReturnedIndividually,Failed,repair-wide-13,System.InvalidOperationException : Sequence contains more than one matching element,Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核
+PCShopSell.Tests.WorkforceTests.VehiclePool_TwoBikesCanServeBuyerAndOwner_AndLocksSurviveJson,Failed,repair-wide-13,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-performance\runs\20261127-194201-repair-wide-13-5d3bcf,待逐项复核

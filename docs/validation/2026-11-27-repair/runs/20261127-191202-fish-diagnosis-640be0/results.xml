@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="20" result="Failed(Child)" total="20" passed="0" failed="20" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:38Z" duration="23.7452438">
+  <test-suite type="TestSuite" id="3126" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:38Z" duration="23.745244" total="20" passed="0" failed="20" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="5248" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:38Z" duration="23.724553" total="20" passed="0" failed="20" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="44100" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="5249" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:38Z" duration="23.715770" total="20" passed="0" failed="20" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="SetUpFixture" id="4372" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:38Z" duration="23.706192" total="20" passed="0" failed="20" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="3743" name="FishingTests" fullname="PCShopSell.Tests.FishingTests" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" testcasecount="49" result="Failed" site="Child" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:38Z" duration="23.662013" total="20" passed="0" failed="20" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="ParameterizedMethod" id="3764" name="EverySpeciesCanBeCaughtKeptReloadedAndSold" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" testcasecount="20" result="Failed" site="Child" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:38Z" duration="23.652901" total="20" passed="0" failed="20" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="3744" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_crucian&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_crucian&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1060101947" result="Failed" start-time="2026-11-27 11:12:14Z" end-time="2026-11-27 11:12:16Z" duration="1.453584" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_crucian")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_crucian") Failed
+]]></output>
+              </test-case>
+              <test-case id="3745" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_carp&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_carp&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="491843886" result="Failed" start-time="2026-11-27 11:12:16Z" end-time="2026-11-27 11:12:17Z" duration="1.187074" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_carp")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_carp") Failed
+]]></output>
+              </test-case>
+              <test-case id="3746" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bass&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bass&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="21087428" result="Failed" start-time="2026-11-27 11:12:17Z" end-time="2026-11-27 11:12:18Z" duration="1.157639" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bass")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bass") Failed
+]]></output>
+              </test-case>
+              <test-case id="3747" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_white_stripe&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_white_stripe&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="881878907" result="Failed" start-time="2026-11-27 11:12:18Z" end-time="2026-11-27 11:12:19Z" duration="1.161743" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_white_stripe")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_white_stripe") Failed
+]]></output>
+              </test-case>
+              <test-case id="3748" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_topmouth_gudgeon&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_topmouth_gudgeon&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="903463692" result="Failed" start-time="2026-11-27 11:12:19Z" end-time="2026-11-27 11:12:20Z" duration="1.184070" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_topmouth_gudgeon")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_topmouth_gudgeon") Failed
+]]></output>
+              </test-case>
+              <test-case id="3749" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bitterling&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bitterling&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="893246094" result="Failed" start-time="2026-11-27 11:12:20Z" end-time="2026-11-27 11:12:22Z" duration="1.156210" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bitterling")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bitterling") Failed
+]]></output>
+              </test-case>
+              <test-case id="3750" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_loach&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_loach&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="278854730" result="Failed" start-time="2026-11-27 11:12:22Z" end-time="2026-11-27 11:12:23Z" duration="1.172802" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_loach")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_loach") Failed
+]]></output>
+              </test-case>
+              <test-case id="3751" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_yellow_catfish&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_yellow_catfish&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1417295064" result="Failed" start-time="2026-11-27 11:12:23Z" end-time="2026-11-27 11:12:24Z" duration="1.148488" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_yellow_catfish")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_yellow_catfish") Failed
+]]></output>
+              </test-case>
+              <test-case id="3752" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_catfish&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_catfish&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="828506482" result="Failed" start-time="2026-11-27 11:12:24Z" end-time="2026-11-27 11:12:25Z" duration="1.153600" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_catfish")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_catfish") Failed
+]]></output>
+              </test-case>
+              <test-case id="3753" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_grass_carp&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_grass_carp&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="866781374" result="Failed" start-time="2026-11-27 11:12:25Z" end-time="2026-11-27 11:12:26Z" duration="1.173770" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_grass_carp")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_grass_carp") Failed
+]]></output>
+              </test-case>
+              <test-case id="3754" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_black_carp&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_black_carp&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="222524849" result="Failed" start-time="2026-11-27 11:12:26Z" end-time="2026-11-27 11:12:27Z" duration="1.149589" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_black_carp")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_black_carp") Failed
+]]></output>
+              </test-case>
+              <test-case id="3755" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_silver_carp&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_silver_carp&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1029533746" result="Failed" start-time="2026-11-27 11:12:27Z" end-time="2026-11-27 11:12:29Z" duration="1.176015" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_silver_carp")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_silver_carp") Failed
+]]></output>
+              </test-case>
+              <test-case id="3756" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bighead_carp&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bighead_carp&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="670530394" result="Failed" start-time="2026-11-27 11:12:29Z" end-time="2026-11-27 11:12:30Z" duration="1.171592" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bighead_carp")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bighead_carp") Failed
+]]></output>
+              </test-case>
+              <test-case id="3757" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bream&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bream&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="741002331" result="Failed" start-time="2026-11-27 11:12:30Z" end-time="2026-11-27 11:12:31Z" duration="1.157128" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bream")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bream") Failed
+]]></output>
+              </test-case>
+              <test-case id="3758" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_yellowtail&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_yellowtail&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1899032868" result="Failed" start-time="2026-11-27 11:12:31Z" end-time="2026-11-27 11:12:32Z" duration="1.182163" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_yellowtail")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_yellowtail") Failed
+]]></output>
+              </test-case>
+              <test-case id="3759" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_culter&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_culter&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="569941391" result="Failed" start-time="2026-11-27 11:12:32Z" end-time="2026-11-27 11:12:33Z" duration="1.156343" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_culter")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_culter") Failed
+]]></output>
+              </test-case>
+              <test-case id="3760" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_mandarin&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_mandarin&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1909641056" result="Failed" start-time="2026-11-27 11:12:33Z" end-time="2026-11-27 11:12:34Z" duration="1.163629" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_mandarin")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_mandarin") Failed
+]]></output>
+              </test-case>
+              <test-case id="3761" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_snakehead&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_snakehead&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="349144228" result="Failed" start-time="2026-11-27 11:12:34Z" end-time="2026-11-27 11:12:36Z" duration="1.177344" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_snakehead")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_snakehead") Failed
+]]></output>
+              </test-case>
+              <test-case id="3762" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_swamp_eel&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_swamp_eel&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="674652266" result="Failed" start-time="2026-11-27 11:12:36Z" end-time="2026-11-27 11:12:37Z" duration="1.157539" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_swamp_eel")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_swamp_eel") Failed
+]]></output>
+              </test-case>
+              <test-case id="3763" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_farmed_sturgeon&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_farmed_sturgeon&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1380611867" result="Failed" start-time="2026-11-27 11:12:37Z" end-time="2026-11-27 11:12:38Z" duration="1.176567" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_farmed_sturgeon")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_farmed_sturgeon") Failed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

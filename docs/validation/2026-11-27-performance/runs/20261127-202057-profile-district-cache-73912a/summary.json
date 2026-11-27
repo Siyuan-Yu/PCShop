@@ -1,0 +1,14 @@
+{
+  "tag": "profile-district-cache",
+  "filter": "SimulationHotspotTests",
+  "started": "2026-11-27T20:20:57.3705462+08:00",
+  "seconds": 36.56,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-20261127\\20261127-202057-profile-district-cache-73912a"
+}

@@ -1,0 +1,87 @@
+[
+  {
+    "name": "PCShopSell.Tests.CustomDestinationTests.GoingNowUsesTheSelectedDestinationAndLeavesTheShortcutAlone",
+    "message": "  Expected: String containing \"约 45 分钟\"\n  But was:  \"出行 · 打车 · 约 <b><color=#79532B>45 分钟</color></b> · <b><color=#79532B>¥10</color></b>\"\n",
+    "stack": "at NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.CustomDestinationTests+<>c__DisplayClass5_0.<GoingNowUsesTheSelectedDestinationAndLeavesTheShortcutAlone>b__0 (PCShopSell.Game.UI.GameUi ui) [0x0002d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CustomDestinationTests.cs:85\nat PCShopSell.Tests.CustomDestinationTests.WithUi (PCShopSell.Core.Session.GameSession session, System.Action`1[T] action) [0x00082] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CustomDestinationTests.cs:22\nat PCShopSell.Tests.CustomDestinationTests.GoingNowUsesTheSelectedDestinationAndLeavesTheShortcutAlone () [0x0008c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CustomDestinationTests.cs:81\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictCommerceTests.ExpoMainlineUsesRealRegistrationReceptionDeliveryAndFinalMeeting",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictCommerceTests.Meet (PCShopSell.Core.Session.GameSession s) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:31\nat PCShopSell.Tests.DistrictCommerceTests.ExpoMainlineUsesRealRegistrationReceptionDeliveryAndFinalMeeting () [0x00009] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:42\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictCommerceTests.MilestonesAndSelectedBrandSurviveSaveWithoutFreeProgress",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictCommerceTests.Meet (PCShopSell.Core.Session.GameSession s) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:31\nat PCShopSell.Tests.DistrictCommerceTests.MilestonesAndSelectedBrandSurviveSaveWithoutFreeProgress () [0x00009] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:89\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictCommerceTests.OtherBrandReceiptsCannotCompleteSelectedBrandAndSelectionLocks",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictCommerceTests.Meet (PCShopSell.Core.Session.GameSession s) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:31\nat PCShopSell.Tests.DistrictCommerceTests.OtherBrandReceiptsCannotCompleteSelectedBrandAndSelectionLocks () [0x00009] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:78\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictCommerceTests.TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictCommerceTests.Meet (PCShopSell.Core.Session.GameSession s) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:31\nat PCShopSell.Tests.DistrictCommerceTests.TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation () [0x0000f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictCommerceTests.cs:60\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictDetailTests.DelayedInvitationSurvivesSaveAndAnotherSleep",
+    "message": "  Expected: 58440\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.DistrictDetailTests.DelayedInvitationSurvivesSaveAndAnotherSleep () [0x0009a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictDetailTests.cs:78\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(600,1)",
+    "message": "  Expected: 1\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake (System.Int32 wake, System.Int32 chapter) [0x001c3] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictDetailTests.cs:35\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(720,1)",
+    "message": "  Expected: 1\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake (System.Int32 wake, System.Int32 chapter) [0x001c3] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictDetailTests.cs:35\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(1140,1)",
+    "message": "  Expected: 1\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake (System.Int32 wake, System.Int32 chapter) [0x001c3] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictDetailTests.cs:35\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictDetailTests.SleepingToTenBeforeSavedDeadlineStillInvitesAtFourteenOhOne",
+    "message": "  Expected: 1\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.DistrictDetailTests.SleepingToTenBeforeSavedDeadlineStillInvitesAtFourteenOhOne () [0x00173] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictDetailTests.cs:62\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce",
+    "message": "System.NullReferenceException : Object reference not set to an instance of an object",
+    "stack": "  at PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce () [0x00175] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:403 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome () [0x00030] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:268\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload",
+    "message": "  请先领取上一次淘到的旧物。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.CompleteLeadOuting (PCShopSell.Core.Session.GameSession s, System.Int32 index, System.Boolean remote) [0x002df] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:101\nat PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload () [0x002ff] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:596\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses",
+    "message": "  residence_s_oldhomes_01\n  Expected: less than 3\n  But was:  3\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses () [0x00108] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:669\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictUiTests.ResidenceDoorShowsAllResidentsBeforeCheckingEntry",
+    "message": "  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.DistrictUiTests.ResidenceDoorShowsAllResidentsBeforeCheckingEntry () [0x00222] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictUiTests.cs:83\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictUiTests.ThreeCheatButtonsLeadToChatAndCannotCompleteMeetingRemotely",
+    "message": "  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.DistrictUiTests.ThreeCheatButtonsLeadToChatAndCannotCompleteMeetingRemotely () [0x000df] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\DistrictUiTests.cs:154\n"
+  },
+  {
+    "name": "PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce () [0x00072] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\EnergyPayrollTests.cs:121\n"
+  }
+]

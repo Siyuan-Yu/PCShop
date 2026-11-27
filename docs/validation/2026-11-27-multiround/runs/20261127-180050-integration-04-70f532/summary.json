@@ -1,0 +1,14 @@
+{
+  "tag": "integration-04",
+  "filter": "^PCShopSell.Tests.CompanyWellbeingRegressionTests\\.;^PCShopSell.Tests.VenueAccessRegressionTests\\.;^PCShopSell.Tests.HomeWorkbenchTests\\.;^PCShopSell.Tests.OnsitePlayTests\\.",
+  "started": "2026-11-27T18:00:50.1190377+08:00",
+  "seconds": 83.7,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 83,
+  "passed": 49,
+  "failed": 34,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-180050-integration-04-70f532"
+}

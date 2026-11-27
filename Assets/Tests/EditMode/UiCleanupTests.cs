@@ -99,7 +99,17 @@ namespace PCShopSell.Tests
             public Button Button(string name) => Components<Button>().Single(b => b.name == name);
             public Transform Workspace(string group) => Components<Transform>().Single(t => t.name == "Workspace_" + group);
             public void ClickCaption(string caption) => Components<Button>().Single(b => b.GetComponentInChildren<Text>()?.text == caption).onClick.Invoke();
-            public object Call(string method, params object[] args) => typeof(GameUi).GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(Ui, args);
+            public object Call(string method, params object[] args)
+            {
+                var target=typeof(GameUi).GetMethod(method,BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+                var parameters=target.GetParameters();
+                if(args.Length>parameters.Length)throw new TargetParameterCountException(method);
+                var supplied=new object[parameters.Length];
+                for(int i=0;i<supplied.Length;i++)
+                    supplied[i]=i<args.Length?args[i]:parameters[i].HasDefaultValue?parameters[i].DefaultValue
+                        :throw new TargetParameterCountException(method+" 缺少必需参数 "+parameters[i].Name);
+                return target.Invoke(Ui,supplied);
+            }
             public void RentSecond()
             {
                 S.DebugAddListing("tea", 0, 60, Money.FromYuan(1000)); GameSessionTests.Teleport(S, "agency");

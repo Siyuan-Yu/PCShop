@@ -1,0 +1,57 @@
+[
+  {
+    "name": "PCShopSell.Tests.MultiShopTests.Rent_IsChargedForEveryShop",
+    "message": "  两家店的月租都扣\n  Expected: 500000\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.MultiShopTests.Rent_IsChargedForEveryShop () [0x000ba] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MultiShopTests.cs:69\n"
+  },
+  {
+    "name": "PCShopSell.Tests.NarrativeContentTests.PopulationHasStableCompleteDistinctProfiles",
+    "message": "  Expected: 124\n  But was:  178\n",
+    "stack": "at PCShopSell.Tests.NarrativeContentTests.PopulationHasStableCompleteDistinctProfiles () [0x00030] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\NarrativeContentTests.cs:19\n"
+  },
+  {
+    "name": "PCShopSell.Tests.NarrativeContentTests.RelationsHaveValidEndpointsAndNoIsolatedProductionPerson",
+    "message": "  Isolated: res_bank_night\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.NarrativeContentTests.RelationsHaveValidEndpointsAndNoIsolatedProductionPerson () [0x000c1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\NarrativeContentTests.cs:39\n"
+  },
+  {
+    "name": "PCShopSell.Tests.NpcTests.Lin_DoesNotBailOutWithoutFriendship",
+    "message": "  交情不够就是普通破产\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.NpcTests.Lin_DoesNotBailOutWithoutFriendship () [0x0008c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:155\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.GuardDeliveryConsumesRealFoodOnceWithoutTakingTheGuardAway",
+    "message": "  Expected: Running\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x0013b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:96\nat PCShopSell.Tests.OutdoorBatchTests.GuardDeliveryConsumesRealFoodOnceWithoutTakingTheGuardAway () [0x0001b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:293\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(65,0,480)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x000d4] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:240\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(66,1,0)",
+    "message": "  Expected: Running\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x0013b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:96\nat PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x000d4] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:240\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(67,0,480)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x000d4] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:240\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(65,1,960)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts (System.Int32 n, System.Int32 choice, System.Int32 amount) [0x00026] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:371\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(65,3,2400)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts (System.Int32 n, System.Int32 choice, System.Int32 amount) [0x00026] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:371\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(67,3,2400)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts (System.Int32 n, System.Int32 choice, System.Int32 amount) [0x00026] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:371\n"
+  }
+]

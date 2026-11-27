@@ -1,0 +1,121 @@
+{
+    "scene": "shop-1x",
+    "resolution": "1920x1080",
+    "place": "player_shop",
+    "frames": 9903,
+    "activeRenderers": 465,
+    "visibleRenderers": 427,
+    "missingMaterials": 0,
+    "errorShaders": 0,
+    "pendingTextures": 0,
+    "notAtTargetMip": 0,
+    "initialPendingTextures": 0,
+    "pausedFrames": 0,
+    "recoveryFrames": 0,
+    "simulatedMinutes": 36,
+    "fps": 165.0415352947235,
+    "frameMs": 6.059080813894796,
+    "p95Ms": 7.124699999963013,
+    "p99Ms": 8.145399999989423,
+    "maxMs": 27.67740000001595,
+    "stepMs": 0.8513786933252547,
+    "drawCalls": 1491.471473290922,
+    "triangles": 1547579.4126022419,
+    "allocatedMB": 1702.6750831604004,
+    "textureMB": 133.7294454574585,
+    "graphicsDriverMB": 1057.3658866882324,
+    "transitionMs": 107.06840000000001,
+    "stepP99Ms": 2.3127,
+    "stepMaxMs": 21.8656,
+    "sampleSeconds": 60.003077300000168,
+    "loadSimulationMs": 27.824900000000004,
+    "attachSessionMs": 18.886300000000003,
+    "isRecovery": false,
+    "recoveryCompleted": false,
+    "cpuMarkersValid": true,
+    "simulationP99Ms": 0.1665,
+    "viewsP99Ms": 0.5417,
+    "uiP99Ms": 1.8514,
+    "simulationMaxMs": 12.9407,
+    "viewsMaxMs": 13.8514,
+    "uiMaxMs": 13.7188,
+    "over120BudgetPercent": 0.7674442088256084,
+    "slowestOnePercentFps": 102.24794144217299,
+    "internalSpeed": 2,
+    "displayedSpeed": "1×",
+    "meets120P99": true,
+    "materialWarnings": [],
+    "uiBreakdown": [
+        {
+            "name": "UpdateLabels",
+            "count": 9903,
+            "meanMs": 0.0009314046248610802,
+            "p99Ms": 0.0021,
+            "maxMs": 0.023
+        },
+        {
+            "name": "UpdateHud",
+            "count": 9903,
+            "meanMs": 0.007070534181561147,
+            "p99Ms": 0.1255,
+            "maxMs": 0.2873
+        },
+        {
+            "name": "UpdateDistrictPersonMarkers",
+            "count": 9903,
+            "meanMs": 0.003970513985660831,
+            "p99Ms": 0.0066,
+            "maxMs": 0.039
+        },
+        {
+            "name": "UpdateInteractMarker",
+            "count": 9903,
+            "meanMs": 0.03475525598303524,
+            "p99Ms": 0.0573,
+            "maxMs": 0.131
+        },
+        {
+            "name": "UpdateTip",
+            "count": 9903,
+            "meanMs": 0.0005842875896193213,
+            "p99Ms": 0.001,
+            "maxMs": 0.0193
+        },
+        {
+            "name": "UpdateQuestTracker",
+            "count": 9903,
+            "meanMs": 0.003575694234070482,
+            "p99Ms": 0.236,
+            "maxMs": 0.3394
+        },
+        {
+            "name": "RefreshShortcutMenus",
+            "count": 9903,
+            "meanMs": 0.02001542966777744,
+            "p99Ms": 1.3412,
+            "maxMs": 2.0032
+        },
+        {
+            "name": "UpdateUpcomingScheduleHud",
+            "count": 9903,
+            "meanMs": 0.002366040593759444,
+            "p99Ms": 0.004,
+            "maxMs": 0.2855
+        },
+        {
+            "name": "RefreshWorkbenchAccess",
+            "count": 9903,
+            "meanMs": 0.020586519236595038,
+            "p99Ms": 0.0319,
+            "maxMs": 0.1621
+        },
+        {
+            "name": "UpdateCityLifeHud",
+            "count": 9903,
+            "meanMs": 0.001187327072604244,
+            "p99Ms": 0.0119,
+            "maxMs": 0.0886
+        }
+    ],
+    "coreBreakdown": []
+}

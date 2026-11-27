@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 12:21:24Z" end-time="2026-11-27 12:21:33Z" duration="8.2099345">
+  <test-suite type="TestSuite" id="3142" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:21:24Z" end-time="2026-11-27 12:21:33Z" duration="8.209935" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="5280" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:21:24Z" end-time="2026-11-27 12:21:33Z" duration="8.175930" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="37932" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="5281" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:21:24Z" end-time="2026-11-27 12:21:33Z" duration="8.118389" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="SetUpFixture" id="4399" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1843" result="Passed" start-time="2026-11-27 12:21:25Z" end-time="2026-11-27 12:21:33Z" duration="8.042839" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="4888" name="SimulationHotspotTests" fullname="PCShopSell.Tests.SimulationHotspotTests" classname="PCShopSell.Tests.SimulationHotspotTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-11-27 12:21:25Z" end-time="2026-11-27 12:21:33Z" duration="7.946717" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="4889" name="ProfileSleep" fullname="PCShopSell.Tests.SimulationHotspotTests.ProfileSleep" methodname="ProfileSleep" classname="PCShopSell.Tests.SimulationHotspotTests" runstate="Runnable" seed="1500031624" result="Passed" start-time="2026-11-27 12:21:25Z" end-time="2026-11-27 12:21:33Z" duration="7.937868" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SimulationHotspotTests.ProfileSleep
+TOTAL=7345.8176
+TickCityPeople=6737.3661
+People.Outing=1712.78000000485
+People.Workplace=818.739700000471
+People.Street=755.7233
+People.WorkAt=734.566300000409
+People.Commute=549.950400001557
+People.Initialize=536.237199999999
+People.Route=314.5035
+TickCityClimate=198.791
+People.Race=110.617500000104
+People.Mcn=49.5086000000669
+UpdateEmployeePurchases=44.4287000000001
+SettleEmployeeWellbeing=42.2937
+TickEmployeePayroll=37.9699
+People.Expo=37.7544000000131
+TickEventFollowups=34.3673
+UpdateBody=28.1712
+TickHomeWorkbench=27.5528999999999
+People.Pet=26.6314999999577
+CheckCalendarReminders=19.9845
+TickKolStreams=17.3153
+People.Meeting=16.8699999999766
+NormalizeWarehouses=14.1647
+TickCityRetail=9.09319999999999
+TickVenueBusinesses=8.11009999999998
+TickCityStories=6.83309999999996
+TickCityAssets=6.0608000000001
+TickCityActivities=5.47039999999998
+DeliverCouriers=5.26290000000001
+People.Wallet=4.6892000000024
+TickDistrictNarrative=4.0651
+TickPetShopStaff=2.732
+TickModelCommissions=2.7136
+TickSpecialBusinesses=2.7099
+TickVenueSponsorships=2.43149999999999
+PreparePetVisits=1.88669999999994
+TickBrandDeliveries=1.38539999999998
+DeliverDirect=1.34249999999998
+UpdateImpoundedVehicles=1.26219999999999
+TickCompanyWork=0.856999999999963
+DeliverOnlineOrders=0.844199999999976
+CheckAppointments=0.671299999999992
+TickEnergyExhaustion=0.632499999999996
+CheckHomeVisits=0.559699999999977
+UpdateCooking=0.4952
+RefreshRecruitmentCandidates=0.321399999999997
+ExpireCandidates=0.246899999999999
+REGRESSION DONE PCShopSell.Tests.SimulationHotspotTests.ProfileSleep Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

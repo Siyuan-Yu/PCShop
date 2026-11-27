@@ -1,0 +1,14 @@
+{
+  "tag": "capture-after",
+  "filter": "SimulationPerformanceCapture",
+  "started": "2026-11-27T20:27:30.2443007+08:00",
+  "seconds": 34.42,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 3,
+  "passed": 3,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-20261127\\20261127-202730-capture-after-cb709a"
+}

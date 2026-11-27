@@ -77,8 +77,9 @@ namespace PCShopSell.Tests
         }
         private static void Attend(GameSession s, CityActivity a)
         {
-            s.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440)); At(s, a.VenueId);
+            CityTestPeople.ApproachAppointment(s,a); At(s, a.VenueId);
             Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));
+            CityTestPeople.WaitForVenueStaff(s,a);
             if (GameSession.IsOutdoorMarketVisit(a) || GameSession.IsInteractiveFishingActivity(a))
                 Assert.IsTrue(s.StartVenueAppointment(a.Id), s.VenueAppointmentStartBlocker(a));
             if (GameSession.IsAutomaticMeal(a))

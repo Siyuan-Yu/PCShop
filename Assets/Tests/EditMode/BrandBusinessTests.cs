@@ -198,8 +198,14 @@ namespace PCShopSell.Tests
                 var save=JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
                 using(var loaded=GameSession.Load(s.City,save))
                 {
-                    var order=loaded.BrandBusiness.Orders[0];loaded.Clock.Restore(new GameDate((int)(order.Arrival/1440)),(int)(order.Arrival%1440));Delivery(loaded);
-                    Assert.True(loaded.BrandBusiness.Orders[0].Done);Assert.AreEqual(money-3000+200000,loaded.Ledger.Balance.Cents);Delivery(loaded);Assert.AreEqual(money-3000+200000,loaded.Ledger.Balance.Cents);
+                    var order=loaded.BrandBusiness.Orders[0];
+                    long companyCash=loaded.CompanyReserves.Cents;
+                    loaded.Clock.Restore(new GameDate((int)(order.Arrival/1440)),(int)(order.Arrival%1440));Delivery(loaded);
+                    Assert.True(loaded.BrandBusiness.Orders[0].Done);
+                    Assert.AreEqual(money-3000,loaded.Ledger.Balance.Cents,"公司门店的交付收入不能再进个人钱包");
+                    Assert.AreEqual(companyCash+200000,loaded.CompanyReserves.Cents);
+                    Delivery(loaded);Assert.AreEqual(companyCash+200000,loaded.CompanyReserves.Cents);
+                    Assert.AreEqual(money-3000,loaded.Ledger.Balance.Cents);
                 }
             }
         }
@@ -279,19 +285,23 @@ namespace PCShopSell.Tests
         }
         private static void Meeting(GameSession s,string node)
         {
-            Assert.True(s.BeginDistrictMeeting(node));var m=s.DistrictStoryState;
-            s.Clock.Restore(new GameDate((int)(m.MeetingAt/1440)),(int)(m.MeetingAt%1440));At(s,m.MeetingPlaceId);
-            foreach(string id in m.MeetingPeople){var p=s.CityPersonState(id);p.Route=null;p.LocationPlaceId=m.MeetingPlaceId;}
+            Assert.AreEqual(node,s.CurrentDistrictNode.Id);
+            DistrictProgressionTests.Meet(s);
             Assert.IsNull(s.DistrictMeetingBlocker);
         }
         [Test] public void NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad()
         {
             using(var s=Make(1))
             {
-                typeof(GameSession).GetField("_district",BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,new DistrictProgress{UnlockedTier=1,Chapter=2,NodeId="expo.review"});
+                typeof(GameSession).GetField("_district",BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,new DistrictProgress{UnlockedTier=1,Chapter=2,NodeId="expo.review",CommerceBrandId="b"});
                 Meeting(s,"expo.review");Assert.False(s.ActDistrictNode("expo.review"));Assert.AreEqual(1,s.DistrictAccessTier);
                 var state=s.BrandBusiness;state.Brands[0].Influence=100;Set(s,state);Assert.False(s.ActDistrictNode("expo.review"));
                 state=s.BrandBusiness;state.Orders=new[]{new BrandOrder{Id="receipt",BrandId="b",Source="expo",Done=true}};Set(s,state);
+                Assert.False(s.ActDistrictNode("expo.review"),"没有对应已完成展会的孤立订单不能解锁道路");
+                state=s.BrandBusiness;
+                state.Exhibits=new[]{new BrandExhibit{Id="proof",BrandId="b",Finished=true,InfluenceAfter=100}};
+                state.Orders=new[]{new BrandOrder{Id="proof:lead",BrandId="b",Source="expo",Done=true}};
+                Set(s,state);
                 Assert.True(s.ActDistrictNode("expo.review"));Assert.AreEqual(2,s.DistrictAccessTier);
             }
         }

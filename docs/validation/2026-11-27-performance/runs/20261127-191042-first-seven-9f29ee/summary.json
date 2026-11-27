@@ -1,0 +1,14 @@
+{
+  "tag": "first-seven",
+  "filter": "WorkshopRegressionTests;PlayerWorkTests;PurchasePlanTests;ShopCompetitionTests;DistrictProgressionTests;SteerTests;ShopCoreGameplayTests",
+  "started": "2026-11-27T19:10:43.1539891+08:00",
+  "seconds": 121.7,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 202,
+  "passed": 181,
+  "failed": 21,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-20261127\\20261127-191042-first-seven-9f29ee"
+}

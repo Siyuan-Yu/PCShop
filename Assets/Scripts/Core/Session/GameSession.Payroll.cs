@@ -30,6 +30,11 @@ namespace PCShopSell.Core.Session
         public long Start, End, DailyCents;
         public int Minutes;
         public bool BasePaid;
+        public bool WellbeingTracked, WellbeingSettled;
+        public int WellbeingMinutes, WellbeingRestMinutes, WellbeingOverloadedMinutes, WellbeingMismatchMinutes, WellbeingChanges;
+        public long WellbeingExpectedCents;
+        public string WellbeingPosition;
+        public EmployeeRole WellbeingRole;
         public long LastMinute = -1;
         public List<EmployeeWorkMinutes> Shops = new List<EmployeeWorkMinutes>();
         public long OvertimeCents => (long)Math.Round((decimal)DailyCents * Math.Max(0, Minutes - 600) / 300m, 0, MidpointRounding.AwayFromZero);
@@ -69,7 +74,12 @@ namespace PCShopSell.Core.Session
             var participant=a.Participants.FirstOrDefault(p=>p.PersonId==PersonIdOf(row.Person));if(participant==null)return false;
             participant.WorkForEmployer=work;if(work)a.EmployeeLeaveApproved=true;return true;
         }
-        public static Money EstimateShiftPay(Employee e, int start, int end) => e.DailyWage + Money.FromCents((long)Math.Round((decimal)e.DailyWage.Cents * Math.Max(0, ShiftMinutes(start,end)-600)/300m,0,MidpointRounding.AwayFromZero));
+        private static Money EmployeeNextShiftWage(Employee e) => e.Wellbeing?.PendingWage>=0?Money.FromYuan(e.Wellbeing.PendingWage):e.DailyWage;
+        public static Money EstimateShiftPay(Employee e, int start, int end)
+        {
+            var wage=EmployeeNextShiftWage(e);
+            return wage+Money.FromCents((long)Math.Round((decimal)wage.Cents*Math.Max(0,ShiftMinutes(start,end)-600)/300m,0,MidpointRounding.AwayFromZero));
+        }
         public string EmployeePaySummary(Employee e)
         {
             var schedule = e.Schedule ?? new EmployeeSchedule();
@@ -80,7 +90,7 @@ namespace PCShopSell.Core.Session
             var total = EstimateShiftPay(e, start, end);
             var current = _employeePayroll.LastOrDefault(p => p.EmployeeId == e.Id);
             string hours = $"{duration / 60.0:0.##} 小时" + (overtime > 0 ? $"（含加班 {overtime / 60.0:0.##} 小时）" : "");
-            string pay = $"预计工资 {total}" + (overtime > 0 ? $"（含加班费 {total - e.DailyWage}）" : "");
+            string pay = $"预计工资 {total}" + (overtime > 0 ? $"（含加班费 {total - EmployeeNextShiftWage(e)}）" : "");
             return $"{start / 60:00}:{start % 60:00}—{(end < start ? "次日" : "")}{end / 60:00}:{end % 60:00} · {hours} · {pay}"
                 + (schedule.PendingAt >= 0 ? "\n新日常排班从下一班生效，当前班次保留。" : "")
                 + (current == null ? "" : $"\n工资记录 · 基础工资 {Money.FromCents(current.DailyCents)}（{(current.BasePaid ? "已付" : "待付")}） · 加班费 {Money.FromCents(current.OvertimeCents)}，已付 {Money.FromCents(current.Shops.Sum(x => x.PaidOvertimeCents))}");
@@ -124,9 +134,10 @@ namespace PCShopSell.Core.Session
         {
             foreach(var row in Employees)
             {
-                var e=row.Person;PrepareEmployeeShift(e,from);
-                if(!e.TryShift(from,out long start,out long end))continue;
+                var e=row.Person;PrepareEmployeeWellbeingPay(e,from);PrepareEmployeeShift(e,from);
+                if(!e.TryShift(from,out long start,out long end)){RecordEmployeeWellbeingTime(e,from,to,0);continue;}
                 var p=PayrollDay(e,start,end);
+                int worked=0;
                 if(EmployeeActuallyWorking(row)&&p.LastMinute<from)
                 {
                     int minutes=(int)Math.Max(0,Math.Min(to,end)-Math.Max(from,start));
@@ -135,9 +146,11 @@ namespace PCShopSell.Core.Session
                     if(shop==null){shop=new EmployeeWorkMinutes{ShopId=shopId};p.Shops.Add(shop);}
                     long priorCost=p.OvertimeCents;
                     int oldOvertime=Math.Max(0,p.Minutes-600);p.Minutes+=minutes;shop.Minutes+=minutes;
+                    worked=minutes;ObserveEmployeeWork(row,p,minutes);
                     shop.OvertimeMinutes+=Math.Max(0,p.Minutes-600)-oldOvertime;p.LastMinute=from;
                     shop.AccruedOvertimeCents+=p.OvertimeCents-priorCost;
                 }
+                RecordEmployeeWellbeingTime(e,from,to,worked);
                 // The base remains on the original daily midnight cycle. Overtime is paid
                 // at shift end (or subsequent midnight), never before it is actually worked.
                 if(to>=end)PayPayrollOvertime(p);
@@ -182,6 +195,6 @@ namespace PCShopSell.Core.Session
                 foreach(var p in records){PayPayrollBase(p);PayPayrollOvertime(p);}
             }
         }
-        public Money EstimatedEmployeeOvertime(int days) => Money.FromCents(Employees.Sum(row=>EstimateShiftPay(row.Person,row.Person.Schedule?.PendingAt>=0?row.Person.Schedule.PendingStart:row.Person.ShiftStart,row.Person.Schedule?.PendingAt>=0?row.Person.Schedule.PendingEnd:row.Person.ShiftEnd).Cents-row.Person.DailyWage.Cents)*days);
+        public Money EstimatedEmployeeOvertime(int days) => Money.FromCents(Employees.Sum(row=>EstimateShiftPay(row.Person,row.Person.Schedule?.PendingAt>=0?row.Person.Schedule.PendingStart:row.Person.ShiftStart,row.Person.Schedule?.PendingAt>=0?row.Person.Schedule.PendingEnd:row.Person.ShiftEnd).Cents-EmployeeNextShiftWage(row.Person).Cents)*days);
     }
 }

@@ -1,0 +1,444 @@
+{
+    "scene": "park-1x",
+    "resolution": "1920x1080",
+    "place": "outdoors",
+    "frames": 4218,
+    "activeRenderers": 46597,
+    "visibleRenderers": 738,
+    "missingMaterials": 0,
+    "errorShaders": 0,
+    "pendingTextures": 0,
+    "notAtTargetMip": 0,
+    "initialPendingTextures": 0,
+    "pausedFrames": 0,
+    "recoveryFrames": 0,
+    "simulatedMinutes": 180,
+    "fps": 140.59509088807656,
+    "frameMs": 7.11262387387387,
+    "p95Ms": 8.834499999998969,
+    "p99Ms": 10.283100000002321,
+    "maxMs": 35.512500000002948,
+    "stepMs": 1.4119462778568022,
+    "drawCalls": 2949.7306780464673,
+    "triangles": 2920006.846846847,
+    "allocatedMB": 1639.8313579559326,
+    "textureMB": 100.38019943237305,
+    "graphicsDriverMB": 973.2690963745117,
+    "transitionMs": 213.0832,
+    "stepP99Ms": 4.1813,
+    "stepMaxMs": 29.1733,
+    "sampleSeconds": 30.001047499999986,
+    "loadSimulationMs": 207.96450000000002,
+    "attachSessionMs": 7.0536,
+    "isRecovery": false,
+    "recoveryCompleted": false,
+    "cpuMarkersValid": true,
+    "simulationP99Ms": 2.1059,
+    "viewsP99Ms": 2.3216,
+    "uiP99Ms": 3.742,
+    "simulationMaxMs": 28.1057,
+    "viewsMaxMs": 2.6982,
+    "uiMaxMs": 6.8221,
+    "over120BudgetPercent": 8.843053579895685,
+    "slowestOnePercentFps": 75.41144836981255,
+    "internalSpeed": 2,
+    "displayedSpeed": "1×",
+    "meets120P99": false,
+    "materialWarnings": [],
+    "uiBreakdown": [
+        {
+            "name": "UpdateLabels",
+            "count": 4218,
+            "meanMs": 0.14355770507349487,
+            "p99Ms": 0.2682,
+            "maxMs": 0.3998
+        },
+        {
+            "name": "UpdateHud",
+            "count": 4218,
+            "meanMs": 0.04022766714082505,
+            "p99Ms": 0.6169,
+            "maxMs": 0.8048
+        },
+        {
+            "name": "UpdateDistrictPersonMarkers",
+            "count": 4218,
+            "meanMs": 0.005028733997155072,
+            "p99Ms": 0.0089,
+            "maxMs": 0.0778
+        },
+        {
+            "name": "UpdateInteractMarker",
+            "count": 4218,
+            "meanMs": 0.44682958748221987,
+            "p99Ms": 0.5871,
+            "maxMs": 0.7208
+        },
+        {
+            "name": "UpdateTip",
+            "count": 4218,
+            "meanMs": 0.0006585111427216601,
+            "p99Ms": 0.0014,
+            "maxMs": 0.0636
+        },
+        {
+            "name": "UpdateQuestTracker",
+            "count": 4218,
+            "meanMs": 0.00499009009009009,
+            "p99Ms": 0.2692,
+            "maxMs": 0.5201
+        },
+        {
+            "name": "RefreshShortcutMenus",
+            "count": 4218,
+            "meanMs": 0.0453327880512091,
+            "p99Ms": 2.4716,
+            "maxMs": 5.6011
+        },
+        {
+            "name": "UpdateUpcomingScheduleHud",
+            "count": 4218,
+            "meanMs": 0.0029433380749169879,
+            "p99Ms": 0.0057,
+            "maxMs": 0.2712
+        },
+        {
+            "name": "RefreshWorkbenchAccess",
+            "count": 4218,
+            "meanMs": 0.030157799905168295,
+            "p99Ms": 0.0502,
+            "maxMs": 0.1174
+        },
+        {
+            "name": "UpdateCityLifeHud",
+            "count": 4218,
+            "meanMs": 0.0014969653864390599,
+            "p99Ms": 0.0147,
+            "maxMs": 0.0232
+        }
+    ],
+    "coreBreakdown": [
+        {
+            "name": "Init.SeedListings",
+            "count": 1,
+            "meanMs": 0.348,
+            "p99Ms": 0.348,
+            "maxMs": 0.348
+        },
+        {
+            "name": "Init.RecordPriceDay",
+            "count": 1,
+            "meanMs": 0.0991,
+            "p99Ms": 0.0991,
+            "maxMs": 0.0991
+        },
+        {
+            "name": "Init.InitializeCityPeople",
+            "count": 1,
+            "meanMs": 8.8621,
+            "p99Ms": 8.8621,
+            "maxMs": 8.8621
+        },
+        {
+            "name": "Init.AssignCityHomes",
+            "count": 1,
+            "meanMs": 11.655,
+            "p99Ms": 11.655,
+            "maxMs": 11.655
+        },
+        {
+            "name": "Init.InitializeExpansionResidents",
+            "count": 1,
+            "meanMs": 0.2171,
+            "p99Ms": 0.2171,
+            "maxMs": 0.2171
+        },
+        {
+            "name": "Init.InitializeStartingContacts",
+            "count": 1,
+            "meanMs": 1.0896,
+            "p99Ms": 1.0896,
+            "maxMs": 1.0896
+        },
+        {
+            "name": "Init.InitializeCityClimate",
+            "count": 1,
+            "meanMs": 0.0002,
+            "p99Ms": 0.0002,
+            "maxMs": 0.0002
+        },
+        {
+            "name": "Init.TickCityRetail",
+            "count": 1,
+            "meanMs": 0.8993,
+            "p99Ms": 0.8993,
+            "maxMs": 0.8993
+        },
+        {
+            "name": "Init.TickSpecialBusinesses",
+            "count": 1,
+            "meanMs": 0.0046,
+            "p99Ms": 0.0046,
+            "maxMs": 0.0046
+        },
+        {
+            "name": "Init.RecordWorkbenchPrices",
+            "count": 1,
+            "meanMs": 0.5048,
+            "p99Ms": 0.5048,
+            "maxMs": 0.5048
+        },
+        {
+            "name": "Init.InitializeStockMarket",
+            "count": 1,
+            "meanMs": 0.0152,
+            "p99Ms": 0.0152,
+            "maxMs": 0.0152
+        },
+        {
+            "name": "Load.Restore",
+            "count": 1,
+            "meanMs": 62.5412,
+            "p99Ms": 62.5412,
+            "maxMs": 62.5412
+        },
+        {
+            "name": "Minute.TickCityAssets",
+            "count": 204,
+            "meanMs": 0.0019720588235294116,
+            "p99Ms": 0.004,
+            "maxMs": 0.129
+        },
+        {
+            "name": "Minute.TickKolStreams",
+            "count": 204,
+            "meanMs": 0.039076470588235299,
+            "p99Ms": 0.2714,
+            "maxMs": 2.601
+        },
+        {
+            "name": "Minute.TickEmployeePayroll",
+            "count": 204,
+            "meanMs": 0.014249509803921574,
+            "p99Ms": 0.025,
+            "maxMs": 0.3699
+        },
+        {
+            "name": "Minute.TickCompanyWork",
+            "count": 204,
+            "meanMs": 0.0033200980392156947,
+            "p99Ms": 0.0019,
+            "maxMs": 0.5166
+        },
+        {
+            "name": "Minute.SettleEmployeeWellbeing",
+            "count": 204,
+            "meanMs": 0.015793137254901968,
+            "p99Ms": 0.0203,
+            "maxMs": 0.8604
+        },
+        {
+            "name": "Minute.PreparePetVisits",
+            "count": 204,
+            "meanMs": 0.004040196078431356,
+            "p99Ms": 0.0023,
+            "maxMs": 0.5456
+        },
+        {
+            "name": "Minute.TickCityPeople",
+            "count": 204,
+            "meanMs": 2.921874509803919,
+            "p99Ms": 20.8156,
+            "maxMs": 191.3949
+        },
+        {
+            "name": "Minute.TickPetShopStaff",
+            "count": 204,
+            "meanMs": 0.004178921568627441,
+            "p99Ms": 0.0038,
+            "maxMs": 0.5292
+        },
+        {
+            "name": "Minute.TickBrandDeliveries",
+            "count": 204,
+            "meanMs": 0.003232352941176474,
+            "p99Ms": 0.0041,
+            "maxMs": 0.2124
+        },
+        {
+            "name": "Minute.TickDistrictNarrative",
+            "count": 204,
+            "meanMs": 0.024100000000000008,
+            "p99Ms": 0.0445,
+            "maxMs": 1.2464
+        },
+        {
+            "name": "Minute.TickCityActivities",
+            "count": 204,
+            "meanMs": 0.012152450980392157,
+            "p99Ms": 0.0078,
+            "maxMs": 1.6815
+        },
+        {
+            "name": "Minute.TickVenueSponsorships",
+            "count": 204,
+            "meanMs": 0.006148529411764691,
+            "p99Ms": 0.0052,
+            "maxMs": 0.6674
+        },
+        {
+            "name": "Minute.TickVenueBusinesses",
+            "count": 204,
+            "meanMs": 0.012344117647058827,
+            "p99Ms": 0.0195,
+            "maxMs": 0.8716
+        },
+        {
+            "name": "Minute.NormalizeWarehouses",
+            "count": 204,
+            "meanMs": 0.013451470588235299,
+            "p99Ms": 0.0213,
+            "maxMs": 0.0263
+        },
+        {
+            "name": "Minute.TickCityStories",
+            "count": 204,
+            "meanMs": 0.01045980392156861,
+            "p99Ms": 0.0094,
+            "maxMs": 0.7666
+        },
+        {
+            "name": "Minute.TickCityRetail",
+            "count": 204,
+            "meanMs": 0.015782843137254894,
+            "p99Ms": 0.0243,
+            "maxMs": 0.0312
+        },
+        {
+            "name": "Minute.TickSpecialBusinesses",
+            "count": 204,
+            "meanMs": 0.0014872549019607866,
+            "p99Ms": 0.0031,
+            "maxMs": 0.0049
+        },
+        {
+            "name": "Minute.TickModelCommissions",
+            "count": 204,
+            "meanMs": 0.0033578431372548857,
+            "p99Ms": 0.0024,
+            "maxMs": 0.4214
+        },
+        {
+            "name": "Minute.TickEventFollowups",
+            "count": 204,
+            "meanMs": 0.04724950980392159,
+            "p99Ms": 0.0455,
+            "maxMs": 4.8703
+        },
+        {
+            "name": "Minute.TickCityClimate",
+            "count": 204,
+            "meanMs": 0.040038725490196099,
+            "p99Ms": 0.0569,
+            "maxMs": 0.7559
+        },
+        {
+            "name": "Minute.UpdateBody",
+            "count": 204,
+            "meanMs": 0.0030803921568627499,
+            "p99Ms": 0.0034,
+            "maxMs": 0.2325
+        },
+        {
+            "name": "Minute.UpdateCooking",
+            "count": 204,
+            "meanMs": 0.0010348039215686254,
+            "p99Ms": 0.0008,
+            "maxMs": 0.098
+        },
+        {
+            "name": "Minute.CheckCalendarReminders",
+            "count": 204,
+            "meanMs": 0.003504411764705884,
+            "p99Ms": 0.0019,
+            "maxMs": 0.5059
+        },
+        {
+            "name": "Minute.CheckHomeVisits",
+            "count": 204,
+            "meanMs": 0.00156568627450981,
+            "p99Ms": 0.0006,
+            "maxMs": 0.26
+        },
+        {
+            "name": "Minute.TickEnergyExhaustion",
+            "count": 204,
+            "meanMs": 0.0008857843137254927,
+            "p99Ms": 0.0012,
+            "maxMs": 0.0785
+        },
+        {
+            "name": "Minute.ExpireCandidates",
+            "count": 204,
+            "meanMs": 0.00035343137254901944,
+            "p99Ms": 0.0007,
+            "maxMs": 0.0019
+        },
+        {
+            "name": "Minute.RefreshRecruitmentCandidates",
+            "count": 204,
+            "meanMs": 0.00040588235294117584,
+            "p99Ms": 0.0009,
+            "maxMs": 0.0014
+        },
+        {
+            "name": "Minute.CheckAppointments",
+            "count": 204,
+            "meanMs": 0.001760294117647053,
+            "p99Ms": 0.0014,
+            "maxMs": 0.2184
+        },
+        {
+            "name": "Minute.DeliverOnlineOrders",
+            "count": 204,
+            "meanMs": 0.002578431372549029,
+            "p99Ms": 0.0017,
+            "maxMs": 0.3422
+        },
+        {
+            "name": "Minute.DeliverCouriers",
+            "count": 204,
+            "meanMs": 0.01327794117647058,
+            "p99Ms": 0.0076,
+            "maxMs": 1.8744
+        },
+        {
+            "name": "Minute.TickHomeWorkbench",
+            "count": 204,
+            "meanMs": 0.018994607843137239,
+            "p99Ms": 0.525,
+            "maxMs": 0.616
+        },
+        {
+            "name": "Minute.UpdateEmployeePurchases",
+            "count": 204,
+            "meanMs": 0.01884313725490197,
+            "p99Ms": 0.0261,
+            "maxMs": 1.2606
+        },
+        {
+            "name": "Minute.UpdateImpoundedVehicles",
+            "count": 204,
+            "meanMs": 0.0017171568627450994,
+            "p99Ms": 0.0031,
+            "maxMs": 0.0041
+        },
+        {
+            "name": "Minute.DeliverDirect",
+            "count": 204,
+            "meanMs": 0.0032058823529411745,
+            "p99Ms": 0.0035,
+            "maxMs": 0.2884
+        }
+    ]
+}

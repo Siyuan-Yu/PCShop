@@ -1,0 +1,14 @@
+{
+  "tag": "regression-02",
+  "filter": "^PCShopSell.Tests.BuyerHistoryTests\\.;^PCShopSell.Tests.CampaignTests\\.(?!ThreeYears_);^PCShopSell.Tests.CartDefaultTests\\.;^PCShopSell.Tests.CheckoutPatienceTests\\.;^PCShopSell.Tests.CityActivityTests\\.;^PCShopSell.Tests.CityAssetIntegrationTests\\.;^PCShopSell.Tests.CityClimateTests\\.;^PCShopSell.Tests.CityClothingTests\\.;^PCShopSell.Tests.CityFinanceTests\\.;^PCShopSell.Tests.CityLayoutTests\\.",
+  "started": "2026-11-27T18:14:01.3013736+08:00",
+  "seconds": 44.76,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 91,
+  "passed": 85,
+  "failed": 6,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-regression-20261127\\20261127-181401-regression-02-129f08"
+}

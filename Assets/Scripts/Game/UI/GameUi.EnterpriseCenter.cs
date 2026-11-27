@@ -35,9 +35,9 @@ namespace PCShopSell.Game.UI
                 if (listing)
                 {
                     var companies = S.Companies.ToArray();
-                    if (S.DistrictAccessTier < 2)
+                    if (S.DistrictAccessTier < 3)
                     {
-                        Line(body, "公园片区开放后可在此办理上市。", 18, Ui.Warn);
+                        Line(body, "花园开放后可在此办理上市。", 18, Ui.Warn);
                         return;
                     }
                     if (companies.Length == 0) { Line(body, "请先办理公司登记。", 18, Ui.Dim); return; }
@@ -107,7 +107,7 @@ namespace PCShopSell.Game.UI
             if (company.ListedDay >= 0)
             {
                 Line(parent, S.CompanyName(company) + " · 已挂牌", 23, Ui.Good);
-                Line(parent, $"发行价 {Money.FromCents(company.ListingPriceCents)} · 总股本 {GameSession.CompanyTotalShares:N0} 股", 18);
+                Line(parent, $"发行价 {Money.FromCents(company.ListingPriceCents)} · 总股本 {S.CompanyShareCapital(company):N0} 股", 18);
                 CompanyButton(parent, "前往股市", OpenCityInvestments);
                 return;
             }
@@ -124,7 +124,7 @@ namespace PCShopSell.Game.UI
             Line(preview, $"每股 {price}　新发 {GameSession.CompanyPublicShares:N0} 股", 19);
             Line(preview, $"挂牌总股本　{GameSession.CompanyTotalShares:N0} 股", 18);
             Line(preview, $"公司到账　{price * GameSession.CompanyPublicShares}", 19);
-            Line(preview, "挂牌后　创始人 80%　公众 20%", 18);
+            Line(preview, "挂牌后　创始人 80%　机构认购 20%", 18);
             CompanyProgress(preview, 80);
             CompanyButton(preview, "确认发行并挂牌", () => { if (S.ListCompany(company.BrandId)) window.Rebuild(); }, blocker, true);
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -108,17 +108,18 @@ namespace PCShopSell.Core.Session
             Random = new GameRandom(seed);
             Clock = new GameClock(start.Date, start.MinuteOfDay);
             _homeLeaseSignedDay = start.Date.TotalDays;
-            InitializePropertyMarket(seed);
+            using (RuntimePerformanceProbe.Measure("Init.PropertyMarket")) InitializePropertyMarket(seed);
             Player.EnergyChanged = SynchronizeEnergyExhaustion;
             Ledger = new Ledger(openingCash) { SalesAccountOfShop = id => ShopAt(id)?.SalesAccountId };
+            ConfigureCompanyCashAccounts();
             Time = new TimeController();
-            Market = new HardwareMarket(Random, start.Date.TotalDays);
-            Market.EnsureOutlook(start.Date);
+            using (RuntimePerformanceProbe.Measure("Init.Market")) Market = new HardwareMarket(Random, start.Date.TotalDays);
+            using (RuntimePerformanceProbe.Measure("Init.Outlook")) Market.EnsureOutlook(start.Date);
             Online = new Online1788();
             Police = new PoliceSystem(city);
             Cargo = new Stock(Vehicles.Walk.CargoCapacity);
 
-            _focus.Sim = CreateShopSim(_focus);
+            using (RuntimePerformanceProbe.Measure("Init.ShopSim")) _focus.Sim = CreateShopSim(_focus);
             _basePatience = PlayerShop.Settings.PatienceMinutes;
 
             _realtyRng = new GameRandom(seed ^ 0x5EA1E57A7EUL);
@@ -126,14 +127,14 @@ namespace PCShopSell.Core.Session
             {
                 Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRentQuote(PlayerShopPlace), Deposit = Money.Zero, StartDay = start.Date.TotalDays, SignedDay = start.Date.TotalDays };
                 if (starterStock) AddStarterStock();
-                FitStarterShop();
+                using (RuntimePerformanceProbe.Measure("Init.FitStarterShop")) FitStarterShop();
                 SkipOpeningQuests();
             }
             else
             {
                 _vacant.Add(PlayerShopPlace.Id);
             }
-            SeedListings(start.Date.TotalDays);
+            using (RuntimePerformanceProbe.Measure("Init.SeedListings")) SeedListings(start.Date.TotalDays);
             HomeBox.Food.RiceKg = Pantry.StartRiceKg;
 
             if (startWithCookingTutorial && !startWithShop)
@@ -150,24 +151,24 @@ namespace PCShopSell.Core.Session
             PlayerNodeId = Home.NodeId;
             CurrentPlace = Home;
             Police.RollDuty(Random);
-            RecordPriceDay();
+            using (RuntimePerformanceProbe.Measure("Init.RecordPriceDay")) RecordPriceDay();
             Clock.TimeAdvanced += OnTimeAdvanced;
             Clock.DayAdvanced += OnDayAdvanced;
-            InitializeCityPeople();
-            AssignCityHomes();
-            InitializeExpansionResidents();
-            InitializeStartingContacts();
-            InitializeCityClimate();
-            TickCityRetail();
-            TickSpecialBusinesses(start,start);
-            RecordWorkbenchPrices();
-            InitializeStockMarket(seed);
+            using (RuntimePerformanceProbe.Measure("Init.InitializeCityPeople")) InitializeCityPeople();
+            using (RuntimePerformanceProbe.Measure("Init.AssignCityHomes")) AssignCityHomes();
+            using (RuntimePerformanceProbe.Measure("Init.InitializeExpansionResidents")) InitializeExpansionResidents();
+            using (RuntimePerformanceProbe.Measure("Init.InitializeStartingContacts")) InitializeStartingContacts();
+            using (RuntimePerformanceProbe.Measure("Init.InitializeCityClimate")) InitializeCityClimate();
+            using (RuntimePerformanceProbe.Measure("Init.TickCityRetail")) TickCityRetail();
+            using (RuntimePerformanceProbe.Measure("Init.TickSpecialBusinesses")) TickSpecialBusinesses(start,start);
+            using (RuntimePerformanceProbe.Measure("Init.RecordWorkbenchPrices")) RecordWorkbenchPrices();
+            using (RuntimePerformanceProbe.Measure("Init.InitializeStockMarket")) InitializeStockMarket(seed);
         }
 
         /// <summary>玩家的画面坐标。</summary>
         public MapPoint PlayerPosition => Trip != null ? Trip.Position : CityActivityPlayerPosition() ?? (OffNode ? _free.Value : CurrentPlace!=null?StandOf(CurrentPlace):City.ViewPosition(PlayerNodeId));
 
-        public bool InPlayerShop => Lease != null && CurrentPlace == PlayerShopPlace;
+        public bool InPlayerShop => Lease != null && CurrentPlace == PlayerShopPlace && (_companySystemDepth>0||PlayerManagesShop(_focus));
         private double _activeCheckoutSeconds;
 
         /// <summary>开局做饭教学期间（锅没在焖饭时）世界时钟不自己走。</summary>
@@ -176,6 +177,7 @@ namespace PCShopSell.Core.Session
         /// <summary>按真实时间推进世界：移动和静止都按同一个真实时间与倍速推进时钟。返回推进的整分钟数。</summary>
         public int Tick(double realSeconds)
         {
+            if (IsTimeAdvancing) return 0;
             _manualMoving = false;
             if (Racing || IsGameOver || realSeconds <= 0 || double.IsNaN(realSeconds)) return 0;
             if (CurrentPlace != null && !_sleeping && !IsWorking && PendingEvent == null
@@ -218,10 +220,19 @@ namespace PCShopSell.Core.Session
         /// <summary>推进时钟并处理推进中触发的晕倒、住院。所有改变时间的操作都走这里。</summary>
         public void AdvanceClock(int minutes)
         {
+            if (IsTimeAdvancing) return;
+            using (var advance = AdvanceClockSteps(minutes))
+                while (advance.MoveNext()) { }
+        }
+
+        // One minute remains atomic: payroll, NPCs and events retain their original order.
+        private IEnumerator<int> AdvanceClockSteps(int minutes)
+        {
             if (BrandExpoExclusive && !ExpoTimeAdvancing || ActiveRace?.PaidPractice == true
-                || ManualActivityClockPaused && !_settlingManualActivity) return;
-            if (minutes <= 0) return;
+                || ManualActivityClockPaused && !_settlingManualActivity) yield break;
+            if (minutes <= 0) yield break;
             int interruption = _bodyInterruptVersion;
+            int generation = _timeAdvanceGeneration;
             SynchronizeEnergyExhaustion();
             while (minutes > 0)
             {
@@ -231,9 +242,13 @@ namespace PCShopSell.Core.Session
                     step = (int)Math.Min(step, Math.Max(1, WorkMealAt - Clock.Now.TotalMinutes));
                 Clock.Advance(step); minutes -= step;
                 if (!_settlingManualActivity) ProcessPending();
-                if (_bodyInterruptVersion != interruption || ManualActivityClockPaused && !_settlingManualActivity) break;
+                if (_bodyInterruptVersion != interruption || generation != _timeAdvanceGeneration
+                    || ManualActivityClockPaused && !_settlingManualActivity) break;
+                yield return step;
             }
-            TrackTempClocks();
+            // A deferred recovery owns the final timestamp. Do not start temporary
+            // storage timers early while its parent clock request is yielding.
+            if (generation == _timeAdvanceGeneration) TrackTempClocks();
         }
 
         // ---------- 地点 ----------
@@ -411,6 +426,7 @@ namespace PCShopSell.Core.Session
             double sum = 0;
             foreach (OwnedShop shop in _shops)
             {
+                if(ListedCompanyAsset(shop.Place.Id))continue;
                 ShopSimulation sim = shop.Sim;
                 foreach (StockLine l in sim.Stock.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
                 foreach (var kv in sim.Stock.GoodsLines()) sum += (Gifts.Get(kv.Key)?.Price.Yuan ?? 0) * kv.Value;
@@ -430,28 +446,31 @@ namespace PCShopSell.Core.Session
             foreach (var l in HomeBoxParts.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
             foreach (var storage in _residenceFreight.Values)
                 foreach (var l in storage.Parts.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
-            foreach (var o in Online.Pending) foreach (var l in o.Lines) sum += Market.PriceOf(PartCatalog.Get(l.PartId)).Yuan * l.Count;
-            foreach (var r in Couriers) foreach (var l in r.Items)
+            foreach (var o in Online.Pending.Where(o=>!ListedCompanyAsset(OnlineOrderDestination(o)?.Place.Id))) foreach (var l in o.Lines) sum += Market.PriceOf(PartCatalog.Get(l.PartId)).Yuan * l.Count;
+            foreach (var r in Couriers.Where(r=>!r.ToShop||!ListedCompanyAsset(r.ShopId))) foreach (var l in r.Items)
                 if (l.Kind == CourierItemKind.Part) sum += Market.PriceOf(PartCatalog.Get(l.Id)).Yuan * l.Count;
-            foreach (var o in DirectShipments) sum += Market.PriceOf(PartCatalog.Get(o.PartId)).Yuan * o.Count;
-            foreach (var trip in _employeeTrips.Where(t => !t.Delivered))
+            foreach (var o in DirectShipments.Where(o=>!ListedCompanyAsset(o.ShopId))) sum += Market.PriceOf(PartCatalog.Get(o.PartId)).Yuan * o.Count;
+            foreach (var trip in _employeeTrips.Where(t => !t.Delivered&&!ListedCompanyAsset(t.ShopId)))
                 foreach (var line in trip.Items) sum += PurchaseInventoryValue(line).Yuan;
             return Money.FromYuan((long)Math.Round((sum + VenueSponsorInventoryYuan()) * 0.9));
         }
 
         /// <summary>身家：现金 + 库存九折 + 铺子押金（退租能拿回来）。</summary>
         public Money VehicleValue => Money.FromYuan(Garage.Sum(v => (long)(MotorCatalog.Get(v.ModelId).Price * .6 * v.Condition / 100)));
-        public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled)
+        public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled&&!ListedCompanyAsset(x.ShopId))
             .Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents)
-            + _cityReferrals.Where(x => x.ShopId != null && x.ContractId == x.Id && !x.Settled).Sum(x => x.DepositCents));
-        public Money TotalDebt => SupplierDebtTotal + MortgageDebt + AppLoanDebt + ChangeRefundDebt;
-        public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
+            + _cityReferrals.Where(x => x.ShopId != null && x.ContractId == x.Id && !x.Settled&&!ListedCompanyAsset(x.ShopId)).Sum(x => x.DepositCents));
+        public Money TotalDebt => SupplierDebtTotal-Money.FromCents(_supplierDebts.Where(d=>ListedCompanyAsset(d.ShopId)).Sum(d=>d.Amount.Cents)) + MortgageDebt + AppLoanDebt + ChangeRefundDebt;
+        public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented&&!ListedCompanyAsset(s.Place.Id)).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + CompanyReserves + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
             + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue + ShortPositionEquity + BankDeposit + EventMoneyAssets - TotalDebt;
 
         public void Dispose()
         {
+            _restAdvance?.Dispose();
+            _restAdvance = null;
+            _restFinished = null;
             Clock.TimeAdvanced -= OnTimeAdvanced;
             Clock.DayAdvanced -= OnDayAdvanced;
             foreach (OwnedShop s in _shops) s.Sim.Dispose();
@@ -459,39 +478,40 @@ namespace PCShopSell.Core.Session
 
         // ---------- 时间事件 ----------
 
-        private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
+        private void OnTimeAdvancedCore(GameTimestamp from, GameTimestamp to)
         {
             bool dailyEventDue = false;
             foreach (int eventMinute in EventMinutes)
                 if (Crosses(from, to, eventMinute)) { dailyEventDue = true; break; }
             bool activityAtEventTime = dailyEventDue && CityActivityExclusive;
-            TickCityAssets();
-            TickKolStreams(from.TotalMinutes,to.TotalMinutes);
-            TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
-            TickCompanyWork(from, to);
-            PreparePetVisits(to.TotalMinutes);
-            TickCityPeople(to.TotalMinutes);
-            TickPetShopStaff();
-            TickBrandDeliveries(to.TotalMinutes);
-            TickDistrictNarrative(from.TotalMinutes, to.TotalMinutes);
-            TickCityActivities(to.TotalMinutes);
-            TickVenueSponsorships(to.TotalMinutes);
-            TickVenueBusinesses(to.TotalMinutes);
-            NormalizeWarehouses();
-            TickCityStories(to.TotalMinutes);
-            TickCityRetail();
-            TickSpecialBusinesses(from,to);
-            TickModelCommissions(from, to);
-            TickEventFollowups(to);
-            TickCityClimate(from.TotalMinutes,to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickCityAssets")) TickCityAssets();
+            using (RuntimePerformanceProbe.Measure("Minute.TickKolStreams")) TickKolStreams(from.TotalMinutes,to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickEmployeePayroll")) TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickCompanyWork")) TickCompanyWork(from, to);
+            using (RuntimePerformanceProbe.Measure("Minute.SettleEmployeeWellbeing")) SettleEmployeeWellbeing(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.PreparePetVisits")) PreparePetVisits(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickCityPeople")) TickCityPeople(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickPetShopStaff")) TickPetShopStaff();
+            using (RuntimePerformanceProbe.Measure("Minute.TickBrandDeliveries")) TickBrandDeliveries(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickDistrictNarrative")) TickDistrictNarrative(from.TotalMinutes, to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickCityActivities")) TickCityActivities(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickVenueSponsorships")) TickVenueSponsorships(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickVenueBusinesses")) TickVenueBusinesses(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.NormalizeWarehouses")) NormalizeWarehouses();
+            using (RuntimePerformanceProbe.Measure("Minute.TickCityStories")) TickCityStories(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.TickCityRetail")) TickCityRetail();
+            using (RuntimePerformanceProbe.Measure("Minute.TickSpecialBusinesses")) TickSpecialBusinesses(from,to);
+            using (RuntimePerformanceProbe.Measure("Minute.TickModelCommissions")) TickModelCommissions(from, to);
+            using (RuntimePerformanceProbe.Measure("Minute.TickEventFollowups")) TickEventFollowups(to);
+            using (RuntimePerformanceProbe.Measure("Minute.TickCityClimate")) TickCityClimate(from.TotalMinutes,to.TotalMinutes);
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
             int minutes = (int)from.MinutesUntil(to);
-            UpdateBody(minutes);
+            using (RuntimePerformanceProbe.Measure("Minute.UpdateBody")) UpdateBody(minutes);
             if(_manualDisplayShop!=null&&CityPlayerCanWork(_manualDisplayShop))_manualDisplayShop.PendingDisplayMinutes=Math.Max(0,_manualDisplayShop.PendingDisplayMinutes-minutes);
-            UpdateCooking(to);
-            CheckCalendarReminders(from, to);
+            using (RuntimePerformanceProbe.Measure("Minute.UpdateCooking")) UpdateCooking(to);
+            using (RuntimePerformanceProbe.Measure("Minute.CheckCalendarReminders")) CheckCalendarReminders(from, to);
             if (Crosses(from, to, RestockCheckMinute)) RunAutoRestock();
-            CheckHomeVisits(from, to);
+            using (RuntimePerformanceProbe.Measure("Minute.CheckHomeVisits")) CheckHomeVisits(from, to);
 
             if (!_sleeping)
             {
@@ -502,18 +522,18 @@ namespace PCShopSell.Core.Session
                     || (MealDeliveryEnabled && HasSmartphone && Ledger.CanAfford(Money.FromYuan(SelectedDeliveryMeal.Price))))) EatMeal("加餐");
             }
 
-            TickEnergyExhaustion();
+            using (RuntimePerformanceProbe.Measure("Minute.TickEnergyExhaustion")) TickEnergyExhaustion();
             if (!_pendingFaint) UpdatePlayerWork(to);
-            ExpireCandidates();
-            RefreshRecruitmentCandidates();
+            using (RuntimePerformanceProbe.Measure("Minute.ExpireCandidates")) ExpireCandidates();
+            using (RuntimePerformanceProbe.Measure("Minute.RefreshRecruitmentCandidates")) RefreshRecruitmentCandidates();
             if (dailyEventDue) RollDailyEvent(to.Date, activityAtEventTime);
-            CheckAppointments(to);
-            DeliverOnlineOrders(to);
-            DeliverCouriers(to);
-            TickHomeWorkbench(from,to);
-            UpdateEmployeePurchases(to);
-            UpdateImpoundedVehicles(to.TotalMinutes);
-            DeliverDirect(to);
+            using (RuntimePerformanceProbe.Measure("Minute.CheckAppointments")) CheckAppointments(to);
+            using (RuntimePerformanceProbe.Measure("Minute.DeliverOnlineOrders")) DeliverOnlineOrders(to);
+            using (RuntimePerformanceProbe.Measure("Minute.DeliverCouriers")) DeliverCouriers(to);
+            using (RuntimePerformanceProbe.Measure("Minute.TickHomeWorkbench")) TickHomeWorkbench(from,to);
+            using (RuntimePerformanceProbe.Measure("Minute.UpdateEmployeePurchases")) UpdateEmployeePurchases(to);
+            using (RuntimePerformanceProbe.Measure("Minute.UpdateImpoundedVehicles")) UpdateImpoundedVehicles(to.TotalMinutes);
+            using (RuntimePerformanceProbe.Measure("Minute.DeliverDirect")) DeliverDirect(to);
             if (from.Date == to.Date) TrackCreatorCampaigns(to);
 
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
@@ -541,15 +561,15 @@ namespace PCShopSell.Core.Session
             return s;
         }
 
-        private void OnDayAdvanced(GameDate previous, GameDate today)
+        private void OnDayAdvancedCore(GameDate previous, GameDate today)
         {
-            TickPropertyMarket();
-            Market.OnNewDay(today);
+            using (RuntimePerformanceProbe.Measure("Day.TickPropertyMarket")) TickPropertyMarket();
+            using (RuntimePerformanceProbe.Measure("Day.Market")) Market.OnNewDay(today);
             var commodityNews = IndustryCycles.CommodityEventOn(today.TotalDays, Market.CommoditySeed);
             if (commodityNews.IsActive(today.TotalDays) && commodityNews.StartDay == today.TotalDays
                 && CanReceiveMarketPriceAlert(commodityNews.Key))
                 Notice?.Invoke($"行业新闻 · {commodityNews.Name} · {commodityNews.Headline}。");
-            RecordPriceDay(announceMoves: true);
+            using (RuntimePerformanceProbe.Measure("Day.RecordPriceDay")) RecordPriceDay(announceMoves: true);
             if (Market.News.Count > 0)
             {
                 NewsItem last = Market.News[Market.News.Count - 1];
@@ -561,10 +581,10 @@ namespace PCShopSell.Core.Session
             }
             Police.RollDuty(Random);
             ResolveTips(today);
-            OnHomeDayAdvanced(today);
-            SpoilRetailGoods(today.TotalDays);
+            using (RuntimePerformanceProbe.Measure("Day.OnHomeDayAdvanced")) OnHomeDayAdvanced(today);
+            using (RuntimePerformanceProbe.Measure("Day.SpoilRetailGoods")) SpoilRetailGoods(today.TotalDays);
 
-            PayWages(previous);
+            using (RuntimePerformanceProbe.Measure("Day.PayWages")) PayWages(previous);
             ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
             CheckRelativeRepayment(today);
@@ -579,8 +599,8 @@ namespace PCShopSell.Core.Session
             {
                 if (HomeUtilities.IsPositive) ChargeRecordedBill("utilities", Home.Id, 0, "home:utilities:" + today.TotalDays, HomeUtilities, "水电", "住处固定水电",new LedgerAttribution(LedgerBusinessKind.Personal,sourceEventId:"home:utilities:"+today.TotalDays,transactionKind:"固定水电"));
             }
-            OnRealtyDay(today.TotalDays);
-            OnBusinessDay(previous, today);
+            using (RuntimePerformanceProbe.Measure("Day.OnRealtyDay")) OnRealtyDay(today.TotalDays);
+            using (RuntimePerformanceProbe.Measure("Day.OnBusinessDay")) OnBusinessDay(previous, today);
 
             if (today.TotalDays == 4 && Online.Discover("s_zhou"))
             {
@@ -589,8 +609,8 @@ namespace PCShopSell.Core.Session
                 Popup?.Invoke("同行的建议", "隔壁手机店的老板说：进货可以找周维成聊聊，他熟悉电子市场，也能谈长期供货。");
             }
 
-            if (!MonthGoalEvaluated && today.TotalDays >= MonthGoalDay) EvaluateMonthGoal();
-            EvaluateCampaign(today);
+            if (!MonthGoalEvaluated && today.TotalDays >= MonthGoalDay) using (RuntimePerformanceProbe.Measure("Day.EvaluateMonthGoal")) EvaluateMonthGoal();
+            using (RuntimePerformanceProbe.Measure("Day.EvaluateCampaign")) EvaluateCampaign(today);
 
             if (Ledger.Balance.IsNegative)
             {

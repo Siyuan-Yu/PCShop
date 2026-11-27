@@ -1,0 +1,3 @@
+RECOVERY_COMPARE sleep baseline_ms=27434.39 optimized_ms=5713.02
+RECOVERY_COMPARE faint baseline_ms=9919.27 optimized_ms=3552.08
+RECOVERY_COMPARE hospital baseline_ms=27462.32 optimized_ms=5832.43

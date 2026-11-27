@@ -1,0 +1,24 @@
+{
+  "日期": "2026-11-27",
+  "分支": "art/experiment",
+  "基准提交": "f052f89c668b8c6351cc9b02f269c05ba30dfbfc",
+  "Unity": "2022.3.6f1",
+  "验证方式": "独立工程编译与生产入口实机复拍；未运行测试框架",
+  "商品图集": 11,
+  "物品图标键": 256,
+  "实际目录键": 228,
+  "缺图目录键": [],
+  "执行完成标记": "PET_ITEM_CAPTURE_DONE",
+  "动物状态记录": "实际寄养区生成：4 只\n捡球：实际交互帧 12\n逗猫：实际交互帧 12\n主人交接：复用 Rig.Dog (15 shapes)\n领养回家：True\n",
+  "源文件SHA256": {
+    "Assets/Scripts/Game/Runtime/PetSceneModels.Animals.cs": "2cd2cde7e3a7449d1b536cd17fb669d259b26a045b681ab87886eb491c48b435",
+    "Assets/Scripts/Game/Runtime/PetCompanionMotion.cs": "640e85c9c41d48986782434f8a9a081a55249d0e92c0771c110f81803e854af8",
+    "Assets/Scripts/Game/Runtime/GameController.LifeEvents.cs": "cb4dd55c9faf50e65e3ebb02e0ddeed964e740a207cd74b33306358c0a7f3c8b",
+    "Assets/Scripts/Game/Runtime/GameController.ShopEvents.cs": "7ebc592a7f28209800aa9fcacbf0adccce09f0aa1ff1eecd472ca526da6aa503",
+    "Assets/Scripts/Game/UI/GameUi.ItemPortraits.cs": "2b0af4a196c0caaa03aea3deb3a74022ce298464f64fd39a4739248b1f370faa",
+    "Assets/Resources/ItemPortraits/catalog.json": "e3ec7143a8f0fce6908df7c6a05feca0ac9ea9c510359120681aaedad260c31c"
+  },
+  "验证边界": "没有运行自动测试、发布包或目标设备帧率基准；不是视觉相似度百分比证明",
+  "Unity原帧数": 78,
+  "补充近景复拍标记": "PET_ITEM_CAPTURE_DONE"
+}

@@ -1,0 +1,50 @@
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")","result":"Passed","message":"","stack":"","seconds":0.3369498}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Tricycle,\"t_cargo\",\"t_sport\",\"dealer\")","result":"Passed","message":"","stack":"","seconds":0.0281911}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Car,\"c_city\",\"c_su7\",\"motor_cars\")","result":"Passed","message":"","stack":"","seconds":0.0272619}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.CancelOrRetargetNearFinalApproachKeepsRealPosition","result":"Passed","message":"","stack":"","seconds":1.6833234}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.DrawingScaleChangeDoesNotMultiplyAnAlreadyScaledEdgeAgain","result":"Passed","message":"","stack":"","seconds":0.0142387}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)","result":"Passed","message":"","stack":"","seconds":0.0194445}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)","result":"Passed","message":"","stack":"","seconds":0.0218251}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)","result":"Passed","message":"","stack":"","seconds":0.0257994}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)","result":"Passed","message":"","stack":"","seconds":0.0338417}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(1)","result":"Passed","message":"","stack":"","seconds":0.0202791}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(2)","result":"Passed","message":"","stack":"","seconds":0.0216044}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(4)","result":"Passed","message":"","stack":"","seconds":0.0263761}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(8)","result":"Passed","message":"","stack":"","seconds":0.0425589}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.NewDestinationResumesManualPauseWithoutReleasingWindowHold","result":"Passed","message":"","stack":"","seconds":0.0233988}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength","result":"Passed","message":"","stack":"","seconds":0.0064675}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.SavingMidRoutePreservesPositionRemainingDistanceAndArrival","result":"Passed","message":"","stack":"","seconds":0.8772671}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(EBike,3)","result":"Passed","message":"","stack":"","seconds":0.0003621}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Tricycle,2.4d)","result":"Passed","message":"","stack":"","seconds":0.000133}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Van,3.84d)","result":"Passed","message":"","stack":"","seconds":0.0001109}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Car,4.32d)","result":"Passed","message":"","stack":"","seconds":0.0001055}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Taxi,4.8d)","result":"Passed","message":"","stack":"","seconds":0.0001031}
+{"name":"PCShopSell.Tests.PathfinderTests.DisconnectedNodes_ReturnNotFound","result":"Passed","message":"","stack":"","seconds":0.0004494}
+{"name":"PCShopSell.Tests.PathfinderTests.FindsShortestPath_NotTheDetourEdge","result":"Passed","message":"","stack":"","seconds":0.000408}
+{"name":"PCShopSell.Tests.PathfinderTests.MatchesBruteForce_OnRandomGraphs","result":"Passed","message":"","stack":"","seconds":0.1457434}
+{"name":"PCShopSell.Tests.PathfinderTests.SameNode_ReturnsZeroDistancePath","result":"Passed","message":"","stack":"","seconds":0.0007835}
+{"name":"PCShopSell.Tests.PathfinderTests.UnknownEndpoint_Throws","result":"Passed","message":"","stack":"","seconds":0.0008071}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedDistrictMembershipPreservesFirstMatchAndUnknownStreets","result":"Passed","message":"","stack":"","seconds":0.0187204}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth","result":"Passed","message":"","stack":"","seconds":0.0193223}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedNpcWorkplaceFollowsMovingHomeAndChangedDefinition","result":"Passed","message":"","stack":"","seconds":0.0044861}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedPathsInvalidateOnNewEdgesAndDoNotLeakBetweenMaps","result":"Passed","message":"","stack":"","seconds":0.0010358}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels","result":"Passed","message":"","stack":"","seconds":0.0215347}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.IndexedPathSearchMatchesOriginalTieBreakingAndDistances","result":"Passed","message":"","stack":"","seconds":0.2108653}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.ReloadReusesOnlyGeographicFootfallAndKeepsSaveAndRentUnchanged","result":"Passed","message":"","stack":"","seconds":0.0097432}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.StreetServiceSpatialIndexKeepsOriginalClearanceAndMeetingNodes","result":"Passed","message":"","stack":"","seconds":0.4672487}
+{"name":"PCShopSell.Tests.ShopFootfallTests.ActualLakeMapHasOrderedQuotesAffordableStartAndCachedEstimates","result":"Passed","message":"","stack":"","seconds":0.2994741}
+{"name":"PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier","result":"Failed","message":"  Expected: True\r\n  But was:  False\r\n","stack":"at PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier () [0x0014f] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:177\r\n","seconds":0.1823929}
+{"name":"PCShopSell.Tests.ShopFootfallTests.CloserMetroAndHousingEachIncreaseDailyPeopleAndRent","result":"Passed","message":"","stack":"","seconds":0.0006852}
+{"name":"PCShopSell.Tests.ShopFootfallTests.DistancesFollowRoadsAndUnreachableSourcesDoNotCountAsNearby","result":"Passed","message":"","stack":"","seconds":0.0003807}
+{"name":"PCShopSell.Tests.ShopFootfallTests.LargerPremisesHaveMorePassingPeopleAndStrictlyHigherRent","result":"Passed","message":"","stack":"","seconds":0.000558}
+{"name":"PCShopSell.Tests.ShopFootfallTests.ListingQuoteSigningAndJsonReloadAgree","result":"Passed","message":"","stack":"","seconds":0.0161759}
+{"name":"PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"computer\")","result":"Failed","message":"  Expected: 35.176654859117285d +/- 2\r\n  But was:  42\r\n","stack":"at PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation (System.String kind) [0x000e5] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:88\r\n","seconds":0.0450952}
+{"name":"PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"pet\")","result":"Failed","message":"  Expected: 35.176654859117285d +/- 2\r\n  But was:  42\r\n","stack":"at PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation (System.String kind) [0x000e5] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:88\r\n","seconds":0.0300123}
+{"name":"PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(0)","result":"Passed","message":"","stack":"","seconds":0.0131284}
+{"name":"PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(2)","result":"Passed","message":"","stack":"","seconds":0.0114978}
+{"name":"PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize","result":"Failed","message":"  Expected: 12.745614035087719d +/- 1.0000000000000001E-09d\r\n  But was:  9.1789416687588119d\r\n","stack":"at PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize () [0x000a1] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:67\r\n","seconds":0.0057326}
+{"name":"PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"restaurant\")","result":"Passed","message":"","stack":"","seconds":0.0149805}
+{"name":"PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"secondhand\")","result":"Passed","message":"","stack":"","seconds":0.0102541}
+{"name":"PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"sleep\")","result":"Passed","message":"","stack":"","seconds":3.2145101}
+{"name":"PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"faint\")","result":"Passed","message":"","stack":"","seconds":1.9103291}
+{"name":"PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"hospital\")","result":"Passed","message":"","stack":"","seconds":3.2365283}

@@ -1,0 +1,11 @@
+{
+  "day": 1095,
+  "ending": "star",
+  "saveBytes": 2168948,
+  "ledgerEntries": 1735,
+  "wageEntries": 1095,
+  "uniqueWageDays": 1095,
+  "wageCents": -13140000.0,
+  "balanceCents": 19943747370,
+  "checkpoint": "D:/tmp/pcshop-qa-focused-20261127/20261127-180533-long-resume-02-c17ad1/resume-7-1095-checkpoint.json"
+}

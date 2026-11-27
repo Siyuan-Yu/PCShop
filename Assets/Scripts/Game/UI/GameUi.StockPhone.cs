@@ -470,6 +470,7 @@ namespace PCShopSell.Game.UI
             var heading = Ui.Row(card, 42, 6);
             StockFlex(Bold(Ui.Label(heading, StockTitle(id) + " · " + (S.StockDefinition(id)?.Industry ?? "指数"), 20)), 42);
             Ui.Size(Ui.Button(heading, S.StockWatched(id) ? "★" : "☆", () => { S.ToggleStockWatch(id); w.Rebuild(); }, 20), 36, 32);
+            if(id!="hardware")Ui.Size(Ui.Button(heading,"股权与治理",()=>OpenCompanyGovernance(id),14,Ui.ButtonSecondary),120,32);
             var switches = Ui.Row(card, 30, 6);
             foreach (bool candles in new[] { false, true })
             { bool pick = candles; Ui.Size(Ui.Button(switches, candles ? "K线" : "折线", () => { _stockCandles = pick; w.Rebuild(); }, 14, candles == _stockCandles ? Ui.Chrome : Ui.ButtonBg), 62, 28); }

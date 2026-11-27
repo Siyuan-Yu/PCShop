@@ -1,0 +1,92 @@
+[
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.AttendedWeeklyWageGetsBankruptcyGraceUntilClaimDeadline",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.AttendedWeeklyWageGetsBankruptcyGraceUntilClaimDeadline () [0x000cd] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:185\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.BrokeWorkerCanFinishTheWeekWithWorkMealsAndSleep_WithoutBuyingStockOrFood",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.BrokeWorkerCanFinishTheWeekWithWorkMealsAndSleep_WithoutBuyingStockOrFood () [0x000cc] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:247\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.FullWeekPaysOnce_AfterClaim_AndAllowsRenewal",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.FullWeekPaysOnce_AfterClaim_AndAllowsRenewal () [0x00044] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:118\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.LastDayAbsenceStillClosesPayroll_AndCanClaimAwayFromShop",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.LastDayAbsenceStillClosesPayroll_AndCanClaimAwayFromShop () [0x0006e] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:137\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.LastNightPaysOnlyAfterNextMorning_AndMidnightJsonKeepsCorrectShiftDay",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.LastNightPaysOnlyAfterNextMorning_AndMidnightJsonKeepsCorrectShiftDay () [0x000b5] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:321\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt(1,141)",
+    "message": "  工资周结，迟到不会直接扣现金\n  Expected: ¥0\n  But was:  ¥141\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt (System.Int32 late, System.Int64 pay) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:88\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt(30,141)",
+    "message": "  工资周结，迟到不会直接扣现金\n  Expected: ¥0\n  But was:  ¥141\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt (System.Int32 late, System.Int64 pay) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:88\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt(31,132)",
+    "message": "  工资周结，迟到不会直接扣现金\n  Expected: ¥0\n  But was:  ¥132\n",
+    "stack": "at PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt (System.Int32 late, System.Int64 pay) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:88\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource",
+    "message": "System.InvalidOperationException : Sequence contains no matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.PurchasePlanTests.<EmployeePurchaseWindowReopensAtTheLastBrowsedSource>g__Button|6_0 (System.String caption, PCShopSell.Tests.PurchasePlanTests+<>c__DisplayClass6_1& ) [0x0000d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:163 \n  at PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource () [0x00230] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:229 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.PurchasePlanTests.MixedSources_AutoCostIgnoresOldBudget_AndShipsAllItemsExactlyOnceAfterJson",
+    "message": "  Expected: 3\n  But was:  2\n",
+    "stack": "at PCShopSell.Tests.PurchasePlanTests.MixedSources_AutoCostIgnoresOldBudget_AndShipsAllItemsExactlyOnceAfterJson () [0x00020] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:282\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave",
+    "message": "  Expected: ¥1,069\n  But was:  ¥3,039\n",
+    "stack": "at PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave () [0x0012a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:398\n"
+  },
+  {
+    "name": "PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem",
+    "message": "  Expected: 1\n  But was:  2\n",
+    "stack": "at PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem () [0x00118] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:427\n"
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"restaurant\")",
+    "message": "  Expected: 2\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce (System.String kind) [0x00194] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:161\n"
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText",
+    "message": "  Expected and actual are both <System.String[4]>\n  Values differ at index [1]\n  Expected string length 17 but was 15. Strings differ at index 0.\n  Expected: \"racing_enrollment\"\n  But was:  \"bank_securities\"\n  -----------^\n",
+    "stack": "at NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText () [0x00094] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:31\n"
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce",
+    "message": "  Expected: 2\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce () [0x00149] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:282\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty () [0x0012c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\RacingEventBatchTests.cs:286\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay",
+    "message": "  首月 + 押金 + 中介费当场付\n  Expected: 19400000\n  But was:  19500000\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay () [0x00077] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:425\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent",
+    "message": "  首月 + 押金 + 中介费 + 搬家费（旧店没押金）\n  Expected: 60800\n  But was:  50800\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent () [0x00168] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:503\n"
+  }
+]

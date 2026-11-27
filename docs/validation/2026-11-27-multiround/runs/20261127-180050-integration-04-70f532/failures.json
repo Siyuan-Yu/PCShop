@@ -1,0 +1,172 @@
+[
+  {
+    "name": "PCShopSell.Tests.HomeWorkbenchTests.MiHomeWorkbenchCanBeInstalledInEitherResidenceAndUsedFromBoth",
+    "message": "  请到住宅所属片区的中介办理\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.HomeWorkbenchTests.MiHomeWorkbenchCanBeInstalledInEitherResidenceAndUsedFromBoth () [0x00362] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\HomeWorkbenchTests.cs:90\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.AFlightCanBeSavedAndResumedWithoutRerollingItsLanding",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.AFlightCanBeSavedAndResumedWithoutRerollingItsLanding () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:322\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:301\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.BasketballUsesActualAimPowerFlightAndDistinctTrainingModes",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.BasketballUsesActualAimPowerFlightAndDistinctTrainingModes () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:229\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.BasketballUsesTheNewShotPositionAfterReload",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.BasketballUsesTheNewShotPositionAfterReload () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:276\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GolfClubPowerAndAngleChangeRealLandingAndFiveShotsComplete",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.GolfClubPowerAndAngleChangeRealLandingAndFiveShotsComplete () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:318\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(0,600)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:192\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(1,2400)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:192\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(2,0)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:192\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(3,1800)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:192\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupTopicsBindTheActualPersonAndCannotBeSpammed",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.GroupTopicsBindTheActualPersonAndCannotBeSpammed () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:196\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.LeavingTastingEarlyDoesNotChargeTheReservedTime",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.LeavingTastingEarlyDoesNotChargeTheReservedTime () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:177\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixedDrinkAndRemainingTasteTimeSurviveJson",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.MixedDrinkAndRemainingTasteTimeSurviveJson () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:223\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,0,True)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:218\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(0,0,0,False)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:218\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,1,0,False)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:218\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,1,False)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:218\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.NewFloorNeedsAllThreeExercisesAndActualFeedback",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.NewFloorNeedsAllThreeExercisesAndActualFeedback () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:249\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime () [0x0001c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:152\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:353\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.StandingStillDoesNotCompleteTheMissingOnsiteTask",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.StandingStillDoesNotCompleteTheMissingOnsiteTask () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:109\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(0,True)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking (System.Int32 choice, System.Boolean pleasant) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:342\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(1,False)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking (System.Int32 choice, System.Boolean pleasant) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:342\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(2,False)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking (System.Int32 choice, System.Boolean pleasant) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:342\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce () [0x0001c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:123\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TeacherGameNeedsFivePhysicalPossessions",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ed] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:30\nat PCShopSell.Tests.OnsitePlayTests.TeacherGameNeedsFivePhysicalPossessions () [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:315\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_court_mid\",54,300)",
+    "message": "  Expected is <System.Int32[4]>, actual is <System.Linq.Enumerable+SelectArrayIterator`2[PCShopSell.Core.Session.CityActivityDefinition,System.Int32]>\n  Values differ at index [0]\n  Expected: 120\n  But was:  40\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt (System.String venue, System.Int32 sport, System.Int32 price) [0x00016] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:58\n"
+  }
+]

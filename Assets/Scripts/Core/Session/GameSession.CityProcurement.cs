@@ -190,12 +190,13 @@ namespace PCShopSell.Core.Session
 
         public string ClaimProcurementDemand(string shopId, PurchaseGoodsKind kind, string productId, int count, ProcurementMethod method, string ownerId, string sourceId)
         {
+            if(ShopAuthorityBlocker(ShopAt(shopId))!=null)return null;
             var shop = ShopAt(shopId); if (shop == null || count <= 0 || count > 100 || string.IsNullOrEmpty(ownerId) || method == ProcurementMethod.DirectSupply) return null;
             if (method == ProcurementMethod.Online1788) sourceId = Online1788.Shopping.Id;
             var quote = ProcurementSources(kind, productId).FirstOrDefault(o => o.Method == method && o.SupplierId == sourceId && o.Blocker == null);
             if (quote == null || ProcurementCoverageFor(shopId, kind, productId).Uncovered < count) return null;
             Money budget = quote.UnitPrice * count + quote.Shipping;
-            if (Ledger.Balance < EffectiveRestockReserve + ClaimedProcurementBudget + budget) return null;
+            if (ShopAvailableCash(shop) < EffectiveRestockReserve + ClaimedProcurementBudget + budget) return null;
             double room = 0; WithShop(shop, () => room = shop.Sim.Stock.FreeSpace - IncomingShopSpace);
             if (PurchaseStockSpace(new PurchaseLine { Kind = kind, PartId = productId, Count = count }) > room + 1e-9) return null;
             string id = "demand:" + _cityProcurementSequence++;
@@ -206,12 +207,13 @@ namespace PCShopSell.Core.Session
         public bool CancelProcurementClaim(string id)
         {
             var claim = _cityProcurementClaims.FirstOrDefault(c => c.Id == id && c.State == ProcurementClaimState.Claimed);
+            if(claim!=null&&ShopAuthorityBlocker(ShopAt(claim.ShopId)) is string authority)return Fail(authority);
             if (claim == null) return false; claim.State = ProcurementClaimState.Released; claim.BudgetCents = 0; claim.Reason = "已取消，缺口与预算已释放"; return true;
         }
 
         private bool PayUnifiedOnlineOrder(OnlineOrder order, Money total, OnlineStore store, Money couponDiscount)
         {
-            if (!Ledger.CanAfford(total)) return false;
+            if (total.IsNegative||(order.ToHome?Ledger.Balance:ShopAvailableCash(ShopAt(order.ShopId)))<total) return false;
             string orderId = "online-order:" + order.Id;
             foreach (var line in order.Lines)
             {
@@ -241,6 +243,7 @@ namespace PCShopSell.Core.Session
         {
             var pending = Online.Pending.FirstOrDefault(o => o.Id == id);
             if (pending == null || Clock.Now.TotalMinutes >= pending.DeliverAtMinute || IsGameOver) return Fail("订单已交付或不可取消。");
+            if(!pending.ToHome&&ShopAuthorityBlocker(ShopAt(pending.ShopId)) is string authority)return Fail(authority);
             var order = Online.CancelPending(id); if (order == null) return false;
             Ledger.Credit(Clock.Today, "进货退款", Money.FromCents(order.TotalCents), "网购取消订单 #" + id,
                 order.ToHome && order.ShopId == null ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: "online-order:" + id + ":refund", transactionKind: "个人采购退款") : LedgerAttribution.ForShop(order.ShopId, "online-order:" + id + ":refund", "采购退款"));
@@ -257,8 +260,9 @@ namespace PCShopSell.Core.Session
             if (claim == null) return false;
             if (claim.Method == ProcurementMethod.Employee) return Fail("进货员认领按保存的班次/采购周期执行，不立即扣款出发。");
             var shop = ShopAt(claim.ShopId); if (shop == null || claim.Kind != PurchaseGoodsKind.Part || !PartCatalog.Exists(claim.ProductId)) return false;
+            if(ShopAuthorityBlocker(shop) is string authority)return Fail(authority);
             Money actual = OnlinePrice(Online1788.Shopping, PartCatalog.Get(claim.ProductId)) * claim.Count + Online1788.ShippingFee;
-            if (Ledger.Balance < actual + EffectiveRestockReserve + ClaimedProcurementBudget - Money.FromCents(claim.BudgetCents)) return Fail("当前报价超过可用采购资金，保留认领等待处理。");
+            if (ShopAvailableCash(shop) < actual + EffectiveRestockReserve + ClaimedProcurementBudget - Money.FromCents(claim.BudgetCents)) return Fail("当前报价超过可用采购资金，保留认领等待处理。");
             claim.State = ProcurementClaimState.Ordered; claim.BudgetCents = 0;
             int onlineId = Online.NextOrderId; bool success = false;
             WithShop(shop, () => success = PlaceOnlineOrderCore(claim.SourceId, new[] { (PartCatalog.Get(claim.ProductId), claim.Count) }, false));

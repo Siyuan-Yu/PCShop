@@ -73,7 +73,7 @@ namespace PCShopSell.Core.Session
             if (CurrentPlace == target) return allowCurrentPlace ? null : "已在此处";
             if (LeaveBlocker is string leave) return leave;
 
-            var route = PlanTrip(target.NodeId, StandOf(target), out double meters);
+            var route = PreviewDestinationRoute(target, out double meters);
             if (route == null) return "当前路线不可达";
             int blocked = BlockedDistrictOnTrip(route);
             if (blocked > 0) return "路线经过尚未开放的" + DistrictName(blocked) + "片区";
@@ -82,6 +82,36 @@ namespace PCShopSell.Core.Session
             if (Vehicle != VehicleKind.Taxi) return null;
             fare = Vehicles.TaxiFare(meters);
             return Ledger.CanAfford(fare) ? null : $"打车需 {fare}，现金不足";
+        }
+
+        private (double x, double y, string node, string place, bool offNode, VehicleSpec vehicle, int revision) _previewOrigin;
+        private readonly Dictionary<(string node, double x, double y), Trip> _destinationPreviews = new();
+        private Trip PreviewDestinationRoute(Place target, out double meters)
+        {
+            // 只复用未移动时的几何路线，不缓存通行、营业、现金或任务限制。
+            // 自动行进中的改道仍按实时路段重新计算；预览 Trip 从不用于实际移动。
+            var end = StandOf(target);
+            if (Trip != null)
+            {
+                _destinationPreviews.Clear();
+                return PlanTrip(target.NodeId, end, out meters);
+            }
+            var position = PlayerPosition;
+            var origin = (position.X, position.Y, PlayerNodeId, CurrentPlace?.Id, OffNode, CurrentVehicle, City.Map.Revision);
+            if (!_previewOrigin.Equals(origin))
+            {
+                _destinationPreviews.Clear();
+                _previewOrigin = origin;
+            }
+            var key = (target.NodeId, end.X, end.Y);
+            if (!_destinationPreviews.TryGetValue(key, out var route))
+            {
+                route = PlanTrip(target.NodeId, end, out _);
+                if (_destinationPreviews.Count >= 256) _destinationPreviews.Clear();
+                _destinationPreviews[key] = route;
+            }
+            meters = route?.TotalGameMeters ?? 0;
+            return route;
         }
 
         /// <summary>出发去某个地点，一直走到它门口的人行道上（到了再进门）。</summary>

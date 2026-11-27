@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using PCShopSell.Core.Common;
@@ -21,7 +22,37 @@ namespace PCShopSell.Tests
             s.MainShop.Sim.Settings.BaseCustomersPerHour = 0; return s;
         }
         private static GameSession Reload(GameSession s) => GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+        [Test]
+        public void JsonReloadKeepsOnDutyStaffWorkingWithoutInventingAVisit()
+        {
+            using var s = Make();
+            var venue = s.City.GetPlace(GameSession.FishingVenueId);
+            var staff = s.CityPeople.First(p => s.IsOnDutyVenueNpc(venue,p));
+            Assert.IsNull(staff.VisitId);
+            using var loaded = Reload(s);
+            var restored = loaded.CityPersonState(staff.PersonId);
+            Assert.IsNull(restored.VisitId);
+            Assert.IsNull(restored.ActivityId);
+            Assert.AreEqual(staff.LocationPlaceId,restored.LocationPlaceId);
+            Assert.AreEqual(staff.Task,restored.Task);
+            Assert.True(loaded.IsPlaceOpen(venue),"读档不能让原本在岗的钓场店员变成返程状态");
+        }
         private const BindingFlags Any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+        [Test]
+        public void EmptyMarketFindStaysEmptyAndRealUnclaimedFindSurvivesJson()
+        {
+            using var s = Make();
+            Assert.IsNull(s.PendingMarketFind);
+            using (var empty = Reload(s)) Assert.IsNull(empty.PendingMarketFind);
+            var data=s.CreateSave();
+            data.oldMarketHunt.Pending=(UsedItem)typeof(OldMarketHuntCatalog)
+                .GetMethod("Draw",BindingFlags.Static|BindingFlags.NonPublic)
+                .Invoke(null,new object[]{OldMarketHuntCatalog.Spot("watch-box"),0,500,0,1});
+            using var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(data)));
+            Assert.NotNull(loaded.PendingMarketFind);
+            Assert.AreEqual(data.oldMarketHunt.Pending.Id,loaded.PendingMarketFind.Id);
+            Assert.AreEqual(data.oldMarketHunt.Pending.MarketModelName,loaded.PendingMarketFind.MarketModelName);
+        }
         private static bool HasLinLoan(GameSession s) => (bool)typeof(GameSession).GetProperty("HasLinLoan", Any).GetValue(s);
 
         [Test]

@@ -18,15 +18,9 @@ namespace PCShopSell.Game
             {
                 if(_lifeDogView==null)
                 {
-                    _lifeDogView=new GameObject("LifeCompanionDog");var p=_lifeDogView.transform;
-                    var fur=Mats.Lit(new Color(.65f,.43f,.23f));var dark=Mats.Lit(ArtDirection.Ink);
-                    Prims.Shape(PrimitiveType.Sphere,p,"DogBody",new Vector3(0,.3f,0),new Vector3(.48f,.45f,.8f),fur);
-                    Prims.Shape(PrimitiveType.Sphere,p,"DogHead",new Vector3(0,.53f,-.38f),new Vector3(.4f,.36f,.4f),fur);
-                    Prims.Shape(PrimitiveType.Sphere,p,"DogNose",new Vector3(0,.5f,-.62f),new Vector3(.14f,.1f,.12f),dark);
-                    foreach(float x in new[]{-.17f,.17f})
-                    {Prims.Box(p,"DogEar",new Vector3(x,.63f,-.35f),new Vector3(.12f,.3f,.2f),dark);foreach(float z in new[]{-.22f,.25f})Prims.Box(p,"DogLeg",new Vector3(x,.12f,z),new Vector3(.14f,.26f,.16f),fur);}
-                    Prims.Box(p,"DogTail",new Vector3(0,.4f,.5f),new Vector3(.1f,.12f,.4f),fur);
-                    Prims.SignText(p,"小狗",new Vector3(0,1,0),1.1f,.25f,ArtDirection.Cream);
+                    _lifeDogView=PetSceneModels.BuildAnimal(null,true,ArtDirection.Hex("A66E3B"),false,out var head,out var tail,out var legs);
+                    _lifeDogView.name="LifeCompanionDog";
+                    _lifeDogView.AddComponent<PetCompanionMotion>().Bind(true,head,tail,legs);
                 }
                 bool home=dog.Stage=="adopted"&&!Session.LifeDogFollowing;
                 Transform parent=null;
@@ -36,8 +30,15 @@ namespace PCShopSell.Game
                 else if(InInterior&&dog.Place==Session.CurrentPlace?.Id)parent=Interior.Root;
                 else if(World.Places.TryGetValue(dog.Place,out var place))parent=place.Root.transform;
                 _lifeDogView.SetActive(parent!=null);
+                _lifeDogView.GetComponent<PetCompanionMotion>().Playing=Session.Time.IsRunning;
                 if(parent!=null)
-                {_lifeDogView.transform.SetParent(parent,false);if(Session.LifeDogFollowing)_lifeDogView.transform.position=_avatar.Position+new Vector3(.8f,0,.6f);else _lifeDogView.transform.localPosition=new Vector3(1.3f,0,home?1.2f:-2.5f);}
+                {
+                    // 同一父级不重复重置局部朝向；换场景时清掉旧位置的步态差值。
+                    if(_lifeDogView.transform.parent!=parent)
+                    {_lifeDogView.transform.SetParent(parent,false);_lifeDogView.GetComponent<PetCompanionMotion>().ResetTravel();}
+                    if(Session.LifeDogFollowing)_lifeDogView.transform.position=_avatar.Position+new Vector3(.8f,0,.6f);
+                    else _lifeDogView.transform.localPosition=new Vector3(1.3f,0,home?1.2f:-2.5f);
+                }
             }
             if(World.Places.TryGetValue(GameSession.LifeServicePlace,out var service))
             {

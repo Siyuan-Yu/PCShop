@@ -1,0 +1,14 @@
+{
+  "tag": "regression-13",
+  "filter": "^PCShopSell.Tests.VenueAccessRegressionTests\\.;^PCShopSell.Tests.VenueBusinessTests\\.;^PCShopSell.Tests.VenueSponsorshipAndStoryTests\\.;^PCShopSell.Tests.WarehouseBoxInteractionTests\\.;^PCShopSell.Tests.WarehouseCapacityTests\\.;^PCShopSell.Tests.WholesaleMinimumTests\\.;^PCShopSell.Tests.WorkforceTests\\.;^PCShopSell.Tests.WorkshopRegressionTests\\.;^PCShopSell.Tests.WorldMapTests\\.",
+  "started": "2026-11-27T18:38:01.9839461+08:00",
+  "seconds": 55.26,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 101,
+  "passed": 81,
+  "failed": 20,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-regression-20261127\\20261127-183801-regression-13-9a397f"
+}

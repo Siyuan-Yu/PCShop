@@ -18,6 +18,7 @@ namespace PCShopSell.Tests
             var s = new GameSession(CityLayout.FromData(GameSessionTests.Layout()), 778, Money.FromYuan(3000000),
                 GameTimestamp.From(new GameDate(0), 600), false);
             s.EventsEnabled = false; s.PlayerShop.Settings.BaseCustomersPerHour = 0;
+            CompanyWellbeingRegressionTests.Tier(s,3); // 证券交易现于花园阶段开放，门槛由专用回归覆盖。
             GameSessionTests.Teleport(s, "agency"); return s;
         }
         private static GameSession Reload(GameSession s) => GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
@@ -81,7 +82,7 @@ namespace PCShopSell.Tests
             {
                 var cash = s.Ledger.Balance;
                 int lot = GameSession.StockLotSize;
-                Assert.False(s.TradeCityInvestment("city_chip", 1, true, true));
+                Assert.False(s.TradeCityInvestment("city_chip", 0, true, true));
                 Assert.True(s.TradeCityInvestment("city_chip", 2 * lot, true, true));
                 Assert.True(s.TradeCityInvestment("city_chip", lot, false));
                 Assert.True(s.TradeCityInvestment("city_chip", lot, false));
@@ -108,17 +109,17 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void MaximumStockBuyUsesWholeLotsWithinTheCurrentQuote()
+        public void MaximumStockBuyUsesIndividualSharesWithinTheCurrentQuote()
         {
             using var s = Make();
             s.SetSmartphone(true);
             const string id = "city_chip";
             var state = s.StockState(id);
             state.AvailableUnits = 275;
-            Assert.That(s.StockMaximumBuyQuantity(id), Is.EqualTo(200));
+            Assert.That(s.StockMaximumBuyQuantity(id), Is.EqualTo(275));
             Assert.That(s.TradeCityInvestment(id, 200, buy: true, acknowledgeReserve: true), Is.True);
             Assert.That(state.AvailableUnits, Is.EqualTo(75));
-            Assert.That(s.StockMaximumBuyQuantity(id), Is.Zero);
+            Assert.That(s.StockMaximumBuyQuantity(id), Is.EqualTo(75));
             Assert.That(s.StockTradeBlocker(id, 200, "sell"), Does.Contain("还可成交75"));
             Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
         }

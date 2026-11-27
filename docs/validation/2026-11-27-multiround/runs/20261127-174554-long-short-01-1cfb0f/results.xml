@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:47:59Z" duration="113.4191843">
+  <test-suite type="TestSuite" id="3104" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1815" result="Passed" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:47:59Z" duration="113.419184" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="5204" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/PCShop-main-build-5f4a412c/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1815" result="Passed" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:47:59Z" duration="113.368671" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="44756" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="5205" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1815" result="Passed" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:47:59Z" duration="113.349957" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="SetUpFixture" id="4333" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1815" result="Passed" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:47:59Z" duration="113.333045" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="4025" name="LongSessionRegressionTests" fullname="PCShopSell.Tests.LongSessionRegressionTests" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:47:59Z" duration="113.283374" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="4041" name="EconomySurvivesBoundedDaysAndRepeatedReload" fullname="PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:47:59Z" duration="113.282227" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4026" name="EconomySurvivesBoundedDaysAndRepeatedReload(7,7,False,False)" fullname="PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(7,7,False,False)" methodname="EconomySurvivesBoundedDaysAndRepeatedReload" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" seed="2046276714" result="Passed" start-time="2026-11-27 09:46:06Z" end-time="2026-11-27 09:46:43Z" duration="37.264044" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(7,7,False,False)
+REGRESSION DONE PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(7,7,False,False) Passed
+]]></output>
+              </test-case>
+              <test-case id="4027" name="EconomySurvivesBoundedDaysAndRepeatedReload(41,7,True,False)" fullname="PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(41,7,True,False)" methodname="EconomySurvivesBoundedDaysAndRepeatedReload" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" seed="1893559138" result="Passed" start-time="2026-11-27 09:46:43Z" end-time="2026-11-27 09:47:21Z" duration="38.061791" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(41,7,True,False)
+REGRESSION DONE PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(41,7,True,False) Passed
+]]></output>
+              </test-case>
+              <test-case id="4028" name="EconomySurvivesBoundedDaysAndRepeatedReload(914,7,True,True)" fullname="PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(914,7,True,True)" methodname="EconomySurvivesBoundedDaysAndRepeatedReload" classname="PCShopSell.Tests.LongSessionRegressionTests" runstate="Runnable" seed="654969935" result="Passed" start-time="2026-11-27 09:47:21Z" end-time="2026-11-27 09:47:59Z" duration="37.943744" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(914,7,True,True)
+REGRESSION DONE PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(914,7,True,True) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -28,7 +28,7 @@ namespace PCShopSell.Core.Session
         {
             int horizon = Math.Max(0, Math.Min(3650, days));
             int today = Clock.Today.TotalDays;
-            Money total = Money.FromCents(_supplierDebts.Where(x => x.DueDay <= today + horizon).Sum(x => x.Principal + x.Fees));
+            Money total = Money.FromCents(_supplierDebts.Where(x => CompanyOfShop(ShopAt(x.ShopId))==null&&x.DueDay <= today + horizon).Sum(x => x.Principal + x.Fees));
             total += Money.FromCents(_appLoans.Where(l => !l.Repaid && l.DueDay <= today + horizon).Sum(l => l.TotalDue.Cents));
             foreach (var p in _properties)
                 total += PropertyMaintenancePayments(p.PriceCents, today, horizon);
@@ -63,6 +63,7 @@ namespace PCShopSell.Core.Session
             + ClaimedProcurementSpace(_focus.Place.Id);
         public string DirectOrderBlocker(string partId, int count, bool credit)
         {
+            if(ShopAuthorityBlocker(_focus) is string authority)return authority;
             if (!DirectAgreement || !HasShop) return "先签直供协议，并保有主店";
             if (!HasSmartphone) return "需要智能手机下单";
             if (!PartCatalog.Exists(partId) || count < 3 || count > 30) return "每个型号每批 3–30 件";
@@ -72,7 +73,7 @@ namespace PCShopSell.Core.Session
             Money total = DirectPrice(p) * count;
             Money now = credit ? total.Scale(.3) : total;
             if (credit && SupplierDebtTotal + total - now > CreditLimit) return "超出直供信用额度";
-            if (Ledger.Balance < now) return "现金不足以支付本次货款";
+            if (ShopAvailableCash(_focus) < now) return "经营资金不足以支付本次货款";
             return null;
         }
         public bool OrderDirect(string partId, int count, bool credit)

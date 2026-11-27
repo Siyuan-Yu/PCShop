@@ -33,19 +33,19 @@ namespace PCShopSell.Core.Session
             result.KnownMandatory += GarageRentDueWithin(days);
             result.KnownMandatory += CityClimatePaymentsWithin(days);
             // Daily wages are contracted fixed bills, not a second additional safety margin.
-            result.KnownMandatory += Money.FromYuan(Employees.Sum(x => (long)x.Person.DailyWageYuan) + McnDailyWages) * days;
+            result.KnownMandatory += Money.FromYuan(Employees.Where(x=>CompanyOfEmployee(x.Person.Id)==null).Sum(x => (long)x.Person.DailyWageYuan) + McnDailyWages) * days;
             var billCredits = ForecastBillCredits();
             for (int offset = 1; offset <= days; offset++)
             {
                 var date = today.AddDays(offset);
                 foreach (var shop in _shops)
-                    if (CommercialRentDue(shop.Lease, date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", shop.Place.Id, shop.Lease.SignedDay, RentOf(shop));
+                    if (CompanyOfShop(shop)==null&&CommercialRentDue(shop.Lease, date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", shop.Place.Id, shop.Lease.SignedDay, RentOf(shop));
                 if (CommercialRentDue(PendingLease, date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", PendingLease.PlaceId, PendingLease.SignedDay, PendingLease.Rent);
                 foreach (var place in ResidentialRentsDue(date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-home", place.Id, ResidentialLeaseSignedDay(place), SignedResidentialRent(place));
                 if (date.IsMonthStart) result.KnownMandatory += ForecastBillNet(billCredits, "utilities", Home.Id, 0, HomeUtilitiesAtDay(date.TotalDays));
             }
             result.EstimatedDaily = Money.FromYuan(VehicleCount(VehicleKind.Car) * 40L + VehicleCount(VehicleKind.Van) * 60L) * days;
-            result.KnownMandatory += Money.FromCents(_employeePayroll.Sum(p=>Math.Max(0,p.OvertimeCents-p.Shops.Sum(x=>x.PaidOvertimeCents))));
+            result.KnownMandatory += Money.FromCents(_employeePayroll.Where(p=>p.CompanyId==null).Sum(p=>Math.Max(0,p.OvertimeCents-p.Shops.Sum(x=>x.PaidOvertimeCents))));
             result.EstimatedDaily += EstimatedEmployeeOvertime(days);
             return result;
         }
@@ -120,10 +120,10 @@ namespace PCShopSell.Core.Session
             foreach (var m in d.cityLedgerAttributions ?? Array.Empty<SaveCityLedgerAttribution>())
                 if (m != null && m.index >= 0 && m.index < Ledger.Entries.Count && Enum.IsDefined(typeof(LedgerBusinessKind), m.businessKind)) metadata[m.index] = m;
             var entries = Ledger.Entries.Select((e, i) => {
-                if (!metadata.TryGetValue(i, out var m)) return new LedgerEntry(e.Date, e.Category, e.Amount, e.Memo, e.BalanceAfter, (i + 1).ToString(), LedgerAttribution.FromCategory(e.Category));
+                if (!metadata.TryGetValue(i, out var m)) return new LedgerEntry(e.Date, e.Category, e.Amount, e.Memo, e.BalanceAfter, (i + 1).ToString(), LedgerAttribution.FromCategory(e.Category),e.CashAccountId);
                 var a = new LedgerAttribution((LedgerBusinessKind)m.businessKind, m.shopId, m.propertyId, m.activityId, m.sourceEventId, m.transactionKind).Product(m.productId, m.quantity, m.unitCostCents).Payroll(m.employeeId,m.payrollWorkday);
                 if (!string.IsNullOrEmpty(m.salesAccountId)) a = a.AssignShopSale(m.shopId, m.salesAccountId);
-                return new LedgerEntry(e.Date, e.Category, e.Amount, e.Memo, e.BalanceAfter, m.entryId ?? (i + 1).ToString(), a);
+                return new LedgerEntry(e.Date, e.Category, e.Amount, e.Memo, e.BalanceAfter, m.entryId ?? (i + 1).ToString(), a,e.CashAccountId);
             }).ToArray();
             Ledger.Restore(Ledger.Balance, entries);
         }
@@ -183,7 +183,7 @@ namespace PCShopSell.Core.Session
                 }
                 var attribution = entry.Attribution.AssignShopSale(shopId, shop?.SalesAccountId);
                 entries[index] = new LedgerEntry(entry.Date, entry.Category, entry.Amount, entry.Memo,
-                    entry.BalanceAfter, entry.EntryId, attribution);
+                    entry.BalanceAfter, entry.EntryId, attribution,entry.CashAccountId);
             }
             Ledger.Restore(Ledger.Balance, entries);
         }

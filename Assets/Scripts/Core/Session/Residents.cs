@@ -225,10 +225,17 @@ namespace PCShopSell.Core.Session
                 }),
         };
 
+        private static Dictionary<string, ResidentDef> _byId;
         public static ResidentDef Get(string id)
         {
-            foreach (ResidentDef r in All) if (r.Id == id) return r;
-            return null;
+            if (id == null) return null;
+            if (_byId == null)
+            {
+                _byId = new Dictionary<string, ResidentDef>(System.StringComparer.Ordinal);
+                foreach (var resident in All)
+                    if (!_byId.ContainsKey(resident.Id)) _byId.Add(resident.Id, resident);
+            }
+            return _byId.TryGetValue(id, out var found) ? found : null;
         }
 
         /// <summary>这个人现在在不在街上、在干嘛；不在街上返回 null（在家或在店里上班）。</summary>

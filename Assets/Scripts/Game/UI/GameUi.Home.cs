@@ -112,6 +112,9 @@ namespace PCShopSell.Game.UI
             {
                 long start = session.Clock.Now.TotalMinutes;
                 bool slept = sleep();
+                while (session.IsTimeAdvancing && S == session && !transition.Closed)
+                    yield return null;
+                if (transition.Closed || S != session) yield break;
                 finishBedWindow(slept);
                 if (transition.Closed || S != session) yield break;
                 if (slept) duration = session.Clock.Now.TotalMinutes - start;

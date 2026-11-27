@@ -1,0 +1,868 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="113" result="Failed(Child)" total="113" passed="101" failed="12" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 09:39:48Z" end-time="2026-11-27 09:41:06Z" duration="77.6535864">
+  <test-suite type="TestSuite" id="3063" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1780" result="Failed" site="Child" start-time="2026-11-27 09:39:48Z" end-time="2026-11-27 09:41:06Z" duration="77.653586" total="113" passed="101" failed="12" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="5122" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1780" result="Failed" site="Child" start-time="2026-11-27 09:39:48Z" end-time="2026-11-27 09:41:06Z" duration="77.638541" total="113" passed="101" failed="12" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="42472" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="5123" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1780" result="Failed" site="Child" start-time="2026-11-27 09:39:48Z" end-time="2026-11-27 09:41:06Z" duration="77.637945" total="113" passed="101" failed="12" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="5124" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1780" result="Failed" site="Child" start-time="2026-11-27 09:39:48Z" end-time="2026-11-27 09:41:06Z" duration="77.637502" total="113" passed="101" failed="12" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="3064" name="AgencyDistrictViewTests" fullname="PCShopSell.Tests.AgencyDistrictViewTests" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" testcasecount="9" result="Failed" site="Child" start-time="2026-11-27 09:39:49Z" end-time="2026-11-27 09:39:53Z" duration="3.800746" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3070" name="ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict" fullname="PCShopSell.Tests.AgencyDistrictViewTests.ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict" methodname="ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1272712455" result="Passed" start-time="2026-11-27 09:39:49Z" end-time="2026-11-27 09:39:50Z" duration="0.973830" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict Passed
+]]></output>
+            </test-case>
+            <test-case id="3072" name="AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview" fullname="PCShopSell.Tests.AgencyDistrictViewTests.AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview" methodname="AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1018238264" result="Passed" start-time="2026-11-27 09:39:50Z" end-time="2026-11-27 09:39:50Z" duration="0.009510" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview Passed
+]]></output>
+            </test-case>
+            <test-case id="3071" name="AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened" fullname="PCShopSell.Tests.AgencyDistrictViewTests.AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened" methodname="AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="165608840" result="Failed" label="Error" start-time="2026-11-27 09:39:50Z" end-time="2026-11-27 09:39:51Z" duration="1.170859" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[System.InvalidOperationException : Sequence contains no matching element]]></message>
+                <stack-trace><![CDATA[  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 
+  at PCShopSell.Tests.AgencyDistrictViewTests+<>c__DisplayClass4_0.<AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened>g__Caption|4 (System.String caption) [0x0000d] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\AgencyDistrictViewTests.cs:162 
+  at PCShopSell.Tests.AgencyDistrictViewTests.AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened () [0x003bc] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\AgencyDistrictViewTests.cs:191 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 ]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened Failed:Error
+]]></output>
+            </test-case>
+            <test-case id="3073" name="DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners" fullname="PCShopSell.Tests.AgencyDistrictViewTests.DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners" methodname="DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1567296784" result="Passed" start-time="2026-11-27 09:39:51Z" end-time="2026-11-27 09:39:51Z" duration="0.002652" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners Passed
+]]></output>
+            </test-case>
+            <test-case id="3074" name="FramingIsTranslationInvariantAndIncludesRoofHeight" fullname="PCShopSell.Tests.AgencyDistrictViewTests.FramingIsTranslationInvariantAndIncludesRoofHeight" methodname="FramingIsTranslationInvariantAndIncludesRoofHeight" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1152047028" result="Passed" start-time="2026-11-27 09:39:51Z" end-time="2026-11-27 09:39:51Z" duration="0.000891" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.FramingIsTranslationInvariantAndIncludesRoofHeight
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.FramingIsTranslationInvariantAndIncludesRoofHeight Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3069" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-27 09:39:51Z" end-time="2026-11-27 09:39:53Z" duration="1.630600" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3065" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1136343832" result="Passed" start-time="2026-11-27 09:39:51Z" end-time="2026-11-27 09:39:51Z" duration="0.405836" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency") Passed
+]]></output>
+              </test-case>
+              <test-case id="3066" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_services&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_services&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1053716397" result="Passed" start-time="2026-11-27 09:39:51Z" end-time="2026-11-27 09:39:52Z" duration="0.406655" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_services")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_services") Passed
+]]></output>
+              </test-case>
+              <test-case id="3067" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_sports&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_sports&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1799284514" result="Passed" start-time="2026-11-27 09:39:52Z" end-time="2026-11-27 09:39:52Z" duration="0.404947" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_sports")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_sports") Passed
+]]></output>
+              </test-case>
+              <test-case id="3068" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_night&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_night&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="113804118" result="Passed" start-time="2026-11-27 09:39:52Z" end-time="2026-11-27 09:39:53Z" duration="0.406084" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_night")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_night") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestFixture" id="3075" name="AnimePortraitTests" fullname="PCShopSell.Tests.AnimePortraitTests" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" testcasecount="3" result="Failed" site="Child" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:39:53Z" duration="0.021651" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3076" name="EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings" fullname="PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings" methodname="EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" seed="1779946928" result="Failed" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:39:53Z" duration="0.012076" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  keeper_mall
+  Expected: 512
+  But was:  1024
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings () [0x000f5] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\AnimePortraitTests.cs:26
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings
+REGRESSION DONE PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings Failed
+]]></output>
+            </test-case>
+            <test-case id="3078" name="RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" fullname="PCShopSell.Tests.AnimePortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" methodname="RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" seed="1275987065" result="Passed" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:39:53Z" duration="0.000258" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AnimePortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs
+REGRESSION DONE PCShopSell.Tests.AnimePortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs Passed
+]]></output>
+            </test-case>
+            <test-case id="3077" name="UnknownDynamicAndDebugPeopleUseCachedAnimeFallback" fullname="PCShopSell.Tests.AnimePortraitTests.UnknownDynamicAndDebugPeopleUseCachedAnimeFallback" methodname="UnknownDynamicAndDebugPeopleUseCachedAnimeFallback" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" seed="1773051533" result="Passed" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:39:53Z" duration="0.005467" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AnimePortraitTests.UnknownDynamicAndDebugPeopleUseCachedAnimeFallback
+REGRESSION DONE PCShopSell.Tests.AnimePortraitTests.UnknownDynamicAndDebugPeopleUseCachedAnimeFallback Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3079" name="BankTests" fullname="PCShopSell.Tests.BankTests" classname="PCShopSell.Tests.BankTests" runstate="Runnable" testcasecount="16" result="Failed" site="Child" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:40:38Z" duration="44.918131" total="16" passed="14" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3095" name="BankLoan_AvailableAtNightOnWeekends" fullname="PCShopSell.Tests.BankTests.BankLoan_AvailableAtNightOnWeekends" methodname="BankLoan_AvailableAtNightOnWeekends" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="1707580302" result="Failed" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:39:53Z" duration="0.004134" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BankTests.GoToBank (PCShopSell.Core.Session.GameSession s) [0x00026] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BankTests.cs:38
+at PCShopSell.Tests.BankTests.BankLoan_AvailableAtNightOnWeekends () [0x0001f] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BankTests.cs:262
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.BankLoan_AvailableAtNightOnWeekends
+REGRESSION DONE PCShopSell.Tests.BankTests.BankLoan_AvailableAtNightOnWeekends Failed
+]]></output>
+            </test-case>
+            <test-case id="3084" name="BankLoan_WorksWithoutSmartphone_AndSharesTheSameTerms" fullname="PCShopSell.Tests.BankTests.BankLoan_WorksWithoutSmartphone_AndSharesTheSameTerms" methodname="BankLoan_WorksWithoutSmartphone_AndSharesTheSameTerms" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="251426452" result="Passed" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:39:53Z" duration="0.006782" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.BankLoan_WorksWithoutSmartphone_AndSharesTheSameTerms
+REGRESSION DONE PCShopSell.Tests.BankTests.BankLoan_WorksWithoutSmartphone_AndSharesTheSameTerms Passed
+]]></output>
+            </test-case>
+            <test-case id="3081" name="Deposit_RequiresBankCounter_AndEarnsPointThreePercentPerMonth" fullname="PCShopSell.Tests.BankTests.Deposit_RequiresBankCounter_AndEarnsPointThreePercentPerMonth" methodname="Deposit_RequiresBankCounter_AndEarnsPointThreePercentPerMonth" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="1484352484" result="Passed" start-time="2026-11-27 09:39:53Z" end-time="2026-11-27 09:40:13Z" duration="20.581810" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.Deposit_RequiresBankCounter_AndEarnsPointThreePercentPerMonth
+REGRESSION DONE PCShopSell.Tests.BankTests.Deposit_RequiresBankCounter_AndEarnsPointThreePercentPerMonth Passed
+]]></output>
+            </test-case>
+            <test-case id="3083" name="Deposit_SurvivesSaveAndLoad" fullname="PCShopSell.Tests.BankTests.Deposit_SurvivesSaveAndLoad" methodname="Deposit_SurvivesSaveAndLoad" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="838057091" result="Passed" start-time="2026-11-27 09:40:13Z" end-time="2026-11-27 09:40:15Z" duration="2.068524" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.Deposit_SurvivesSaveAndLoad
+REGRESSION DONE PCShopSell.Tests.BankTests.Deposit_SurvivesSaveAndLoad Passed
+]]></output>
+            </test-case>
+            <test-case id="3096" name="DueLoan_PullsFromDepositWhenCashShort" fullname="PCShopSell.Tests.BankTests.DueLoan_PullsFromDepositWhenCashShort" methodname="DueLoan_PullsFromDepositWhenCashShort" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="1857271162" result="Passed" start-time="2026-11-27 09:40:15Z" end-time="2026-11-27 09:40:37Z" duration="21.591960" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.DueLoan_PullsFromDepositWhenCashShort
+REGRESSION DONE PCShopSell.Tests.BankTests.DueLoan_PullsFromDepositWhenCashShort Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3091" name="EarlyRepaymentDebitsOnlyTheMonthsUsed" fullname="PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed" classname="PCShopSell.Tests.BankTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.014089" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3086" name="EarlyRepaymentDebitsOnlyTheMonthsUsed(0,1)" fullname="PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(0,1)" methodname="EarlyRepaymentDebitsOnlyTheMonthsUsed" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="2122043374" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.001949" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(0,1)
+REGRESSION DONE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(0,1) Passed
+]]></output>
+              </test-case>
+              <test-case id="3087" name="EarlyRepaymentDebitsOnlyTheMonthsUsed(30,1)" fullname="PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(30,1)" methodname="EarlyRepaymentDebitsOnlyTheMonthsUsed" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="211354500" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.001557" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(30,1)
+REGRESSION DONE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(30,1) Passed
+]]></output>
+              </test-case>
+              <test-case id="3088" name="EarlyRepaymentDebitsOnlyTheMonthsUsed(31,2)" fullname="PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(31,2)" methodname="EarlyRepaymentDebitsOnlyTheMonthsUsed" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="1814098063" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.001540" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(31,2)
+REGRESSION DONE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(31,2) Passed
+]]></output>
+              </test-case>
+              <test-case id="3089" name="EarlyRepaymentDebitsOnlyTheMonthsUsed(60,2)" fullname="PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(60,2)" methodname="EarlyRepaymentDebitsOnlyTheMonthsUsed" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="849687364" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.001450" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(60,2)
+REGRESSION DONE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(60,2) Passed
+]]></output>
+              </test-case>
+              <test-case id="3090" name="EarlyRepaymentDebitsOnlyTheMonthsUsed(61,3)" fullname="PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(61,3)" methodname="EarlyRepaymentDebitsOnlyTheMonthsUsed" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="1475243155" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.001429" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(61,3)
+REGRESSION DONE PCShopSell.Tests.BankTests.EarlyRepaymentDebitsOnlyTheMonthsUsed(61,3) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3092" name="ExistingLoanAboveNewCeilingLoadsAndConsumesCredit" fullname="PCShopSell.Tests.BankTests.ExistingLoanAboveNewCeilingLoadsAndConsumesCredit" methodname="ExistingLoanAboveNewCeilingLoadsAndConsumesCredit" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="403961294" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.005846" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.ExistingLoanAboveNewCeilingLoadsAndConsumesCredit
+REGRESSION DONE PCShopSell.Tests.BankTests.ExistingLoanAboveNewCeilingLoadsAndConsumesCredit Passed
+]]></output>
+            </test-case>
+            <test-case id="3094" name="ExistingResidentWorksAtBankInNewAndOlderSaves" fullname="PCShopSell.Tests.BankTests.ExistingResidentWorksAtBankInNewAndOlderSaves" methodname="ExistingResidentWorksAtBankInNewAndOlderSaves" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="109217152" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.006372" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.ExistingResidentWorksAtBankInNewAndOlderSaves
+REGRESSION DONE PCShopSell.Tests.BankTests.ExistingResidentWorksAtBankInNewAndOlderSaves Passed
+]]></output>
+            </test-case>
+            <test-case id="3080" name="LoanVerificationRequiresBothGesturesAndCanOnlyIssueOneLoan" fullname="PCShopSell.Tests.BankTests.LoanVerificationRequiresBothGesturesAndCanOnlyIssueOneLoan" methodname="LoanVerificationRequiresBothGesturesAndCanOnlyIssueOneLoan" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="64504072" result="Passed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:37Z" duration="0.001879" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.LoanVerificationRequiresBothGesturesAndCanOnlyIssueOneLoan
+REGRESSION DONE PCShopSell.Tests.BankTests.LoanVerificationRequiresBothGesturesAndCanOnlyIssueOneLoan Passed
+]]></output>
+            </test-case>
+            <test-case id="3093" name="ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival" fullname="PCShopSell.Tests.BankTests.ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival" methodname="ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="122979310" result="Failed" start-time="2026-11-27 09:40:37Z" end-time="2026-11-27 09:40:38Z" duration="0.621634" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BankTests.ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival () [0x001de] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BankTests.cs:222
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival
+REGRESSION DONE PCShopSell.Tests.BankTests.ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival Failed
+]]></output>
+            </test-case>
+            <test-case id="3085" name="ReputationSetsASharedCreditLineAndRepaymentFreesPrincipal" fullname="PCShopSell.Tests.BankTests.ReputationSetsASharedCreditLineAndRepaymentFreesPrincipal" methodname="ReputationSetsASharedCreditLineAndRepaymentFreesPrincipal" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="279940961" result="Passed" start-time="2026-11-27 09:40:38Z" end-time="2026-11-27 09:40:38Z" duration="0.001770" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.ReputationSetsASharedCreditLineAndRepaymentFreesPrincipal
+REGRESSION DONE PCShopSell.Tests.BankTests.ReputationSetsASharedCreditLineAndRepaymentFreesPrincipal Passed
+]]></output>
+            </test-case>
+            <test-case id="3082" name="Withdraw_ReturnsCash_AndRejectsOverdraw" fullname="PCShopSell.Tests.BankTests.Withdraw_ReturnsCash_AndRejectsOverdraw" methodname="Withdraw_ReturnsCash_AndRejectsOverdraw" classname="PCShopSell.Tests.BankTests" runstate="Runnable" seed="1152453143" result="Passed" start-time="2026-11-27 09:40:38Z" end-time="2026-11-27 09:40:38Z" duration="0.001877" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BankTests.Withdraw_ReturnsCash_AndRejectsOverdraw
+REGRESSION DONE PCShopSell.Tests.BankTests.Withdraw_ReturnsCash_AndRejectsOverdraw Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3097" name="BrandAmbassadorTests" fullname="PCShopSell.Tests.BrandAmbassadorTests" classname="PCShopSell.Tests.BrandAmbassadorTests" runstate="Runnable" testcasecount="6" result="Failed" site="Child" start-time="2026-11-27 09:40:38Z" end-time="2026-11-27 09:40:42Z" duration="4.022201" total="6" passed="5" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3103" name="BrandSalesDoNotChargeASecondEndorsementCommission" fullname="PCShopSell.Tests.BrandAmbassadorTests.BrandSalesDoNotChargeASecondEndorsementCommission" methodname="BrandSalesDoNotChargeASecondEndorsementCommission" classname="PCShopSell.Tests.BrandAmbassadorTests" runstate="Runnable" seed="1888922102" result="Passed" start-time="2026-11-27 09:40:38Z" end-time="2026-11-27 09:40:38Z" duration="0.417567" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandAmbassadorTests.BrandSalesDoNotChargeASecondEndorsementCommission
+REGRESSION DONE PCShopSell.Tests.BrandAmbassadorTests.BrandSalesDoNotChargeASecondEndorsementCommission Passed
+]]></output>
+            </test-case>
+            <test-case id="3100" name="DualOldContractsMergePerBrandWithoutResettingScheduleOrCharging" fullname="PCShopSell.Tests.BrandAmbassadorTests.DualOldContractsMergePerBrandWithoutResettingScheduleOrCharging" methodname="DualOldContractsMergePerBrandWithoutResettingScheduleOrCharging" classname="PCShopSell.Tests.BrandAmbassadorTests" runstate="Runnable" seed="1813370379" result="Passed" start-time="2026-11-27 09:40:38Z" end-time="2026-11-27 09:40:39Z" duration="0.810624" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandAmbassadorTests.DualOldContractsMergePerBrandWithoutResettingScheduleOrCharging
+REGRESSION DONE PCShopSell.Tests.BrandAmbassadorTests.DualOldContractsMergePerBrandWithoutResettingScheduleOrCharging Passed
+]]></output>
+            </test-case>
+            <test-case id="3102" name="ExpiredOldEndorsementIsNotReactivated" fullname="PCShopSell.Tests.BrandAmbassadorTests.ExpiredOldEndorsementIsNotReactivated" methodname="ExpiredOldEndorsementIsNotReactivated" classname="PCShopSell.Tests.BrandAmbassadorTests" runstate="Runnable" seed="299110289" result="Passed" start-time="2026-11-27 09:40:39Z" end-time="2026-11-27 09:40:40Z" duration="0.813585" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandAmbassadorTests.ExpiredOldEndorsementIsNotReactivated
+REGRESSION DONE PCShopSell.Tests.BrandAmbassadorTests.ExpiredOldEndorsementIsNotReactivated Passed
+]]></output>
+            </test-case>
+            <test-case id="3099" name="LegacyEndorsementMigratesWithoutPaymentOrBackdatedWagesAndKeepsStoryId" fullname="PCShopSell.Tests.BrandAmbassadorTests.LegacyEndorsementMigratesWithoutPaymentOrBackdatedWagesAndKeepsStoryId" methodname="LegacyEndorsementMigratesWithoutPaymentOrBackdatedWagesAndKeepsStoryId" classname="PCShopSell.Tests.BrandAmbassadorTests" runstate="Runnable" seed="1015609294" result="Passed" start-time="2026-11-27 09:40:40Z" end-time="2026-11-27 09:40:41Z" duration="1.175032" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandAmbassadorTests.LegacyEndorsementMigratesWithoutPaymentOrBackdatedWagesAndKeepsStoryId
+REGRESSION DONE PCShopSell.Tests.BrandAmbassadorTests.LegacyEndorsementMigratesWithoutPaymentOrBackdatedWagesAndKeepsStoryId Passed
+]]></output>
+            </test-case>
+            <test-case id="3098" name="OneSigningPaysOnceAndGrantsStreamingAndExpoEligibility" fullname="PCShopSell.Tests.BrandAmbassadorTests.OneSigningPaysOnceAndGrantsStreamingAndExpoEligibility" methodname="OneSigningPaysOnceAndGrantsStreamingAndExpoEligibility" classname="PCShopSell.Tests.BrandAmbassadorTests" runstate="Runnable" seed="1989912348" result="Passed" start-time="2026-11-27 09:40:41Z" end-time="2026-11-27 09:40:41Z" duration="0.398273" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandAmbassadorTests.OneSigningPaysOnceAndGrantsStreamingAndExpoEligibility
+REGRESSION DONE PCShopSell.Tests.BrandAmbassadorTests.OneSigningPaysOnceAndGrantsStreamingAndExpoEligibility Passed
+]]></output>
+            </test-case>
+            <test-case id="3101" name="OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify" fullname="PCShopSell.Tests.BrandAmbassadorTests.OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify" methodname="OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify" classname="PCShopSell.Tests.BrandAmbassadorTests" runstate="Runnable" seed="1708673759" result="Failed" start-time="2026-11-27 09:40:41Z" end-time="2026-11-27 09:40:42Z" duration="0.399550" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: not collection containing "qiao"
+  But was:  < "momo", "ake", "qiao" >
+]]></message>
+                <stack-trace><![CDATA[at NUnit.Framework.CollectionAssert.DoesNotContain (System.Collections.IEnumerable collection, System.Object actual, System.String message, System.Object[] args) [0x0000d] in <10b6135e63434fdba4fc6c109928ab3b>:0
+at NUnit.Framework.CollectionAssert.DoesNotContain (System.Collections.IEnumerable collection, System.Object actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0
+at PCShopSell.Tests.BrandAmbassadorTests.OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify () [0x0005e] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BrandAmbassadorTests.cs:86
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandAmbassadorTests.OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify
+REGRESSION DONE PCShopSell.Tests.BrandAmbassadorTests.OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3104" name="BrandBusinessTests" fullname="PCShopSell.Tests.BrandBusinessTests" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" testcasecount="22" result="Failed" site="Child" start-time="2026-11-27 09:40:42Z" end-time="2026-11-27 09:40:55Z" duration="12.939097" total="22" passed="20" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3111" name="ActualVisitsAreCountedOnceAndSurviveReload" fullname="PCShopSell.Tests.BrandBusinessTests.ActualVisitsAreCountedOnceAndSurviveReload" methodname="ActualVisitsAreCountedOnceAndSurviveReload" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1915872441" result="Passed" start-time="2026-11-27 09:40:42Z" end-time="2026-11-27 09:40:42Z" duration="0.807445" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.ActualVisitsAreCountedOnceAndSurviveReload
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.ActualVisitsAreCountedOnceAndSurviveReload Passed
+]]></output>
+            </test-case>
+            <test-case id="3113" name="AmbassadorDoesNotAddPassiveTrafficAndBlocksOtherBrand" fullname="PCShopSell.Tests.BrandBusinessTests.AmbassadorDoesNotAddPassiveTrafficAndBlocksOtherBrand" methodname="AmbassadorDoesNotAddPassiveTrafficAndBlocksOtherBrand" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="785505915" result="Passed" start-time="2026-11-27 09:40:42Z" end-time="2026-11-27 09:40:43Z" duration="0.392059" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.AmbassadorDoesNotAddPassiveTrafficAndBlocksOtherBrand
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.AmbassadorDoesNotAddPassiveTrafficAndBlocksOtherBrand Passed
+]]></output>
+            </test-case>
+            <test-case id="3126" name="AssignedExhibitionEmployeeTravelsAndCannotAlsoWorkInShop" fullname="PCShopSell.Tests.BrandBusinessTests.AssignedExhibitionEmployeeTravelsAndCannotAlsoWorkInShop" methodname="AssignedExhibitionEmployeeTravelsAndCannotAlsoWorkInShop" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1937318308" result="Passed" start-time="2026-11-27 09:40:43Z" end-time="2026-11-27 09:40:43Z" duration="0.447587" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.AssignedExhibitionEmployeeTravelsAndCannotAlsoWorkInShop
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.AssignedExhibitionEmployeeTravelsAndCannotAlsoWorkInShop Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3107" name="BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload" fullname="PCShopSell.Tests.BrandBusinessTests.BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-27 09:40:43Z" end-time="2026-11-27 09:40:46Z" duration="2.561240" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3105" name="BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload(&quot;brand_ready_two&quot;,2)" fullname="PCShopSell.Tests.BrandBusinessTests.BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload(&quot;brand_ready_two&quot;,2)" methodname="BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1553083544" result="Passed" start-time="2026-11-27 09:40:43Z" end-time="2026-11-27 09:40:45Z" duration="1.380950" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload("brand_ready_two",2)
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload("brand_ready_two",2) Passed
+]]></output>
+              </test-case>
+              <test-case id="3106" name="BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload(&quot;brand_ready_three&quot;,3)" fullname="PCShopSell.Tests.BrandBusinessTests.BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload(&quot;brand_ready_three&quot;,3)" methodname="BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="492503089" result="Passed" start-time="2026-11-27 09:40:45Z" end-time="2026-11-27 09:40:46Z" duration="1.176888" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload("brand_ready_three",3)
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload("brand_ready_three",3) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3109" name="BrandRenameKeepsItsIdentityAndPersistsBothPenalties" fullname="PCShopSell.Tests.BrandBusinessTests.BrandRenameKeepsItsIdentityAndPersistsBothPenalties" methodname="BrandRenameKeepsItsIdentityAndPersistsBothPenalties" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1169118564" result="Passed" start-time="2026-11-27 09:40:46Z" end-time="2026-11-27 09:40:47Z" duration="0.765227" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.BrandRenameKeepsItsIdentityAndPersistsBothPenalties
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.BrandRenameKeepsItsIdentityAndPersistsBothPenalties Passed
+]]></output>
+            </test-case>
+            <test-case id="3108" name="BrandRequiresCommunityAndSustainedQualifications" fullname="PCShopSell.Tests.BrandBusinessTests.BrandRequiresCommunityAndSustainedQualifications" methodname="BrandRequiresCommunityAndSustainedQualifications" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1116984360" result="Passed" start-time="2026-11-27 09:40:47Z" end-time="2026-11-27 09:40:47Z" duration="0.792363" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.BrandRequiresCommunityAndSustainedQualifications
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.BrandRequiresCommunityAndSustainedQualifications Passed
+]]></output>
+            </test-case>
+            <test-case id="3121" name="CopiesCannotMutateLiveStateAndOldSavesRemainValid" fullname="PCShopSell.Tests.BrandBusinessTests.CopiesCannotMutateLiveStateAndOldSavesRemainValid" methodname="CopiesCannotMutateLiveStateAndOldSavesRemainValid" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="589555563" result="Passed" start-time="2026-11-27 09:40:47Z" end-time="2026-11-27 09:40:48Z" duration="0.761054" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.CopiesCannotMutateLiveStateAndOldSavesRemainValid
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.CopiesCannotMutateLiveStateAndOldSavesRemainValid Passed
+]]></output>
+            </test-case>
+            <test-case id="3122" name="ExpoIsAccessibleFromCommunityBeforeParkGate" fullname="PCShopSell.Tests.BrandBusinessTests.ExpoIsAccessibleFromCommunityBeforeParkGate" methodname="ExpoIsAccessibleFromCommunityBeforeParkGate" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1357928234" result="Passed" start-time="2026-11-27 09:40:48Z" end-time="2026-11-27 09:40:49Z" duration="0.385201" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.ExpoIsAccessibleFromCommunityBeforeParkGate
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.ExpoIsAccessibleFromCommunityBeforeParkGate Passed
+]]></output>
+            </test-case>
+            <test-case id="3125" name="GardenInvitationUsesOnlyPreviousCompletedIndustryMonth" fullname="PCShopSell.Tests.BrandBusinessTests.GardenInvitationUsesOnlyPreviousCompletedIndustryMonth" methodname="GardenInvitationUsesOnlyPreviousCompletedIndustryMonth" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1393093379" result="Passed" start-time="2026-11-27 09:40:49Z" end-time="2026-11-27 09:40:49Z" duration="0.393198" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.GardenInvitationUsesOnlyPreviousCompletedIndustryMonth
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.GardenInvitationUsesOnlyPreviousCompletedIndustryMonth Passed
+]]></output>
+            </test-case>
+            <test-case id="3120" name="GardenResourceIsLockedCostlyLimitedAndExpires" fullname="PCShopSell.Tests.BrandBusinessTests.GardenResourceIsLockedCostlyLimitedAndExpires" methodname="GardenResourceIsLockedCostlyLimitedAndExpires" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="784960023" result="Passed" start-time="2026-11-27 09:40:49Z" end-time="2026-11-27 09:40:50Z" duration="0.793441" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.GardenResourceIsLockedCostlyLimitedAndExpires
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.GardenResourceIsLockedCostlyLimitedAndExpires Passed
+]]></output>
+            </test-case>
+            <test-case id="3116" name="InsufficientStockAndInvalidCommandsHaveNoMoneyEffect" fullname="PCShopSell.Tests.BrandBusinessTests.InsufficientStockAndInvalidCommandsHaveNoMoneyEffect" methodname="InsufficientStockAndInvalidCommandsHaveNoMoneyEffect" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="523509411" result="Passed" start-time="2026-11-27 09:40:50Z" end-time="2026-11-27 09:40:50Z" duration="0.386718" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.InsufficientStockAndInvalidCommandsHaveNoMoneyEffect
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.InsufficientStockAndInvalidCommandsHaveNoMoneyEffect Passed
+]]></output>
+            </test-case>
+            <test-case id="3127" name="NewControversyCanOnlyBeNegotiatedOnce" fullname="PCShopSell.Tests.BrandBusinessTests.NewControversyCanOnlyBeNegotiatedOnce" methodname="NewControversyCanOnlyBeNegotiatedOnce" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="534733514" result="Passed" start-time="2026-11-27 09:40:50Z" end-time="2026-11-27 09:40:50Z" duration="0.387186" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.NewControversyCanOnlyBeNegotiatedOnce
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.NewControversyCanOnlyBeNegotiatedOnce Passed
+]]></output>
+            </test-case>
+            <test-case id="3124" name="NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad" fullname="PCShopSell.Tests.BrandBusinessTests.NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad" methodname="NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="795020653" result="Failed" start-time="2026-11-27 09:40:50Z" end-time="2026-11-27 09:40:51Z" duration="0.393117" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: null
+  But was:  "请自行前往云帆会展中心附近的街边会面点"
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BrandBusinessTests.Meeting (PCShopSell.Core.Session.GameSession s, System.String node) [0x0008a] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BrandBusinessTests.cs:285
+at PCShopSell.Tests.BrandBusinessTests.NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad () [0x00044] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BrandBusinessTests.cs:292
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad Failed
+]]></output>
+            </test-case>
+            <test-case id="3115" name="OrderPaysOnArrivalOnceAndSurvivesSave" fullname="PCShopSell.Tests.BrandBusinessTests.OrderPaysOnArrivalOnceAndSurvivesSave" methodname="OrderPaysOnArrivalOnceAndSurvivesSave" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1529831151" result="Failed" start-time="2026-11-27 09:40:51Z" end-time="2026-11-27 09:40:52Z" duration="0.795798" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: 200197000
+  But was:  199997000
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BrandBusinessTests.OrderPaysOnArrivalOnceAndSurvivesSave () [0x00199] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BrandBusinessTests.cs:202
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.OrderPaysOnArrivalOnceAndSurvivesSave
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.OrderPaysOnArrivalOnceAndSurvivesSave Failed
+]]></output>
+            </test-case>
+            <test-case id="3119" name="OverdueContractLosesSeatAndCannotBeRevived" fullname="PCShopSell.Tests.BrandBusinessTests.OverdueContractLosesSeatAndCannotBeRevived" methodname="OverdueContractLosesSeatAndCannotBeRevived" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="133956505" result="Passed" start-time="2026-11-27 09:40:52Z" end-time="2026-11-27 09:40:52Z" duration="0.389233" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.OverdueContractLosesSeatAndCannotBeRevived
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.OverdueContractLosesSeatAndCannotBeRevived Passed
+]]></output>
+            </test-case>
+            <test-case id="3112" name="PromotionContributionRespectsTheSameCapAsShopTraffic" fullname="PCShopSell.Tests.BrandBusinessTests.PromotionContributionRespectsTheSameCapAsShopTraffic" methodname="PromotionContributionRespectsTheSameCapAsShopTraffic" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1871252770" result="Passed" start-time="2026-11-27 09:40:52Z" end-time="2026-11-27 09:40:52Z" duration="0.385043" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.PromotionContributionRespectsTheSameCapAsShopTraffic
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.PromotionContributionRespectsTheSameCapAsShopTraffic Passed
+]]></output>
+            </test-case>
+            <test-case id="3123" name="QualificationAccumulatesRealRevenueAndFoundingIsUnique" fullname="PCShopSell.Tests.BrandBusinessTests.QualificationAccumulatesRealRevenueAndFoundingIsUnique" methodname="QualificationAccumulatesRealRevenueAndFoundingIsUnique" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1679636993" result="Passed" start-time="2026-11-27 09:40:52Z" end-time="2026-11-27 09:40:53Z" duration="0.490353" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.QualificationAccumulatesRealRevenueAndFoundingIsUnique
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.QualificationAccumulatesRealRevenueAndFoundingIsUnique Passed
+]]></output>
+            </test-case>
+            <test-case id="3114" name="RegistrationReservesOneHundredAndRemoteExpoCannotProgress" fullname="PCShopSell.Tests.BrandBusinessTests.RegistrationReservesOneHundredAndRemoteExpoCannotProgress" methodname="RegistrationReservesOneHundredAndRemoteExpoCannotProgress" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="1845725760" result="Passed" start-time="2026-11-27 09:40:53Z" end-time="2026-11-27 09:40:53Z" duration="0.393714" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.RegistrationReservesOneHundredAndRemoteExpoCannotProgress
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.RegistrationReservesOneHundredAndRemoteExpoCannotProgress Passed
+]]></output>
+            </test-case>
+            <test-case id="3117" name="TenderNeedsTrialAndFailureDoesNotAwardSeat" fullname="PCShopSell.Tests.BrandBusinessTests.TenderNeedsTrialAndFailureDoesNotAwardSeat" methodname="TenderNeedsTrialAndFailureDoesNotAwardSeat" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="2094182889" result="Passed" start-time="2026-11-27 09:40:53Z" end-time="2026-11-27 09:40:54Z" duration="0.402552" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.TenderNeedsTrialAndFailureDoesNotAwardSeat
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.TenderNeedsTrialAndFailureDoesNotAwardSeat Passed
+]]></output>
+            </test-case>
+            <test-case id="3118" name="TenderWinRequiresThreeDistinctTimedDeliveries" fullname="PCShopSell.Tests.BrandBusinessTests.TenderWinRequiresThreeDistinctTimedDeliveries" methodname="TenderWinRequiresThreeDistinctTimedDeliveries" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="402338373" result="Passed" start-time="2026-11-27 09:40:54Z" end-time="2026-11-27 09:40:54Z" duration="0.405951" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.TenderWinRequiresThreeDistinctTimedDeliveries
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.TenderWinRequiresThreeDistinctTimedDeliveries Passed
+]]></output>
+            </test-case>
+            <test-case id="3110" name="WeeklyBrandFinanceCountsCommonCostsOnceAndExcludesOtherBrands" fullname="PCShopSell.Tests.BrandBusinessTests.WeeklyBrandFinanceCountsCommonCostsOnceAndExcludesOtherBrands" methodname="WeeklyBrandFinanceCountsCommonCostsOnceAndExcludesOtherBrands" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="2138198383" result="Passed" start-time="2026-11-27 09:40:54Z" end-time="2026-11-27 09:40:55Z" duration="0.385480" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.WeeklyBrandFinanceCountsCommonCostsOnceAndExcludesOtherBrands
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.WeeklyBrandFinanceCountsCommonCostsOnceAndExcludesOtherBrands Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3128" name="BrandShowcaseArtTests" fullname="PCShopSell.Tests.BrandShowcaseArtTests" classname="PCShopSell.Tests.BrandShowcaseArtTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-27 09:40:55Z" end-time="2026-11-27 09:40:56Z" duration="1.747169" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3130" name="BrandShowcaseUsesOnlyLinkedRealStockAndDoesNotTakeGoods" fullname="PCShopSell.Tests.BrandShowcaseArtTests.BrandShowcaseUsesOnlyLinkedRealStockAndDoesNotTakeGoods" methodname="BrandShowcaseUsesOnlyLinkedRealStockAndDoesNotTakeGoods" classname="PCShopSell.Tests.BrandShowcaseArtTests" runstate="Runnable" seed="1358716214" result="Passed" start-time="2026-11-27 09:40:55Z" end-time="2026-11-27 09:40:55Z" duration="0.395801" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandShowcaseArtTests.BrandShowcaseUsesOnlyLinkedRealStockAndDoesNotTakeGoods
+REGRESSION DONE PCShopSell.Tests.BrandShowcaseArtTests.BrandShowcaseUsesOnlyLinkedRealStockAndDoesNotTakeGoods Passed
+]]></output>
+            </test-case>
+            <test-case id="3129" name="EveryMarketHostAndEveryExhibitableProductHasAnIndependentLayer" fullname="PCShopSell.Tests.BrandShowcaseArtTests.EveryMarketHostAndEveryExhibitableProductHasAnIndependentLayer" methodname="EveryMarketHostAndEveryExhibitableProductHasAnIndependentLayer" classname="PCShopSell.Tests.BrandShowcaseArtTests" runstate="Runnable" seed="1893600284" result="Passed" start-time="2026-11-27 09:40:55Z" end-time="2026-11-27 09:40:55Z" duration="0.093404" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandShowcaseArtTests.EveryMarketHostAndEveryExhibitableProductHasAnIndependentLayer
+REGRESSION DONE PCShopSell.Tests.BrandShowcaseArtTests.EveryMarketHostAndEveryExhibitableProductHasAnIndependentLayer Passed
+]]></output>
+            </test-case>
+            <test-case id="3132" name="ExpoScreensUseBookedGoodsAndOnlyArrivedPresentersWithoutRebuildingTheHall" fullname="PCShopSell.Tests.BrandShowcaseArtTests.ExpoScreensUseBookedGoodsAndOnlyArrivedPresentersWithoutRebuildingTheHall" methodname="ExpoScreensUseBookedGoodsAndOnlyArrivedPresentersWithoutRebuildingTheHall" classname="PCShopSell.Tests.BrandShowcaseArtTests" runstate="Runnable" seed="411141051" result="Passed" start-time="2026-11-27 09:40:55Z" end-time="2026-11-27 09:40:56Z" duration="0.712612" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandShowcaseArtTests.ExpoScreensUseBookedGoodsAndOnlyArrivedPresentersWithoutRebuildingTheHall
+REGRESSION DONE PCShopSell.Tests.BrandShowcaseArtTests.ExpoScreensUseBookedGoodsAndOnlyArrivedPresentersWithoutRebuildingTheHall Passed
+]]></output>
+            </test-case>
+            <test-case id="3131" name="OtherHostsUseTheExistingStudioWithTheirOwnCutoutAndSample" fullname="PCShopSell.Tests.BrandShowcaseArtTests.OtherHostsUseTheExistingStudioWithTheirOwnCutoutAndSample" methodname="OtherHostsUseTheExistingStudioWithTheirOwnCutoutAndSample" classname="PCShopSell.Tests.BrandShowcaseArtTests" runstate="Runnable" seed="181564771" result="Passed" start-time="2026-11-27 09:40:56Z" end-time="2026-11-27 09:40:56Z" duration="0.441054" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandShowcaseArtTests.OtherHostsUseTheExistingStudioWithTheirOwnCutoutAndSample
+REGRESSION DONE PCShopSell.Tests.BrandShowcaseArtTests.OtherHostsUseTheExistingStudioWithTheirOwnCutoutAndSample Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3133" name="BrandStoryTests" fullname="PCShopSell.Tests.BrandStoryTests" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-11-27 09:40:56Z" end-time="2026-11-27 09:41:03Z" duration="7.173669" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3141" name="CuratorStoryNeedsRecordedFulfilmentAndRealConversationWithDesigner" fullname="PCShopSell.Tests.BrandStoryTests.CuratorStoryNeedsRecordedFulfilmentAndRealConversationWithDesigner" methodname="CuratorStoryNeedsRecordedFulfilmentAndRealConversationWithDesigner" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="226012468" result="Passed" start-time="2026-11-27 09:40:56Z" end-time="2026-11-27 09:40:57Z" duration="0.398451" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.CuratorStoryNeedsRecordedFulfilmentAndRealConversationWithDesigner
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.CuratorStoryNeedsRecordedFulfilmentAndRealConversationWithDesigner Passed
+]]></output>
+            </test-case>
+            <test-case id="3147" name="EmployeeNamesMigrateWithoutChangingPersonIdentityOrInventingNewPerson" fullname="PCShopSell.Tests.BrandStoryTests.EmployeeNamesMigrateWithoutChangingPersonIdentityOrInventingNewPerson" methodname="EmployeeNamesMigrateWithoutChangingPersonIdentityOrInventingNewPerson" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1258292301" result="Passed" start-time="2026-11-27 09:40:57Z" end-time="2026-11-27 09:40:57Z" duration="0.395560" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.EmployeeNamesMigrateWithoutChangingPersonIdentityOrInventingNewPerson
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.EmployeeNamesMigrateWithoutChangingPersonIdentityOrInventingNewPerson Passed
+]]></output>
+            </test-case>
+            <test-case id="3139" name="EndingContractDoesNotFakeFinishedRetestOrAwardRelationship" fullname="PCShopSell.Tests.BrandStoryTests.EndingContractDoesNotFakeFinishedRetestOrAwardRelationship" methodname="EndingContractDoesNotFakeFinishedRetestOrAwardRelationship" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1818257155" result="Passed" start-time="2026-11-27 09:40:57Z" end-time="2026-11-27 09:40:57Z" duration="0.388935" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.EndingContractDoesNotFakeFinishedRetestOrAwardRelationship
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.EndingContractDoesNotFakeFinishedRetestOrAwardRelationship Passed
+]]></output>
+            </test-case>
+            <test-case id="3140" name="ExhibitStoryUsesRegisteredGoodsAndWaitsForActualDelivery" fullname="PCShopSell.Tests.BrandStoryTests.ExhibitStoryUsesRegisteredGoodsAndWaitsForActualDelivery" methodname="ExhibitStoryUsesRegisteredGoodsAndWaitsForActualDelivery" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="477280719" result="Passed" start-time="2026-11-27 09:40:57Z" end-time="2026-11-27 09:40:58Z" duration="0.394245" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.ExhibitStoryUsesRegisteredGoodsAndWaitsForActualDelivery
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.ExhibitStoryUsesRegisteredGoodsAndWaitsForActualDelivery Passed
+]]></output>
+            </test-case>
+            <test-case id="3145" name="FormalNamesAreConsistentAcrossCataloguesAndPreserveAllStableIds" fullname="PCShopSell.Tests.BrandStoryTests.FormalNamesAreConsistentAcrossCataloguesAndPreserveAllStableIds" methodname="FormalNamesAreConsistentAcrossCataloguesAndPreserveAllStableIds" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="952746844" result="Passed" start-time="2026-11-27 09:40:58Z" end-time="2026-11-27 09:40:58Z" duration="0.009828" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.FormalNamesAreConsistentAcrossCataloguesAndPreserveAllStableIds
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.FormalNamesAreConsistentAcrossCataloguesAndPreserveAllStableIds Passed
+]]></output>
+            </test-case>
+            <test-case id="3149" name="LateDesignPreparationCannotChangeAnExhibitAlreadyRunning" fullname="PCShopSell.Tests.BrandStoryTests.LateDesignPreparationCannotChangeAnExhibitAlreadyRunning" methodname="LateDesignPreparationCannotChangeAnExhibitAlreadyRunning" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1569541483" result="Passed" start-time="2026-11-27 09:40:58Z" end-time="2026-11-27 09:40:58Z" duration="0.386996" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.LateDesignPreparationCannotChangeAnExhibitAlreadyRunning
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.LateDesignPreparationCannotChangeAnExhibitAlreadyRunning Passed
+]]></output>
+            </test-case>
+            <test-case id="3142" name="MissedExhibitCanCloseWithoutRewardOrMutatingOrders" fullname="PCShopSell.Tests.BrandStoryTests.MissedExhibitCanCloseWithoutRewardOrMutatingOrders" methodname="MissedExhibitCanCloseWithoutRewardOrMutatingOrders" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1524114628" result="Passed" start-time="2026-11-27 09:40:58Z" end-time="2026-11-27 09:40:59Z" duration="0.392229" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.MissedExhibitCanCloseWithoutRewardOrMutatingOrders
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.MissedExhibitCanCloseWithoutRewardOrMutatingOrders Passed
+]]></output>
+            </test-case>
+            <test-case id="3146" name="OldNamedPersonRetainsContactRelationshipAndBiographyAfterLoad" fullname="PCShopSell.Tests.BrandStoryTests.OldNamedPersonRetainsContactRelationshipAndBiographyAfterLoad" methodname="OldNamedPersonRetainsContactRelationshipAndBiographyAfterLoad" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="839009608" result="Passed" start-time="2026-11-27 09:40:59Z" end-time="2026-11-27 09:40:59Z" duration="0.804668" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.OldNamedPersonRetainsContactRelationshipAndBiographyAfterLoad
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.OldNamedPersonRetainsContactRelationshipAndBiographyAfterLoad Passed
+]]></output>
+            </test-case>
+            <test-case id="3148" name="OtherBrandOrOtherExhibitCannotCompleteBoundStory" fullname="PCShopSell.Tests.BrandStoryTests.OtherBrandOrOtherExhibitCannotCompleteBoundStory" methodname="OtherBrandOrOtherExhibitCannotCompleteBoundStory" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1096079278" result="Passed" start-time="2026-11-27 09:40:59Z" end-time="2026-11-27 09:41:00Z" duration="0.392166" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.OtherBrandOrOtherExhibitCannotCompleteBoundStory
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.OtherBrandOrOtherExhibitCannotCompleteBoundStory Passed
+]]></output>
+            </test-case>
+            <test-case id="3135" name="PreparationIsLocalConsumesSelectedStockOnceAndDoesNotPayProfit" fullname="PCShopSell.Tests.BrandStoryTests.PreparationIsLocalConsumesSelectedStockOnceAndDoesNotPayProfit" methodname="PreparationIsLocalConsumesSelectedStockOnceAndDoesNotPayProfit" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1517577741" result="Passed" start-time="2026-11-27 09:41:00Z" end-time="2026-11-27 09:41:00Z" duration="0.388196" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.PreparationIsLocalConsumesSelectedStockOnceAndDoesNotPayProfit
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.PreparationIsLocalConsumesSelectedStockOnceAndDoesNotPayProfit Passed
+]]></output>
+            </test-case>
+            <test-case id="3136" name="PromoFollowupUsesOnlySelectedShopRevenueAndCompletesOnceAfterSave" fullname="PCShopSell.Tests.BrandStoryTests.PromoFollowupUsesOnlySelectedShopRevenueAndCompletesOnceAfterSave" methodname="PromoFollowupUsesOnlySelectedShopRevenueAndCompletesOnceAfterSave" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1317244476" result="Passed" start-time="2026-11-27 09:41:00Z" end-time="2026-11-27 09:41:01Z" duration="0.774077" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.PromoFollowupUsesOnlySelectedShopRevenueAndCompletesOnceAfterSave
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.PromoFollowupUsesOnlySelectedShopRevenueAndCompletesOnceAfterSave Passed
+]]></output>
+            </test-case>
+            <test-case id="3134" name="ReadingOffersAndProfilesDoesNotStartStoryOrRevealConclusion" fullname="PCShopSell.Tests.BrandStoryTests.ReadingOffersAndProfilesDoesNotStartStoryOrRevealConclusion" methodname="ReadingOffersAndProfilesDoesNotStartStoryOrRevealConclusion" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1576103220" result="Passed" start-time="2026-11-27 09:41:01Z" end-time="2026-11-27 09:41:01Z" duration="0.385596" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.ReadingOffersAndProfilesDoesNotStartStoryOrRevealConclusion
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.ReadingOffersAndProfilesDoesNotStartStoryOrRevealConclusion Passed
+]]></output>
+            </test-case>
+            <test-case id="3138" name="RetestRequiresTwoSamplesAndARealDay" fullname="PCShopSell.Tests.BrandStoryTests.RetestRequiresTwoSamplesAndARealDay" methodname="RetestRequiresTwoSamplesAndARealDay" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="917661321" result="Passed" start-time="2026-11-27 09:41:01Z" end-time="2026-11-27 09:41:02Z" duration="0.405921" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.RetestRequiresTwoSamplesAndARealDay
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.RetestRequiresTwoSamplesAndARealDay Passed
+]]></output>
+            </test-case>
+            <test-case id="3144" name="RoutineCareerUpdatesDoNotInventRecurringMisconduct" fullname="PCShopSell.Tests.BrandStoryTests.RoutineCareerUpdatesDoNotInventRecurringMisconduct" methodname="RoutineCareerUpdatesDoNotInventRecurringMisconduct" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1322205173" result="Passed" start-time="2026-11-27 09:41:02Z" end-time="2026-11-27 09:41:02Z" duration="0.483261" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.RoutineCareerUpdatesDoNotInventRecurringMisconduct
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.RoutineCareerUpdatesDoNotInventRecurringMisconduct Passed
+]]></output>
+            </test-case>
+            <test-case id="3143" name="StoryCopiesDoNotMutateLiveProgressAndOldSaveGetsEmptyRecords" fullname="PCShopSell.Tests.BrandStoryTests.StoryCopiesDoNotMutateLiveProgressAndOldSaveGetsEmptyRecords" methodname="StoryCopiesDoNotMutateLiveProgressAndOldSaveGetsEmptyRecords" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="69103197" result="Passed" start-time="2026-11-27 09:41:02Z" end-time="2026-11-27 09:41:03Z" duration="0.764175" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.StoryCopiesDoNotMutateLiveProgressAndOldSaveGetsEmptyRecords
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.StoryCopiesDoNotMutateLiveProgressAndOldSaveGetsEmptyRecords Passed
+]]></output>
+            </test-case>
+            <test-case id="3137" name="ZeroSalesIsAnHonestCompleteOutcome" fullname="PCShopSell.Tests.BrandStoryTests.ZeroSalesIsAnHonestCompleteOutcome" methodname="ZeroSalesIsAnHonestCompleteOutcome" classname="PCShopSell.Tests.BrandStoryTests" runstate="Runnable" seed="1233080933" result="Passed" start-time="2026-11-27 09:41:03Z" end-time="2026-11-27 09:41:03Z" duration="0.386484" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryTests.ZeroSalesIsAnHonestCompleteOutcome
+REGRESSION DONE PCShopSell.Tests.BrandStoryTests.ZeroSalesIsAnHonestCompleteOutcome Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3150" name="BrandStoryUiTests" fullname="PCShopSell.Tests.BrandStoryUiTests" classname="PCShopSell.Tests.BrandStoryUiTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-11-27 09:41:03Z" end-time="2026-11-27 09:41:04Z" duration="0.979729" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3152" name="FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding" fullname="PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding" methodname="FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding" classname="PCShopSell.Tests.BrandStoryUiTests" runstate="Runnable" seed="1680507452" result="Failed" start-time="2026-11-27 09:41:03Z" end-time="2026-11-27 09:41:04Z" duration="0.494900" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding () [0x002ae] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BrandStoryUiTests.cs:88
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding
+REGRESSION DONE PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding Failed
+]]></output>
+            </test-case>
+            <test-case id="3151" name="KolBadgeIdentifiesTheCreatorInContactsDialogueAndProfile" fullname="PCShopSell.Tests.BrandStoryUiTests.KolBadgeIdentifiesTheCreatorInContactsDialogueAndProfile" methodname="KolBadgeIdentifiesTheCreatorInContactsDialogueAndProfile" classname="PCShopSell.Tests.BrandStoryUiTests" runstate="Runnable" seed="1228731540" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.481137" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandStoryUiTests.KolBadgeIdentifiesTheCreatorInContactsDialogueAndProfile
+REGRESSION DONE PCShopSell.Tests.BrandStoryUiTests.KolBadgeIdentifiesTheCreatorInContactsDialogueAndProfile Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3153" name="BuildingBoundsTests" fullname="PCShopSell.Tests.BuildingBoundsTests" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.020521" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="3157" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.007260" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3154" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Body&quot;,0)" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Body&quot;,0)" methodname="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="198817662" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.001329" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Body",0)
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Body",0) Passed
+]]></output>
+              </test-case>
+              <test-case id="3155" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Building&quot;,90)" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Building&quot;,90)" methodname="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="762202651" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.000356" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Building",90)
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Building",90) Passed
+]]></output>
+              </test-case>
+              <test-case id="3156" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;CustomFacade&quot;,137)" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;CustomFacade&quot;,137)" methodname="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="1972326817" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.000334" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("CustomFacade",137)
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("CustomFacade",137) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3159" name="BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds" fullname="PCShopSell.Tests.BuildingBoundsTests.BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds" methodname="BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="660253178" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.007210" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds Passed
+]]></output>
+            </test-case>
+            <test-case id="3158" name="ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof" fullname="PCShopSell.Tests.BuildingBoundsTests.ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof" methodname="ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="1553058659" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.000727" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3160" name="BusinessRegressionTests" fullname="PCShopSell.Tests.BusinessRegressionTests" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" testcasecount="30" result="Failed" site="Child" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:06Z" duration="1.517126" total="30" passed="26" failed="4" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3178" name="AutoRestockReservesDueBillsAndPropertyMaintenance" fullname="PCShopSell.Tests.BusinessRegressionTests.AutoRestockReservesDueBillsAndPropertyMaintenance" methodname="AutoRestockReservesDueBillsAndPropertyMaintenance" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1831887059" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.008312" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.AutoRestockReservesDueBillsAndPropertyMaintenance
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.AutoRestockReservesDueBillsAndPropertyMaintenance Passed
+]]></output>
+            </test-case>
+            <test-case id="3169" name="CafeConsumesRealHardware_AndCannotBeLeasedAsMainShop" fullname="PCShopSell.Tests.BusinessRegressionTests.CafeConsumesRealHardware_AndCannotBeLeasedAsMainShop" methodname="CafeConsumesRealHardware_AndCannotBeLeasedAsMainShop" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="166041081" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:04Z" duration="0.013143" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.CafeConsumesRealHardware_AndCannotBeLeasedAsMainShop
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.CafeConsumesRealHardware_AndCannotBeLeasedAsMainShop Passed
+]]></output>
+            </test-case>
+            <test-case id="3166" name="CancellingReservedEnterpriseReturnsParts_AndForfeitsUnfulfilledBond" fullname="PCShopSell.Tests.BusinessRegressionTests.CancellingReservedEnterpriseReturnsParts_AndForfeitsUnfulfilledBond" methodname="CancellingReservedEnterpriseReturnsParts_AndForfeitsUnfulfilledBond" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1514168691" result="Passed" start-time="2026-11-27 09:41:04Z" end-time="2026-11-27 09:41:05Z" duration="0.015666" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.CancellingReservedEnterpriseReturnsParts_AndForfeitsUnfulfilledBond
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.CancellingReservedEnterpriseReturnsParts_AndForfeitsUnfulfilledBond Passed
+]]></output>
+            </test-case>
+            <test-case id="3177" name="CarVanAreLegal_PersistCapacity_AndCanBeSold" fullname="PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold" methodname="CarVanAreLegal_PersistCapacity_AndCanBeSold" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="2105038366" result="Failed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.003495" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold () [0x00014] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BusinessRegressionTests.cs:250
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold Failed
+]]></output>
+            </test-case>
+            <test-case id="3174" name="CashHomePurchaseAndSaleRetainFurniture" fullname="PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture" methodname="CashHomePurchaseAndSaleRetainFurniture" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1230572940" result="Failed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.004032" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: ¥999,220
+  But was:  ¥873,220
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture () [0x0006a] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BusinessRegressionTests.cs:205
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture Failed
+]]></output>
+            </test-case>
+            <test-case id="3172" name="CashPropertyPurchaseStopsRentAndLegacyMortgageIsRemovedOnReload" fullname="PCShopSell.Tests.BusinessRegressionTests.CashPropertyPurchaseStopsRentAndLegacyMortgageIsRemovedOnReload" methodname="CashPropertyPurchaseStopsRentAndLegacyMortgageIsRemovedOnReload" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="699358482" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.021681" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.CashPropertyPurchaseStopsRentAndLegacyMortgageIsRemovedOnReload
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.CashPropertyPurchaseStopsRentAndLegacyMortgageIsRemovedOnReload Passed
+]]></output>
+            </test-case>
+            <test-case id="3173" name="ClosingOwnedVentureKeepsProperty_AndRentalRequiresExplicitRegistration" fullname="PCShopSell.Tests.BusinessRegressionTests.ClosingOwnedVentureKeepsProperty_AndRentalRequiresExplicitRegistration" methodname="ClosingOwnedVentureKeepsProperty_AndRentalRequiresExplicitRegistration" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1809686118" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.016343" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.ClosingOwnedVentureKeepsProperty_AndRentalRequiresExplicitRegistration
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.ClosingOwnedVentureKeepsProperty_AndRentalRequiresExplicitRegistration Passed
+]]></output>
+            </test-case>
+            <test-case id="3190" name="CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract" fullname="PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract" methodname="CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="641612257" result="Failed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.003671" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract () [0x000c7] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BusinessRegressionTests.cs:355
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract Failed
+]]></output>
+            </test-case>
+            <test-case id="3162" name="DirectAndOnlineShareIncomingCapacity" fullname="PCShopSell.Tests.BusinessRegressionTests.DirectAndOnlineShareIncomingCapacity" methodname="DirectAndOnlineShareIncomingCapacity" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1524510023" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.007349" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.DirectAndOnlineShareIncomingCapacity
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.DirectAndOnlineShareIncomingCapacity Passed
+]]></output>
+            </test-case>
+            <test-case id="3161" name="DirectCreditTracksGoodsDebtAndCash_AndJsonResumesOnce" fullname="PCShopSell.Tests.BusinessRegressionTests.DirectCreditTracksGoodsDebtAndCash_AndJsonResumesOnce" methodname="DirectCreditTracksGoodsDebtAndCash_AndJsonResumesOnce" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1470471306" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.021229" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.DirectCreditTracksGoodsDebtAndCash_AndJsonResumesOnce
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.DirectCreditTracksGoodsDebtAndCash_AndJsonResumesOnce Passed
+]]></output>
+            </test-case>
+            <test-case id="3171" name="EmptyVenturePauses_HeadquartersPaysRetainer_ClosingIsIdempotent" fullname="PCShopSell.Tests.BusinessRegressionTests.EmptyVenturePauses_HeadquartersPaysRetainer_ClosingIsIdempotent" methodname="EmptyVenturePauses_HeadquartersPaysRetainer_ClosingIsIdempotent" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="916055318" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.006035" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EmptyVenturePauses_HeadquartersPaysRetainer_ClosingIsIdempotent
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EmptyVenturePauses_HeadquartersPaysRetainer_ClosingIsIdempotent Passed
+]]></output>
+            </test-case>
+            <test-case id="3165" name="EnterpriseBatchUsesNormalAssembly_PaysOnce_RefundsBond" fullname="PCShopSell.Tests.BusinessRegressionTests.EnterpriseBatchUsesNormalAssembly_PaysOnce_RefundsBond" methodname="EnterpriseBatchUsesNormalAssembly_PaysOnce_RefundsBond" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="689528736" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.012651" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EnterpriseBatchUsesNormalAssembly_PaysOnce_RefundsBond
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EnterpriseBatchUsesNormalAssembly_PaysOnce_RefundsBond Passed
+]]></output>
+            </test-case>
+            <test-case id="3167" name="EnterpriseExpiredOrdersResolveContractWithoutLosingReservedParts" fullname="PCShopSell.Tests.BusinessRegressionTests.EnterpriseExpiredOrdersResolveContractWithoutLosingReservedParts" methodname="EnterpriseExpiredOrdersResolveContractWithoutLosingReservedParts" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="399967203" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.007137" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EnterpriseExpiredOrdersResolveContractWithoutLosingReservedParts
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EnterpriseExpiredOrdersResolveContractWithoutLosingReservedParts Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3187" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" testcasecount="7" result="Failed" site="Child" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:06Z" duration="1.198851" total="7" passed="6" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="3180" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;branch&quot;)" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;branch&quot;)" methodname="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="2114383646" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.190464" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("branch")
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("branch") Passed
+]]></output>
+              </test-case>
+              <test-case id="3181" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;cafe&quot;)" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;cafe&quot;)" methodname="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="770580841" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.211306" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("cafe")
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("cafe") Passed
+]]></output>
+              </test-case>
+              <test-case id="3182" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;esports&quot;)" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;esports&quot;)" methodname="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="137467327" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.188256" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("esports")
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("esports") Passed
+]]></output>
+              </test-case>
+              <test-case id="3183" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;food&quot;)" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;food&quot;)" methodname="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1371814183" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:05Z" duration="0.189064" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("food")
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("food") Passed
+]]></output>
+              </test-case>
+              <test-case id="3184" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;flowers&quot;)" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;flowers&quot;)" methodname="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="396207801" result="Passed" start-time="2026-11-27 09:41:05Z" end-time="2026-11-27 09:41:06Z" duration="0.211616" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("flowers")
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("flowers") Passed
+]]></output>
+              </test-case>
+              <test-case id="3185" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;stay&quot;)" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;stay&quot;)" methodname="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1057699369" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.191470" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("stay")
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("stay") Passed
+]]></output>
+              </test-case>
+              <test-case id="3186" name="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;cars&quot;)" fullname="PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(&quot;cars&quot;)" methodname="EveryVentureCanOperateSaveResumeAndExitOverNinetyDays" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="2040076991" result="Failed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.003159" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays (System.String kind) [0x00074] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\BusinessRegressionTests.cs:297
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("cars")
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays("cars") Failed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3175" name="ExistingIndexHoldingsCanBeSoldButCannotBeIncreased" fullname="PCShopSell.Tests.BusinessRegressionTests.ExistingIndexHoldingsCanBeSoldButCannotBeIncreased" methodname="ExistingIndexHoldingsCanBeSoldButCannotBeIncreased" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1957466612" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.012695" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.ExistingIndexHoldingsCanBeSoldButCannotBeIncreased
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.ExistingIndexHoldingsCanBeSoldButCannotBeIncreased Passed
+]]></output>
+            </test-case>
+            <test-case id="3191" name="LegacySaveDoesNotInventBusinessAssetsOrLiabilities" fullname="PCShopSell.Tests.BusinessRegressionTests.LegacySaveDoesNotInventBusinessAssetsOrLiabilities" methodname="LegacySaveDoesNotInventBusinessAssetsOrLiabilities" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="867849142" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.010678" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.LegacySaveDoesNotInventBusinessAssetsOrLiabilities
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.LegacySaveDoesNotInventBusinessAssetsOrLiabilities Passed
+]]></output>
+            </test-case>
+            <test-case id="3189" name="McnContractSettlesOnceAndStopsAfterCancellation" fullname="PCShopSell.Tests.BusinessRegressionTests.McnContractSettlesOnceAndStopsAfterCancellation" methodname="McnContractSettlesOnceAndStopsAfterCancellation" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="992871530" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.016816" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.McnContractSettlesOnceAndStopsAfterCancellation
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.McnContractSettlesOnceAndStopsAfterCancellation Passed
+]]></output>
+            </test-case>
+            <test-case id="3164" name="OverdueCreditBlocksSupply_AccruesOnce_AndCanBeRepaid" fullname="PCShopSell.Tests.BusinessRegressionTests.OverdueCreditBlocksSupply_AccruesOnce_AndCanBeRepaid" methodname="OverdueCreditBlocksSupply_AccruesOnce_AndCanBeRepaid" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="778583964" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.018892" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.OverdueCreditBlocksSupply_AccruesOnce_AndCanBeRepaid
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.OverdueCreditBlocksSupply_AccruesOnce_AndCanBeRepaid Passed
+]]></output>
+            </test-case>
+            <test-case id="3188" name="ParkConstructionLayoutSynergyAndExitSurviveJson" fullname="PCShopSell.Tests.BusinessRegressionTests.ParkConstructionLayoutSynergyAndExitSurviveJson" methodname="ParkConstructionLayoutSynergyAndExitSurviveJson" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="328017964" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.016640" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.ParkConstructionLayoutSynergyAndExitSurviveJson
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.ParkConstructionLayoutSynergyAndExitSurviveJson Passed
+]]></output>
+            </test-case>
+            <test-case id="3176" name="PreviouslyPaidStoreCampaignContinuesUntilItsSavedExpiry" fullname="PCShopSell.Tests.BusinessRegressionTests.PreviouslyPaidStoreCampaignContinuesUntilItsSavedExpiry" methodname="PreviouslyPaidStoreCampaignContinuesUntilItsSavedExpiry" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="652189173" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.011450" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.PreviouslyPaidStoreCampaignContinuesUntilItsSavedExpiry
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.PreviouslyPaidStoreCampaignContinuesUntilItsSavedExpiry Passed
+]]></output>
+            </test-case>
+            <test-case id="3179" name="PromotionRevenueDoesNotDoubleCountWhenMidnightIsCrossed" fullname="PCShopSell.Tests.BusinessRegressionTests.PromotionRevenueDoesNotDoubleCountWhenMidnightIsCrossed" methodname="PromotionRevenueDoesNotDoubleCountWhenMidnightIsCrossed" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="216478568" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.008258" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.PromotionRevenueDoesNotDoubleCountWhenMidnightIsCrossed
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.PromotionRevenueDoesNotDoubleCountWhenMidnightIsCrossed Passed
+]]></output>
+            </test-case>
+            <test-case id="3168" name="ReadingOffersDoesNotRerollPricesOrIssueMoreContracts" fullname="PCShopSell.Tests.BusinessRegressionTests.ReadingOffersDoesNotRerollPricesOrIssueMoreContracts" methodname="ReadingOffersDoesNotRerollPricesOrIssueMoreContracts" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1201293267" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.011261" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.ReadingOffersDoesNotRerollPricesOrIssueMoreContracts
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.ReadingOffersDoesNotRerollPricesOrIssueMoreContracts Passed
+]]></output>
+            </test-case>
+            <test-case id="3163" name="SupplierDueAutoPays_WithoutDoubleChargingAfterLoad" fullname="PCShopSell.Tests.BusinessRegressionTests.SupplierDueAutoPays_WithoutDoubleChargingAfterLoad" methodname="SupplierDueAutoPays_WithoutDoubleChargingAfterLoad" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="391359446" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.016526" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.SupplierDueAutoPays_WithoutDoubleChargingAfterLoad
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.SupplierDueAutoPays_WithoutDoubleChargingAfterLoad Passed
+]]></output>
+            </test-case>
+            <test-case id="3170" name="VentureOperationsStayInSubaccount_TransfersPreserveNetWorth" fullname="PCShopSell.Tests.BusinessRegressionTests.VentureOperationsStayInSubaccount_TransfersPreserveNetWorth" methodname="VentureOperationsStayInSubaccount_TransfersPreserveNetWorth" classname="PCShopSell.Tests.BusinessRegressionTests" runstate="Runnable" seed="1554747191" result="Passed" start-time="2026-11-27 09:41:06Z" end-time="2026-11-27 09:41:06Z" duration="0.013954" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BusinessRegressionTests.VentureOperationsStayInSubaccount_TransfersPreserveNetWorth
+REGRESSION DONE PCShopSell.Tests.BusinessRegressionTests.VentureOperationsStayInSubaccount_TransfersPreserveNetWorth Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

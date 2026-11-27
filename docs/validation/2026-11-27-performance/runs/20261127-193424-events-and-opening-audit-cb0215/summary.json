@@ -1,0 +1,14 @@
+{
+  "tag": "events-and-opening-audit",
+  "filter": "EventSystemTests.Events_FireOverTime;GameplayAuditTests",
+  "started": "2026-11-27T19:34:24.6292933+08:00",
+  "seconds": 600.16,
+  "timeout": true,
+  "exitCode": -1,
+  "result": "Timeout",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-20261127\\20261127-193424-events-and-opening-audit-cb0215"
+}

@@ -15,14 +15,18 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private int WorkbenchTodoCount() => (S.PendingEvent != null ? 1 : 0)
+            + S.Employees.Count(r=>S.EmployeeNeedsAttention(r.Person)&&S.PlayerManagesEmployee(r.Person.Id))
+            + S.GovernanceCompanies.Count(S.GovernanceNeedsAttention)
             + S.AppLoans.Count(l => !l.Repaid && l.DueDay - S.Clock.Today.TotalDays <= 7)
             + StockIds.Count(id => id != "hardware" && S.StockState(id)?.ShortUnits > 0 && S.StockMarginRatio(id) < 1.5)
-            + S.WorkbenchAlerts.Count + S.MyShops.Count(s => !S.IsOwnedVenue(s.Place) && WbStockCount(s) == 0)
+            + S.WorkbenchAlerts.Count + S.MyShops.Count(s => S.PlayerManagesShop(s)&&!S.IsOwnedVenue(s.Place) && WbStockCount(s) == 0)
             + S.CityActivities.Count(a => a.State == CityActivityPhase.Offered)
             + S.CityActivities.Count(a => a.State == CityActivityPhase.Scheduled || a.State == CityActivityPhase.Gathering);
 
         private void BuildWorkbenchUnifiedShop(Transform parent, Window w, OwnedShop shop)
         {
+            if(!S.PlayerManagesShop(shop))
+            {WbHeading(parent,"公司管理层经营",21);BuildGovernanceStore(parent,shop);CompanyButton(parent,"查看股权与交接",()=>{_governancePage=2;OpenCompanyGovernance(S.CompanyTicker(S.CompanyOfShop(shop)));});return;}
             var columns = Ui.Row(parent, -1, 16); Ui.Size(columns).GetComponent<LayoutElement>().flexibleHeight = 1;
             var middle = WbColumn(columns, "WorkbenchShopSettings", .9f);
             var right = WbColumn(columns, "WorkbenchShopPricing", 1.4f);

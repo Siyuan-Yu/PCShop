@@ -1,0 +1,47 @@
+[
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.Online_FromPhoneAnywhere_DeliveredNextMorning",
+    "message": "  还没发现这家\n  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.Online_FromPhoneAnywhere_DeliveredNextMorning () [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:322\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.Police_CatchesTricycleInSight",
+    "message": "  Expected: \"被交警抓到了\"\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.Police_CatchesTricycleInSight () [0x000e2] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:370\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.RealLayout_MatchesDesign",
+    "message": "  保留原商业街18间商铺及独立中介/车行\n  Expected: 18\n  But was:  29\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.RealLayout_MatchesDesign () [0x00060] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:527\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.ShopLocationUsesEstimatedDailyPassingPeople",
+    "message": "  Expected: 0.46666666666666667d +/- 1.0000000000000001E-09d\n  But was:  0.25992553847978317d\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.ShopLocationUsesEstimatedDailyPassingPeople () [0x00013] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.HomeTests.Courier_CarFull_CallsNextCar_EachWithFee",
+    "message": "System.NullReferenceException : Object reference not set to an instance of an object",
+    "stack": "  at PCShopSell.Tests.HomeTests.Courier_CarFull_CallsNextCar_EachWithFee () [0x00061] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\HomeTests.cs:814 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.HomeTests.Mall_TruckCanDeliverToTheShop_AndSurvivesSave",
+    "message": "  Expected: collection containing \"货车到店里了\"\n  But was:  < \"快递到了\", \"你晕倒了\" >\n",
+    "stack": "at NUnit.Framework.CollectionAssert.Contains (System.Collections.IEnumerable collection, System.Object actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.CollectionAssert.Contains (System.Collections.IEnumerable collection, System.Object actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.HomeTests.Mall_TruckCanDeliverToTheShop_AndSurvivesSave () [0x00170] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\HomeTests.cs:462\n"
+  },
+  {
+    "name": "PCShopSell.Tests.HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup",
+    "message": "  进了临时存放要说清楚能放几天\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup () [0x00173] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\HomeTests.cs:276\n"
+  },
+  {
+    "name": "PCShopSell.Tests.IndustrialArtTests.NavigationArtworkPreservesTextActionAndHitTarget",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.IndustrialArtTests.NavigationArtworkPreservesTextActionAndHitTarget () [0x00079] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\IndustrialArtTests.cs:40\n"
+  },
+  {
+    "name": "PCShopSell.Tests.InteractionFlowTests.RecruitWithAssignment_RejectsOccupiedRole_WithoutHiringOrRemovingCandidate",
+    "message": "  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.InteractionFlowTests.RecruitWithAssignment_RejectsOccupiedRole_WithoutHiringOrRemovingCandidate () [0x00083] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\InteractionFlowTests.cs:161\n"
+  }
+]

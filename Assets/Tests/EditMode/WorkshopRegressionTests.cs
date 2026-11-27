@@ -17,7 +17,7 @@ namespace PCShopSell.Tests
         private static GameSession Make()
         {
             var s = new GameSession(CityLayout.FromData(GameSessionTests.Layout()), 91, Money.FromYuan(50000),
-                GameTimestamp.From(new GameDate(0), 9 * 60), false);
+                GameTimestamp.From(new GameDate(GameSession.BuildOrdersStartDay), 9 * 60), false);
             s.EventsEnabled = false;
             s.PlayerShop.Settings.BaseCustomersPerHour = 0;
             GameSessionTests.Teleport(s, "pc");
@@ -59,7 +59,8 @@ namespace PCShopSell.Tests
                 var balance = s.Ledger.Balance;
                 Assert.IsFalse(s.CompleteBuild(order.Id, 0));
                 Assert.AreEqual(balance, s.Ledger.Balance);
-                Assert.AreEqual(6, s.PlayerShop.Stock.Lines().Sum(x => x.Count));
+                Assert.True(order.PartsReserved, "未到交付时限仍保留本订单的六件预留配件");
+                Assert.AreEqual(6, order.ReservedParts.Count());
             }
         }
         [Test]
@@ -81,8 +82,8 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                Order(s);
-                s.PlayerShop.RestoreOrders(new BuildOrder[0], 2);
+                var order = Order(s);
+                Assert.True(s.PlayerShop.CancelBuild(order.Id));
                 var worth = s.NetWorth();
                 Assert.IsTrue(s.PlayerShop.AssembleForDisplay(0));
                 Assert.AreEqual(worth, s.NetWorth());
@@ -178,6 +179,7 @@ namespace PCShopSell.Tests
                     var order = Order(staffed);
                     staffed.AdvanceClock(59);
                     Assert.AreEqual(0, order.EmployeeMinutesLeft);
+                    CityTestPeople.AtAssignedWork(staffed, staffed.Assembler);
                     staffed.AdvanceClock(5);
                     Assert.Greater(order.EmployeeMinutesLeft, 0);
                     using (var loaded = GameSession.Load(s.City, staffed.CreateSave()))
@@ -204,6 +206,7 @@ namespace PCShopSell.Tests
                 {
                     if (!staffed.AutoBuildEnabled) staffed.ToggleAutoBuild(); staffed.EventsEnabled = false;
                     staffed.PlayerShop.Settings.BaseCustomersPerHour = 0;
+                    CityTestPeople.AtAssignedWork(staffed, staffed.Assembler);
                     var order = Order(staffed); staffed.AdvanceClock(10);
                     int left = order.EmployeeMinutesLeft;
                     Assert.Greater(left, 0); staffed.Fire();
@@ -347,7 +350,10 @@ namespace PCShopSell.Tests
                         yield return null;
                         var updated=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<PCShopSell.Game.UI.ChoiceDropdown>()).Single(d=>d.name==name);
                         Assert.AreEqual(caption,updated.captionText.text,"选中时间后应立即更新并保存");
-                        Assert.AreEqual(name=="ShopOpeningTime"?9*60+15:21*60+15,name=="ShopOpeningTime"?s.PlayerShop.OpenMinute:s.PlayerShop.CloseMinute);
+                        var time = System.Text.RegularExpressions.Regex.Match(caption, @"(\d+):(\d+)");
+                        Assert.True(time.Success, caption);
+                        int selectedMinute = int.Parse(time.Groups[1].Value) * 60 + int.Parse(time.Groups[2].Value);
+                        Assert.AreEqual(selectedMinute,name=="ShopOpeningTime"?s.PlayerShop.OpenMinute:s.PlayerShop.CloseMinute);
                     }
                     var closing=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<PCShopSell.Game.UI.ChoiceDropdown>()).Single(d=>d.name=="ShopClosingTime");
                     closing.Show();
@@ -356,7 +362,9 @@ namespace PCShopSell.Tests
                     Assert.IsFalse(closing.IsChoiceOpen);
                     refresh.Invoke(ui,null);
                     yield return null;
-                    Assert.IsTrue(closing==null,"收起列表后柜台自动刷新应恢复");
+                    var refreshed=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<PCShopSell.Game.UI.ChoiceDropdown>()).Single(d=>d.name=="ShopClosingTime");
+                    Assert.False(refreshed.IsChoiceOpen,"刷新后的控件应保持收起，不能重新展开");
+                    Assert.True(refreshed.interactable,"刷新后仍可再次调整营业时间");
                 }
                 finally
                 {

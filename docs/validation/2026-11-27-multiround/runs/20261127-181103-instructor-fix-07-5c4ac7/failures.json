@@ -1,0 +1,7 @@
+[
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76)",
+    "message": "  暂时没有店员在岗，暂停营业。 时间=第1年2月22日 09:00 场所=life_expo 人员=life_curator at= task=Travelling activity= route=True;resident_hanzheng at= task=Travelling activity= route=True;resident_baiming at= task=Travelling activity= route=True;life_leisure_staff_expo_reception at= task=Travelling activity= route=True\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x00128] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:35\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:129\n"
+  }
+]

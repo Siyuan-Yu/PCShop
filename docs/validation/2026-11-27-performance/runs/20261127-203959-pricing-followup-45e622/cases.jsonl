@@ -1,0 +1,4 @@
+{"name":"PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)","result":"Passed","message":"","stack":"","seconds":0.0495243}
+{"name":"PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)","result":"Passed","message":"","stack":"","seconds":0.0114966}
+{"name":"PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)","result":"Failed","message":"  Expected: <empty>\r\n  But was:  < <PCShopSell.Core.Session.DiningOrder> >\r\n","stack":"at PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent (System.Double salesBonus) [0x0017f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:119\r\n","seconds":0.2765009}
+{"name":"PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)","result":"Passed","message":"","stack":"","seconds":0.245186}

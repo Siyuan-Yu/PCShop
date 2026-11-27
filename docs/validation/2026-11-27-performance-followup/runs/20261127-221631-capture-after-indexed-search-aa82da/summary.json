@@ -1,0 +1,14 @@
+{
+  "tag": "capture-after-indexed-search",
+  "filter": "SimulationPerformanceCapture;PerformanceRegressionTests;PathfinderTests;CityTravelTimingTests;ShopFootfallTests",
+  "started": "2026-11-27T22:16:31.2734155+08:00",
+  "seconds": 37.36,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 50,
+  "passed": 46,
+  "failed": 4,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-221631-capture-after-indexed-search-aa82da"
+}

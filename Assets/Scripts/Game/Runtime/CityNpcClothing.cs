@@ -80,6 +80,13 @@ namespace PCShopSell.Game.Runtime
             return styles;
         }
 
+        internal static int StyleStamp(GameSession session, string personId)
+        {
+            if (NpcArtCatalog.Find(personId) != null) return 0;
+            double temperature = session.CityOutdoorTemperature(session.Clock.Today.TotalDays * 1440L + 8 * 60);
+            return temperature < 12 ? 1 : temperature >= 26 ? 3 : 2;
+        }
+
         public static void Apply(GameObject figure, GameSession session, string personId)
         {
             if (figure == null || session == null || string.IsNullOrEmpty(personId) || figure.GetComponent<CityNpcClothing>() != null) return;

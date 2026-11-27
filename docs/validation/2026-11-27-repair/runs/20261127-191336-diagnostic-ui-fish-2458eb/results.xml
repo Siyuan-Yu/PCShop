@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="6" result="Failed(Child)" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:14:01Z" duration="9.9010612">
+  <test-suite type="TestSuite" id="3126" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:14:01Z" duration="9.901061" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="5248" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:14:01Z" duration="9.874888" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="46392" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="5249" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:14:01Z" duration="9.862648" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="SetUpFixture" id="4372" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:14:01Z" duration="9.852799" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="3743" name="FishingTests" fullname="PCShopSell.Tests.FishingTests" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" testcasecount="49" result="Failed" site="Child" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:13:53Z" duration="1.406460" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="ParameterizedMethod" id="3764" name="EverySpeciesCanBeCaughtKeptReloadedAndSold" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" testcasecount="20" result="Failed" site="Child" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:13:53Z" duration="1.399272" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="3746" name="EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bass&quot;)" fullname="PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(&quot;fish_bass&quot;)" methodname="EverySpeciesCanBeCaughtKeptReloadedAndSold" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1402295155" result="Failed" start-time="2026-11-27 11:13:51Z" end-time="2026-11-27 11:13:53Z" duration="1.383018" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。 保存前=resident_luqiao:life_fishing:Working:route=:act=:visit=:duty=True;life_leisure_staff_fishing_night:residence_s_oldhomes_02:Home:route=:act=:visit=:duty=False;life_leisure_staff_fishing_evening:residence_s_oldhomes_03:Home:route=:act=:visit=:duty=False 读档后=resident_luqiao:life_fishing:Returning:route=:act=:visit=:duty=False;life_leisure_staff_fishing_night:residence_s_oldhomes_02:Returning:route=:act=:visit=:duty=False;life_leisure_staff_fishing_evening:residence_s_oldhomes_03:Returning:route=:act=:visit=:duty=False
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\FishingTests.cs:120
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bass")
+REGRESSION DONE PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold("fish_bass") Failed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestFixture" id="4265" name="OutdoorBatchTests" fullname="PCShopSell.Tests.OutdoorBatchTests" classname="PCShopSell.Tests.OutdoorBatchTests" runstate="Runnable" testcasecount="34" result="Failed" site="Child" start-time="2026-11-27 11:13:53Z" end-time="2026-11-27 11:13:58Z" duration="4.991880" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="ParameterizedMethod" id="4275" name="FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen" fullname="PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen" classname="PCShopSell.Tests.OutdoorBatchTests" runstate="Runnable" testcasecount="3" result="Failed" site="Child" start-time="2026-11-27 11:13:53Z" end-time="2026-11-27 11:13:58Z" duration="4.984676" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="4272" name="FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(68)" fullname="PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(68)" methodname="FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen" classname="PCShopSell.Tests.OutdoorBatchTests" runstate="Runnable" seed="2129558806" result="Failed" start-time="2026-11-27 11:13:53Z" end-time="2026-11-27 11:13:55Z" duration="1.833805" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                  <stack-trace><![CDATA[PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)
+PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)
+PCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)
+UnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)
+UnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)
+UnityEngine.UI.InputField:set_text(String)
+PCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)
+PCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)
+PCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)
+PCShopSell.Game.UI.GameUi:BuildOutdoorBatchProcurement(Window, CityActivity) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:108)
+PCShopSell.Game.UI.<>c__DisplayClass1355_0:<OpenOutdoorMarketVisit>b__0(Window) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:33)
+PCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)
+PCShopSell.Game.UI.GameUi:RebuildWindows() (at Assets/Scripts/Game/UI/GameUi.cs:154)
+PCShopSell.Tests.OutdoorBatchTests:FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(Int32) (at Assets/Tests/EditMode/OutdoorBatchTests.cs:203)
+System.Reflection.MethodBase:Invoke(Object, Object[])
+NUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])
+NUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions()
+
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(68)
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+REGRESSION DONE PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(68) Failed
+]]></output>
+              </test-case>
+              <test-case id="4273" name="FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(69)" fullname="PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(69)" methodname="FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen" classname="PCShopSell.Tests.OutdoorBatchTests" runstate="Runnable" seed="144492950" result="Failed" start-time="2026-11-27 11:13:55Z" end-time="2026-11-27 11:13:56Z" duration="1.607250" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                  <stack-trace><![CDATA[PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)
+PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)
+PCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)
+UnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)
+UnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)
+UnityEngine.UI.InputField:set_text(String)
+PCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)
+PCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)
+PCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)
+PCShopSell.Game.UI.GameUi:BuildOutdoorBatchProcurement(Window, CityActivity) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:108)
+PCShopSell.Game.UI.<>c__DisplayClass1355_0:<OpenOutdoorMarketVisit>b__0(Window) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:33)
+PCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)
+PCShopSell.Game.UI.GameUi:RebuildWindows() (at Assets/Scripts/Game/UI/GameUi.cs:154)
+PCShopSell.Tests.OutdoorBatchTests:FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(Int32) (at Assets/Tests/EditMode/OutdoorBatchTests.cs:203)
+System.Reflection.MethodBase:Invoke(Object, Object[])
+NUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])
+NUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions()
+
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(69)
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+REGRESSION DONE PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(69) Failed
+]]></output>
+              </test-case>
+              <test-case id="4274" name="FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(70)" fullname="PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(70)" methodname="FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen" classname="PCShopSell.Tests.OutdoorBatchTests" runstate="Runnable" seed="309548180" result="Failed" start-time="2026-11-27 11:13:56Z" end-time="2026-11-27 11:13:58Z" duration="1.538909" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                  <stack-trace><![CDATA[PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)
+PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)
+PCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)
+UnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)
+UnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)
+UnityEngine.UI.InputField:set_text(String)
+PCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)
+PCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)
+PCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)
+PCShopSell.Game.UI.GameUi:BuildOutdoorBatchProcurement(Window, CityActivity) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:108)
+PCShopSell.Game.UI.<>c__DisplayClass1355_0:<OpenOutdoorMarketVisit>b__0(Window) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:33)
+PCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)
+PCShopSell.Game.UI.GameUi:RebuildWindows() (at Assets/Scripts/Game/UI/GameUi.cs:154)
+PCShopSell.Tests.OutdoorBatchTests:FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(Int32) (at Assets/Tests/EditMode/OutdoorBatchTests.cs:203)
+System.Reflection.MethodBase:Invoke(Object, Object[])
+NUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])
+NUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions()
+
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(70)
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+REGRESSION DONE PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(70) Failed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestFixture" id="5012" name="UiCleanupTests" fullname="PCShopSell.Tests.UiCleanupTests" classname="PCShopSell.Tests.UiCleanupTests" runstate="Runnable" testcasecount="74" result="Failed" site="Child" start-time="2026-11-27 11:13:58Z" end-time="2026-11-27 11:14:01Z" duration="3.290485" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="5085" name="EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode" fullname="PCShopSell.Tests.UiCleanupTests.EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode" methodname="EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode" classname="PCShopSell.Tests.UiCleanupTests" runstate="Runnable" seed="856687286" result="Failed" start-time="2026-11-27 11:13:58Z" end-time="2026-11-27 11:13:58Z" duration="0.161657" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                <stack-trace><![CDATA[PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)
+PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)
+PCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)
+UnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)
+UnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)
+UnityEngine.UI.InputField:set_text(String)
+PCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)
+PCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)
+PCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)
+PCShopSell.Game.UI.<>c__DisplayClass543_2:<OpenEmployeePurchase>b__21(Int32, RectTransform) (at Assets/Scripts/Game/UI/GameUi.Employees.cs:451)
+PCShopSell.Game.UI.PurchaseListViewport:Refresh() (at Assets/Scripts/Game/UI/GameUi.Employees.cs:786)
+PCShopSell.Game.UI.PurchaseListViewport:Bind(RectTransform, Int32, Single, Action`2) (at Assets/Scripts/Game/UI/GameUi.Employees.cs:755)
+PCShopSell.Game.UI.<>c__DisplayClass543_0:<OpenEmployeePurchase>b__4(Window) (at Assets/Scripts/Game/UI/GameUi.Employees.cs:416)
+PCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)
+PCShopSell.Game.UI.GameUi:OpenWindow(String, Single, Single, Action`1, Boolean, Boolean, Action, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean) (at Assets/Scripts/Game/UI/GameUi.cs:1126)
+PCShopSell.Game.UI.GameUi:OpenEmployeePurchase(String, Window, Nullable`1) (at Assets/Scripts/Game/UI/GameUi.Employees.cs:290)
+PCShopSell.Tests.UiCleanupTests:EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode() (at Assets/Tests/EditMode/UiCleanupTests.cs:1912)
+System.Reflection.MethodBase:Invoke(Object, Object[])
+NUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])
+NUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions()
+
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.UiCleanupTests.EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+REGRESSION DONE PCShopSell.Tests.UiCleanupTests.EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode Failed
+]]></output>
+            </test-case>
+            <test-case id="5041" name="FurnitureMallKeepsVariantsTogetherAcrossShopTabs" fullname="PCShopSell.Tests.UiCleanupTests.FurnitureMallKeepsVariantsTogetherAcrossShopTabs" methodname="FurnitureMallKeepsVariantsTogetherAcrossShopTabs" classname="PCShopSell.Tests.UiCleanupTests" runstate="Runnable" seed="1247451924" result="Failed" start-time="2026-11-27 11:13:58Z" end-time="2026-11-27 11:14:01Z" duration="3.098568" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                <stack-trace><![CDATA[PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)
+PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)
+PCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)
+UnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)
+UnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)
+UnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)
+UnityEngine.UI.InputField:set_text(String)
+PCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)
+PCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)
+PCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)
+PCShopSell.Game.UI.GameUi:ShopQuantity(Window, Transform, String, Func`1, Boolean, Nullable`1, Func`2, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:175)
+PCShopSell.Game.UI.GameUi:BuildCarryCatalogBody(Window, Place, String, RectTransform) (at Assets/Scripts/Game/UI/GameUi.Retail.cs:333)
+PCShopSell.Game.UI.GameUi:BuildCarryCatalog(Window, Place, String) (at Assets/Scripts/Game/UI/GameUi.Retail.cs:122)
+PCShopSell.Game.UI.GameUi:BuildCarryStore(Window, Place) (at Assets/Scripts/Game/UI/GameUi.Retail.cs:115)
+PCShopSell.Game.UI.<>c__DisplayClass1365_0:<OpenPlaceWindow>b__0(Window) (at Assets/Scripts/Game/UI/GameUi.Panels.cs:230)
+PCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)
+PCShopSell.Game.UI.GameUi:OpenWindow(String, Single, Single, Action`1, Boolean, Boolean, Action, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean) (at Assets/Scripts/Game/UI/GameUi.cs:1126)
+PCShopSell.Game.UI.GameUi:OpenPlaceWindow(Place, Action`2, Single, Single, Boolean, Boolean, VenueSponsorView) (at Assets/Scripts/Game/UI/GameUi.Panels.cs:207)
+PCShopSell.Game.UI.GameUi:OpenMall(Place) (at Assets/Scripts/Game/UI/GameUi.Home.cs:1539)
+PCShopSell.Game.UI.GameUi:OnEnteredPlace(Place, String) (at Assets/Scripts/Game/UI/GameUi.Panels.cs:48)
+PCShopSell.Tests.UiCleanupTests:FurnitureMallKeepsVariantsTogetherAcrossShopTabs() (at Assets/Tests/EditMode/UiCleanupTests.cs:657)
+System.Reflection.MethodBase:Invoke(Object, Object[])
+NUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])
+NUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions()
+
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.UiCleanupTests.FurnitureMallKeepsVariantsTogetherAcrossShopTabs
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+NullReferenceException: Object reference not set to an instance of an object
+REGRESSION DONE PCShopSell.Tests.UiCleanupTests.FurnitureMallKeepsVariantsTogetherAcrossShopTabs Failed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

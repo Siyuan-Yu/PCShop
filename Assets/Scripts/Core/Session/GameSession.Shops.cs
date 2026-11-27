@@ -168,6 +168,7 @@ namespace PCShopSell.Core.Session
         /// <summary>临时把“当前店”切到 s 做一件事（后台店的员工干活、自动补货、到货入库），做完切回来。</summary>
         private void WithShop(OwnedShop s, Action a)
         {
+            string authority=ShopAuthorityBlocker(s??_focus);if(authority!=null){Fail(authority);return;}
             if (s == null || s == _focus)
             {
                 a();
@@ -210,6 +211,8 @@ namespace PCShopSell.Core.Session
         /// <summary>退租与结束自营共用办理条件。</summary>
         public string CloseShopBlocker(OwnedShop s)
         {
+            if(ShopAuthorityBlocker(s) is string authority)return authority;
+            if(CompanyOfShop(s)?.ListedDay>=0)return "挂牌公司门店不能按个人名义退租；须先由公司处理业务及合同";
             if (s == null || ShopAt(s.Place) != s) return "这不是你的店";
             if (IsGameOver) return "当前无法办理";
             if (CurrentPlace != s.Place && !InAgency) return "要在这家店里或所属片区中介办理退租";

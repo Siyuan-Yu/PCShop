@@ -1,0 +1,27 @@
+[
+  {
+    "name": "PCShopSell.Tests.CityAssetIntegrationTests.EquityFullLiquidationClearsCostAndCannotRoundTripProfit",
+    "message": "  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.CityAssetIntegrationTests.EquityFullLiquidationClearsCostAndCannotRoundTripProfit () [0x00016] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityAssetIntegrationTests.cs:85\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")",
+    "message": "  Expected: 1982.7403624999999d +/- 1.0000000000000001E-05d\n  But was:  1982.1835999999998d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime (PCShopSell.Core.Session.VehicleKind kind, System.String basicModel, System.String fasterModel, System.String dealer) [0x00315] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:100\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Tricycle,\"t_cargo\",\"t_sport\",\"dealer\")",
+    "message": "  Expected: 1986.3433905263159d +/- 1.0000000000000001E-05d\n  But was:  1985.9028547368421d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime (PCShopSell.Core.Session.VehicleKind kind, System.String basicModel, System.String fasterModel, System.String dealer) [0x00315] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:100\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Car,\"c_city\",\"c_su7\",\"motor_cars\")",
+    "message": "  Expected: 1976.6389952d +/- 1.0000000000000001E-05d\n  But was:  1975.8854143999999d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime (PCShopSell.Core.Session.VehicleKind kind, System.String basicModel, System.String fasterModel, System.String dealer) [0x00315] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:100\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.DilutionBelowDirectorThresholdRemovesBoardPrivilege",
+    "message": "  稀释后不再满足席位持股条件\n  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.CompanyWellbeingRegressionTests.DilutionBelowDirectorThresholdRemovesBoardPrivilege () [0x000b8] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CompanyWellbeingRegressionTests.cs:147\n"
+  }
+]

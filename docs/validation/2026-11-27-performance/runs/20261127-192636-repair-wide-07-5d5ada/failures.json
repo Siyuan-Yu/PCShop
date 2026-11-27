@@ -1,0 +1,22 @@
+[
+  {
+    "name": "PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)",
+    "message": "  Expected: 0\n  But was:  4\n",
+    "stack": "at PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice (System.Double bonus) [0x0014c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:84\n"
+  },
+  {
+    "name": "PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)",
+    "message": "  0%购买意愿不会生成堂食订单\n  Expected: 1\n  But was:  6\n",
+    "stack": "at PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent (System.Double salesBonus) [0x00117] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:110\n"
+  },
+  {
+    "name": "PCShopSell.Tests.MarkupRangeTests.ShopSliderAndRestaurantMenuReachThree_AndMenuShowsZeroIntent",
+    "message": "  Expected: 3\n  But was:  1.1499999999999999d\n",
+    "stack": "at PCShopSell.Tests.MarkupRangeTests.ShopSliderAndRestaurantMenuReachThree_AndMenuShowsZeroIntent () [0x00115] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:128\n"
+  },
+  {
+    "name": "PCShopSell.Tests.McnRecruitmentTests.SignedThroughPhoneThenAssignedAfterSaveWithoutChargingASecondFee",
+    "message": "  Expected: null\n  But was:  \"acceptance-expo\"\n",
+    "stack": "at PCShopSell.Tests.McnRecruitmentTests.SignedThroughPhoneThenAssignedAfterSaveWithoutChargingASecondFee () [0x0008f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\McnRecruitmentTests.cs:36\n"
+  }
+]

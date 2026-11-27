@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -88,9 +88,16 @@ namespace PCShopSell.Tests
                 var person=s.CityPersonState(Npcs.Li);var market=s.City.GetPlace("stall_cpu");
                 var at=s.City.ViewPosition(market.NodeId);person.X=at.X;person.Y=at.Y;person.LocationPlaceId=market.Id;person.Route=null;
                 var plan=typeof(GameSession).GetMethod("PlanCityRoute",BindingFlags.NonPublic|BindingFlags.Instance);
-                var route=(CityRoute)plan.Invoke(s,new object[]{person,"life_restaurant",s.Clock.Now.TotalMinutes,long.MaxValue,null});
+                // 地图缩放后，原来的市场→街坊餐厅已不是长途。选择真实的跨城远端作为长途条件。
+                var destination=s.City.PublicPlaces.OrderByDescending(p=>{
+                    var point=s.StandOf(p);return (point.X-at.X)*(point.X-at.X)+(point.Y-at.Y)*(point.Y-at.Y);
+                }).First();
+                var route=(CityRoute)plan.Invoke(s,new object[]{person,destination.Id,s.Clock.Now.TotalMinutes,long.MaxValue,null});
                 Assert.NotNull(route);Assert.AreEqual(VehicleKind.Taxi,route.Transport);
-                Assert.Less(route.ArriveMinute-route.DepartMinute,90);
+                Assert.Greater(CityTravelTiming.NpcMinutes(route.Meters.Sum(),Vehicles.Walk),90,"长途测试必须实际超过步行阈值");
+                Assert.AreEqual(CityTravelTiming.NpcMinutes(route.Meters.Sum(),Vehicles.Taxi),route.ArriveMinute-route.DepartMinute);
+                var estimate=typeof(GameSession).GetMethod("EstimateCityCommute",BindingFlags.NonPublic|BindingFlags.Instance);
+                Assert.AreEqual(route.ArriveMinute-route.DepartMinute,estimate.Invoke(s,new object[]{person,destination.Id,s.Clock.Now.TotalMinutes}));
                 Assert.Greater(route.ArriveMinute,route.DepartMinute,"ordinary transport follows the route rather than teleporting");
                 var saved=JsonUtility.FromJson<CityRoute>(JsonUtility.ToJson(route));
                 Assert.AreEqual(route.Transport,saved.Transport);Assert.AreEqual(route.ArriveMinute,saved.ArriveMinute);

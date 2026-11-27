@@ -1,0 +1,12 @@
+预生成地图与当前版本不符，使用地图生成回退路径。
+[城市加载] loading_baked_map: 1752 ms
+[城市加载] loading_ground: 81 ms
+[城市加载] loading_roads: 6882 ms
+[城市加载] loading_buildings: 3587 ms
+[城市加载] loading_scenery: 233 ms
+[城市加载] loading_forest_layout: 1082 ms
+[城市加载] loading_forest_meshes: 248 ms
+[城市加载] loading_shore_details: 612 ms
+[城市加载] loading_people: 116 ms
+[城市加载] loading_session: 13 ms
+[城市加载] 总耗时: 14611 ms

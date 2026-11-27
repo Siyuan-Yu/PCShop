@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Failed(Child)" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.7255982">
+  <test-suite type="TestSuite" id="3142" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1844" result="Failed" site="Child" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.725598" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="5280" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1844" result="Failed" site="Child" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.699805" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="49652" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="5281" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1844" result="Failed" site="Child" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.684385" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="SetUpFixture" id="4401" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1844" result="Failed" site="Child" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.671134" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="4105" name="MarkupRangeTests" fullname="PCShopSell.Tests.MarkupRangeTests" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" testcasecount="11" result="Failed" site="Child" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.599489" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="ParameterizedMethod" id="4115" name="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" fullname="PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.072457" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4113" name="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)" fullname="PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)" methodname="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="649120643" result="Passed" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.049524" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0) Passed
+]]></output>
+              </test-case>
+              <test-case id="4114" name="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)" fullname="PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)" methodname="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="1729741315" result="Passed" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.011497" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="ParameterizedMethod" id="4119" name="ExpensiveMenuActuallyRequiresPurchaseIntent" fullname="PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.524835" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="4117" name="ExpensiveMenuActuallyRequiresPurchaseIntent(0)" fullname="PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)" methodname="ExpensiveMenuActuallyRequiresPurchaseIntent" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="13144901" result="Failed" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.276501" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  Expected: <empty>
+  But was:  < <PCShopSell.Core.Session.DiningOrder> >
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent (System.Double salesBonus) [0x0017f] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\MarkupRangeTests.cs:119
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0) Failed
+]]></output>
+              </test-case>
+              <test-case id="4118" name="ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)" fullname="PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)" methodname="ExpensiveMenuActuallyRequiresPurchaseIntent" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="1098875694" result="Passed" start-time="2026-11-27 12:40:45Z" end-time="2026-11-27 12:40:45Z" duration="0.245186" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

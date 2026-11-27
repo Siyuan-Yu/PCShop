@@ -23,6 +23,7 @@ namespace PCShopSell.Tests
         {
             var s = HomeTests.Make(200000, 600);
             s.EventsEnabled = false;
+            CompanyWellbeingRegressionTests.Tier(s,3);
             s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId, 1);
             MoveAndInstallWorkbench(s);
             s.Clock.Restore(s.Clock.Today, minute);
@@ -49,7 +50,7 @@ namespace PCShopSell.Tests
             {
                 new LayoutPlaceData { id = "phone", name = "米家", kind = "shop", node = "dl", size = "small", business = GameSession.PhoneBusiness },
                 new LayoutPlaceData { id = "mall", name = "家具城", kind = "shop", node = "dl", size = "large", business = GameSession.MallBusiness },
-                new LayoutPlaceData { id = "workbench_second_home", name = "第二住处", kind = "home", node = "home" }
+                new LayoutPlaceData { id = "workbench_second_home", name = "第二住处", kind = "home", node = "home", street = "s_start" }
             }).ToArray();
             using var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(2_000_000), GameTimestamp.From(new GameDate(0), 600));
             s.EventsEnabled = false;
@@ -86,7 +87,7 @@ namespace PCShopSell.Tests
 
             const string secondHome = "workbench_second_home";
             GameSessionTests.Teleport(loaded, "agency");
-            Assert.True(loaded.BuyResidentialHome(secondHome, false, true, keepCurrentResidence: true));
+            Assert.True(loaded.BuyResidentialHome(secondHome, false, true, keepCurrentResidence: true),loaded.ResidentialTradeBlocker(secondHome,true,false,true,true));
             GameSessionTests.Teleport(loaded, secondHome);
             Assert.True(loaded.CanUseHomeWorkbench);
 
@@ -214,6 +215,7 @@ namespace PCShopSell.Tests
                 Assert.False(s.TradeCityInvestment(id, lot, buy: true, acknowledgeReserve: true));
                 Assert.AreEqual(cash, s.Ledger.Balance);
                 s.SetSmartphone(true);
+                CompanyWellbeingRegressionTests.Tier(s,3);
                 Assert.True(s.TradeCityInvestment(id, lot, buy: true, acknowledgeReserve: true));
                 Assert.AreEqual(lot, s.CityInvestmentUnits(id));
             }

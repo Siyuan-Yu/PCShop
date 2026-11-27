@@ -1,0 +1,92 @@
+[
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.ConfirmedPlanHasFourAgencyDistrictsAndNoStarterShopStation",
+    "message": "  Expected: 8\n  But was:  18\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.ConfirmedPlanHasFourAgencyDistrictsAndNoStarterShopStation () [0x00007] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:34\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.LayoutMigrationDoesNotReplayCashOrDuplicateAssetsAndThenIsIdempotent",
+    "message": "  Expected: 8\n  But was:  18\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.LayoutMigrationDoesNotReplayCashOrDuplicateAssetsAndThenIsIdempotent () [0x000a5] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:110\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.MetroTravelsToChosenStationRatherThanLastEnumeratedStation",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.MetroTravelsToChosenStationRatherThanLastEnumeratedStation () [0x00077] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:94\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.ResidentialSceneryHasMultipleRowsAndDoesNotCollapseToFourApartmentBlocks",
+    "message": "  s_oldhomes\n  Expected: greater than or equal to 45\n  But was:  26\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.ResidentialSceneryHasMultipleRowsAndDoesNotCollapseToFourApartmentBlocks () [0x00080] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:56\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash",
+    "message": "  Expected: 1\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash () [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityRetailTests.cs:141\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityRetailTests.ModelsUseTheRealGoodsStockAndDistinctSeriesShelves",
+    "message": "  Expected: 12\n  But was:  16\n",
+    "stack": "at PCShopSell.Tests.CityRetailTests.ModelsUseTheRealGoodsStockAndDistinctSeriesShelves () [0x00085] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityRetailTests.cs:128\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute",
+    "message": "  Expected: Taxi\n  But was:  Walk\n",
+    "stack": "at PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute () [0x000d2] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityStoryTests.cs:92\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")",
+    "message": "  Expected: -1.670287500000001d +/- 0.0001d\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime (PCShopSell.Core.Session.VehicleKind kind, System.String basicModel, System.String fasterModel, System.String dealer) [0x001c7] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:86\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)",
+    "message": "  Expected: 0.66150000000000009d +/- 0.0001d\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel (System.Int32 speed) [0x00206] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:55\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)",
+    "message": "  Expected: 1.3230000000000002d +/- 0.0001d\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel (System.Int32 speed) [0x00206] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:55\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)",
+    "message": "  Expected: 2.6460000000000004d +/- 0.0001d\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel (System.Int32 speed) [0x00206] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:55\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)",
+    "message": "  Expected: 5.2920000000000007d +/- 0.0001d\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel (System.Int32 speed) [0x00206] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:55\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength",
+    "message": "  Expected: 1997.0599999999999d +/- 0.001d\n  But was:  1994.1200000000001d\n",
+    "stack": "at PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength () [0x000a9] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:119\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ClassmateDinnerTests.ClassmateDinnerCompletesAfterChoosingMealAndKeepsContactAfterReload",
+    "message": "  Expected: Completed\n  But was:  Running\n",
+    "stack": "at PCShopSell.Tests.ClassmateDinnerTests.ClassmateDinnerCompletesAfterChoosingMealAndKeepsContactAfterReload () [0x0019a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\ClassmateDinnerTests.cs:65\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CompetitionContextTests.ClothingPriceWarNamesTheActualRivalAndTemporarilyDiscountsOnlyThePromotedProduct",
+    "message": "  Expected: ¥915\n  But was:  ¥854\n",
+    "stack": "at PCShopSell.Tests.CompetitionContextTests.ClothingPriceWarNamesTheActualRivalAndTemporarilyDiscountsOnlyThePromotedProduct () [0x000f9] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CompetitionContextTests.cs:278\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CompetitionContextTests.SpecialShopReferralKeepsItsQuotedInventoryAndConsumesItOnDelivery(\"restaurant\")",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CompetitionContextTests.SpecialShopReferralKeepsItsQuotedInventoryAndConsumesItOnDelivery (System.String kind) [0x0019a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CompetitionContextTests.cs:220\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CompetitionContextTests.StudentDiscountOrderUsesTheStoreInventoryAndAddsAwareness(\"restaurant\",\"produce:veg\")",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.CompetitionContextTests.StudentDiscountOrderUsesTheStoreInventoryAndAddsAwareness (System.String kind, System.String productId) [0x001ce] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CompetitionContextTests.cs:112\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CustomDestinationTests.GoingNowUsesTheSelectedDestinationAndLeavesTheShortcutAlone",
+    "message": "  Expected: String containing \"约 45 分钟\"\n  But was:  \"出行 · 打车 · 约 <b><color=#79532B>45 分钟</color></b> · <b><color=#79532B>¥10</color></b>\"\n",
+    "stack": "at NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.CustomDestinationTests+<>c__DisplayClass5_0.<GoingNowUsesTheSelectedDestinationAndLeavesTheShortcutAlone>b__0 (PCShopSell.Game.UI.GameUi ui) [0x0002d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CustomDestinationTests.cs:85\nat PCShopSell.Tests.CustomDestinationTests.WithUi (PCShopSell.Core.Session.GameSession session, System.Action`1[T] action) [0x00082] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CustomDestinationTests.cs:22\nat PCShopSell.Tests.CustomDestinationTests.GoingNowUsesTheSelectedDestinationAndLeavesTheShortcutAlone () [0x0008c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CustomDestinationTests.cs:81\n"
+  }
+]

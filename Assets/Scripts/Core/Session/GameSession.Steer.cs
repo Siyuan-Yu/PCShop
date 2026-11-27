@@ -429,12 +429,17 @@ namespace PCShopSell.Core.Session
         // ---------- 进门 ----------
 
         /// <summary>站在入口附近（不用正好站在路口）的地点。</summary>
+        private (double x, double y, int revision, int places) _nearbyDoorKey;
+        private bool _nearbyDoorKnown;
+        private Place _nearbyDoor;
         public Place NearbyPlace
         {
             get
             {
                 if (CurrentPlace != null || Trip != null || IsGameOver) return null;
                 MapPoint p = PlayerPosition;
+                var key = (p.X, p.Y, City.Map.Revision, City.Places.Count);
+                if (_nearbyDoorKnown && _nearbyDoorKey.Equals(key)) return _nearbyDoor;
                 Place best = null;
                 double bestDist = double.PositiveInfinity;
                 foreach (Place pl in City.PublicPlaces)
@@ -446,6 +451,7 @@ namespace PCShopSell.Core.Session
                         best = pl;
                     }
                 }
+                _nearbyDoorKnown = true; _nearbyDoorKey = key; _nearbyDoor = best;
                 return best;
             }
         }

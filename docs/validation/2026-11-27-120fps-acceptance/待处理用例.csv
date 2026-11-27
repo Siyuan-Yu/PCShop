@@ -1,0 +1,17 @@
+﻿用例,最新状态,轮次,失败说明,首次结果,记录数,证据目录,复核分类
+PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks,Failed,recovery-regression,"  racer_0 working in closed race_0 at 第1年1月6日 10:00
+  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-120fps-acceptance\runs\20261127-211916-recovery-regression-e6597c,待逐项复核
+PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302),Failed,recovery-regression,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-120fps-acceptance\runs\20261127-211916-recovery-regression-e6597c,待逐项复核
+PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422),Failed,recovery-regression,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-120fps-acceptance\runs\20261127-211916-recovery-regression-e6597c,待逐项复核
+PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60),Failed,recovery-regression,"  Expected: True
+  But was:  False
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-120fps-acceptance\runs\20261127-211916-recovery-regression-e6597c,待逐项复核
+PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute,Failed,recovery-regression,"  Expected: Taxi
+  But was:  Walk
+",Failed,1,D:\UnityProjects\PCShop\PCShop\docs\validation\2026-11-27-120fps-acceptance\runs\20261127-211916-recovery-regression-e6597c,待逐项复核

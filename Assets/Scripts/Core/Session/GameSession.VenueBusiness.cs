@@ -44,8 +44,23 @@ namespace PCShopSell.Core.Session
         private bool VenueHasNpcOnDuty(Place place) => place.Business == "venue_bar" ? BartenderAt(place) != null
             : PeopleInPlace(place.Id).Any(person => IsOnDutyVenueNpc(place, person));
 
-        public string NpcVenueStaffingBlocker(Place place) => UsesNpcVenueRoster(place)
-            && CityVenueFits(place, Clock.Now.TotalMinutes, 1) && !VenueHasNpcOnDuty(place)
+        // 教练授课、音响助理调试设备时，主持人本人提供这次预约服务。
+        // 不把普通聚会参与者算成值班人员，也不为其他客人的服务解除限制。
+        private bool AppointmentServiceHostPresent(Place place, CityActivity activity)
+        {
+            int number=OnsiteNumber(activity?.DefinitionId);
+            bool audio=activity?.DefinitionId=="social_49";
+            if (activity==null || !activity.Active || activity.VenueId!=place?.Id || !audio && number is not (54 or 57)) return false;
+            string instructor=audio?"resident_fuzhi":number==54?"life_coach":"life_golfer";
+            var person=CityPersonState(instructor);
+            return activity.Participants.Any(p=>p.PersonId==instructor && p.Phase is CityParticipantPhase.Waiting or CityParticipantPhase.Participating)
+                && person!=null && person.LocationPlaceId==place.Id && person.WorkPlaceId==place.Id
+                && person.Route==null && person.ActivityId==activity.Id && string.IsNullOrEmpty(person.VisitId)
+                && (audio || AuthoredCityWorkAt(person,Clock.Now.TotalMinutes));
+        }
+
+        public string NpcVenueStaffingBlocker(Place place, CityActivity activity=null) => UsesNpcVenueRoster(place)
+            && CityVenueFits(place, Clock.Now.TotalMinutes, 1) && !VenueHasNpcOnDuty(place) && !AppointmentServiceHostPresent(place,activity)
                 ? "暂时没有店员在岗，暂停营业。" : null;
 
         public string VenueBusinessName(Place p)

@@ -1,0 +1,12 @@
+通过：按钮可操作 EmployeePay_qa_runtime_worker
+通过：按钮可操作 保存日薪
+通过：调薪按钮已修改员工状态
+通过：按钮可操作 董事会
+通过：按钮可操作 控制权与门店
+通过：居家工作台打开
+通过：按钮可操作 WorkbenchTab_1
+通过：按钮可操作 WorkbenchTab_2
+通过：按钮可操作 WorkbenchTab_3
+通过：按钮可操作 WorkbenchTab_4
+通过：关闭全部界面后解除界面暂停
+通过：重复开关证券 20 次未泄漏暂停锁

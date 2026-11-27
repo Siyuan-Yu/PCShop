@@ -1,0 +1,14 @@
+{
+  "tag": "pricing-followup",
+  "filter": "MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent\\(0\\)",
+  "started": "2026-11-27T20:41:22.4792420+08:00",
+  "seconds": 16.07,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 1,
+  "passed": 0,
+  "failed": 1,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-20261127\\20261127-204122-pricing-followup-49331f"
+}

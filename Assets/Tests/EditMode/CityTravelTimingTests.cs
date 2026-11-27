@@ -19,6 +19,9 @@ namespace PCShopSell.Tests
             foreach (var edge in data.edges) if (edge.length > 0) edge.length /= visualScale;
             var s = new GameSession(CityLayout.FromData(data), 812, Money.FromYuan(100000), GameTimestamp.From(new GameDate(0), 600), false);
             s.EventsEnabled = false; s.PlayerShop.Settings.BaseCustomersPerHour = 0;
+            // 本组测运动；首次购车引导会有意暂停时钟，其交互另行验证。
+            s.Flags.Add(GameSession.ScooterGuideCompleted);
+            s.Time.SetSpeed(1);
             s.Leave(); s.ArriveAtNode("st"); return s;
         }
         [TestCase(VehicleKind.EBike,3)]
@@ -88,6 +91,7 @@ namespace PCShopSell.Tests
 
             using var restored = GameSession.Load(faster.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(faster.CreateSave())));
             restored.EventsEnabled = false;
+            restored.Time.SetSpeed(faster.Time.Speed); // 倍速是会话偏好，本用例比较相同倍速下的车辆速度。
             foreach (var officer in restored.Police.Officers) officer.OnDutyToday = false;
             Assert.AreEqual(faster.Trip.Vehicle.Name, restored.Trip.Vehicle.Name);
             Assert.AreEqual(faster.Trip.EstimatedMinutes, restored.Trip.EstimatedMinutes);
@@ -114,7 +118,8 @@ namespace PCShopSell.Tests
                 Assert.True(s.GoTo("mk"));
                 Assert.AreEqual(2000, s.Trip.TotalGameMeters, 1e-6);
                 Assert.AreEqual(CityTravelTiming.PlayerMinutes(2000, Vehicles.Walk), s.Trip.EstimatedMinutes);
-                double gameBudget = CityTravelTiming.SpeedPerMinute(Vehicles.Walk)*CityTravelTiming.PlayerWalkSpeedFactor;
+                double gameBudget = CityTravelTiming.PlayerScaledSecondsMeters(Vehicles.Walk,
+                    TimeController.DefaultSecondsPerMinute * TimeController.WorldRate, s.Time.SecondsPerMinuteAt1x);
                 for (int i = 0; i < 20; i++) s.Tick(TimeController.DefaultSecondsPerMinute / 20);
                 Assert.That(s.Trip.RemainingGameMeters, Is.EqualTo(2000 - gameBudget).Within(.001));
                 Assert.Less(Math.Abs(s.PlayerPosition.X), 1, "2km road drawn as 100m must not be crossed at uncompressed visual speed");

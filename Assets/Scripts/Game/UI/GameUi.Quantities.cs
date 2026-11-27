@@ -55,6 +55,7 @@ namespace PCShopSell.Game.UI
             (Button button, HoldRepeat repeat) less = default, more = default;
             InputField quantity = null;
             PurchaseAmountSlider slider = null;
+            bool ready = false;
             // For wholesale orders, the first notch after zero is the minimum order.
             double gap = min == 0 ? Math.Max(0, Math.Min(minimumOrder, limit) - 1) : 0;
             float Position(double count) => count <= 0 ? 0 : (float)Math.Max(1, count - gap);
@@ -66,6 +67,7 @@ namespace PCShopSell.Game.UI
                 Ui.Label(range, Format(limit), 11, TextAnchor.MiddleRight, Ui.Dim).rectTransform.Anchor(.5f, 0, 1, 0, 0, 0, 2, -13);
                 slider = Ui.Slider<PurchaseAmountSlider>(range, (float)min, Position(limit), Position(current), position =>
                 {
+                    if (!ready) return;
                     if (slider.Previewing) quantity.SetTextWithoutNotify(Format(Amount(position)));
                     else Apply(Amount(position), true);
                 }, wholeNumbers: true);
@@ -107,6 +109,7 @@ namespace PCShopSell.Game.UI
                 }
                 else quantity.SetTextWithoutNotify(Format(current));
             });
+            ready = true;
             RefreshControls();
             return target => Apply(target, false);
 
@@ -137,7 +140,7 @@ namespace PCShopSell.Game.UI
             }
             void Apply(double target, bool waitForPointer)
             {
-                if (w.Closed) return;
+                if (!ready || w.Closed || quantity == null) return;
                 double next = Math.Max(min, Math.Min(limit, target));
                 if (minimumOrder > 1 && min == 0 && next > 0 && next < minimumOrder)
                     next = limit >= minimumOrder ? minimumOrder : 0;

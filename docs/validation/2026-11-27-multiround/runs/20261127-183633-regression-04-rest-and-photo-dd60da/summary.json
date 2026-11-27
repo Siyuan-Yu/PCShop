@@ -1,0 +1,14 @@
+{
+  "tag": "regression-04-rest-and-photo",
+  "filter": "^PCShopSell.Tests.EventSystemTests\\.(?!Events_FireOverTime_AndEveryChoiceResolves);InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking\\(76\\);PhotoInvitationUsesRealExhibitionDatesAndRequiresSavedDifferentSubjects",
+  "started": "2026-11-27T18:36:34.0155827+08:00",
+  "seconds": 38.26,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 12,
+  "passed": 12,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-regression-20261127\\20261127-183633-regression-04-rest-and-photo-dd60da"
+}

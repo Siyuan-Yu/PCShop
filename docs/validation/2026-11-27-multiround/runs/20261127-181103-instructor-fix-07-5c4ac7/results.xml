@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="11" result="Failed(Child)" total="11" passed="10" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:46Z" duration="22.0959387">
+  <test-suite type="TestSuite" id="3126" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:46Z" duration="22.095939" total="11" passed="10" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="5248" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:46Z" duration="22.065614" total="11" passed="10" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="24104" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="5249" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:46Z" duration="22.044830" total="11" passed="10" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="SetUpFixture" id="4372" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1831" result="Failed" site="Child" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:46Z" duration="22.026213" total="11" passed="10" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="4214" name="OnsitePlayTests" fullname="PCShopSell.Tests.OnsitePlayTests" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" testcasecount="44" result="Failed" site="Child" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:46Z" duration="21.904165" total="11" passed="10" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="ParameterizedMethod" id="4217" name="InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing" fullname="PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:28Z" duration="3.837807" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4215" name="InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(54)" fullname="PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(54)" methodname="InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="211755270" result="Passed" start-time="2026-11-27 10:11:24Z" end-time="2026-11-27 10:11:26Z" duration="2.121490" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(54)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(54) Passed
+]]></output>
+              </test-case>
+              <test-case id="4216" name="InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(57)" fullname="PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(57)" methodname="InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1148974102" result="Passed" start-time="2026-11-27 10:11:26Z" end-time="2026-11-27 10:11:28Z" duration="1.704817" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(57)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(57) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="ParameterizedMethod" id="4233" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" testcasecount="9" result="Failed" site="Child" start-time="2026-11-27 10:11:28Z" end-time="2026-11-27 10:11:46Z" duration="18.060495" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="4224" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1945981913" result="Passed" start-time="2026-11-27 10:11:28Z" end-time="2026-11-27 10:11:30Z" duration="1.827631" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51) Passed
+]]></output>
+              </test-case>
+              <test-case id="4225" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1329128728" result="Passed" start-time="2026-11-27 10:11:30Z" end-time="2026-11-27 10:11:33Z" duration="3.237633" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52) Passed
+]]></output>
+              </test-case>
+              <test-case id="4226" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1346963789" result="Passed" start-time="2026-11-27 10:11:33Z" end-time="2026-11-27 10:11:35Z" duration="1.811633" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53) Passed
+]]></output>
+              </test-case>
+              <test-case id="4227" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1637686554" result="Passed" start-time="2026-11-27 10:11:35Z" end-time="2026-11-27 10:11:36Z" duration="1.613356" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54) Passed
+]]></output>
+              </test-case>
+              <test-case id="4228" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="939575557" result="Passed" start-time="2026-11-27 10:11:36Z" end-time="2026-11-27 10:11:39Z" duration="2.604138" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55) Passed
+]]></output>
+              </test-case>
+              <test-case id="4229" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1633666832" result="Passed" start-time="2026-11-27 10:11:39Z" end-time="2026-11-27 10:11:41Z" duration="1.823422" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56) Passed
+]]></output>
+              </test-case>
+              <test-case id="4230" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1005530786" result="Passed" start-time="2026-11-27 10:11:41Z" end-time="2026-11-27 10:11:42Z" duration="1.688300" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57) Passed
+]]></output>
+              </test-case>
+              <test-case id="4231" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(58)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(58)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1913088514" result="Passed" start-time="2026-11-27 10:11:42Z" end-time="2026-11-27 10:11:44Z" duration="1.674932" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(58)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(58) Passed
+]]></output>
+              </test-case>
+              <test-case id="4232" name="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76)" fullname="PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76)" methodname="InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking" classname="PCShopSell.Tests.OnsitePlayTests" runstate="Runnable" seed="1695659566" result="Failed" start-time="2026-11-27 10:11:44Z" end-time="2026-11-27 10:11:46Z" duration="1.767369" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  暂时没有店员在岗，暂停营业。 时间=第1年2月22日 09:00 场所=life_expo 人员=life_curator at= task=Travelling activity= route=True;resident_hanzheng at= task=Travelling activity= route=True;resident_baiming at= task=Travelling activity= route=True;life_leisure_staff_expo_reception at= task=Travelling activity= route=True
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x00128] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\OnsitePlayTests.cs:35
+at PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\OnsitePlayTests.cs:129
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76)
+REGRESSION DONE PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76) Failed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

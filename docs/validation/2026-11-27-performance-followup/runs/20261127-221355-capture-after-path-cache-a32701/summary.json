@@ -1,0 +1,14 @@
+{
+  "tag": "capture-after-path-cache",
+  "filter": "SimulationPerformanceCapture;PerformanceRegressionTests;PathfinderTests",
+  "started": "2026-11-27T22:13:55.7811052+08:00",
+  "seconds": 34.41,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 14,
+  "passed": 14,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-221355-capture-after-path-cache-a32701"
+}

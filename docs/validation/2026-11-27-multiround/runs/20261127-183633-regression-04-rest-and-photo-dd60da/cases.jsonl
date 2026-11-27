@@ -1,0 +1,12 @@
+{"name":"PCShopSell.Tests.EventSystemTests.Blackout_ChargesPerUnprotectedShopAndCanRecurAfterFailure","result":"Passed","message":"","stack":"","seconds":0.2569715}
+{"name":"PCShopSell.Tests.EventSystemTests.Catalog_IsWellFormed","result":"Passed","message":"","stack":"","seconds":0.0024816}
+{"name":"PCShopSell.Tests.EventSystemTests.DisabledChoice_CannotBePicked","result":"Passed","message":"","stack":"","seconds":0.006619}
+{"name":"PCShopSell.Tests.EventSystemTests.EventHistory_SurvivesSaveLoad_SoCooldownHolds","result":"Passed","message":"","stack":"","seconds":0.0077327}
+{"name":"PCShopSell.Tests.EventSystemTests.EventsAreOff_ByDefault","result":"Passed","message":"","stack":"","seconds":15.2231366}
+{"name":"PCShopSell.Tests.EventSystemTests.Flyer_ChargesPromotionWithoutImmediateReputation","result":"Passed","message":"","stack":"","seconds":0.0038005}
+{"name":"PCShopSell.Tests.EventSystemTests.Lend_MayBeRepaidLater","result":"Passed","message":"","stack":"","seconds":3.6313751}
+{"name":"PCShopSell.Tests.EventSystemTests.Pending_BlocksSave_UntilResolved","result":"Passed","message":"","stack":"","seconds":0.002926}
+{"name":"PCShopSell.Tests.EventSystemTests.StockDiscrepancyEnablesVideoReviewWhenCctvIsInstalled","result":"Passed","message":"","stack":"","seconds":0.0144907}
+{"name":"PCShopSell.Tests.EventSystemTests.Students_SellFiveRam","result":"Passed","message":"","stack":"","seconds":0.0151535}
+{"name":"PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76)","result":"Passed","message":"","stack":"","seconds":1.8322403}
+{"name":"PCShopSell.Tests.OnsitePlayTests.PhotoInvitationUsesRealExhibitionDatesAndRequiresSavedDifferentSubjects","result":"Passed","message":"","stack":"","seconds":2.4183254}

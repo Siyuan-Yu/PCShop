@@ -208,6 +208,7 @@ namespace PCShopSell.Core.Session
                 else { e.Units -= units; e.CostCents -= soldCost; e.RealizedCents += amount.Cents - soldCost; }
             }
             ConsumeStockLiquidity(id,units);
+            if(id!="hardware")SettlePublicShareTrade(id,units,buy,priceCents);
             _cityAssetEffects.Add(key);
             RecordStockExecution(id, buy ? StockExecutionKind.Buy : StockExecutionKind.Sell, minute, priceCents, units);
             Say("交易完成，已按本次报价扣减可成交数量。"); return true;

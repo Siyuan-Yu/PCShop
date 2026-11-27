@@ -1,0 +1,2094 @@
+[
+  {
+    "path": "Assets/Scripts/Core/Catalog/PartCatalog.cs",
+    "sha256": "aecfc3eb9db5d5d5387086861a05e1eba567209e21bbfddfdc92445c16cba43d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Common/GameRandom.cs",
+    "sha256": "db395493749544cbcfc39db625deda8b5460866b503b78f53dd01506978c9c2e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Common/Money.cs",
+    "sha256": "67a34e3df3c2227face3dd9bdcdf3d77ba2152c5f2a5c9ca1369c174ddc02417"
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/CityFinance.cs",
+    "sha256": "bc9dd937708c899c7d7e1d48c93c5dfdced04ef7ec7828a15a56f52e4ab7c5e4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/FinanceReport.cs",
+    "sha256": "75eb18cc2184ae9330e72af6be3fed4a9c8ef0196983b7bd1dc58a3055dc3311"
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/Ledger.cs",
+    "sha256": "0d7af590a5c5434177e9905fd5731a681ebad8565012e8fad8c4bf740bc0b736"
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/LedgerAttribution.cs",
+    "sha256": "042945be5b37977241cf7ec21fcd5f74bc0795a185b62e4c2fbf8884a9bb5659"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/Backpack.cs",
+    "sha256": "29d73f6470fa6eabb12bd64e855f5fefe900ce0f6b3128566b5f25ec4ac351d1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/ClothingProducts.cs",
+    "sha256": "21d5caf50c8f2cfae094acaef38693eeaf318d3550240a234735e4db5a14f350"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/FastFoodCatalog.cs",
+    "sha256": "5d8675628aab4ee555f232200e08dc25c9bf5669cf1d4814d0c8994615981f44"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/Furniture.cs",
+    "sha256": "a90f2ed54de6604202badbc2bbb58378a152c56a0a5fd90a866f9debd040a944"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/FurnitureShops.cs",
+    "sha256": "d70d5a9d86608ac637f513c95fff803d2387959e6f304bca2829eff61a0d2371"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/IndustryCycles.cs",
+    "sha256": "d8a54777dddc6c2dde45ed4e1dac83256b901bb1acebcf6210add7ca35d48bdc"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/ModelProducts.cs",
+    "sha256": "0a45a34ac8bb4645581e086aaee0401b72d834f00140311f8ade5b453374dad5"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/Pantry.cs",
+    "sha256": "2c19ca5b9ef81ca71216c36628dd5a27629687bf4525ea4940bc03b54f5f811b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/PetShopCatalog.cs",
+    "sha256": "25a3643bf6c97d1d0c42458ffd9bc3aa69099447b7166091defe1e69d1a65d34"
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/RetailProducts.cs",
+    "sha256": "0bf5759037781723e5e2b59e1d9e4b14dde9cd2f32b624e2e4a08ed889db3634"
+  },
+  {
+    "path": "Assets/Scripts/Core/Inventory/ShelfPlanner.cs",
+    "sha256": "9451669f7cb8fec53d285f14934ba0a66e1b08c3daf4208bedf39fd9abefba91"
+  },
+  {
+    "path": "Assets/Scripts/Core/Inventory/Stock.cs",
+    "sha256": "d8c98c660f474bc536cd3de5eb75fd9303af566bd232f478aee4da2e8ca4af62"
+  },
+  {
+    "path": "Assets/Scripts/Core/Market/HardwareMarket.cs",
+    "sha256": "06255b0f76b65b03faa204038f1e23e80254511b8cb0e82a57198d648ba9b60d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/BrandAgencies.cs",
+    "sha256": "b6e27197b9fbbda78e9cf7a386b9117d388b15747da558d53f9a56e1aa7b82e3"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/BrandBusinessState.cs",
+    "sha256": "1715157f53cdfc0dba78c55391e6fb9c0b831ad18a76d7bda8a7b8aa5d34d87a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/BusinessState.cs",
+    "sha256": "28ce5830af9b846934c1a4f833b2e911b50751a33225de5fb58150d433861c1b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Campaign.cs",
+    "sha256": "7bc17df8148a44d9ff56ee5910acd8c23049c29e5bb53074f9f0a2247c5421e1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityAssets.cs",
+    "sha256": "a306fafa52416a344e7c88d68e4dd6e9672113dfb299ab8eba16e6dedb4622d1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityClimate.cs",
+    "sha256": "f485a3cd21dc2a67b4b3ec9d9307766c5c0b66f7121271f0a91ce7131766afda"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityClothingCatalog.cs",
+    "sha256": "dad9683633444bc7e32c9b8ec3e9802709ceb5259dbba17937a82d91276f9352"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.cs",
+    "sha256": "c21d16cf64dfec511b6fb04cae635204c4d462027eb24757de9550d0cea3fa97"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.ExhibitionServices.cs",
+    "sha256": "5fcbd773dca05eb8ba358d8de8605722cc6d7b2ba1d2ef2aa5878cd84b04f154"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.Leisure.cs",
+    "sha256": "a4822bfd9cca5e5e714af3f34c8df8c02bb2573bab0bcc45e18d2525808283fd"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.NarrativeExisting.cs",
+    "sha256": "0e9dda0fda70017f10d64fc54facba53d8d94bd3691e12036b06f1c8dd1141b5"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.NarrativePeople.cs",
+    "sha256": "089f74b4ee52c94898b5a0885a9b41365a5e87920ccf2bf144f4d73b9d84306e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.OnsiteServices.cs",
+    "sha256": "6df31003764c80351690a277a1ee0f8900d402bc04150dd67c21ae80f5624675"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.OutdoorServices.cs",
+    "sha256": "dc61041add1b5c658d1edf360f0bf8845573a920a15275b9f0ed931de798115b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.PremiumServices.cs",
+    "sha256": "41b86e996a497eb323c45747dd5e359e156b41e78461f873254883a7d3bbd314"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.Racing.cs",
+    "sha256": "25e9935062e41c1b7cf2ad4b3b092b0bf7a338b02bcd46e1f01b48b537ad2aae"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CompanyGovernanceState.cs",
+    "sha256": "ca36c492f55d0f317b39a6acb1abd70327d145d3bfc612af24f78380d18e2a67"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Contacts.cs",
+    "sha256": "de5e6e032f755ca3ad4ee55166060c3ce7221f123fc9c73855b1df7841a5be79"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/DistrictNarrativeCatalog.cs",
+    "sha256": "6bd32138a0021275e24ffe81110cc94d3a1bb0556d1a6f3279e18810ba56fd51"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/DistrictProgress.cs",
+    "sha256": "fa626af137f1c89c1bb4e8f05676a4053b218a3b4386ad0743c4611870c8a3b2"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/EventCatalog.cs",
+    "sha256": "810a6d68f3ba027418b34deddbeebd1b4f74165413263f0c388a8c727923653a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/EventLoader.cs",
+    "sha256": "0f067cedb4c6ff9969881b9013faea526883411c5be19b1484da3479c55f6082"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/EventScript.cs",
+    "sha256": "0ef3f1e817dee89fce8e4812883109e0b4f57c9737d56fbfce9b53b952cf13ea"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/EventScriptModel.cs",
+    "sha256": "aa82cbdf1fa211579e61ab6e05b710872f6d640a89902f86168f4d5833b71671"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/EventScriptReader.cs",
+    "sha256": "99d87b025c3825ea14130eea23e78f45ab1f9a2b279abfb47056e3b24acfdfe7"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/EventScriptWriter.cs",
+    "sha256": "ccb61957f77f9a8ba0d26bb56ae2f51930218d37b416796a7fc77848697f8fa4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/ExpoMoments.cs",
+    "sha256": "8c2f7e9f49708fec7e3d23e04d682660154af80d540a614edd0e1d79d0662806"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/FishingCatalog.cs",
+    "sha256": "9852473e35e2d7f9e8b37c44db4fd7b1175ec9d51c08b05d326507341e93580b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ActivityFarewells.cs",
+    "sha256": "1c8c33667912a9ebfd269c9df3c3bcaa04ed9a6cbf0a72d36060f791730e15be"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Amusement.cs",
+    "sha256": "29e1e10c5269ee5ba81dc3b6b4e6db909bd20250876c20d1dd9b411102a3bb26"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.AssetReports.cs",
+    "sha256": "d7f9c7571d0419796e76ba2d0b2e949a0c48debe7aea8eaec93ee497bfc8d75d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Bank.cs",
+    "sha256": "1cbc743262fb802b7603a1ae0765e6bd92340d3eda53a0e1b06a185f82534343"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BrandAmbassadors.cs",
+    "sha256": "c0f595b54bb47e74badbf2d38365b362b5561bd091cb0ee8ac07e9f813b3057e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BrandOverview.cs",
+    "sha256": "bf675cead3ee22b420f09db30b9a664e54e20aa3a6a866175fb5e48f2bf030b1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Brands.cs",
+    "sha256": "7475edde40e72c7c81f871c4e0fdefd21476a87bb5e269aad60e9695162c3d06"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BrandStories.cs",
+    "sha256": "af5d5b9d6fbf4257f6e61bf853e090ad0f770fbc948dcdf5c2453ba3462d69d8"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BusinessLife.cs",
+    "sha256": "73ad3cfcafec65de3db3b029caecb99951b61ae971163b2aebb12ae0e0d7ab53"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Campaign.cs",
+    "sha256": "7f76ad7d742ce7f2fbd9346730329f33e7ca1388d048a5a169836e32989124c0"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Cart.cs",
+    "sha256": "d9b480f12a60e950d6263ad15ffe82641e6232c317a5093e7d5feedacea97d2a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Cheats.cs",
+    "sha256": "70475e751845f4fbdf4b9e40dd62fcc9ac9c33c23d59fbae1aa2de1530595ced"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityActivities.cs",
+    "sha256": "b20038e1ad4aad925c998e186de40a099d512650d58de72ce957f5d12fb3accc"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityAssets.cs",
+    "sha256": "44991be12e924135812357453fc3646ed4b74a181ab09fdef1d403489a5e583d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityClimate.cs",
+    "sha256": "3cf11d4f3aa37c014c53d83b97c6b6feacd26379b4c8be998306005f152e05bd"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityClothing.cs",
+    "sha256": "381918add5a2737ccd1445012635bb84a6565174811f77e50072452f2a29af79"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityCustomers.cs",
+    "sha256": "49ad4a5e05a22bc914d2527116965115621e80cecbcaef2b756ad47c7fbec9b7"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityFinance.cs",
+    "sha256": "f1af4904202d110efba35ea38e55e5d416f39fa638a9480d56180b30c47c948b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityLayoutMigration.cs",
+    "sha256": "4786c51391c5ac882a2a9f9ba4d2ae3b77620cdced435a0f5b958713561dd957"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityPeople.cs",
+    "sha256": "5632fe188ab3c13c7aa5a89a2b1f45b6a02893d0652ab8a699249d0d44ca5c76"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityPreset.cs",
+    "sha256": "a22b36413226ee25e3edc9ef686b320e792f94f4c72e07bd44958463b77e0eb4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityProcurement.cs",
+    "sha256": "9adba44285f1123c0bd1cb720851213b4635dc2e1e6270b37931104acf0a71e4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityPurchaseTravel.cs",
+    "sha256": "eef0726cc3bfe5994cd4db556f284b56c7faac82251080764ab2893fc8fc470a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityRetail.cs",
+    "sha256": "596b089c50da282f24675e848e6ad794798c5e27b109df2533d2bb3986644ab7"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityStories.cs",
+    "sha256": "deecfef4b5ba36494141a066812659821bdac87f7d1c23c1e2f114e474dadc82"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityVisits.cs",
+    "sha256": "f1bd069484881bb7ad80edb7fe23d8e581b734dc22fa92f6f3b30a7b6b22cd70"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CommunitySearch.cs",
+    "sha256": "b87b63b69c4107f34e3d41f566bc863701733050976f16e8978769a8dbff7530"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Companies.cs",
+    "sha256": "48fae9e7b5be698aba0d67541f9b0b2111e60bbae1f5c3e4d618feb905ae61b7"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CompanyBoard.cs",
+    "sha256": "dce1898ec218e589e234219a0e7dc1e4e9e15e26581578498bc96722e7d2562b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CompanyControl.cs",
+    "sha256": "539b6bc05dafa4d44ce76a20fd47d5642bcfd20e904255cc2e7e2af1cf8bf0be"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CompanyGovernance.cs",
+    "sha256": "18a1f85c58e524b5b18325b96da106e2059f6479df182daa25c2212ff83b7804"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Conversations.cs",
+    "sha256": "1ae12300d1924809b1bba72e4b4b1d2cf0718d54c7635afc356727f32b334877"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Courier.cs",
+    "sha256": "3e23829d8cdd3f3e870084ad07a87d7be9168e1bd57f3233b81bccb1ec9b4548"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CreatorRelations.cs",
+    "sha256": "6f9d15025b5b6984483a44a09394b4b84e5fdbe95cea665516cd927de9c7a2c2"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.cs",
+    "sha256": "7bb04809466088cbd96c73561e2d6ac52826b49422d84fa806b473b7d5529d22"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.DistrictCommerce.cs",
+    "sha256": "ac4bfd1a41e53cac5fc4e054dfe349641eb9375d882c6a35ad5e91de9b659b23"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Districts.cs",
+    "sha256": "8708e153c64122462a51beb0b6dc25e271e77c1ef239ca5af34d603d15fd5d69"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EmployeeAssignments.cs",
+    "sha256": "cdf31901bd1e303991a38a5cbd4839df0eaa1aa16972665ebb2bc239ced1f724"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EmployeeWellbeing.cs",
+    "sha256": "c495f4627a86e115446e5818d496e9df6f1a1262c4586eddebca40b9ccbda363"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Energy.cs",
+    "sha256": "ab9032911908829cd06ca2256376092eb1f5c0f8a3f874c93a253515c87e82b1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventCustomerBatch.cs",
+    "sha256": "992bff0963b495ae6757641c137ae6c03e73f3adfc11082c6bbfb7ba794dfcb2"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventDeals.cs",
+    "sha256": "9ecd4ad499664c77196bd61325c37e696558c266ab5b58badabd7fb0d13e8332"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventExhibitionBatch.cs",
+    "sha256": "701d6f287172bba8a5d8e91168a43e533350cf58c3664f0a9804f4f85668a2db"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventFinanceBatch.cs",
+    "sha256": "0ed488764ed7fcd2275091d0a59a645c60f369a5ec31d620194b998126656b54"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventFishingInvitations.cs",
+    "sha256": "afc4d13fb62f1e25a926483f3a283df2bdac0fb2faa7e31d85c8a281957568d7"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventLifeBatch.cs",
+    "sha256": "a6b220f4842d777f3555eccbc6e529d2a61afeeeb184931b6d7dc4eb77a6f607"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventMoneyBatch.cs",
+    "sha256": "838bd79beb45814aee2122f1373276f23236d67fc768a3508253aea47ab168ae"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventOutdoorBatch.cs",
+    "sha256": "2c7eaf519cd38082e22e507f1056761144c1a173486cd7d3ec4c6496ddce7758"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventRacing.cs",
+    "sha256": "1578f4c3aa7da2f0c7563566c244591034d08395247c6a758e03f21e3e09e9ef"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventRacingBatch.cs",
+    "sha256": "26e2b9cfb551b8a1a7c2e8abd3f5c525698b83fc671e16a8b88854c1a9bf7f19"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Events.cs",
+    "sha256": "766b6cc8c496f14b8be5d0e8eb537dabcf62157aaf22f5660add2f33bed775b1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventShopBatch.cs",
+    "sha256": "b6126bb78e5d1d19c6208b19471af4f3bfaeee0e69e6e5efb4517dd9206bf9a4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EventSocialBatch.cs",
+    "sha256": "a04141ce21e673353521f1be3736e73520cc7e730eb5c8b4a0eb3b0963412b0e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ExpoAcceptance.cs",
+    "sha256": "0964edaeb52f1d76bcff6c4294943c61d8035b1681513bbfb66eec4605e4384d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ExpoCalendar.cs",
+    "sha256": "fca69cfc704c25e3ab3ad7639a6ae61c5d81ab64e5b6add6fd1c372f97dc779e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ExpoFinance.cs",
+    "sha256": "0d7027edcf544386c643c3d5ab26830efb020474484854ed65aeeb64c1f349d2"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.FastFood.cs",
+    "sha256": "b171d536bf9837299ac26fb18187459f72fe0bc8117ed9ba50410acaa30934af"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Fishing.cs",
+    "sha256": "96699eef39906d1de08b734e5dfbd7d9f4c2ce151153c2164744c0276f8b0ac8"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Fixtures.cs",
+    "sha256": "d63b7bedddcfcac324c96c5acb9594af966f89659e124994b4ac2872631c180d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Food.cs",
+    "sha256": "f37352e4d8553e98cf696a1257e26e2c3156212aecfac95f393e9d0a25ee2f0e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.FootballPenalty.cs",
+    "sha256": "6e31d0c25d28201f15140b72736c59fc7507e966b3da6e71d3ee2939d95780a8"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Footfall.cs",
+    "sha256": "5217515489a8f42a732da80166f90b0fa44f957efb2f469cbac30857e684c6c9"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.FurnitureBuyback.cs",
+    "sha256": "f67e808a672d8b1db5ef467e0ac3d4c01e6be49188af0595fa4cf6b5a3e21aad"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Goods.cs",
+    "sha256": "6c73008fe1a762fa274c509d3e28e6e304118ffe7ad85240e8a01e6a5af21073"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Growth.cs",
+    "sha256": "c8fa7ebe21f26cb98123bc9c65fb446b11a2fb8adcac14e0a803ca65b46586f6"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Home.cs",
+    "sha256": "b2e363976002253116720d89403d536cdc74c1d8c4777205ed7745d108d79d2c"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.HomeWorkbench.cs",
+    "sha256": "c4d887adf6b557e2f265ff5d61d0f07c704bfcd0f131f5f70fb46bbd3001e0a8"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Interactions.cs",
+    "sha256": "17e5f1a858595edd019e320e94ba35aaedad461f98d7661c904b6b2abc5a5200"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.JointExpo.cs",
+    "sha256": "b1a9c1988fb9312443ef61b669508f68c0df94f7d32291827069c584209d8060"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.KolFees.cs",
+    "sha256": "a93684099aacacf5c3b5be617d3d81038ed3a6f02a412ac2bb7174ba6d4886aa"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.KolShowcase.cs",
+    "sha256": "ff99d0f97c2f633c40e45ebe75a522154c9442a0f16129b0c725e007eec17a1a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.KolStreaming.cs",
+    "sha256": "1ac9e9715ad1a44c9a34212d2d068436efeae1b47c02b25e984a6ddfaa04257e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.LayoutHistory.cs",
+    "sha256": "898780907f564de98185817caee79f7ff60618bda30ab2dd2a9cb2edb37f0c2f"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.LeisureGames.cs",
+    "sha256": "6d865078a6cdfb2233fb4a60f6b644fefc75b57a7953b636866a1d5875f73bf0"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Life.cs",
+    "sha256": "f4f41ca0b776d887ee6edbddfcd2dfabee328f708ad9d61fca118cb2be19f94b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.LifeFair.cs",
+    "sha256": "23b3968e8ae2465e7a0baf6793a5531bf29d75e0731be94fd2c60c8b651af372"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Loans.cs",
+    "sha256": "6039f9fb7f4e810b93b87a5d666d188f5c4cfc98e05d6111e43a0d905fcd85b0"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Mall.cs",
+    "sha256": "db4cbcd131c23b5a8b204c9ea20ad18cd3d2bc2468918e6cf0d8c5074a441469"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.MarketTalk.cs",
+    "sha256": "a500561e966f153d05952c16b131b1a8c4a2f7737afe7a277600919d6e96c16f"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.McnIntroductions.cs",
+    "sha256": "759ee1d77a36c4eabaf223012dd4f0f691440bfa12f4f7083a7551699995387c"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ModelCommissions.cs",
+    "sha256": "670064d6d6634966c9bedbddec7305ddb68e541fe7568dc7e43f7e58f34accbd"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Neighborhood.cs",
+    "sha256": "b75affc697be097572ca3de3b34a616210a065c61341b1e133c0fb0b99a8dca7"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Npcs.cs",
+    "sha256": "1883fdc80eeb30a6e903aaafa4b8f0ec57d47b5513375f1beea21a975ed2fc1a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.OldMarket.cs",
+    "sha256": "8cfb974ea7acb14a307049d0f546cb49eec72c95dd125e8a53d6a7910be328e8"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.OldMarketHunt.cs",
+    "sha256": "0e51e910aecb7c40cf40e9a41de4c683979b19df8858307a15c5c791d754e41e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.OnsitePlay.cs",
+    "sha256": "37bee0df5e3c7be769e7c44b4719732d0599e032cc537593b7da6e5a2a669ec6"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.OutdoorPurchases.cs",
+    "sha256": "29790165a263258153774dcaaf5a8ccef2a7b850b657fe746c9afbae70a1b811"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PachinkoBusiness.cs",
+    "sha256": "faf4870fca8b967e2c04487aae127801970367a37c6771e1f91f2c042976fc25"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Pack.cs",
+    "sha256": "98afaa0b6a02e805967aae3a0f61a22fbe4e99977d6a1ee44f052fee4af7ce89"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Park.cs",
+    "sha256": "e065498034fd8e1fe7e6884df88812087df1b1e028c788a11e07a4ff870ed572"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ParkRowing.cs",
+    "sha256": "e489a0aab5a74164b09088cf69478c09c5db14ba0ef4a1c58ea4094c91fb01c1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Payroll.cs",
+    "sha256": "616f1362338bbecd10823f8e93ec56c53048e9b6a2e6546e40419e41ce365bf8"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PetBoarding.cs",
+    "sha256": "eaa5fce8a11e2222dd6805eb6c1f9ed347fea38cc50bc5a27db9ff0da37f8f2a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PlayerWork.cs",
+    "sha256": "c830e19ec652548215f24c01ead76dd3a3f169c0ee18e3db49e86b74c84585cc"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PriceReport.cs",
+    "sha256": "41c24f2c83f0bb8a5e3310467f606e02767b8ca3a39277c7de43dca0c650188c"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PropertyMarket.cs",
+    "sha256": "0815b18937792f020082ff9df0b952b60746195fd771201b3f5779c4e5e51cde"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PropertyMarketAcceptance.cs",
+    "sha256": "a20e45691d8e3e882fc6394723db70813ce88b295cea8502500df82d4fc06f78"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PropertyRentals.cs",
+    "sha256": "2c11e1d8579476c55f5fa8f5a3b2628ed81c858e291c7c6e9da797fc3a18d25b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PurchaseCatalog.cs",
+    "sha256": "447ac7f02fef9b2110dcaf3dbfce0f359fe1f666771fd12028e5565bfbc6845a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PurchaseHistory.cs",
+    "sha256": "351bf4d37cd0b11c8534724b177715fb3862e82b5c17cc29c67302f4ddc9b5ea"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.QuarterlyExpo.cs",
+    "sha256": "ae0662606d8a8fbe013f1b45bf8f9ae5495ce9d4e50b563a33d5a4bb2cc0e58d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Racing.cs",
+    "sha256": "c1def016b16820990e2d10bb26a9478ebd1672302480f81ec916ee918d7d5c4f"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RacingAcceptance.cs",
+    "sha256": "bfcebb55c8f7c4da916ebdbe907ff6afedf6e13fdd39eab6e7fd6c73212735b3"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RacingMeetups.cs",
+    "sha256": "a5522e03378a445017c7fe0a55667d87bf815c8471f23d444829341127ebb8de"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Realty.cs",
+    "sha256": "aefdb63ee2e5728342a90ac2b936b09e6ec299cccf965a21300557979365fea2"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RegionalGarages.cs",
+    "sha256": "958ac3a01e11788b8f64b74060ba8f28fa5b0dce166617d90c08f7d4c0c6e522"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RelationshipStories.cs",
+    "sha256": "6852a8e505ba53a17fffdc8d9c566368b44b4991a5d8eb550b2681c435af94d4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Resale.cs",
+    "sha256": "1dba55dbaf77284d949c603978f7da088282b9041e05b432130ee19dc5016d8d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ResidentialAgency.cs",
+    "sha256": "12bfb8c8320ebc9dd1efbf991d8005996e85321aba43c2d6c379aaba43e65fbc"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ResidentialProperties.cs",
+    "sha256": "08656caad5b6450a4851ad016308e2340b21c4bce727c84dc98d4bf011597e1b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RestaurantDrinks.cs",
+    "sha256": "677597fc99dba6c76b5c9c90e8178e6233ec1f1bc7aa1ded4e5b446e40916df6"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RestaurantWork.cs",
+    "sha256": "c14ba337669147dcc1e1cab25f2c766a3ca967aecbb30ea88e017a34becc1f5e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Restock.cs",
+    "sha256": "6f26f3b8ba75b4922d2824d8526827191fb9ff9152680ba0a076f8dbe90abc2c"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Retail.cs",
+    "sha256": "9fbcd1d1c1e2c8da8315194a003d15a20917573a86b74c1490f3cb5d8ff6759a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Romance.cs",
+    "sha256": "0ef68e3abbac9c42e93b870f2f8814dfbe417b9b0aaf70306c90805ad1bbd7bf"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Save.cs",
+    "sha256": "679a2e12306511f5835190bf4558b1151e1af0eddda83b135745903227397689"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Shop.cs",
+    "sha256": "30f62766aeae309180737598057f18e26a424f6d3eae70afaf98a32f09d05aa9"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ShopCompetition.cs",
+    "sha256": "0fd5ab22ac26aa44584179b7743484e08400aaf85388aca52fe467b61e7e7ff4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Shops.cs",
+    "sha256": "065a9773390fd511cea22bf3481ab17e990da45b53234140b5cde5dcedb60725"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Social.cs",
+    "sha256": "6e576f299645e2364bed4b567859187c692d480fb2fe949f0e710895f0da811b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.SpecialBusinesses.cs",
+    "sha256": "79bb8f27d5325bcf459f5fef787546a18206cea02fb40c0de851941a21f025a1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Staff.cs",
+    "sha256": "8be09734bb9bc0649a287e2a195d30957275f4e583dbe919a909721d42fe679a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.StaffCapacity.cs",
+    "sha256": "2bfc91d505253baa25f1cdc9a133d16113a0bd7bfdd4274398b3eb01aee5ba72"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Steer.cs",
+    "sha256": "d65583444bd27f76b12a213d4b6a15317afebe821981a9fc1e77bc57dd2df4ab"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.StockMarket.cs",
+    "sha256": "a2dea4904ea13cc7ec52e944ebae23f25047ec10808e5094e6601c53206ab5a4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.SupplierLimits.cs",
+    "sha256": "7b8054558088291da08aa106e1bf35b5c299f70c406830cfbb13ca47a2b4213b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.SupplyContracts.cs",
+    "sha256": "80d53008179c9a04e1ab38c5e363c97000b7912e3920b4f4c13868d589ca2f18"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Talk.cs",
+    "sha256": "abce6b0398349eb5519e0543b4902bb4fba70b76e6dfc1c407869c3acd25ab5e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Trade.cs",
+    "sha256": "1561c570e1b89cc8d37d81af633ce41999bc1a2194d2e2ace385de20af7aad9e"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Travel.cs",
+    "sha256": "5caf4e18024fd5c9a5d889c2dedcf032fe23b40475f706b050bbaf694bf66d01"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.UsedMotors.cs",
+    "sha256": "582a04934af16ee14fe52963f278ce233db4a40e2bfce209c0f15bf6313d06d7"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.UsedRepairs.cs",
+    "sha256": "e0bf04523fe5bd27f74e3524526b21b66afb32b572c7f07680fc68aea3b30ae6"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Ventures.cs",
+    "sha256": "bf5a94f401eb506c46e6e23e2d0ab70561bade28d04e7930cd807c37fdf128cd"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.VenueBusiness.cs",
+    "sha256": "e76320a590e6a17fe4497938097c588179ed7af01603db4f19df074de069ed8f"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.VenueCommunityActivities.cs",
+    "sha256": "87eb614b9051889be7a5e866c51cedb9be2e6b26358d66cbf6028f3aeb5c46ba"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.VenueServices.cs",
+    "sha256": "878cbb99443128482e1e6e8a22d402a880fe77d7ce5595f385d88259bd823161"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.VenueSponsorship.cs",
+    "sha256": "4afa9547a9a0c96bac7d7c023488f7534cc5fccfef41d48e3520693ed9dc0578"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Visits.cs",
+    "sha256": "a8576bdc2bb0c5db84cbfcc83e7028ad3fa8c6965f247d7e77f4e60e40172c98"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Warehouses.cs",
+    "sha256": "4c83a9524994a075e5a1815d18c61b3a2ecc17bac8b9789c7f24e8ac40078621"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.WeightMigration.cs",
+    "sha256": "1e191a987c2eb4433dc89ed36a6d47d34cdf72bf235740d1c5754cf701712f62"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Workforce.cs",
+    "sha256": "ccfd6656a925f80f21d19cd17a138f9b1502c5253be163303fd37316e3f987da"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Workshop.cs",
+    "sha256": "65ec1b67c770292028d562aeca4ceee5d0199eeed4846b452c196e6eb1792450"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/KolStreamingState.cs",
+    "sha256": "c81ac2d557dadab9eee4b1a63504d796b5276dbfe184a716980adfc4b7bc5fe6"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/LeisureBilliards.cs",
+    "sha256": "7f3cee9886b106f38821f69f506634204895460a2fcf8173a65dafe720bf4cef"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/LeisureMachines.cs",
+    "sha256": "768e1004e2175c9f7cc3178577dc25ac6a4741a795b2bc0fbfbb3b12d0c2abcb"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/LeisurePoker.cs",
+    "sha256": "5cdaeb5e623faaf65d5ef2749c461eef792ec288f2a90417f1d1516706417e13"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/NpcEvents.cs",
+    "sha256": "f5a9010005f59fd25ad58304ec932d49863586ef763315725b3da9d0111a0938"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/NpcNames.cs",
+    "sha256": "acdfc847d0bf50882d19118319a67b487cb757b23dd9bbb64ec81eeac1d03437"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Npcs.cs",
+    "sha256": "2bd7e10ec27d494d4c69d939c8035001b07220045d33f14366e4f8966aef2f22"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/NpcTalk.cs",
+    "sha256": "a21097172e76b8da1be960b8247bea75a7710bcbaa490e5de0ce4fb248745982"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/OldMarketCatalog.cs",
+    "sha256": "d6870c4c9388b4d1dcf8fdf58e0e0b5edf4e9098f943936047730e6650adc164"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/OwnedShop.cs",
+    "sha256": "dd8914f5d0faeaf486c544136d854e7d5d7a321b3a61af7ac4dd6f4392101738"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/PersonStanding.cs",
+    "sha256": "46091bc96b563b4149c1dd03218314bec1549fcf54061cdccff8bbae801ac57c"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/PhoneApps.cs",
+    "sha256": "65e11717f216ccf38f9f2d1f9b489c5df98245cfbae07b46b61e6e6f9a4620ff"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/PlaceRoster.cs",
+    "sha256": "db9302f5c210a10e842ddba3a07ab764b4e810c00b8153b02bd3a84b6e3826d5"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Police.cs",
+    "sha256": "2acfd55317b565a541049510832d138d529ebafa6ef641e93507b8a57b749ffb"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Quests.cs",
+    "sha256": "c6b555de13c956e9f4e83c4f62ae523ee7e771997cd0305864404d3f79b87153"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Quests.Growth.cs",
+    "sha256": "6002d17059b8781d3e958c18e624943a960f78a3493535b7faa222f1380baed3"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Quests.Opening.cs",
+    "sha256": "1dabdc1d88f3a6fb81612d9d726765bf2e3a7f41caeaa720e69f019b1de14628"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Quests.VenueSponsorship.cs",
+    "sha256": "be48ddf4b7948e938489b637b44c383b97920704619394846243206a34cf45ab"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RaceSimulation.cs",
+    "sha256": "99ed255f5064ec20c7503871d0a9ff2a27d5026d6dff6c019cd476d9972077eb"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RacingCatalog.cs",
+    "sha256": "9cea21698069a4edf4cd6bb06e5ced8847035ea23bcc89ee8d4f88562bb48fc1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RacingSchedule.cs",
+    "sha256": "db35b02725024ab03f483a2121df6e7f8e03f1b7af5f6fe4ee511e71827f9874"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RelationshipStoryCatalog.cs",
+    "sha256": "fa5644d347a4d5f6efb07529746df1a0845c797f9f72ec1d242eb552bcda9233"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RelationshipStoryResponses.cs",
+    "sha256": "90753bcea913c34b17009d6c9c740089ea4517eab55e3d56087375d16d1db07c"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Residents.cs",
+    "sha256": "632fc9961d0182cd093ebe1923936f85cb14c3f40edded925f0f2a66ccbe766a"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityAssets.cs",
+    "sha256": "9ecdc2143e6a0c82ff299a6171202c03c9c88af33fd4cc17e72239ed4ce102a4"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityClimate.cs",
+    "sha256": "aede978a91969c4d97ad234721957f7ed82f92ced5a1a649ecc88c86e43fd06d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityClothing.cs",
+    "sha256": "6ef7e5362052502651d7217cae80bdb6417b06290d84e127bc6e199b5aba38b1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityFinance.cs",
+    "sha256": "9dc5d5b60e5c53f4a558271601347ab7c262836b107796ce75f9395f03bd2540"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityLife.cs",
+    "sha256": "69d80407904a410411e365ec6fa9faf4b6c3b16c9c51fb6f8349fd5a3c4484e0"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityProcurement.cs",
+    "sha256": "4867bc51b2065e54fd65f7d3595d02d0ba1ea8c822ed6b07a795cb1983670991"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityRetail.cs",
+    "sha256": "e1d28c1720c7ab62e8643949d5b95608d3598e33c3459a75c751a2868dc4ba27"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityVisits.cs",
+    "sha256": "41560f7e6083dbebd54100868eb04eaaddb55851a7aa73c2636578769bb3c6b8"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.cs",
+    "sha256": "800267931f55d707d72dd74e945eb11ea0300c2e0866983a9a362fae09a3386b"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Social.cs",
+    "sha256": "ddbcfcef3d960ce0ff100b9ce3805956ea4d7822bfeab6ba1d6d3e2d2a841201"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/StockMarketState.cs",
+    "sha256": "482d9e4dd6180c509500c797b4862aaf3b7e30cb82a0da91387b62bd323a1c28"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Trip.cs",
+    "sha256": "c3ad96770e7b6d3008a81f3aba1c298ef32acd94f24cfe287fa56c63cd2e6b3d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Vehicles.cs",
+    "sha256": "52519ea4dc72a0108d34fe0874e798c31d2966dd40a68ba155367ef1db3b035d"
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/RealEstate.cs",
+    "sha256": "15b2bc38cd5099d4b2f97ff79f2c077d177a5914a7c71ccdabe19cdc59a3546f"
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.CitySave.cs",
+    "sha256": "0cbddb292a898a49d57c6294b95f083346cdf1708fe6db930c3b8a9f96ebc0cc"
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.cs",
+    "sha256": "e5853efb5fd3b6f02524259edc239fe04e18a75ce3dd568e3308d2056648ecc1"
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.Pricing.cs",
+    "sha256": "51bcda1d7fa45a7851fec582bfb4a617113339dc77219e6a47b0714695a02466"
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.Resale.cs",
+    "sha256": "d776f9d7f9d7801205ef40565aebe59d16c6e0b11dded2bf4a29d99fb5b82233"
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopUpgrades.cs",
+    "sha256": "27ebbc97b5f702a0702d73a81ac9331ab7c76c52b8e649627095d04c6a989159"
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/GameClock.cs",
+    "sha256": "1e81d5757a3b1a3f94362fdd2bc62bd8d66a535e550942b32c893f04e2c85655"
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/GameDate.cs",
+    "sha256": "0249c0c0c58ccbf93d2ac7fb4ce7699a0094c16cba4f52919f08294a4a573302"
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/GameTimestamp.cs",
+    "sha256": "8408a6caa8736cafbbd0cda08d3e52b745a5dbce2c07aa5ec3aa62b1d1ef6fe2"
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/TimeController.cs",
+    "sha256": "4b5c32a94ef7c7d112dd3250ab1daa8846bfd4382b187ec5d3211a0e813632db"
+  },
+  {
+    "path": "Assets/Scripts/Core/Trade/Online1788.cs",
+    "sha256": "c8f82ef13483be4f2d82bb22911da96eb1bccf40e3345e18f454520c7a1ebb10"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/CityLayout.cs",
+    "sha256": "c920c7d655964503af1262e3e1e7949455779931d9b85d4fdac31d30011d09ee"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/CityTravelTiming.cs",
+    "sha256": "a963fbeb45247192c984c07fc3166cfb99292eae6c75a2974eba7854fc6a463a"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/DistrictRoadGate.cs",
+    "sha256": "5b8883e711c0123ae1509e50b46d34d91a67c2e258e12b6115e25095e230c12c"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/OldQuarterLanes.cs",
+    "sha256": "e698386cfa2ad8b1a28ec18beb96404628b0e46e8d264379dd61712a2d95ec31"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/ParkPondWalk.cs",
+    "sha256": "72e009fd776b8bb67e7c9f61e0c45cd372a4fc2fa2a3ce6a1a1e1372771629b6"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/Pathfinder.cs",
+    "sha256": "025a9f32b2727c19f86943464514ec3a50691222beb2b17f0e29172468b01503"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/PathWalker.cs",
+    "sha256": "dac6183fbe14a6f51c2eae6212684ed50ef5c198a12c58292036979b70644886"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/ShopFootfall.cs",
+    "sha256": "62bf72e0ae3278d406ea8f7ce803e12fc01554bd316b3119a0fd9f4238e5eb2b"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/Transport.cs",
+    "sha256": "9cc02e8208f1c97487c41248fea45bca01cf2d3716b85379890ea6639201b3c3"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/TravelPlanner.cs",
+    "sha256": "58a1daa65b4c1f23b3f3c23ca3f92905b967e9673d0ab6db22a1aed0a2fba01f"
+  },
+  {
+    "path": "Assets/Scripts/Core/World/WorldMap.cs",
+    "sha256": "68af6fef835dfe964fb970eb21e6fac05c2ef3be238cfd881a41b9bee01e2788"
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/CityLookProfile.cs",
+    "sha256": "ee643bf39847756ba1ee2e83314273667fb84632cf999e8817f27856c0a803c4"
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.Actors.cs",
+    "sha256": "e7665b94c4352bcf974b58aa73e39c2570127aba58136322acac199339cde54c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.Buildings.cs",
+    "sha256": "1eaffc000320f36ca108bb82e351631f2d2b1133fe746e74f66fb30fbb4793f9"
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.cs",
+    "sha256": "f1897cfe40b3ed4828846f71bbed73c75636d16f449f9f36e538b6f3f77da807"
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.Street.cs",
+    "sha256": "6965606fd445cb2189efc7bbf419e486bad4ab51e39df61455d220a1a650c1d9"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/AmusementParkView.cs",
+    "sha256": "71c310e310fec2019939069b77f4a2fda9f827f8ae90d369a8c360b7a5d869d9"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ArtDirection.cs",
+    "sha256": "df748158ff42fcdbf45dfdf78358d8716b114bdfa6e6ef8401f5ba2808004381"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/AvatarPreview.cs",
+    "sha256": "19066c5785f5d92628a03a793f4fa9e2bcdab0238792f733f59b23c7dac304eb"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/BakedCityGeometry.cs",
+    "sha256": "6384b74dc858aefaf091dd63e4fdb68dcc78225c0f14343a0a170c02ce0e3aa0"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/BakedCityMap.cs",
+    "sha256": "6e3aeb2f8d4c0ca01724cfc74f9666bf859a07db9c42d5db3350d8a2aa3e4325"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/BakedDetailLayout.cs",
+    "sha256": "4a02aeaed9b233e9655b482ea965f3be7a09ae31090573128a5aa229506182a8"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/BakedForestLayout.cs",
+    "sha256": "4095148f233c45642493e537d6a4ab9d34deb73eb2f1e562718483263e262285"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/BrandShowcaseArt.cs",
+    "sha256": "5cd21c332875908455e94ffc1ab7fbd8c58fe243c15c0e98b19eaeadc41eab4c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.cs",
+    "sha256": "22be3641806575e4fd71855553fafc227eef54246fd50a5b5ccc9cb26cdf9cb5"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.Industrial.cs",
+    "sha256": "cf9e1d74a55b84e63ebb1d844a130b65486d8639de1348d0384b1b55dbd8ab2f"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.Miniature.cs",
+    "sha256": "33baddb8b4df87df4ecf6b254056b300e4360b3fb42b90342a1e0bc1b596581e"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.ModernVilla.cs",
+    "sha256": "10887b996026983a5fd4a149c326acf1c63d2b586002e65f75828e0595ca2473"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.Reference.cs",
+    "sha256": "ceefbdc93e3cf6f5cf535a04cdafb048bfde5e4c1636231e984985d79c5413d5"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityNpcClothing.cs",
+    "sha256": "03787aa85bf16278b854e6f3fff63274ca12900a8984ee52d5f58bd76bc96a4d"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityOverviewShadows.cs",
+    "sha256": "8c2b0a6bb526e4efb1d4e2bae82a6bc0762297bda71072281cf00fe71ea556a6"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityRainView.cs",
+    "sha256": "572467df1537271a1bc59086d1cf9c0b9cde326a5c6cad42969b28ffd08c674b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityRoomRoute.cs",
+    "sha256": "990b715b366a2253ed041b3050ba82c5c07fa038e482c63884f812d0a2457352"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityVegetation.cs",
+    "sha256": "4625da76931e8424ef74c6d570890b568ec8c23703485d2a78ea80288068d525"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityVenueView.cs",
+    "sha256": "ba5495055548a741bcc815742ba5ac7084c45880d86a2ce753f02fa2a698dafb"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CommunitySearchView.cs",
+    "sha256": "77fbbfc29ea39802a7b785f4654f2be70e600c2e8cd1969a43c9a35d0037a70d"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CrowdView.Ambient.cs",
+    "sha256": "f21b1a7c8bba7f6d6eea446e1fac1792eefeb0a799a0ad45d17c19cf14a314b5"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CrowdView.cs",
+    "sha256": "a9ab285ea0ee7f3a10ba0d616d920746993149182c7e9ff000ebd53432a4788b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DayNightLighting.cs",
+    "sha256": "d07307fc2dd4bf61a0fe53b988b970882e24b20c326bb4b088b83ebf14219768"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DirectionalInput.cs",
+    "sha256": "6e442ba0f7d58de5c2affbb888e63c964f3c6d2bd5b6eb2239e355f9c17c690c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DistrictFinishes.cs",
+    "sha256": "1de42a8b2d89b993f07178dde3b995a276c44e0e78d8e99a8c0d773b41b85935"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DistrictGateView.cs",
+    "sha256": "17067f8f8a8279b1fc4178ab4420c8e2284fbbb6977882f1dd8b4c2de1f5e864"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DistrictOffice.cs",
+    "sha256": "f94872bb92132ea2c429ab97f8c5b860ac0db18638f09952a5a1e21d1735d02b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DistrictRoomArt.cs",
+    "sha256": "748284aa92ab374ac9e20fb49814f630af19ec7de90d629397a1b944a33669db"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/EventDataSource.cs",
+    "sha256": "831b083177b476ddd5de3f2614547d220caa14f6318b9b109c65f548544338fb"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ExpoProductVisual.cs",
+    "sha256": "fdd127b34f6d7894651a75c3ab829447e9c7a3e5e9083ddb0c422017c0fdfdaf"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/FigureMotion.cs",
+    "sha256": "1e78f43638c223fe63cb9951493fdb007b19e28efbb0ab6fb5c66414321e366e"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/FootballPenaltyView.cs",
+    "sha256": "223af2c0eca683c6037d49d02f2d741603a49866e79565c005bf99249a6b1dff"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ForestFloorShade.cs",
+    "sha256": "3dff928bbeb3c2e4a1fbf9c05553b2b016c50bd75ce9b2359962dce2c9a6ec10"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/FurniturePropArt.cs",
+    "sha256": "c4cfd74a0c3a05c3929187f3ac3493fbd02db1949ba311f41b5250fe9176310a"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/FurnitureVisuals.cs",
+    "sha256": "b4633886de6ed6e8114f9f68a3caa3543c4635247a70d4193b4b9fd386f7483b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.CityCamera.cs",
+    "sha256": "6f6050a3d9e3a0e3df92648619f95e4a760f275b16bc58d054ab212c96af1c8f"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.CityLife.cs",
+    "sha256": "4e75e3758f69dd476b996d55c7f19d4ba1eccae274a8d655bc86903e5213a74e"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.cs",
+    "sha256": "c27ec51c8de7612ee3ff865b413f3fe95f8395c95f985788e3f694cc792d3aa9"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.LifeEvents.cs",
+    "sha256": "cb4dd55c9faf50e65e3ebb02e0ddeed964e740a207cd74b33306358c0a7f3c8b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Neighborhood.cs",
+    "sha256": "ffbd3d80c38b31c7e62c9acec9c8643353bbee3e7a5af27726863c486d958da1"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Office.cs",
+    "sha256": "c04e2af5f5ea8cb0e802a671c91a26f2d420a32245c47b3a4b61603f7e2bf48c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.OnsitePlay.cs",
+    "sha256": "3d1d078b79106307277106473107db93c80abc58476c1187089104b43214567c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Performance.cs",
+    "sha256": "4c3fe0c45b2da441c8bb3844f61b18a02a76ae531cfb5b530731dcc4ba765272"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Pets.cs",
+    "sha256": "dbed40a719e3bbb27632cf9900061790fe6c71dd02806320653283066fc329d2"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Placement.cs",
+    "sha256": "d4749ed4b4464248a85bd2bc22b5f115fc74a900d4fe70df64bf8b80bb92511e"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.QuarterlyExpo.cs",
+    "sha256": "8122e7640c228483acf3c1d259c6af85d54d72f8fe6f2faf1f29b8ff1c1cb2f8"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Racing.cs",
+    "sha256": "c0e31152fc34b0a266665ccde7f0bf36cd7589b759e49b1f6a955a53d22e215c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.RestaurantWork.cs",
+    "sha256": "9c899c88f63f2b848ae9cf2ad424cbe9660b3d1c9957f6ec5dba966c19fa38ca"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.ShopEvents.cs",
+    "sha256": "7ebc592a7f28209800aa9fcacbf0adccce09f0aa1ff1eecd472ca526da6aa503"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameDisplaySettings.cs",
+    "sha256": "66b3549c874d46c7bf43f651ea5ac79bce7772ba711e425278d412e624821a67"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GardenStructures.cs",
+    "sha256": "f373f74e57a1b3026ad76317922bf50d8e1e47369d42c405a33044c3e2987dcd"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GiftClawCabinet.cs",
+    "sha256": "6693d7c29f5733e8a116ef5afa8a33e46e26c055e29f674dffa55c31df66b94f"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/HomeRoomView.cs",
+    "sha256": "017c77d277178ab00e0f4f15a1ac91a7c5f381cbb55aa1658371367b6bcdd897"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/IndustrialMaterials.cs",
+    "sha256": "b1cc94a379425cede8abd6cd4ded4832a52ca5c24bc72273e8e2e6da102d1a81"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/InteriorWindowLight.cs",
+    "sha256": "aec440a899a96a9b90a106c0d8a9d6ff770e6d7dc0b6a0767ff45a687fe02a61"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/Kill.cs",
+    "sha256": "e657ea831e27668eff2d37b426d04b01c9d360743e18b2ba2a9514e31df38356"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/LakesideReflections.cs",
+    "sha256": "48d9bfab8c6500b81448b1ff2ff3a956b2703e7e4552dccda37db6ceb03e3552"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/LeisureVenueEntrance.cs",
+    "sha256": "eca68fe1e40e92e91325dcd08fa6cf335bc0c16d1331caccafd20a890635e43c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/MasonryPatina.cs",
+    "sha256": "ddd897364e160d4e3c80a984f575a0f2cb0a4d9e23e0da4d825ba6b99e506bc2"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/Mats.cs",
+    "sha256": "4a05c291e74202e0fd6706d9550f2314069e109a50897ef4ecd6528b6755f0b2"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/MenuLocalization.cs",
+    "sha256": "4973521c731a85c100698f92aef670b941092e34b03d74f03193d358491d6bb9"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/MiniatureDetailMesh.cs",
+    "sha256": "efea7dc6a059ce52ed93c30ff7cc17a864b333dc12298673efc84e7ded8e5f3c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/MotorPortraitArt.cs",
+    "sha256": "c2e83980320bf381b8d00fd6295c60ed87bb640030becad663efef597f15d939"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/NaturalFigure.cs",
+    "sha256": "d3acc51d19e97a13084a87a58f12ede43861155ccddd3e3a1cb5c2ebf4cdbe0f"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/NpcArtCatalog.cs",
+    "sha256": "70f93da29a109053e56edfec5eaf2f35313be10ce6264e5bf42c1c4d8e5000dd"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/OldTownSurfaces.cs",
+    "sha256": "60a2962d69e54fa2203a00b3d78c621300a9ac6bd2a2fcd8fd2ed93495b17a93"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PachinkoRoomView.cs",
+    "sha256": "d7e6468e8d3fcfaa31a7f00970d795589955a30ad09249af17a74286df724fc3"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PaintedWoodland.cs",
+    "sha256": "0ae6e81787b5ce2127bc86e3e69207e991fb3fe4b8e7840df42c793d88b72b41"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PetCompanionMotion.cs",
+    "sha256": "640e85c9c41d48986782434f8a9a081a55249d0e92c0771c110f81803e854af8"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PetSceneModels.Animals.cs",
+    "sha256": "2cd2cde7e3a7449d1b536cd17fb669d259b26a045b681ab87886eb491c48b435"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PetSceneModels.cs",
+    "sha256": "5b1b30ea2c8cce0bbc53357b2f33f2fb65135ab5f0abd70204b3bd589c9636c1"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PlacementOutline.cs",
+    "sha256": "d9a346feb055d2bcb02f9955c7be587dc530cc3d1201a763bcaf9a9bf7e98f3c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PlayerCharacterModel.cs",
+    "sha256": "a9eaf5692f18a9da23d54587400ff32e837329c1ea65038293eef08c76c1969a"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ProductPropArt.cs",
+    "sha256": "717da3a8f85f880f21bf2c9fd82a30260d45b1c4d1bd3e46a068958ba5bbf619"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PropForms.cs",
+    "sha256": "ed1280b962f525b24157ede2eacc3d427eae29df1759d6b05d56a21a55cf6b01"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/QuarterlyExpoView.Art.cs",
+    "sha256": "b6cbc88cee38f7f05ee6ffd2aace934ab679fa568adb17fddf253fd57d55a1e2"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/QuarterlyExpoView.cs",
+    "sha256": "cf730b2d18b380a64b47f8f4c291eb26f984f5a2cdd8b7d4a526f92f2104d8d5"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/QuarterlyExpoView.Monthly.cs",
+    "sha256": "9fc937ec90be2b4d9e960cb40f842d365e5937bc6304e53a3aef9168f2432a8b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/QuarterModules.cs",
+    "sha256": "a121a1d0f594de945fb81d8875b4bed9397ab53b87d5df1a09b35004cf121e32"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RaceTrackView.cs",
+    "sha256": "7715ac8304e9d8a6e0879a395141cd692d749ef04afbe7ba358c4478b77218af"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RiceCookerVisual.cs",
+    "sha256": "1f6566434289a5259aedd7ff7091ba28cf692bbaf4f5af1b3c757e757187374d"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RoadSurfaceGeometry.cs",
+    "sha256": "9fbfa45e7f4c2c9b5c08689f9cd462c90a9c6958af32572b230137c91719fdc2"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RoomEditOverlay.cs",
+    "sha256": "07ed19212e14a6c058ca865da9ff77c86fd91ec0249129b1ce6bc3ee9013b37e"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/SaveStore.cs",
+    "sha256": "e6f1340e77c10df49542213f04073a8a534477c7c9c9d0b23d81a8218d9b7412"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopBeacon.cs",
+    "sha256": "8d4830eb4e21c1765fb2cded035b079eac88b00e479e0971c53c7d0459ecc2e8"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopFixtures.Art.cs",
+    "sha256": "37ab87707925c8a112da145d20d3a3fd1c6893c75dfecbd463c30f45d6a574f8"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopFixtures.cs",
+    "sha256": "8119a352c94e0e7588b591d0b9b68ace2033fcf20a4f4a89a81ac99aa6cc79d7"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.cs",
+    "sha256": "5c7c0e9451901a37672d5b3ed7b1bc2b4701079158a9b78ee2a98ef45af4f57a"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.Pets.cs",
+    "sha256": "aa60f09c917c9379a65e0955ac5d399e3dd63df7eb1c7083b5ac8daa8584471c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.RestaurantWork.cs",
+    "sha256": "05c186946add8e1e22caeda5860c596a79fa78c08e0176abfd0be8150d5f9e72"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.SpecialBusinesses.cs",
+    "sha256": "085e4221bb3c9e31ab3da43aecc146a4255f6a0da2aac987015618ab92fb7c07"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.Visit.cs",
+    "sha256": "f76c1b31909c96a08f8741ee9768037edb3d2e9d9f05d1b1435315da029f5aa3"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/SoundFx.cs",
+    "sha256": "4bf39bac89bc23123e06b1f57359f3d4cd0c91ed7efdb10c29b28897710f852b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetPlanting.cs",
+    "sha256": "71748b7cdf90b2c5947ee9540d710d0b76385bf0e4e23c9fa2603779a6f8ddca"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Baking.cs",
+    "sha256": "da2c4c3920b6753ace2a86f9a7565afabf384ba2d95bb6e55672b33df087a096"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.City.cs",
+    "sha256": "ac884f2d0ebc4b4a207108c1c9356cefdd6d1bd063f2dfb2517a5986131cecf5"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Courtyards.cs",
+    "sha256": "a14cce91884fd1488079d27b797f04a34f3abd3c9e80b69aecf25e1abbffb31b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.cs",
+    "sha256": "11cefc6b2b3b40b9aace320be2e574742462ead690d257153e8a837c2c91dd0b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.DistrictArchitecture.cs",
+    "sha256": "87bced318c881d3f002a4cb4b0948bfcbb08b9e37e4c252745733649843e5859"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Lake.cs",
+    "sha256": "46eff109ef588d8ebcf7ea27575aacdfee78bdd69b0ece47727ec1e41d3de277"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.LakeWater.cs",
+    "sha256": "2f7200cab81120d8a35283a4ce824c46d34ed4fe39c77d607f472c1235df4508"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.OldQuarter.cs",
+    "sha256": "dbf8568d17b8744296c450ef412775700162ad335f970044fbb042f832ebe17b"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.OldResidences.cs",
+    "sha256": "e72da999c88582a70262ad73e4df57394b8e524445b2d3edd7a2d8004e3890f8"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Planned.cs",
+    "sha256": "5281a115064ca1bca4f3c120494ef7998359e05ab02516a4e1edacdc9fa51780"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Racing.cs",
+    "sha256": "9739445ed29e55785b82cdd42b6aa472be447f430b1862c208d095a763c941eb"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.ReferenceArchitecture.cs",
+    "sha256": "4b8d2b7b42d95b94f1bc5427e4fda7741a9fb4e93a7e82b8d1d54a4b869477eb"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.ReferenceLandscape.cs",
+    "sha256": "cd5cca34da7ffb642afd21cb8d13f52c9d53828212c19dec9d9948b4cbcc9a3e"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.RoadSurfaces.cs",
+    "sha256": "48841aa7867e3030688efa459e5509d2bdec05316f75dcdbc2f08ebf99313397"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.StarterArt.cs",
+    "sha256": "339939f3d50fd43b9a0139544771db0d7eeac305bf23f18ef644963717719f55"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Verges.cs",
+    "sha256": "43fc00576f2e245fc95118e637151bb5dcd656ea74e5e3636a70a9e2824e7f33"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/SuburbanRoomFinish.cs",
+    "sha256": "56cd1beaa5d3674bccc9bd1903d49e3146a5a95b03296cbeb470112b17558170"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/VehiclePropArt.cs",
+    "sha256": "ab138b34c322f652b20175e6a65e1802b9ae327ee939f769da7b204c6647fc99"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/VehiclePropArt.Front.cs",
+    "sha256": "567f95e0c549d56dc872cb123d06f0f200022946575cf5bb255d2dd2e2e1546c"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/VehiclePropArt.Passenger.cs",
+    "sha256": "1969511db2f28d863264de07d386aa8c61521d8c74b47e2cfbd97878ebff8aa2"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/WheelStreetVisibility.cs",
+    "sha256": "8ed5a42dd4aebcd2e9495693a545efc19de010f82f1635c97dc408c45e4dabbc"
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/WorldViews.cs",
+    "sha256": "5dfd3a6d24d3c91fe976aeeeb4e9ac9a6aa763030d14d9d31fe507585c223f2b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AgencyBuildingGlow.cs",
+    "sha256": "624f367b6f5b3cb1a30a56a605355b0e70cb2c722284b9297055e7f30bde0d06"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AgencyStreetMap.cs",
+    "sha256": "c28218726cf4c69057811c7acfbf2257d80d98a243263451fa0f06e2c6445c20"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AssetPropertyDoubleClick.cs",
+    "sha256": "ee6effca41b0c9d8f2c730eb4760f59faa7ca3c5ac6cdb4687b284a10097b8bd"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AssetPropertyMap.cs",
+    "sha256": "203c6a224b60bc7dd1dabdf9e08e3d73f6c1b755331a18f7e05b9ea03a0c95dc"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AssetTrendGraphic.cs",
+    "sha256": "39b0fc395d2a0a6f929a0471af56bc897ba54cfa0270d774d9ecc2898cc98488"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/BuildMinigame.cs",
+    "sha256": "217103e64d999da440e0e6d66c5a9dd05d7013cb66404808cdbfab5ac5282716"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/CompanyDepartmentGlyph.cs",
+    "sha256": "bc0a596cf4aa218fb6941419bd624c0064a4e22f89414c34a4c253271c0e3402"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/CompetitionRangeGraphic.cs",
+    "sha256": "d08bb50c3067b5fb5463f3260f3a0e48d1600b8daf8ad5c8cd0c4f243b656c63"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/FishingWaterGraphic.cs",
+    "sha256": "958f7402cef9a54c79382f1ecb279af24d57d6d7cdc1c8961aac46f27b178c2e"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ActivityConversations.cs",
+    "sha256": "01965f6f8d23b717dae106c27754302e457b6d00a91538f92a5257b3071e46cd"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Agency.cs",
+    "sha256": "76228c2389ef444834dad00b068576edaf16f1b203ffb848f2c8327dea9d00fd"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.AgencyMap.cs",
+    "sha256": "cc9cc7f73e838cb4f33a8e789bb515b6348ec915b42978c813e096c9fd6e306f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Amusement.cs",
+    "sha256": "0d11b63757da86e4e76e54e0d84c65f216de881461b48f54435b8c7ce8cd198a"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.AssetProperties.cs",
+    "sha256": "075a66e0b70600aa8f8dcf66d35f842b642d32f79f9f28da042f8b23b57101a6"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Assets.cs",
+    "sha256": "39616c0d9b0550411995929a6f5d0a9c8c1903825f6f75e3acd8bc31e3464f27"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Bank.cs",
+    "sha256": "b75c92c11742e4f4cdc73ac2240dce5281dbca2103e54a1d3eab1cd74f902982"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Bench.cs",
+    "sha256": "7a46f6c67102fa09f75e30b0fb2002c0ff22b2a5ce7401d9a320f4f791fb0a69"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.BrandOverview.cs",
+    "sha256": "4e601d74efe0d0aebdd3f20df3b0ccb36ea63ad6e1ba9e01f06f906ad9d3294b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Brands.cs",
+    "sha256": "5613761048faa8c29f1ca5b843d0f32635af5604dec4c7390fc1929d0e7c3173"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Business.cs",
+    "sha256": "e6dcb4fe7cabc587c6d55c4775b98493fc8dc7c818fb7079facdf44659e488e0"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Cart.cs",
+    "sha256": "fb697eba1f5bfd76165c48fe6acdfb86f4dd2b44596acb3853bcfb79e25ef38f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CartSide.cs",
+    "sha256": "41a01d49aea7822d491f9f895f6589da17d1df11a777ffece88c8b08424450d3"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Cheats.cs",
+    "sha256": "763b119cbc611143593b240b87308700508abe16e11b3005fb24ae4893d9a6df"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityAssets.cs",
+    "sha256": "26a996d9537e302c1ec68d1c1c7c24c3d4c842255a6aaa7d690abb59c5e5e662"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityClimate.cs",
+    "sha256": "13ee222d262c4bc48e4182439b90cf49a75658fcade5b8e6bcfc314eb2da05bb"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityClothing.cs",
+    "sha256": "f84c6a90a73e035e4eed94045e6acb3595126d4a34cb539f31117a2a32e805d6"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityFinance.cs",
+    "sha256": "2bf2f9ce7793f6b26da3206c289ec1dcaace27b488db3e25a996f10d5f8c1750"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityLifePanels.cs",
+    "sha256": "5d3ed9409cbfb2fc341384c6999a90dd3d355c80ea72073176429ca0b616dc90"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityNavigation.cs",
+    "sha256": "4e2c3d1ca48accd73e4e346eee642afec438cec9fbefbe565f238495d39d9e14"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityProcurement.cs",
+    "sha256": "96899dcb50c52a335fa401701d2eaf1e4c419060221bf08ad4795da6dfed3361"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityRetail.cs",
+    "sha256": "66164edcafaf736ab6a6e0c938e94543ddbde9a9400ca72158465cc5f193c805"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityStories.cs",
+    "sha256": "b3d8d446056aedbe207b0650e95a441cee6fc4fe12fac4b30ed733e8a8ce5e51"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Companies.cs",
+    "sha256": "fcb63a1dcfb19b3dbd74eb1e6f08be014561abe691e8f06d6f7d1933cbbacc03"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CompanyGovernance.cs",
+    "sha256": "bef40a4260d4d44263711a716a174dcafca80f8857e81e1b97500d60b794aed4"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CreatorRelations.cs",
+    "sha256": "660d6a8a0b5a67586727eea91dea6b05e12e25686682adffc27c82e928d83f66"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.cs",
+    "sha256": "483ccdd495ca9880d724a8617ba36c5f5e7dabaa5a6e184d55688a0cd05e23cd"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CustomDestination.cs",
+    "sha256": "e861d2b96f12107737df13f627505d793dbe75f0cf51d09652468e3732b4d81e"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.DisplaySettings.cs",
+    "sha256": "fde2c0b8e8dbe773521f2512764f45890523948710782566e9d94704cb5c5993"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.DistrictCommerce.cs",
+    "sha256": "99c262f7673835b2fbeacf86738710ecd15f5a145521402c665023f733f9b7f3"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Districts.cs",
+    "sha256": "eed38a6f33e7c576041d9f61df66c947abe09bb465eb383a6ea005f9045aacf0"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Edit.cs",
+    "sha256": "5e7222189f94dde83902d6d7c05c1edc6125da4d0f4384b3896ae610f91710d2"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Employees.cs",
+    "sha256": "bc9dd7bf24762a7cab1201d4b841059cb4e4c6bb0075592eea86715e89ee3eac"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.EmployeeWellbeing.cs",
+    "sha256": "92a09129ca95eefc9a3e72a742a679eab4aa84d54073769bd9b89628bd1bb0ed"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.EnterpriseCenter.cs",
+    "sha256": "ada5f74a33c0ab070c351462a7c523d30052b0a72ea0d0c33e459bdab5959887"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.EventCg.cs",
+    "sha256": "8eba4603bcc86d737268806f1739a3a461ca0e92ca0647c2bfe4bf4bd83c8984"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExhibitionBatch.cs",
+    "sha256": "5bee121a119c03d93717e06616419156348652d0d77c4a300b36998349c50ed3"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoAcceptance.cs",
+    "sha256": "dfde70c39504a94dd0eeb934022e6a85db62435aeae28a0e1f280a44c326c583"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoAutoChoices.cs",
+    "sha256": "361babe3f22a128e5e1a2caf95bccba7b9f3a11a2ead9faacd03d33acf3c0c64"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoOverview.cs",
+    "sha256": "529c8884c886eed47479668aed6b3281d2c46f04a6a1f088e19faadf29d3797c"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoReception.cs",
+    "sha256": "7074c1a1119c70a25987a053e3a0fa3e9b2138960750d08786f782d9958727d2"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoSettlement.cs",
+    "sha256": "862913df8dd651d53830b59a7279ba0c98681888687799add399c50bb257563b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.FastFood.cs",
+    "sha256": "3de78d853e5f3c46dcf13d3ed963d74a8f36ccbc09841dcb7ca69c4711cef13b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Fishing.cs",
+    "sha256": "c413e54379d3087f9628307a90c4c7c901919feb32295982af47128337a3e744"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Fixtures.cs",
+    "sha256": "ae14a4302f1073f29868250af9b89cc3d018fcc8e174f49b5ff42584c792d6d4"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Food.cs",
+    "sha256": "dd846dca7dac9d5f7847311e336d90a33904b35180488f94439d3c5686a57293"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.FoodExpiry.cs",
+    "sha256": "25989ed96da8ea55e85bd4813a8835530e15592a507183d155ecd75b5c1f410e"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.FootballPenalty.cs",
+    "sha256": "291a8b5c7e48253d58d61bb50b5915423f052bb2c987437e1de9cb2eee3c463e"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.FurnitureBuyback.cs",
+    "sha256": "29b68bf8500764687485e9f8e83292165efa6bf290e57c62cd171984ff5eec2f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Goals.cs",
+    "sha256": "bb52e1301403f1f5a4731a04c38df0ff7a701ac805eca6963c6df161532a9d8d"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Goods.cs",
+    "sha256": "9a1d1eff9ab51a237ca67bb25b42f2726bfdfbf3d5eb0cfe89bf3065ebd5d777"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Home.cs",
+    "sha256": "2d615eb8e01c5015ea21faa9fc538ed8fe2c311ed6e2e49f4a1db7c0ecbb2a5d"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.HomeWorkbench.cs",
+    "sha256": "88b0f37ea25e7363176e81cc4e7b0a5774cfb9f1b04935a260ab516f1ca40e24"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.HomeWorkbenchBusiness.cs",
+    "sha256": "9c45a58e18aff049cc9b45d2d7345493f1ba8041fecbdc64371119f70e2166f4"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.HomeWorkbenchKit.cs",
+    "sha256": "f9bdfcec10627655bdfe422d39b3416c56a6e223aa37b8bd8bbab9b66e98cb8e"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.HomeWorkbenchPages.cs",
+    "sha256": "e0fc05e78c739e4eea2f6d1b53460b31d6ea1a4d14c5a7e88312eb506a51cd5f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.HudSlim.cs",
+    "sha256": "b0bc47eabc76407593f1aefdede0907ef4499a64c2108d37d211489c7f707ba5"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.InformationHub.cs",
+    "sha256": "e9ac2d027493df4675919342aefcd9b46ae6223784c5d02e7a56f8e955609f89"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Interactions.cs",
+    "sha256": "58b8ad44da11db6dbb67f8bae940825f353c76ea5148620815e70fad349193d5"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ItemPortraits.cs",
+    "sha256": "2b0af4a196c0caaa03aea3deb3a74022ce298464f64fd39a4739248b1f370faa"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.JointExpo.cs",
+    "sha256": "63a7f2c6d065156eb0dbd24f1363680b04b31a14ea2152ab545af00bd1ad9187"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.KolNegotiation.cs",
+    "sha256": "4442e7bfcaba1fd0be19b1c8ab5341e0e20eafd51629a0834cfc413c3a794591"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.KolStreaming.cs",
+    "sha256": "bf289b9302c0789b29b2e3df6b918572dbced187bd1f531fb31b50f77c6ffc34"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.KolViewer.cs",
+    "sha256": "14737a501c3462ca5a926a0e73aea77b8b9ce0c5af17e77f84d798dc52f82ac8"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.LeisureGames.cs",
+    "sha256": "969a4196f731aa859e86731213aca6a9301cc5faf374f3a1f40bed517c81f7f5"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.LifeEvents.cs",
+    "sha256": "86fa815c04fd20491f5e6e8734261a707c2cce9d85c9c7a95240806b8c0b0543"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Loans.cs",
+    "sha256": "31f18093eea50dfc87ab51f4207146ce73a7ba46c3be199fc0d86d43b1260e8a"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.MainMenu.cs",
+    "sha256": "21fcd98af829112bb1e97f672ab118aabce0527e0ddb136edd4bf81b86e3bf1e"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Mcn.cs",
+    "sha256": "a78b66471605e10493c6fe44133fa0b2891b4ef79257a6e51d7f7e9baa5b2aa4"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ModelCommissions.cs",
+    "sha256": "d110bcd950a61bcf2f20e7603b6271e09c3c17d63c54fe17dca3aa3be7e79214"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.MoneyEvents.cs",
+    "sha256": "c70b1b01080d0991033a30685524de9cda33021fdd6512223d9c2fc89ffe9172"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.MonthCalendar.cs",
+    "sha256": "ea1f5379dec9e50f83488da46f67950ff349000a10b3018f9ceade4c34b1d30d"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Motion.cs",
+    "sha256": "6d891e31e808d781f8d91645703ff68e6e16f71dbbed62fe11f1d8ce83b8cde8"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.MotorCards.cs",
+    "sha256": "5e5460a6420d3607e66c12dc6f6bf11c4e011d818ea53651763d257e96df87f8"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.NarrativeCatalogue.cs",
+    "sha256": "d4c61fedb16a9c1c926baa8a459d0dbfdec10c82b2a9ee5c23f557996a56ae87"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Navigation.cs",
+    "sha256": "6c2b21869754a41098cabc8ed7e4de1e0e5029f2a013c61ad540bef90c504fb9"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Neighborhood.cs",
+    "sha256": "1c4221641ac33ebc35dd8bc05505aa686c8704014451eda0db5db0dd0e2514a7"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Npc.cs",
+    "sha256": "9383f2f434525ff11939fa67ca766957394d0bd427ff87cf9533d4b9ab6fc959"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.OldMarket.cs",
+    "sha256": "11b991ef3e64f60db36916e3bbb9b38921552619ae8fe9fc1fbd823cb4159e93"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.OldMarketHunt.cs",
+    "sha256": "4e4bbd68238f3f7fa8c5502b3d6fd7053bad012a538150c157ffd1af3299074c"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.OnlineParcels.cs",
+    "sha256": "cb73dac0a73b20369fdac56f130d8c28d9af92eeb00958f2976c4713b2abe187"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.OnsitePlay.cs",
+    "sha256": "4a3bbeca01923f003ca64ec71b686a5d4f9932639c6003d2d72e2afae1d82f55"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.OpeningCinematic.cs",
+    "sha256": "72e295b70bc338c73908f9e5e9cdfd0293ecfbdde730f093dcb1f2b49d8c9459"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.OpeningMeal.cs",
+    "sha256": "f4f6694e377fedbdd0efc4b9bff7b743719747a6b5f2021ef80b421794c3703b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs",
+    "sha256": "b2ffd7bff36af820ff91e73df09b6bd6e850fd7451d9c31142a6e4f18240dbda"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Panels.cs",
+    "sha256": "767a274924f81ddbda3d2831a715ccf73337339927c23f1e187fbae3e99e5a57"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Park.cs",
+    "sha256": "6779208bbc16b8662dbb4295618209ebc45833fd4dd02a4e6bd28fd0b7a5b03d"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ParkRowing.cs",
+    "sha256": "246d643683f0e1e416149262d5d2c2441ac46288217ffe146d7518c314bb6f41"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Passerby.cs",
+    "sha256": "27c617fcdb58f36a7a907959b1f06b50459ae9b8568632f0825dd8ca4c929438"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Pets.cs",
+    "sha256": "e776bb5cc791775896a56c5650a4e9890b9f60dfcb93c34f4558133e2781a55f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Phone.cs",
+    "sha256": "53701208e03b1db0abd522a9ee32b1f0e9d279b00694f7863633c4e05f8a00d4"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.PlayerWork.cs",
+    "sha256": "e0fbea91ce97d5f9622af01f741a44771204b3dfc4659c9452fcbf31aa7cf8f0"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.PriceReport.cs",
+    "sha256": "f637f521d0e0a0f4e54d7bea5a669480a43cc6954e6dffded242fa05bf6bf3ce"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ProcurementShops.cs",
+    "sha256": "bcaca57a85916bc633c61624a4b82535ee621a5730d143fe71bfb0b0a7a2d667"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ProductLabels.cs",
+    "sha256": "fbfc35ac1013d210d536818eb8d6b1c75dc8fd4af5f806fe92580b5c635ed15a"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.PropertyContract.cs",
+    "sha256": "2bffebca7d383dccd0f3b90b9c2a7b30754c735022f3681b509f64af29c1ac21"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.PropertyRentals.cs",
+    "sha256": "85d0f0df0c90543cc787209e227123a50174e8ce2dcb1f7ae1488bec3e2e6ad0"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Quantities.cs",
+    "sha256": "810f016115f84dac13f0756bb9760c85b1947d5bc735e3130d186edc7e1303ca"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.QuarterlyExpo.cs",
+    "sha256": "50cd66adae121b6a5c7073982e8f51e0d47199ac750bed20e7e9e65f1b91e821"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Quests.cs",
+    "sha256": "f42a537e756c67c391a9a9d43c83b8e9f4febc22bfbb9c8efcd708a5ec2c6219"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Racing.cs",
+    "sha256": "e7f0d944ba10b403dd483192362261f5a464171fc611cb67f04e6f8d242240ef"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.RegionalGarages.cs",
+    "sha256": "4adfdfc7a391fefdd4d07ebec30446b50c3334ba6ef0f218a57b8ad4210cc722"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Relations.cs",
+    "sha256": "25ed6c54e89eac9bec046d05f05bbdee22c88726c207a1a78f70ce5bfbda63fb"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.RelationshipStories.cs",
+    "sha256": "1aaff800bfed9c8b6e0a1e38b35d33476b457f05fc0c95cc71023581741eecc8"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ReportDashboard.cs",
+    "sha256": "abf9edf765938b38d4026f85422bf49560d1cda4e3133b68411ac00578c251e9"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Resale.cs",
+    "sha256": "ec4883e10c4b889d0cc642aad56b06158ee020c274aa84b3edae22584a4a2711"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ResidentialAgency.cs",
+    "sha256": "b29b1d0b7929e90984ba296ada6fbd18ab4f31e72185c2cd0c5ab6760dad00a5"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.RestaurantDrinks.cs",
+    "sha256": "2c15cd9f9053decb389249065d49353aecd5aab26be697563f0042e7b9e3ad7f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Retail.cs",
+    "sha256": "9307ef91cb0e739e148934c6bbe12bad31f77f31347d6ed6317134f24341d66d"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.SaveSlots.cs",
+    "sha256": "84b29016e623d6a705f13b9289f9e1f80eb9a2676d5899b0b9fb45c8c33f363f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShelfPricing.cs",
+    "sha256": "a936601cdaaeaf1ffd3386fd1d63cb5ec5a52eaa3bcf13b545e93dfb19c9f556"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Shop.cs",
+    "sha256": "598bb3deebd3a649a4c73c387cedc1274900884436027ae9f2eec85950862a4b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopBuyers.cs",
+    "sha256": "ae074888ba5c3e3699a7dc5a6f4533caad56fafbe8dfb9461f4028f846c9b99f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopCompetition.cs",
+    "sha256": "b51a9f026f5a55338e77ace80a324a92214f35c473b071d9bd9909723b4b9738"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopEventBatch.cs",
+    "sha256": "220ea5b4e36be997246697de9436d42134df60c5140279bf8a061f352ed34b75"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopManagement.cs",
+    "sha256": "74d3816ab2190254374e8516fc2950277ef70bdbe7f34f91af75218b86c3fce4"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopShelf.cs",
+    "sha256": "3cefdf867bc3157a8d29ed62264319afd521b4a288e686b55936b480e5d1c1db"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.SleepBanner.cs",
+    "sha256": "0241ecd775bc2ccdfc2ed87a0279d018dd8fb0af94ec99ec7f0c4fb80173d75b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Social.cs",
+    "sha256": "7618c42298875608a81a4548bf1fc9e56ccee2fd9a48f7a625896ada6d0c751f"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.SpecialBusinesses.cs",
+    "sha256": "e0ad49f17b864c3ba925e89d9f361e59b7e2a9a5fc63e0439abbaa907f3006be"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.StockMarket.cs",
+    "sha256": "f3230e279c8dc4da7bdcbc632eb7f32e54b2403325d003a31d0861b0640d7a66"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.StockPhone.cs",
+    "sha256": "09f5101b37001714f60516d5666d362647e9df29192f311fac72c8d186262748"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Tip.cs",
+    "sha256": "0eab4a330c3c70ad87a0da2917fce80743f8de57c3b2853412548ba6dafbfb6b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.UpcomingSchedule.cs",
+    "sha256": "f58acdf291365ee34c943b1090bf39bf45ff86992ec3a60a562799682b78ac47"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.UsedMotors.cs",
+    "sha256": "6685ee2708983e2a6f6888a40e3828ee2305bd96adfa9c41aa574d2fcf67b841"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueBusiness.cs",
+    "sha256": "1ebc801a45ee66be95bbb1183b87582c43b678b989f6f970428b4c03e9eef46c"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueLeisure.cs",
+    "sha256": "d275ca1177a4b81eabdae9e57536df90f05c1f0e262d72596d354b27aa4ddabb"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueServices.cs",
+    "sha256": "8ed67e8d7152329819d395a251e38dab1a9db4eae5834ff07b8d55bb7b346b56"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueSponsorGuide.cs",
+    "sha256": "8e121ccade64cae21a50b18f34d5a33be03bde9e0a24235f9b6fe39ded265ebd"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueSponsorship.cs",
+    "sha256": "5bbb98a13a62795c393c6308fd508f312610adece4c8caa7f57dd1bd017fb06b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueWalkIn.cs",
+    "sha256": "0e4e0b613f369a0c67d8e59f40706cd40c7b78116abef94a46ac903fe582a0e9"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Wholesale.cs",
+    "sha256": "8871155c3d2d281d8c620765267126b2a5e632fd2d0f4ee1523f7cdfec2271da"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Workshop.cs",
+    "sha256": "7f6af577031f9a54e5689eb3f1e40c992fb0eedb1101242d9f9d5de8fd3f164c"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/LeisureBoardGraphic.cs",
+    "sha256": "551f9b7750192a49e037ac8586f7c40e898b0430d5006a069bcf3598158d8f58"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/MotorRadarGraphic.cs",
+    "sha256": "3e014a26ed9b02476f19d69748ad071c03f9a66a8efb1efabe6d8a17a2a39b37"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/ReportPriceTrendGraphic.cs",
+    "sha256": "3e18f4ed0670acb33938ab63fc9d936e499ae965507f6c23c30e43be2aefd830"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/ScenePortraits.cs",
+    "sha256": "429d4fe270e598e04233fe984c3b099cbdaa58259b5b2bd30dc7e302846356ef"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/ScratchTicketGraphic.cs",
+    "sha256": "8b5e81888ad4da8009234a12cd753c551f4b498108fd61e79b5bd39379d7635b"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/StockPriceGraphic.cs",
+    "sha256": "cf9ae31dfe4625f6e0e60b6bb80cb51bc964f5ee9c936dee889c1574337d3a01"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/TipTarget.cs",
+    "sha256": "1e06cad1a901167b36ec7d880d0c8c23ac4d0204a76dad3f55161d70db312c93"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/Ui.cs",
+    "sha256": "1d67194c7f2b401664cc6c0a12f6c2e836e9d12e3086c1232b0a3077f2898f7d"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/Ui.FlatSkin.cs",
+    "sha256": "01be3ebe7b4a6acbf845ada9bd262cae78bfbbcbc61d67c863047aa85900e812"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/Ui.IndustrialArt.cs",
+    "sha256": "40a642f5fc9b9998102a4225611911f29a3e1f53bddc04dd92d438ee1ab7e4fe"
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/WindowFit.cs",
+    "sha256": "031ed81f6565ce2d3de9deb8ed8c8b06cef1462cb466b660db5d29f2d6e09a1e"
+  }
+]

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Passed" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:05Z" duration="99.0274852">
+  <test-suite type="TestSuite" id="3140" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1842" result="Passed" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:05Z" duration="99.027485" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="5276" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/PCShop-main-build-5f4a412c/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1842" result="Passed" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:05Z" duration="99.002577" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="53416" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="5277" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1842" result="Passed" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:05Z" duration="98.989097" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="SetUpFixture" id="4397" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1842" result="Passed" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:05Z" duration="98.977233" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="3897" name="EventSystemTests" fullname="PCShopSell.Tests.EventSystemTests" classname="PCShopSell.Tests.EventSystemTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:04Z" duration="98.329717" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="3905" name="Events_FireOverTime_AndEveryChoiceResolves" fullname="PCShopSell.Tests.EventSystemTests.Events_FireOverTime_AndEveryChoiceResolves" classname="PCShopSell.Tests.EventSystemTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:04Z" duration="98.326266" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3904" name="Events_FireOverTime_AndEveryChoiceResolves(6)" fullname="PCShopSell.Tests.EventSystemTests.Events_FireOverTime_AndEveryChoiceResolves(6)" methodname="Events_FireOverTime_AndEveryChoiceResolves" classname="PCShopSell.Tests.EventSystemTests" runstate="Runnable" seed="844639922" result="Passed" start-time="2026-11-27 11:45:26Z" end-time="2026-11-27 11:47:04Z" duration="98.315745" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EventSystemTests.Events_FireOverTime_AndEveryChoiceResolves(6)
+REGRESSION DONE PCShopSell.Tests.EventSystemTests.Events_FireOverTime_AndEveryChoiceResolves(6) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestFixture" id="3869" name="GameplayAuditTests" fullname="PCShopSell.Tests.GameplayAuditTests" classname="PCShopSell.Tests.GameplayAuditTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-27 11:47:04Z" end-time="2026-11-27 11:47:05Z" duration="0.555192" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="3873" name="NewGameOpeningQuotesRemainObservable" fullname="PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable" classname="PCShopSell.Tests.GameplayAuditTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-27 11:47:04Z" end-time="2026-11-27 11:47:05Z" duration="0.483721" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties>
+                <property name="Category" value="GameplayAudit" />
+              </properties>
+              <test-case id="3870" name="NewGameOpeningQuotesRemainObservable(7)" fullname="PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(7)" methodname="NewGameOpeningQuotesRemainObservable" classname="PCShopSell.Tests.GameplayAuditTests" runstate="Runnable" seed="285027473" result="Passed" start-time="2026-11-27 11:47:04Z" end-time="2026-11-27 11:47:05Z" duration="0.171110" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(7)
+REGRESSION DONE PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(7) Passed
+]]></output>
+              </test-case>
+              <test-case id="3871" name="NewGameOpeningQuotesRemainObservable(41)" fullname="PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(41)" methodname="NewGameOpeningQuotesRemainObservable" classname="PCShopSell.Tests.GameplayAuditTests" runstate="Runnable" seed="487132542" result="Passed" start-time="2026-11-27 11:47:05Z" end-time="2026-11-27 11:47:05Z" duration="0.156049" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(41)
+REGRESSION DONE PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(41) Passed
+]]></output>
+              </test-case>
+              <test-case id="3872" name="NewGameOpeningQuotesRemainObservable(914)" fullname="PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(914)" methodname="NewGameOpeningQuotesRemainObservable" classname="PCShopSell.Tests.GameplayAuditTests" runstate="Runnable" seed="746281515" result="Passed" start-time="2026-11-27 11:47:05Z" end-time="2026-11-27 11:47:05Z" duration="0.150749" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(914)
+REGRESSION DONE PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(914) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

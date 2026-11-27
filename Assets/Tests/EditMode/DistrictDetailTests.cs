@@ -28,6 +28,7 @@ namespace PCShopSell.Tests
                 using(var s=GameSession.Load(seed.City,save))
                 {
                     s.EventsEnabled=false;At(s,s.Home.Id);int popups=0;s.Popup+=(title,body)=>{if(title.EndsWith("发来主线邀请"))popups++;};
+                    s.Notice+=message=>{if(message.StartsWith("李秀兰主动联系了你"))popups++;};
                     Assert.True(s.SleepUntil(wake));Assert.IsNull(s.CurrentDistrictNode);Assert.Zero(popups);
                     Assert.AreEqual(s.Clock.Now.TotalMinutes+120,s.DistrictStoryState.InvitationDueAt);
                     s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;s.AdvanceClock(119);
@@ -49,6 +50,7 @@ namespace PCShopSell.Tests
                     At(s,s.Home.Id);
                     int invites=0;
                     s.Popup+=(title,body)=>{if(title.EndsWith("发来主线邀请"))invites++;};
+                    s.Notice+=message=>{if(message.StartsWith("李秀兰主动联系了你"))invites++;};
                     Assert.True(s.SleepUntil(600));
                     Assert.AreEqual(4920,s.Clock.Now.TotalMinutes);
                     StringAssert.Contains("第4天 14:01",s.DistrictInvitationStatus);

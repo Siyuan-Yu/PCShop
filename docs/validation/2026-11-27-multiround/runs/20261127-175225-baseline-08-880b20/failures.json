@@ -1,0 +1,242 @@
+[
+  {
+    "name": "PCShopSell.Tests.MultiShopTests.Rent_IsChargedForEveryShop",
+    "message": "  两家店的月租都扣\n  Expected: 500000\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.MultiShopTests.Rent_IsChargedForEveryShop () [0x000ba] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MultiShopTests.cs:69\n"
+  },
+  {
+    "name": "PCShopSell.Tests.NarrativeContentTests.PopulationHasStableCompleteDistinctProfiles",
+    "message": "  Expected: 124\n  But was:  178\n",
+    "stack": "at PCShopSell.Tests.NarrativeContentTests.PopulationHasStableCompleteDistinctProfiles () [0x00030] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\NarrativeContentTests.cs:19\n"
+  },
+  {
+    "name": "PCShopSell.Tests.NarrativeContentTests.RelationsHaveValidEndpointsAndNoIsolatedProductionPerson",
+    "message": "  Isolated: res_bank_night\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.NarrativeContentTests.RelationsHaveValidEndpointsAndNoIsolatedProductionPerson () [0x000c1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\NarrativeContentTests.cs:39\n"
+  },
+  {
+    "name": "PCShopSell.Tests.NpcTests.Lin_DoesNotBailOutWithoutFriendship",
+    "message": "  交情不够就是普通破产\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.NpcTests.Lin_DoesNotBailOutWithoutFriendship () [0x0008c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:155\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.AFlightCanBeSavedAndResumedWithoutRerollingItsLanding",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.AFlightCanBeSavedAndResumedWithoutRerollingItsLanding () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:321\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:300\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.BasketballUsesActualAimPowerFlightAndDistinctTrainingModes",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.BasketballUsesActualAimPowerFlightAndDistinctTrainingModes () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:228\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.BasketballUsesTheNewShotPositionAfterReload",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.BasketballUsesTheNewShotPositionAfterReload () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:275\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GolfClubPowerAndAngleChangeRealLandingAndFiveShotsComplete",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.GolfClubPowerAndAngleChangeRealLandingAndFiveShotsComplete () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:317\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(0,600)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:191\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(1,2400)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:191\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(2,0)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:191\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(3,1800)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost (System.Int32 choice, System.Int32 fee) [0x0001d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:191\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.GroupTopicsBindTheActualPersonAndCannotBeSpammed",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.GroupTopicsBindTheActualPersonAndCannotBeSpammed () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:195\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking (System.Int32 n) [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.LeavingTastingEarlyDoesNotChargeTheReservedTime",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.LeavingTastingEarlyDoesNotChargeTheReservedTime () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:176\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixedDrinkAndRemainingTasteTimeSurviveJson",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.MixedDrinkAndRemainingTasteTimeSurviveJson () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:222\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,0,True)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:217\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(0,0,0,False)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:217\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,1,0,False)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:217\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,1,False)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty (System.Int32 basis, System.Int32 flavor, System.Int32 sweet, System.Boolean correct) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:217\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.NewFloorNeedsAllThreeExercisesAndActualFeedback",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.NewFloorNeedsAllThreeExercisesAndActualFeedback () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:248\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime () [0x0001c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:151\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:352\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.StandingStillDoesNotCompleteTheMissingOnsiteTask",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.StandingStillDoesNotCompleteTheMissingOnsiteTask () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:108\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(0,True)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking (System.Int32 choice, System.Boolean pleasant) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:341\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(1,False)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking (System.Int32 choice, System.Boolean pleasant) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:341\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(2,False)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking (System.Int32 choice, System.Boolean pleasant) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:341\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce () [0x0001c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:122\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.TeacherGameNeedsFivePhysicalPossessions",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000a1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:29\nat PCShopSell.Tests.OnsitePlayTests.TeacherGameNeedsFivePhysicalPossessions () [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:314\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_court_mid\",54,300)",
+    "message": "  Expected is <System.Int32[4]>, actual is <System.Linq.Enumerable+SelectArrayIterator`2[PCShopSell.Core.Session.CityActivityDefinition,System.Int32]>\n  Values differ at index [0]\n  Expected: 120\n  But was:  40\n",
+    "stack": "at PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt (System.String venue, System.Int32 sport, System.Int32 price) [0x00016] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OnsitePlayTests.cs:57\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(68)",
+    "message": "Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect",
+    "stack": "PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)\nPCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)\nPCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)\nUnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)\nUnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)\nUnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)\nUnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)\nUnityEngine.UI.InputField:set_text(String)\nPCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)\nPCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)\nPCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)\nPCShopSell.Game.UI.GameUi:BuildOutdoorBatchProcurement(Window, CityActivity) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:108)\nPCShopSell.Game.UI.<>c__DisplayClass1355_0:<OpenOutdoorMarketVisit>b__0(Window) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:33)\nPCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)\nPCShopSell.Game.UI.GameUi:RebuildWindows() (at Assets/Scripts/Game/UI/GameUi.cs:154)\nPCShopSell.Tests.OutdoorBatchTests:FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(Int32) (at Assets/Tests/EditMode/OutdoorBatchTests.cs:203)\nSystem.Reflection.MethodBase:Invoke(Object, Object[])\nNUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])\nNUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])\nNUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)\nNUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)\nNUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions()\n\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(69)",
+    "message": "Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect",
+    "stack": "PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)\nPCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)\nPCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)\nUnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)\nUnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)\nUnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)\nUnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)\nUnityEngine.UI.InputField:set_text(String)\nPCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)\nPCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)\nPCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)\nPCShopSell.Game.UI.GameUi:BuildOutdoorBatchProcurement(Window, CityActivity) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:108)\nPCShopSell.Game.UI.<>c__DisplayClass1355_0:<OpenOutdoorMarketVisit>b__0(Window) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:33)\nPCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)\nPCShopSell.Game.UI.GameUi:RebuildWindows() (at Assets/Scripts/Game/UI/GameUi.cs:154)\nPCShopSell.Tests.OutdoorBatchTests:FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(Int32) (at Assets/Tests/EditMode/OutdoorBatchTests.cs:203)\nSystem.Reflection.MethodBase:Invoke(Object, Object[])\nNUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])\nNUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])\nNUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)\nNUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)\nNUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions()\n\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(70)",
+    "message": "Unhandled log message: '[Exception] NullReferenceException: Object reference not set to an instance of an object'. Use UnityEngine.TestTools.LogAssert.Expect",
+    "stack": "PCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>g__Apply|7 (System.Double target, System.Boolean waitForPointer) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:152)\nPCShopSell.Game.UI.GameUi+<>c__DisplayClass1513_0.<QuantityStepper>b__8 (System.Single position) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:70)\nPCShopSell.Game.UI.Ui+<>c__DisplayClass51_0`1[T].<Slider>b__0 (System.Single v) (at Assets/Scripts/Game/UI/Ui.cs:442)\nUnityEngine.Events.InvokableCall`1[T1].Invoke (T1 args0) (at <b41119cc6741409ea29f63c7f98de938>:0)\nUnityEngine.Events.UnityEvent`1[T0].Invoke (T0 arg0) (at <b41119cc6741409ea29f63c7f98de938>:0)\nUnityEngine.UI.Slider.Rebuild (UnityEngine.UI.CanvasUpdate executing) (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/Slider.cs:408)\nUnityEngine.UI.CanvasUpdateRegistry.PerformUpdate () (at ./Library/PackageCache/com.unity.ugui@1.0.0/Runtime/UI/Core/CanvasUpdateRegistry.cs:181)\nUnityEngine.UI.InputField:set_text(String)\nPCShopSell.Game.UI.Ui:TextInput(Transform, String, String, Action`1) (at Assets/Scripts/Game/UI/Ui.cs:246)\nPCShopSell.Game.UI.GameUi:QuantityStepper(Window, Transform, String, Double, Double, Double, Double, Action`1, Boolean, String, Double, Func`1, Action`1, Int32, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:82)\nPCShopSell.Game.UI.GameUi:PurchaseQuantity(Window, Transform, String, Double, Double, Double, Action`1, Boolean, Int32, Func`1, Action`1, Int32) (at Assets/Scripts/Game/UI/GameUi.Quantities.cs:160)\nPCShopSell.Game.UI.GameUi:BuildOutdoorBatchProcurement(Window, CityActivity) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:108)\nPCShopSell.Game.UI.<>c__DisplayClass1355_0:<OpenOutdoorMarketVisit>b__0(Window) (at Assets/Scripts/Game/UI/GameUi.OutdoorBatch.cs:33)\nPCShopSell.Game.UI.Window:Rebuild() (at Assets/Scripts/Game/UI/GameUi.cs:63)\nPCShopSell.Game.UI.GameUi:RebuildWindows() (at Assets/Scripts/Game/UI/GameUi.cs:154)\nPCShopSell.Tests.OutdoorBatchTests:FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(Int32) (at Assets/Tests/EditMode/OutdoorBatchTests.cs:203)\nSystem.Reflection.MethodBase:Invoke(Object, Object[])\nNUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])\nNUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])\nNUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)\nNUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)\nNUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions()\n\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.GuardDeliveryConsumesRealFoodOnceWithoutTakingTheGuardAway",
+    "message": "  Expected: Running\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x0013b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:96\nat PCShopSell.Tests.OutdoorBatchTests.GuardDeliveryConsumesRealFoodOnceWithoutTakingTheGuardAway () [0x0001b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:293\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(61,0,300)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x00063] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:83\nat PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x000d4] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:240\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(65,0,480)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x000d4] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:240\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(66,1,0)",
+    "message": "  Expected: Running\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x0013b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:96\nat PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x000d4] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:240\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance(67,0,480)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.InvitationsDoNotChargeOrGrantContactUntilRealAttendance (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x000d4] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:240\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(65,1,960)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts (System.Int32 n, System.Int32 choice, System.Int32 amount) [0x00026] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:371\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(65,3,2400)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts (System.Int32 n, System.Int32 choice, System.Int32 amount) [0x00026] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:371\n"
+  },
+  {
+    "name": "PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts(67,3,2400)",
+    "message": "  Expected: Completed\n  But was:  Gathering\n",
+    "stack": "at PCShopSell.Tests.OutdoorBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity a) [0x000ca] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:89\nat PCShopSell.Tests.OutdoorBatchTests.TreatAndPremiumVariantsChargeTheirConfirmedAmounts (System.Int32 n, System.Int32 choice, System.Int32 amount) [0x00026] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\OutdoorBatchTests.cs:371\n"
+  }
+]

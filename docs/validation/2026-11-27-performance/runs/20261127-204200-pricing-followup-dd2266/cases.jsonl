@@ -1,0 +1,4 @@
+{"name":"PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)","result":"Passed","message":"","stack":"","seconds":0.047646}
+{"name":"PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)","result":"Passed","message":"","stack":"","seconds":0.010016}
+{"name":"PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)","result":"Passed","message":"","stack":"","seconds":0.3902313}
+{"name":"PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)","result":"Passed","message":"","stack":"","seconds":0.1327456}

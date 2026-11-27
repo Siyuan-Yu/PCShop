@@ -1,0 +1,37 @@
+[
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses",
+    "message": "  residence_s_oldhomes_21\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses () [0x00345] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:695\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.PassPickerOpensManualFishingForWalkInsAndConfirmedInvitations(0,0,480,900)",
+    "message": "System.InvalidOperationException : Sequence contains no matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.FishingTests.PassPickerOpensManualFishingForWalkInsAndConfirmedInvitations (System.Int32 invitation, System.Int32 option, System.Int32 duration, System.Int32 cost) [0x0032e] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:252 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopCoreGameplayTests.RestaurantButtonQueuesActualOwnerMovementAndPausingFreezesIt",
+    "message": "  worker={\"ActorId\":\"$player\",\"LayoutKey\":\"Small:shop_counter:1:2:0;restaurant_stove:2:2:0;restaurant_table:3:2:0;fridge_small:4:2:0;shelf:5:2:0\",\"Station\":\"restaurant_stove\",\"OrderId\":1,\"Phase\":0,\"Stove\":0,\"Job\":1,\"X\":5.0,\"Z\":0.899993896484375,\"Depart\":22200.0,\"Arrive\":22201.484378178913,\"OperateUntil\":-1.0,\"PathX\":[5.0,5.0,4.75,4.5,4.25,4.0,3.75,3.5,3.25,3.0,2.75,2.5,2.5],\"PathZ\":[0.899993896484375,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.25]} now=22200 fraction=0\n  Expected: not equal to (605.00, 0.00, -399.10)\n  But was:  (605.00, 0.00, -399.10)\n",
+    "stack": "at PCShopSell.Tests.ShopCoreGameplayTests.RestaurantButtonQueuesActualOwnerMovementAndPausingFreezesIt () [0x0028c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopCoreGameplayTests.cs:876\n"
+  },
+  {
+    "name": "PCShopSell.Tests.SocialEventBatchTests.AudioInspectionRemainsSelectableBelowThresholdAndPaysOnlyOnceAtCompletion(49,False)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.SocialEventBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity activity) [0x00087] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:41\nat PCShopSell.Tests.SocialEventBatchTests.AudioInspectionRemainsSelectableBelowThresholdAndPaysOnlyOnceAtCompletion (System.Int32 intelligence, System.Boolean findsProblem) [0x00037] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:398\n"
+  },
+  {
+    "name": "PCShopSell.Tests.SocialEventBatchTests.AudioInspectionRemainsSelectableBelowThresholdAndPaysOnlyOnceAtCompletion(100,True)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.SocialEventBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity activity) [0x00087] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:41\nat PCShopSell.Tests.SocialEventBatchTests.AudioInspectionRemainsSelectableBelowThresholdAndPaysOnlyOnceAtCompletion (System.Int32 intelligence, System.Boolean findsProblem) [0x00037] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:398\n"
+  },
+  {
+    "name": "PCShopSell.Tests.SocialEventBatchTests.InvitationsSettleAtTheirRealVenue(\"act_ktv_fuzhi\",\"resident_fuzhi\",49,-1500)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.SocialEventBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity activity) [0x00087] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:41\nat PCShopSell.Tests.SocialEventBatchTests.InvitationsSettleAtTheirRealVenue (System.String eventId, System.String personId, System.Int32 number, System.Int32 netCost) [0x00118] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:308\n"
+  },
+  {
+    "name": "PCShopSell.Tests.SocialEventBatchTests.LeavingAudioWorkEarlyDoesNotPayAndChefStoryWaitsForCompletion",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.SocialEventBatchTests.Attend (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.CityActivity activity) [0x00087] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:41\nat PCShopSell.Tests.SocialEventBatchTests.LeavingAudioWorkEarlyDoesNotPayAndChefStoryWaitsForCompletion () [0x00020] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\SocialEventBatchTests.cs:447\n"
+  }
+]

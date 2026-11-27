@@ -141,6 +141,7 @@ namespace PCShopSell.Game.UI
         private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText;
         private readonly List<(Button b, VehicleKind kind)> _vehicleButtons = new List<(Button, VehicleKind)>();
         private float _slowTimer;
+        private int _slowHudPhase;
         private float _uiTime;
         private float _hudRefreshTimer;
 
@@ -179,9 +180,21 @@ namespace PCShopSell.Game.UI
 
         // ---------- 每帧 ----------
 
+        private static readonly Unity.Profiling.ProfilerMarker UpdateLabelsMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateLabels");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateHudMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateHud");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateDistrictPersonMarkersMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateDistrictPersonMarkers");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateInteractMarkerMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateInteractMarker");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateTipMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateTip");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateQuestTrackerMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateQuestTracker");
+        private static readonly Unity.Profiling.ProfilerMarker RefreshShortcutMenusMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.RefreshShortcutMenus");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateUpcomingScheduleHudMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateUpcomingScheduleHud");
+        private static readonly Unity.Profiling.ProfilerMarker RefreshWorkbenchAccessMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.RefreshWorkbenchAccess");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateCityLifeHudMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateCityLifeHud");
+
         public void Update(float dt)
         {
             if (S == null) return;
+            if (S.IsTimeAdvancing) { RefreshTimeAdvance(); return; }
             UpdateFishingInteraction(dt);
             UpdateOnsitePlay(dt);
             MaybeResumeLeisure();
@@ -190,10 +203,10 @@ namespace PCShopSell.Game.UI
             _labelCanvas.enabled=!ExpoHudOpen&&!_ctrl.PetFocusActive;
             RefreshShopDockVisibility();
             RefreshHomeDockVisibility();
-            UpdateUpcomingScheduleHud();
+            using (UpdateUpcomingScheduleHudMarker.Auto()) UpdateUpcomingScheduleHud();
             UpdateLoanReminderHud();
             PositionRightHudCards();
-            RefreshWorkbenchAccess();
+            using (RefreshWorkbenchAccessMarker.Auto()) RefreshWorkbenchAccess();
             ApplyHudFunctionLayout();
             var selectedControl = EventSystem.current?.currentSelectedGameObject;
             var selectedInput = selectedControl != null ? selectedControl.GetComponent<InputField>() : null;
@@ -222,10 +235,14 @@ namespace PCShopSell.Game.UI
             UpdateDisplayPreview();
             _slowTimer -= dt;
             bool refreshSlowHud = _slowTimer <= 0;
+            int slowPhase = _slowHudPhase;
             if (refreshSlowHud)
             {
-                _slowTimer = 0.4f;
-                if (!MainMenuOpen && !S.IsWorking) UpdateQuestTracker();
+                // 每项仍约 0.4 秒刷新一次，错开四组，避免同一帧集中重排所有 HUD。
+                _slowTimer = 0.1f;
+                _slowHudPhase = (_slowHudPhase + 1) % 4;
+                if (slowPhase == 0) { UpdateEmployeeWellbeingWidgets(); UpdateGovernanceWindows(); }
+                if (slowPhase == 1 && !MainMenuOpen && !S.IsWorking) using (UpdateQuestTrackerMarker.Auto()) UpdateQuestTracker();
             }
             UpdateOpeningMealGuide();
             UpdateFirstUseGuide();
@@ -250,24 +267,23 @@ namespace PCShopSell.Game.UI
             }
             _uiTime += dt;
             _hudRefreshTimer -= dt;
-            if (_hudRefreshTimer <= 0 || dt <= 0) { _hudRefreshTimer = .1f; UpdateHud(); }
+            if (_hudRefreshTimer <= 0 || dt <= 0) { _hudRefreshTimer = .1f; using (UpdateHudMarker.Auto()) UpdateHud(); }
             UpdateHudCashMotion();
             if (dt <= 0) _labelContentAt = 0;
-            UpdateCityLifeHud(dt);
-            UpdateLabels();
+            using (UpdateCityLifeHudMarker.Auto()) UpdateCityLifeHud(dt);
+            using (UpdateLabelsMarker.Auto()) UpdateLabels();
             UpdatePlayerMarker();
-            UpdateDistrictPersonMarkers();
-            UpdateInteractMarker();
+            using (UpdateDistrictPersonMarkersMarker.Auto()) UpdateDistrictPersonMarkers();
+            using (UpdateInteractMarkerMarker.Auto()) UpdateInteractMarker();
             UpdatePlacementStatus();
             UpdateEditHud();
             UpdateQueueLabels();
             UpdateToasts();
-            UpdateTip(dt);
+            using (UpdateTipMarker.Auto()) UpdateTip(dt);
             if (refreshSlowHud)
             {
-                RefreshShortcutMenus();
-                UpdateVehicleButtons();
-                if (!pointerBusy) { RefreshDock(); RefreshHomeDock(); }
+                if (slowPhase == 2) { using (RefreshShortcutMenusMarker.Auto()) RefreshShortcutMenus(); UpdateVehicleButtons(); }
+                if (slowPhase == 3 && !pointerBusy) { RefreshDock(); RefreshHomeDock(); }
             }
             RefreshToastPlacement();
         }

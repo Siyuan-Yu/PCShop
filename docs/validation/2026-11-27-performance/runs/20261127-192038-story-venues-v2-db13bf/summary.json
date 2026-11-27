@@ -1,0 +1,14 @@
+{
+  "tag": "story-venues-v2",
+  "filter": "DistrictProgressionTests;SaveGhostStateTests;FishingTests;SocialEventBatchTests;OutdoorBatchTests;ShopCompetitionTests;WorkshopRegressionTests;ShopCoreGameplayTests",
+  "started": "2026-11-27T19:20:38.6119207+08:00",
+  "seconds": 290.17,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 262,
+  "passed": 237,
+  "failed": 25,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-20261127\\20261127-192038-story-venues-v2-db13bf"
+}

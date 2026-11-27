@@ -1,0 +1,14 @@
+{
+  "tool": "内置 image_gen",
+  "date": "2026-11-27",
+  "mode": "generate",
+  "name": "supplement",
+  "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-a026dedb-a47a-4054-b4d7-661a191bf073.png",
+  "prompt": "Create a NEW supplemental item-icon atlas matching the supplied approved item atlases and gouache style reference. EXACTLY THREE columns and THREE rows, nine isolated icons with LARGE transparent gutters and identical 3x3 square cell spacing. Each icon must stay inside central 76% of its own cell with 12% clear margin, isolated on true transparent alpha. Warm brown hand-drawn contours, matte hand-painted gouache, simple clean color shapes, faint brush grain. Readable at 34 pixels. No text, no logos, no cards, no background, no ground or drop shadows, no glossy photoreal PBR. Keep object identity distinct. ROW 1 left to right: 1) large premium wooden sailing flagship model with three cream sails, detailed deck and dark blue wave display base, 2) premium miniature clocktower workshop diorama with brown friendly square-headed clock-repair robot beside tower, 3) premium botanical conservatory miniature diorama with a glass greenhouse, green courtyard and tiny sprout mascot. ROW 2 left to right: 4) large premium blue-domed astronomical observatory model with brass telescope and circular star-map plinth, 5) player's own-brand everyday commuter shirt, cream short-sleeved collared shirt with muted teal small chest pocket accent, 6) player's own-brand assembly model kit: blue and gold cardboard kit box with a little unbranded original space rover toy beside it. ROW 3 left to right: 7) model-painting workbench with gray extractor hood, small turntable and tidy paint bottles on a warm wooden table, 8) second-hand electronics repair workbench, sturdy wooden desk, green repair mat, articulated magnifying lamp, screwdriver and small open radio, 9) second-hand game console, a gray home console unit with dark cartridge slot and TWO wired gamepad controllers. Keep clean new models and shirt and benches, game console lightly used. Nine objects total, exact order. Reference images are STYLE references, do not redraw their existing full contents.",
+  "保存到": "Assets/Resources/ItemPortraits/supplement.png",
+  "参考图": [
+    "本轮已生成的 models.png",
+    "本轮已生成的 furniture_shop.png",
+    "docs/art-direction/concept/props/concept/goods.jpg"
+  ]
+}

@@ -61,7 +61,8 @@ namespace PCShopSell.Tests
                 Assert.True(s.SelectVenueService(a.DefinitionId, 1, a.Id), s.VenueServiceBlocker(a.DefinitionId, 1, a.Id));
                 Step(s);
                 Assert.AreEqual(CityActivityPhase.Running, a.State);
-                for(int i=0;i<60000&&a.Active;i++)Step(s);
+                // 餐厅改为在用餐场景内主动结束，不能靠等待跳过整场对话。
+                Assert.True(s.FinishManualCityActivity(a.Id));
                 Assert.AreEqual(CityActivityPhase.Completed,a.State,a.EndReason);
                 Assert.AreEqual(1, a.ServiceChoice);
                 Assert.Zero(a.EntryCostCents);

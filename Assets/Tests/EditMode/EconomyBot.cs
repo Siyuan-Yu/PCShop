@@ -31,7 +31,7 @@ namespace PCShopSell.Tests
             ShopUpgrades.AirCon, ShopUpgrades.Cctv, ShopUpgrades.Shelf2, ShopUpgrades.SelfCheckout, ShopUpgrades.Shelf3,
         };
 
-        private readonly GameSession _s;
+        private GameSession _s;
         private readonly bool _events;
         private readonly bool _lazy;
 
@@ -51,6 +51,13 @@ namespace PCShopSell.Tests
         }
 
         public GameSession Session => _s;
+
+        public void ReloadCheckpoint()
+        {
+            var old=_s;
+            _s=GameSession.Load(old.City,UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(old.CreateSave())));
+            _s.EventsEnabled=_events;_s.EventRaised+=def=>ResolveEvent();old.Dispose();
+        }
 
         private void ResolveEvent()
         {
@@ -107,13 +114,18 @@ namespace PCShopSell.Tests
             Go(_s.PlayerShopPlace, 10);
 
             ManageShop();
-            while (_s.Clock.MinuteOfDay < 21 * 60 + 30 && !_s.IsGameOver)
+            long closing=_s.Clock.Today.TotalDays*1440L+21*60+30;
+            int steps=0;
+            while (_s.Clock.Now.TotalMinutes < closing && !_s.IsGameOver)
             {
+                if(++steps>3000)throw new InvalidOperationException("自动经营超过单日步数上限："+_s.Clock.Now);
+                long before=_s.Clock.Now.TotalMinutes;
                 _s.AdvanceClock(1);
                 if (_s.PendingEvent != null) ResolveEvent();
                 DrainQueue();
                 if (!_lazy && !_s.EverHired && _s.Candidates.Count > 0) _s.Hire(0);
                 if (_s.Clock.MinuteOfDay % 60 == 0) HandleOrders();
+                if(_s.Clock.Now.TotalMinutes<=before)throw new InvalidOperationException("自动经营时间停滞："+_s.Clock.Now+" event="+_s.PendingEvent?.Id+" manual="+_s.ManualActivityClockPaused+" expo="+_s.BrandExpoExclusive);
             }
             if (_s.IsGameOver) return;
 

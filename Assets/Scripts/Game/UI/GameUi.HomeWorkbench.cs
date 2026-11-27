@@ -178,7 +178,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(nav, 184, -1, 0); Ui.VList(nav, 10, 8);
             string[] tabs = { "今日", "门店", "投资", "财务", "联系人" };
             int todos = WorkbenchTodoCount();
-            int shops = S.MyShops.Count(shop => !S.IsOwnedVenue(shop.Place) && (WbStockCount(shop) == 0 || !S.Employees.Any(e => e.Shop == shop)));
+            int shops = S.MyShops.Count(shop => S.PlayerManagesShop(shop)&&!S.IsOwnedVenue(shop.Place) && (WbStockCount(shop) == 0 || !S.Employees.Any(e => e.Shop == shop)));
             for (int i = 0; i < tabs.Length; i++)
             {
                 int index = i;

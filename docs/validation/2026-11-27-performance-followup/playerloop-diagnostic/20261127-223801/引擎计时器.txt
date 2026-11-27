@@ -1,0 +1,10 @@
+EditorLoop
+Canvas.BuildBatch
+Gfx.WaitForPresentOnGfxThread
+GC.Collect
+Main Thread
+PlayerLoop
+WaitForTargetFPS
+CPU Main Thread Frame Time
+CPU Render Thread Frame Time
+GPU Frame Time

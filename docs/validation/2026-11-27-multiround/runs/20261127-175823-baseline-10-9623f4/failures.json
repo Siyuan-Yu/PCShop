@@ -1,0 +1,17 @@
+[
+  {
+    "name": "PCShopSell.Tests.RoadSurfaceTests.ActualCityRoadCentersStayCoveredAndPavementDoesNotCoverThem",
+    "message": "  Expected: 4\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.RoadSurfaceTests.ActualCityRoadCentersStayCoveredAndPavementDoesNotCoverThem () [0x00097] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\RoadSurfaceTests.cs:69\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShelfItemCapacityTests.InventoryAndShelfDetailsShowBothLimits_EvenBeforeChoosingCategory",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShelfItemCapacityTests.InventoryAndShelfDetailsShowBothLimits_EvenBeforeChoosingCategory () [0x0010b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\ShelfItemCapacityTests.cs:178\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShelfTests.ShelfKinds_Goods_GroupSimilarGifts",
+    "message": "  visit_hamper 要有对应的货架类\n  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.ShelfTests.ShelfKinds_Goods_GroupSimilarGifts () [0x000b2] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\ShelfTests.cs:86\n"
+  }
+]

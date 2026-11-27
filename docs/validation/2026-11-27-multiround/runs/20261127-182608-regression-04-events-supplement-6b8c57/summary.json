@@ -1,0 +1,14 @@
+{
+  "tag": "regression-04-events-supplement",
+  "filter": "^PCShopSell.Tests.EventSystemTests\\.",
+  "started": "2026-11-27T18:26:08.9119832+08:00",
+  "seconds": 600.15,
+  "timeout": true,
+  "exitCode": -1,
+  "result": "Timeout",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-regression-20261127\\20261127-182608-regression-04-events-supplement-6b8c57"
+}

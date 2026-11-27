@@ -1,5 +1,15 @@
 # PETSHOP · PCShopSell
 
+**最新完整交接（2026-11-27）**　当前交付分支为 `art/experiment`。本次统一归档猫狗与商品图标、员工满意度、公司治理、多轮 Bug 修复及性能优化的全部项目改动与证据。[完整交接与换机入口](docs/163-current-handoff-2026-11-27.md) · [最新性能实测](docs/162-performance-followup-2026-11-27.md)。**稳定 120 FPS 尚未达标**；199 项专项用例的最新结果通过，不代表全项目验收通过。首次进城加载与内存取舍、历史待复核项、派生地图缓存重建方法均在交接中明确记录。本次上传不包含新发布包。下方各专题保留当时的历史状态。
+
+**历史首轮功能测试（2026-11-27）**　已完成两轮广覆盖及多次专项复测，最新去重结果为 1539 项通过、266 项失败、1 项长模拟超时；修复 5 处问题，365／1095 天压力续跑和管理界面回调巡检通过。全项目尚未通过验收；逐轮证据、待复核风险和边界见 [测试报告](docs/157-multiround-testing-2026-11-27.md)。下方“未运行测试”保留各实现阶段的历史状态。
+
+**公司股权与双向接管（2026-11-27）**　接入真实股东名册、机构资金、大宗交易、董事会、增发分红、双向控股及门店留任交接，新增治理与 IPO 按花园开放。[完整规则、入口及验证边界](docs/156-company-equity-and-control-2026-11-27.md) · [实机界面](docs/art-direction/implemented/company-governance-20261127/index.html)。本轮按要求先不做完整玩法验收，未打包或上传。
+
+**员工满意度与请求（2026-11-27）**　门店与公司共用满意度、精力、调薪调班、带薪休假和离职预告，居家工作台可直达员工待办。[规则、代码与验证边界](docs/155-employee-wellbeing-2026-11-27.md) · [十张实机界面](docs/art-direction/implemented/employee-wellbeing-20261127/index.html)。当前修改在 `art/experiment`，未提交上传或打包。
+
+**猫狗与商品图标（2026-11-27）**　10 种动物外观统一寄养、交接及事件入口；11 套透明水粉图集覆盖 256 个物品键。[实现与复拍记录](docs/art-direction/猫狗与商品图标实施记录.md) · [概念、动作、实际界面及全部图标](docs/art-direction/implemented/pets-items-20261127/index.html)。当前修改保存在 `art/experiment`。
+
 **证券与全屏工作台交接（2026-11-27）**　开发分支为 `art/experiment`。证券三处入口同步，居家工作台采用全屏、五项侧栏及常驻日进度带。[实现、操作入口、验证边界与换机方法](docs/art-direction/证券与居家工作台实施记录.md) · [24 张原图与定稿图并排对照](docs/art-direction/implemented/stock-workbench-20261127/index.html)。已完成 Unity 编译与界面复拍，未运行自动测试、未生成新发布包。
 
 **全体 NPC 手绘三维（2026-11-27）**　194 份固定外观配置及动态人物入口已统一接入。[全员实施与换机记录](docs/art-direction/全体NPC手绘三维实施记录.md) · [逐人实机图库](docs/art-direction/concept/characters-3d/real-bench/npc-population-20261127/index.html)。场景美术的视觉验收状态仍以下方三区交接为准。
@@ -242,6 +252,8 @@ UI整理已落实：[第50篇：保留员工部分的UI整理](docs/50-ui-cleanu
 Windows 测试包留在本机。GitHub 用于同步源码和文档，打包、上传和测试分别遵循[项目操作规则](AGENTS.md)。工程入口见[本地构建与验证](docs/122-current-game-content-2026-11-16.md#本地构建与验证)。
 
 运行测试（命令行）：
+
+优先使用隔离入口 `tools/run-tests.ps1` 或 `tools/run-qa-baseline.ps1`，避免与玩家编辑器、正式存档共用工程；本次完整命令与结果保存方式见[多轮测试报告](docs/157-multiround-testing-2026-11-27.md#复跑方法)。
 
 ```
 Unity.exe -batchmode -nographics -projectPath <项目路径> -runTests -testPlatform EditMode -testResults <结果.xml>

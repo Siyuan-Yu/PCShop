@@ -1,0 +1,27 @@
+[
+  {
+    "name": "PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)",
+    "message": "  Expected: 0\n  But was:  4\n",
+    "stack": "at PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice (System.Double bonus) [0x0014c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:84\n"
+  },
+  {
+    "name": "PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)",
+    "message": "  0%购买意愿不会生成堂食订单\n  Expected: 1\n  But was:  6\n",
+    "stack": "at PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent (System.Double salesBonus) [0x00117] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:110\n"
+  },
+  {
+    "name": "PCShopSell.Tests.MarkupRangeTests.ShopSliderAndRestaurantMenuReachThree_AndMenuShowsZeroIntent",
+    "message": "  Expected: 3\n  But was:  1.1499999999999999d\n",
+    "stack": "at PCShopSell.Tests.MarkupRangeTests.ShopSliderAndRestaurantMenuReachThree_AndMenuShowsZeroIntent () [0x00115] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:128\n"
+  },
+  {
+    "name": "PCShopSell.Tests.McnRecruitmentTests.SignedThroughPhoneThenAssignedAfterSaveWithoutChargingASecondFee",
+    "message": "  Expected: null\n  But was:  \"acceptance-expo\"\n",
+    "stack": "at PCShopSell.Tests.McnRecruitmentTests.SignedThroughPhoneThenAssignedAfterSaveWithoutChargingASecondFee () [0x0008f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\McnRecruitmentTests.cs:36\n"
+  },
+  {
+    "name": "PCShopSell.Tests.MenuLocalizationTests.LoadSlotInspection_DistinguishesSlotsAndBackupWithoutLoadingGame",
+    "message": "System.IO.IOException : 当文件已存在时，无法创建该文件。",
+    "stack": "  at System.IO.FileSystem.MoveFile (System.String sourceFullPath, System.String destFullPath) [0x00013] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at System.IO.File.Move (System.String sourceFileName, System.String destFileName) [0x0007e] in <eef08f56e2e042f1b3027eca477293d9>:0 \n  at PCShopSell.Tests.MenuLocalizationTests.LoadSlotInspection_DistinguishesSlotsAndBackupWithoutLoadingGame () [0x00144] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MenuLocalizationTests.cs:148 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  }
+]

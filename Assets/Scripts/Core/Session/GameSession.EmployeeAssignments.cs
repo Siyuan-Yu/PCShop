@@ -10,9 +10,9 @@ namespace PCShopSell.Core.Session
         private static int WorkTaskMinutes(int baseline, int aptitude) =>
             Math.Max(1, (int)Math.Round(baseline * (1 + (50 - aptitude) * .014), MidpointRounding.AwayFromZero));
 
-        public static int EmployeeCheckoutCycleMinutes(Employee person) => WorkTaskMinutes(Math.Max(1, person.CheckoutMinutes), person.Dexterity) + 1;
+        public static int EmployeeCheckoutCycleMinutes(Employee person) => EmployeeTaskMinutes(WorkTaskMinutes(Math.Max(1, person.CheckoutMinutes), person.Dexterity) + 1,person);
         public static int AssemblyAptitude(Employee person) => (person.Dexterity + person.Intelligence) / 2;
-        public static int AssemblyMinutesOf(Employee person) => Math.Max(45, WorkTaskMinutes(person.AssemblyMinutes, AssemblyAptitude(person)) - person.BuildsCompleted / 2);
+        public static int AssemblyMinutesOf(Employee person) => Math.Max(45, EmployeeTaskMinutes(WorkTaskMinutes(person.AssemblyMinutes, AssemblyAptitude(person)) - person.BuildsCompleted / 2,person));
         public static double AssemblyPriceBonus(Employee person) => AssemblyPriceBonus(AssemblyAptitude(person));
 
         private static double AssemblyPriceBonus(int aptitude)
@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
         public static PCShopSell.Core.Common.Money EmployeePurchasePrice(Employee person, PurchaseOffer offer) =>
             offer.Price.Scale(1 - EmployeePurchaseDiscount(person));
         public static int RestaurantEmployeeOperationMinutes(Employee person, EmployeeRole role) =>
-            WorkTaskMinutes(RestaurantOperationMinutes, person.Dexterity);
+            EmployeeTaskMinutes(WorkTaskMinutes(RestaurantOperationMinutes, person.Dexterity),person);
         public const double WaiterTipMaximumRate = .15;
         public static double WaiterTipChance(int charm) => .05 + Math.Max(0, Math.Min(100, charm)) * .0035;
         public static double WaiterTipUpperRate(int charm) => .05 + Math.Max(0, Math.Min(100, charm)) * .001;
@@ -39,7 +39,7 @@ namespace PCShopSell.Core.Session
             foreach(char ch in person.Id??person.Name??"employee")hash=unchecked((hash^ch)*16777619);
             return 20+(int)(hash%71);
         }
-        public static double EmployeeSalesBonus(Employee person)=>EmployeeCharm(person)*.0025;
+        public static double EmployeeSalesBonus(Employee person)=>EmployeeCharm(person)*.0025*EmployeeWorkRate(person);
         public double ShopSalesBonus(OwnedShop shop)=>Math.Min(.25,ShopStaff(shop,EmployeeRole.Salesperson)
             .Where(e=>CityEmployeeAvailable(e,shop)).Sum(EmployeeSalesBonus));
 
@@ -50,6 +50,7 @@ namespace PCShopSell.Core.Session
             string capacity=StaffCapacityBlocker(hiringShop);if(capacity!=null){Fail(capacity);return null;}
             var person = _candidates[index];
             if (!CandidateAvailable(person)) { Fail("这位应聘者已经离开了。"); return null; }
+            EnsureEmployeeWellbeing(person,Clock.Now.TotalMinutes);
             _candidates.RemoveAt(index);
             _idleEmployees.Add(person);
             _employeeHireShops[person.Id]=hiringShop.Place.Id;
@@ -112,6 +113,8 @@ namespace PCShopSell.Core.Session
 
         private string EmployeeWorkAssignmentBlocker(string id, string destination, EmployeeRole role, bool replace = false, bool companyTransfer = false)
         {
+            if(EmployeeAuthorityBlocker(id) is string authority)return authority;
+            if(ShopAuthorityBlocker(ShopAt(destination)) is string destinationAuthority)return destinationAuthority;
             var row = FindEmployee(id);
             if (IsGameOver || row == null) return "员工不存在或游戏已结束";
             if (!companyTransfer && (CompanyPostOf(id) != null || PendingCompanyPostOf(id) != null))

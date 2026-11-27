@@ -1,0 +1,37 @@
+[
+  {
+    "name": "PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource",
+    "message": "System.InvalidOperationException : Sequence contains no matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.PurchasePlanTests.<EmployeePurchaseWindowReopensAtTheLastBrowsedSource>g__Button|6_0 (System.String caption, PCShopSell.Tests.PurchasePlanTests+<>c__DisplayClass6_1& ) [0x0000d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:163 \n  at PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource () [0x00230] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:229 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"restaurant\")",
+    "message": "  Expected: 2\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce (System.String kind) [0x00194] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:161\n"
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText",
+    "message": "  Expected and actual are both <System.String[4]>\n  Values differ at index [1]\n  Expected string length 17 but was 15. Strings differ at index 0.\n  Expected: \"racing_enrollment\"\n  But was:  \"bank_securities\"\n  -----------^\n",
+    "stack": "at NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText () [0x00094] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:31\n"
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce",
+    "message": "  Expected: 2\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce () [0x00149] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:282\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty () [0x0012c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\RacingEventBatchTests.cs:286\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay",
+    "message": "  首月 + 押金 + 中介费当场付\n  Expected: 19400000\n  But was:  19500000\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay () [0x00077] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:425\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent",
+    "message": "  首月 + 押金 + 中介费 + 搬家费（旧店没押金）\n  Expected: 60800\n  But was:  50800\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent () [0x00168] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:503\n"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "tag": "baseline-13",
+  "filter": "^PCShopSell.Tests.VenueSponsorshipAndStoryTests\\.;^PCShopSell.Tests.WarehouseBoxInteractionTests\\.;^PCShopSell.Tests.WarehouseCapacityTests\\.;^PCShopSell.Tests.WholesaleMinimumTests\\.;^PCShopSell.Tests.WorkforceTests\\.;^PCShopSell.Tests.WorkshopRegressionTests\\.;^PCShopSell.Tests.WorldMapTests\\.",
+  "started": "2026-11-27T18:04:56.8651075+08:00",
+  "seconds": 42.77,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 90,
+  "passed": 72,
+  "failed": 18,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-20261127\\20261127-180456-baseline-13-8e1a54"
+}

@@ -85,7 +85,7 @@ namespace PCShopSell.Tests
                 Assert.True(s.IsWorking); Finish(s);
                 Assert.AreEqual(pay, s.WorkContract.Days[0].EarnedYuan);
                 Assert.AreEqual(late, s.WorkContract.Days[0].LateMinutes);
-                Assert.AreEqual(Money.Zero, s.Ledger.Balance, "工资周结，迟到不会直接扣现金");
+                Assert.AreEqual(Money.FromYuan(pay), s.Ledger.Balance, "收工按扣除迟到后的工资日结，不额外形成债务");
             }
         }
 
@@ -108,16 +108,22 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void FullWeekPaysOnce_AfterClaim_AndAllowsRenewal()
+        public void FullWeekPaysDailyOnce_AndAllowsRenewal()
         {
             using (var s = Make())
             {
                 s.SignPlayerWork(s.CurrentPlace);
                 Assert.False(s.ClaimPlayerWorkPay());
-                for (int i = 0; i < 7; i++) { Attend(s, i); Finish(s); }
-                Assert.True(s.WorkContract.ReadyToPay);
+                for (int i = 0; i < 7; i++)
+                {
+                    Attend(s, i); Finish(s);
+                    Assert.AreEqual(Money.FromYuan(150 * (i + 1)), s.Ledger.Balance);
+                    Assert.True(s.WorkContract.Days[i].WagePaid);
+                }
+                Assert.False(s.WorkContract.ReadyToPay);
+                Assert.True(s.WorkContract.Paid);
                 Assert.AreEqual(1050, s.WorkContract.EarnedYuan);
-                Assert.True(s.ClaimPlayerWorkPay());
+                Assert.False(s.ClaimPlayerWorkPay());
                 Assert.AreEqual(Money.FromYuan(1050), s.Ledger.Balance);
                 Assert.False(s.ClaimPlayerWorkPay());
                 Assert.AreEqual(Money.FromYuan(1050), s.Ledger.Balance);
@@ -126,7 +132,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void LastDayAbsenceStillClosesPayroll_AndCanClaimAwayFromShop()
+        public void LastDayAbsenceClosesContract_WithoutPayingAgainAwayFromShop()
         {
             using (var s = Make())
             {
@@ -134,10 +140,11 @@ namespace PCShopSell.Tests
                 for (int i = 0; i < 6; i++) { Attend(s, i); Finish(s); }
                 s.Leave();
                 s.Clock.Restore(new GameDate(s.WorkContract.EndDay), s.WorkContract.ShiftEnd); s.AdvanceClock(1);
-                Assert.True(s.WorkContract.ReadyToPay);
+                Assert.False(s.WorkContract.ReadyToPay);
+                Assert.True(s.WorkContract.Paid);
                 Assert.AreEqual(WorkDayState.Absent, s.WorkContract.Days[6].State);
                 Assert.AreEqual(150, s.WorkContract.DeductionsYuan);
-                Assert.True(s.ClaimPlayerWorkPay()); Assert.AreEqual(Money.FromYuan(900), s.Ledger.Balance);
+                Assert.False(s.ClaimPlayerWorkPay()); Assert.AreEqual(Money.FromYuan(900), s.Ledger.Balance);
             }
         }
 
@@ -170,19 +177,20 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void AttendedWeeklyWageGetsBankruptcyGraceUntilClaimDeadline()
+        public void DailyWageRepaysDebt_AndAbsenceDoesNotCreateAdditionalPay()
         {
             using (var s = Make())
             {
-                s.Ledger.ForceDebit(s.Clock.Today, "测试", Money.FromYuan(10), "待周结");
+                s.Ledger.ForceDebit(s.Clock.Today, "测试", Money.FromYuan(10), "工资到账前欠款");
                 s.SignPlayerWork(s.CurrentPlace); Attend(s, 0); Finish(s);
+                Assert.AreEqual(Money.FromYuan(140), s.Ledger.Balance);
                 for (int day = 1; day <= 7; day++)
                 {
                     s.Player.Health = s.Player.Energy = s.Player.Hunger = 100;
                     s.Clock.Restore(new GameDate(day), 23 * 60 + 59); s.AdvanceClock(1);
-                    Assert.False(s.IsGameOver, "不能在周薪领取前因为三天负现金结束游戏");
+                    Assert.False(s.IsGameOver, "日结工资已经偿清欠款");
                 }
-                Assert.True(s.WorkContract.ReadyToPay); Assert.True(s.ClaimPlayerWorkPay());
+                Assert.True(s.WorkContract.Paid); Assert.False(s.ClaimPlayerWorkPay());
                 Assert.AreEqual(Money.FromYuan(140), s.Ledger.Balance);
             }
         }
@@ -244,9 +252,9 @@ namespace PCShopSell.Tests
                     GameSessionTests.Teleport(s, "flat");
                     if (i < 6) Assert.True(s.Sleep());
                 }
-                Assert.True(s.WorkContract.ReadyToPay);
-                Assert.AreEqual(Money.Zero, s.Ledger.Balance);
-                Assert.True(s.ClaimPlayerWorkPay());
+                Assert.True(s.WorkContract.Paid);
+                Assert.False(s.WorkContract.ReadyToPay);
+                Assert.False(s.ClaimPlayerWorkPay());
                 Assert.AreEqual(Money.FromYuan(1050), s.Ledger.Balance);
             }
         }
@@ -318,9 +326,10 @@ namespace PCShopSell.Tests
                 {
                     Assert.True(loaded.IsWorking); Finish(loaded);
                     Assert.AreEqual(6 * 60, loaded.Clock.MinuteOfDay);
-                    Assert.True(loaded.WorkContract.ReadyToPay);
+                    Assert.False(loaded.WorkContract.ReadyToPay);
+                    Assert.True(loaded.WorkContract.Paid);
                     Assert.AreEqual(175, loaded.WorkContract.EarnedYuan);
-                    Assert.True(loaded.ClaimPlayerWorkPay());
+                    Assert.False(loaded.ClaimPlayerWorkPay());
                     Assert.AreEqual(Money.FromYuan(175), loaded.Ledger.Balance);
                 }
             }

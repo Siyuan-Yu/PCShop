@@ -1,0 +1,14 @@
+{
+  "tag": "long-resume-02",
+  "filter": "ResumeArchivedStressCheckpointToTarget",
+  "started": "2026-11-27T18:05:33.5235936+08:00",
+  "seconds": 1157.15,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 2,
+  "passed": 2,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-180533-long-resume-02-c17ad1"
+}

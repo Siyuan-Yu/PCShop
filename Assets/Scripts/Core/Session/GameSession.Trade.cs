@@ -215,6 +215,7 @@ namespace PCShopSell.Core.Session
             string appBlock = AppBlocker(PhoneApps.Shop);
             if (appBlock != null) return Fail(appBlock);
             destination = toHome ? null : destination ?? _focus;
+            if(!toHome&&ShopAuthorityBlocker(destination) is string authority)return Fail(authority);
             if (!toHome && destination?.Rented != true) return Fail("请选择可用的收货门店，或选“送到家里”。");
             // Old callers also use the single shopping channel for new orders.
             OnlineStore store = Online1788.Shopping;

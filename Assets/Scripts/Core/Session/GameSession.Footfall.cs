@@ -12,7 +12,6 @@ namespace PCShopSell.Core.Session
     public sealed partial class SaveData { public int shopFootfallVersion, leaseSignedDay; }
     public sealed partial class GameSession
     {
-        private ShopFootfall _shopFootfall;
         private Dictionary<int,(double min,double max)> _districtDemandRange;
         private readonly Dictionary<string,double> _streetTraffic = new Dictionary<string,double>();
         private readonly Dictionary<(string from,string to),string> _trafficStreetByEdge = new Dictionary<(string,string),string>();
@@ -24,7 +23,7 @@ namespace PCShopSell.Core.Session
         private const double ReferenceStreetDemand = 300;
         private const double LowStreetDemandFactor = .52;
         private static readonly ShopSettings PreviewShopSettings = new ShopSettings();
-        public ShopFootfallEstimate FootfallOf(Place place) => (_shopFootfall??(_shopFootfall=new ShopFootfall(City))).For(place);
+        public ShopFootfallEstimate FootfallOf(Place place) => City.Footfall.For(place);
         public Money ShopRentQuote(Place place)
         {
             // Price the site's baseline arrival demand. Day of week and shop operations affect visits only.

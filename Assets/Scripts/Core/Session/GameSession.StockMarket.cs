@@ -50,10 +50,7 @@ namespace PCShopSell.Core.Session
         public CityEquityState StockState(string id) => _cityEquities.Find(e=>e.Id==id);
         public double StockOwnershipRatio(string id)
         {
-            var company = ListedCompanyOf(id);
-            long total = company != null ? CompanyTotalShares : StockDefinition(id)?.TotalShares ?? 0;
-            long held = CityInvestmentUnits(id) + (company != null ? CompanyFounderHolding(company) : 0);
-            return total > 0 ? held / (double)total : 0;
+            var g=GovernanceOf(id);return ShareholderRatio(g,PlayerShareholderId);
         }
         public StockQuote[] StockQuotes(string id) => id=="hardware"?_stockMarket.IndexQuotes:StockState(id)?.Quotes??Array.Empty<StockQuote>();
         public StockExecution[] StockExecutions(string id, long from, bool shortMode) =>
@@ -94,7 +91,7 @@ namespace PCShopSell.Core.Session
         public void ToggleStockWatch(string id)
         {if(id=="hardware")_stockMarket.IndexWatched=!_stockMarket.IndexWatched;else if(StockState(id)!=null)StockState(id).Watched=!StockState(id).Watched;}
         public long StockAvailable(string id) => id=="hardware"?_stockMarket.IndexAvailableUnits:StockState(id)?.AvailableUnits??0;
-        public long StockBorrowAvailable(string id) => ListedCompanyOf(id) != null ? 0 : Math.Max(0,(StockDefinition(id)?.Liquidity??0)/2-(StockState(id)?.ShortUnits??0));
+        public long StockBorrowAvailable(string id) => ListedCompanyOf(id) != null ? 0 : Math.Max(0,Math.Min(StockPublicShares(id),(StockDefinition(id)?.Liquidity??0)/2-(StockState(id)?.ShortUnits??0)));
         public long StockPreviousClose(string id)
         {
             // 展示基准跟随最新报价所属的交易日，不能因开市重置限价基准而提前归零。
@@ -115,7 +112,7 @@ namespace PCShopSell.Core.Session
         public double StockDayChange(string id) => StockPreviousClose(id)>0?CityInvestmentPrice(id).Cents/(double)StockPreviousClose(id)-1:0;
         public double StockMarginRatio(string id)
         {var e=StockState(id);return e==null||e.ShortUnits<=0?0:e.ShortCollateralCents/(double)(e.PriceCents*e.ShortUnits);}
-        public string StockTradingStatus => StockMarketOpen ? "工作日全天可交易" : "周末休市";
+        public string StockTradingStatus => !CompanyGovernanceUnlocked?"花园开放后可买入 · 旧仓可卖出或平仓":StockMarketOpen ? "工作日全天可交易" : "周末休市";
         public string StockNextQuote
         {
             get
@@ -330,6 +327,7 @@ namespace PCShopSell.Core.Session
         }
         private void SettleStockDay(int day,long minute)
         {
+            SettleGovernanceOperatingDay(day);
             foreach(var e in _cityEquities)
             {
                 if(e.ShortUnits>0)
@@ -339,6 +337,17 @@ namespace PCShopSell.Core.Session
                 }
                 if(day>0&&day%90==0)
                 {
+                    var governance=GovernanceOf(e.Id);
+                    if(governance!=null)
+                    {
+                        if(ListedCompanyOf(e.Id)==null)
+                        {
+                            long distributable=Math.Min(GovernanceAvailableDistribution(governance),Math.Max(0,e.QuarterProfitCents/4));
+                            PayCompanyDividend(governance,distributable/governance.TotalShares,day);
+                            AddStockNews(e.Id,minute,StockName(e.Id)+"季度分红",e.LastDividendCents>0?"按实际股东名册派发并同步除息。":"本次现金或利润不足，不派息。");
+                        }
+                        e.QuarterProfitCents=0;continue;
+                    }
                     if (ListedCompanyOf(e.Id) != null) { e.QuarterProfitCents = 0; continue; }
                     // One million issued shares, distributing 25% of accumulated operating profit.
                     long dividend=Math.Max(0,Math.Min(e.PriceCents-100,(long)Math.Floor(e.QuarterProfitCents*.25/1000000)));
@@ -386,10 +395,12 @@ namespace PCShopSell.Core.Session
             if(!StockMarketOpen)return "周末休市，周一至周五全天可交易";
             if(units<=0||units>StockOrderLimit)return "数量须为1—1,000,000的整数";
             if(action!="buy"&&action!="sell"&&action!="short"&&action!="cover")return "未知交易类型";
+            string governanceGate=GovernanceTradeGate(id,action=="buy");if(governanceGate!=null)return governanceGate;
+            if(id!="hardware"&&(action=="buy"||action=="sell"))
+            {string source=PublicShareTradeBlocker(id,units,action=="buy");if(source!=null)return source;}
             if (ListedCompanyOf(id) != null)
             {
                 if (action == "short" || action == "cover") return "自有公司股票暂不提供借股";
-                if (action == "buy" && units > CompanyPublicShares - e.Units) return "公众剩余股份不足";
             }
             if(id=="hardware"&&action=="buy")return "硬件景气指数仅供查看，已有持仓可以卖出";
             if(units>StockAvailable(id))return "本次报价还可成交"+StockAvailable(id)+"股，请减少数量或等待下一次报价";
@@ -415,7 +426,7 @@ namespace PCShopSell.Core.Session
             if (StockTradeBlocker(id, StockLotSize, action, checkCash:false) != null || !CityInvestmentPrice(id).IsPositive) return 0;
             long limit = Math.Min(StockAvailable(id), StockOrderLimit);
             if (shortMode) limit = Math.Min(limit, StockBorrowAvailable(id));
-            else if (ListedCompanyOf(id) != null) limit = Math.Min(limit, CompanyPublicShares - CityInvestmentUnits(id));
+            else if (id!="hardware") limit = Math.Min(limit, StockPublicShares(id));
             long upper = limit / StockLotSize;
             long affordable = 0;
             while (affordable < upper)

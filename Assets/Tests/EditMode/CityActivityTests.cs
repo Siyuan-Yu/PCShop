@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -55,7 +55,18 @@ namespace PCShopSell.Tests
                     var employees=s.Employees.Select(e=>s.PersonIdOf(e.Person)).ToArray();
                     foreach(var p in s.CityPeople.Where(p=>p.Task==CityPersonTask.Working&&p.WorkPlaceId!=null
                         &&p.WorkPlaceId!=p.HomePlaceId&&!employees.Contains(p.PersonId)))
-                        Assert.True(s.IsPlaceOpen(s.City.GetPlace(p.WorkPlaceId)),p.PersonId+" working in closed "+p.WorkPlaceId+" at "+s.Clock.Now);
+                    {
+                        if (p.TaskLabel == "正在直播")
+                        {
+                            Assert.IsNull(s.GetKolRoom(p.PersonId, false).Blocker, p.PersonId + "直播状态应与实际直播间一致");
+                            continue;
+                        }
+                        var venue=s.City.GetPlace(p.WorkPlaceId);
+                        var track=RaceTracks.Get(venue.Id);
+                        // NPC 的值班时段不以玩家是否办理赛车登记为条件。
+                        bool open=track!=null ? s.CurrentRaceMeeting!=RaceMeeting.None || track.IsOpenAt(s.Clock.MinuteOfDay) : s.IsPlaceOpen(venue);
+                        Assert.True(open,p.PersonId+" working in closed "+p.WorkPlaceId+" at "+s.Clock.Now);
+                    }
                 }
                 Check();
                 foreach(int day in new[]{0,5,6})
@@ -83,9 +94,9 @@ namespace PCShopSell.Tests
         [TestCase(21*60+42)] [TestCase(23*60+42)] [TestCase(60)]
         public void NeighborhoodRestaurantAcceptsAndCompletesLateMeals(int minute)
         {
-            using(var s=Make())
+            using(var s=Make(minute))
             {
-                s.Clock.Restore(new GameDate(5),minute);
+                // 在目标时间正常初始化排班；只改时钟会留下上午的人员状态。
                 var venue=s.City.GetPlace("life_restaurant");
                 typeof(GameSession).GetProperty("CurrentPlace").SetValue(s,venue);
                 typeof(GameSession).GetProperty("PlayerNodeId").SetValue(s,venue.NodeId);
@@ -94,10 +105,15 @@ namespace PCShopSell.Tests
                 Assert.IsNull(s.VenueServiceBlocker("dinner",0));
                 Assert.True(s.SelectVenueService("dinner",0));
                 var activity=s.CityActivities.Last();
-                for(int i=0;i<180&&activity.Active;i++)
+                for(int i=0;i<180&&activity.Active&&activity.State!=CityActivityPhase.Running;i++)
                 {s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;s.AdvanceClock(1);}
+                Assert.AreEqual(CityActivityPhase.Running,activity.State,activity.EndReason);
+                // 餐厅现在在用餐场景保留交谈时间，结束用餐按钮才结算，不能靠空转时钟代替操作。
+                Assert.True(GameSession.IsRestaurantMeal(activity));
+                Assert.True(s.FinishManualCityActivity(activity.Id));
                 Assert.AreEqual(CityActivityPhase.Completed,activity.State,activity.EndReason);
                 Assert.True(activity.RewardApplied);
+                Assert.False(s.FinishManualCityActivity(activity.Id),"同一餐不能重复结算");
                 Assert.AreEqual(1,s.Ledger.Entries.Count(e=>e.SourceEventId==activity.Id+":entry"));
             }
         }
@@ -121,10 +137,10 @@ namespace PCShopSell.Tests
             }
         }
 
-        private static GameSession Make()
+        private static GameSession Make(int minute=600)
         {
             var city=CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
-            var s=new GameSession(city,1234,Money.FromYuan(100000),GameTimestamp.From(new GameDate(5),600),true);
+            var s=new GameSession(city,1234,Money.FromYuan(100000),GameTimestamp.From(new GameDate(5),minute),true);
             s.EventsEnabled=false;s.MainShop.Sim.Settings.BaseCustomersPerHour=0;s.Time.SetSpeed(8);
             return s;
         }
@@ -199,7 +215,7 @@ namespace PCShopSell.Tests
                     var loaded=restored.CityActivities.Single(x=>x.Id==a.Id);
                     Assert.True(loaded.EntryPaid);Assert.AreEqual(s.Ledger.Balance,restored.Ledger.Balance);
                     Assert.True(restored.ChooseCityActivity(loaded.Id,0));
-                    for(int i=0;i<12000&&loaded.Active;i++)Step(restored,1);
+                    Assert.True(restored.FinishManualCityActivity(loaded.Id));
                     Assert.AreEqual(CityActivityPhase.Completed,loaded.State,loaded.EndReason);
                     Assert.AreEqual(venue.Id,restored.CurrentPlace.Id);
                     Assert.AreEqual(cash,restored.Ledger.Balance,"Only the one entry payment is due for this meal");

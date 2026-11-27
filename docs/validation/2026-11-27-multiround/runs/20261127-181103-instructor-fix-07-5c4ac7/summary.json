@@ -1,0 +1,14 @@
+{
+  "tag": "instructor-fix-07",
+  "filter": "InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing;InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking",
+  "started": "2026-11-27T18:11:03.9213550+08:00",
+  "seconds": 43.5,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 11,
+  "passed": 10,
+  "failed": 1,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-181103-instructor-fix-07-5c4ac7"
+}

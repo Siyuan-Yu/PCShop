@@ -1,0 +1,7 @@
+[城市加载] loading_baked_map: 1662 ms
+[城市加载] loading_baked_map: 327 ms
+[城市加载] loading_baked_details: 1447 ms
+[城市加载] loading_forest_meshes: 255 ms
+[城市加载] loading_people: 138 ms
+[城市加载] loading_session: 11 ms
+[城市加载] 总耗时: 3844 ms

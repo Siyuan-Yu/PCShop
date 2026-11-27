@@ -1,0 +1,20 @@
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.BlockTradeTransfersRealSharesAndCashAndRejectsOversell","result":"Passed","message":"","stack":"","seconds":0.1280072}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.CompanyOperatingCashIsSeparateAndPersists","result":"Passed","message":"","stack":"","seconds":0.1374744}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.CompletedShiftChangesMoraleOnceAndTransferPreservesIt","result":"Passed","message":"","stack":"","seconds":0.3875119}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.ExactlyHalfAndAggregatedPublicDoNotControlCompany","result":"Passed","message":"","stack":"","seconds":0.0048138}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.ExistingSharesCanExitBeforeGarden","result":"Passed","message":"","stack":"","seconds":0.0050477}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.GovernanceRefreshAndReloadNeverMintInvestorCash","result":"Passed","message":"","stack":"","seconds":0.0295913}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueRechecksSubscriberFundsAtSettlement","result":"Passed","message":"","stack":"","seconds":0.7929818}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueWaitsForVoteAndDoesNotRepeatAfterReload","result":"Passed","message":"","stack":"","seconds":0.7968991}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.LeaveIsNextShiftPaidAndCannotBeRepeatedOrCreditedTwice","result":"Passed","message":"","stack":"","seconds":1.6266993}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.LosingMajorityBeforeHandoverCancelsIt","result":"Passed","message":"","stack":"","seconds":0.0042477}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(0)","result":"Passed","message":"","stack":"","seconds":0.0038057}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(1)","result":"Passed","message":"","stack":"","seconds":0.0032103}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(2)","result":"Passed","message":"","stack":"","seconds":0.003219}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcManagedCompanyDeniesEmployeeAndShopChanges","result":"Passed","message":"","stack":"","seconds":0.004072}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(7)","result":"Passed","message":"","stack":"","seconds":0.2098825}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(41)","result":"Passed","message":"","stack":"","seconds":0.2187104}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(914)","result":"Passed","message":"","stack":"","seconds":0.1789677}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RequestsMayDeferOnceAndAgreementDoesNotInstantlyRaiseMorale","result":"Passed","message":"","stack":"","seconds":0.003673}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.SalaryChangeDuringShiftPreservesCurrentPayrollThroughReload","result":"Failed","message":"  Expected: 180\r\n  But was:  120\r\n","stack":"at PCShopSell.Tests.CompanyWellbeingRegressionTests.SalaryChangeDuringShiftPreservesCurrentPayrollThroughReload () [0x000ac] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CompanyWellbeingRegressionTests.cs:167\r\n","seconds":0.3764067}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.TakeoverSurvivesSaveAndExecutesOnlyOnce","result":"Passed","message":"","stack":"","seconds":0.6447729}

@@ -30,6 +30,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Vignette _vignette;
         private readonly FilmGrain _grain;
         private float _lastRoomYaw;
+        private float _lastQuarterYaw;
         private float _lastTownWeight = -1;
         private float _lastQuarterWeight = -1;
         private float _lastMinute = -1;
@@ -130,11 +131,17 @@ namespace PCShopSell.Game.Runtime
             Shader.SetGlobalVector("_OldQuarterFigureZone", new Vector4(quarterCenter.x,quarterCenter.z,ungradedDaylight,0));
             _volume.weight = interior ? 0f : _baseVolumeWeight * (1f - ungradedDaylight);
             _cameraData.renderPostProcessing = !interior && _usesPostProcessing && ungradedDaylight < .999f;
-            if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && interior == _lastInterior
+            // These time ranges have identical Blend and NightFactor results. Avoid
+            // re-uploading every emissive material and ambient probe every game minute.
+            float lightingMinute = minuteOfDay >= 480 && minuteOfDay <= 1020 ? 600
+                : minuteOfDay < 300 || minuteOfDay >= 1200 ? 0 : minuteOfDay;
+            if (Mathf.Abs(lightingMinute - _lastMinute) < 0.5f && interior == _lastInterior
+                && Mathf.Abs(quarterYaw - _lastQuarterYaw) < .01f
                 && oldRoom==_lastOldRoom && Mathf.Abs(roomYaw-_lastRoomYaw)<.01f && Mathf.Abs(townWeight - _lastTownWeight) < .012f && Mathf.Abs(quarterWeight - _lastQuarterWeight) < .012f && raining == _lastRain
                 && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
             _lastRoomYaw=roomYaw;_lastOldRoom=oldRoom;
-            _lastMinute = minuteOfDay;
+            _lastMinute = lightingMinute;
+            _lastQuarterYaw = quarterYaw;
             _lastQuarterWeight = quarterWeight;
             _lastTownWeight = townWeight;
             _lastInterior = interior;

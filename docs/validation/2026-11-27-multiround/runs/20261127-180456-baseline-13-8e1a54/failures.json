@@ -1,0 +1,92 @@
+[
+  {
+    "name": "PCShopSell.Tests.WarehouseBoxInteractionTests.BAndBoxInteractionUseSameFixedWindowWithBackpackAboveWarehouse(False)",
+    "message": "  Expected: less than 1\n  But was:  1\n",
+    "stack": "at PCShopSell.Tests.WarehouseBoxInteractionTests.BAndBoxInteractionUseSameFixedWindowWithBackpackAboveWarehouse (System.Boolean shop) [0x000b0] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WarehouseBoxInteractionTests.cs:124\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WarehouseBoxInteractionTests.BAndBoxInteractionUseSameFixedWindowWithBackpackAboveWarehouse(True)",
+    "message": "  Expected: less than 1\n  But was:  1\n",
+    "stack": "at PCShopSell.Tests.WarehouseBoxInteractionTests.BAndBoxInteractionUseSameFixedWindowWithBackpackAboveWarehouse (System.Boolean shop) [0x000b0] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WarehouseBoxInteractionTests.cs:124\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WarehouseCapacityTests.WarehouseUiUsesOneTilePerStackAndOpensWithBackpack",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WarehouseCapacityTests.WarehouseUiUsesOneTilePerStackAndOpensWithBackpack () [0x0016c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WarehouseCapacityTests.cs:205\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WholesaleMinimumTests.RestaurantWholesaleDeliversToWarehouseWhenFridgeIsMissingOrFull(False)",
+    "message": "  String lengths are both 5. Strings differ at index 1.\n  Expected: \"stock\"\n  But was:  \"shelf\"\n  ------------^\n",
+    "stack": "at PCShopSell.Tests.WholesaleMinimumTests.RestaurantWholesaleDeliversToWarehouseWhenFridgeIsMissingOrFull (System.Boolean hasFridge) [0x0010d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WholesaleMinimumTests.cs:133\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WholesaleMinimumTests.RestaurantWholesaleDeliversToWarehouseWhenFridgeIsMissingOrFull(True)",
+    "message": "  String lengths are both 5. Strings differ at index 1.\n  Expected: \"stock\"\n  But was:  \"shelf\"\n  ------------^\n",
+    "stack": "at PCShopSell.Tests.WholesaleMinimumTests.RestaurantWholesaleDeliversToWarehouseWhenFridgeIsMissingOrFull (System.Boolean hasFridge) [0x0010d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WholesaleMinimumTests.cs:133\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.ImpoundedPurchaseVehicleUsesFallbackWithoutChangingThePlan(False,Walk)",
+    "message": "  Expected: Walk\n  But was:  Taxi\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.ImpoundedPurchaseVehicleUsesFallbackWithoutChangingThePlan (System.Boolean shortShift, PCShopSell.Core.Session.VehicleKind expectedTransport) [0x00166] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:215\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(\"quota\")",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods (System.String failure) [0x0018f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:315\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.OverweightPurchase_UnloadsAndContinuesSameDayAfterLoadingSave",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Buy (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.VehicleKind kind, System.Int32 count) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:45\nat PCShopSell.Tests.WorkforceTests.OverweightPurchase_UnloadsAndContinuesSameDayAfterLoadingSave () [0x00009] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:263\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole",
+    "message": "  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole () [0x0003a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:85\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.Transfer_LeavesTodayUntouched_AndMovesTomorrowAfterJson(Assembler)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Transfer_LeavesTodayUntouched_AndMovesTomorrowAfterJson (PCShopSell.Core.Session.EmployeeRole role) [0x00062] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:61\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.TricyclesAreImpoundedAndReturnedIndividually",
+    "message": "System.InvalidOperationException : Sequence contains more than one matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x0004a] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.WorkforceTests.TricyclesAreImpoundedAndReturnedIndividually () [0x0016e] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:253 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.VehiclePool_TwoBikesCanServeBuyerAndOwner_AndLocksSurviveJson",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Buy (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.VehicleKind kind, System.Int32 count) [0x00011] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:45\nat PCShopSell.Tests.WorkforceTests.VehiclePool_TwoBikesCanServeBuyerAndOwner_AndLocksSurviveJson () [0x000a9] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkforceTests.cs:155\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.AssemblerRespectsShiftAndKeepsExperienceAcrossSave",
+    "message": "  Expected: greater than 0\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.AssemblerRespectsShiftAndKeepsExperienceAcrossSave () [0x000d5] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:182\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.CompletedAssemblyPaysAfterElapsedTime_AndConsumesOnlyOnce",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.CompletedAssemblyPaysAfterElapsedTime_AndConsumesOnlyOnce () [0x00035] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:73\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.FiringCashierDoesNotResetDedicatedAssembly",
+    "message": "  Expected: greater than 0\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.FiringCashierDoesNotResetDedicatedAssembly () [0x000ce] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:209\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.LegacyCashierAssemblyReleasesOrderForManualWorkAfterLoad",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.LegacyCashierAssemblyReleasesOrderForManualWorkAfterLoad () [0x00014] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:109\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.ReservationPreservesWealth_AndSurvivesSaveLoad",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests.ReservationPreservesWealth_AndSurvivesSaveLoad () [0x0001b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:40\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.ShopHoursDropdown_SurvivesLiveRefreshAndCommitsSelection",
+    "message": "  Expected: 555\n  But was:  600\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests+<ShopHoursDropdown_SurvivesLiveRefreshAndCommitsSelection>d__16.MoveNext () [0x00562] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:350\nat UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0004e] in .\\Library\\PackageCache\\com.unity.test-framework@1.1.33\\UnityEngine.TestRunner\\NUnitExtensions\\Attributes\\TestEnumerator.cs:46\n"
+  }
+]

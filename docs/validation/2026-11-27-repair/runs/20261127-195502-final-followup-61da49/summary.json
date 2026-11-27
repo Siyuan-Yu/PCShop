@@ -1,0 +1,14 @@
+{
+  "tag": "final-followup",
+  "filter": "PurchasePlanTests.EmployeePurchaseWindowReopens",
+  "started": "2026-11-27T19:55:02.7604528+08:00",
+  "seconds": 16.11,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-20261127\\20261127-195502-final-followup-61da49"
+}

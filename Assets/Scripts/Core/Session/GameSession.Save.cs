@@ -15,11 +15,12 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        public bool CanSave => PendingEvent == null && !Racing;
+        public bool CanSave => PendingEvent == null && !Racing && !IsTimeAdvancing;
 
         public SaveData CreateSave()
         {
-            if (!CanSave) throw new InvalidOperationException("请先处理当前待选择事件再存档。");
+            if (!CanSave) throw new InvalidOperationException(IsTimeAdvancing
+                ? "请等待休息或治疗结算完成后再存档。" : "请先处理当前待选择事件再存档。");
             QuestIndex(); // 固化已完成教学，再序列化 flags。
             OwnedShop keep = _focus;
             _focus = MainShop;
@@ -32,6 +33,7 @@ namespace PCShopSell.Core.Session
                 SaveCityFinance(d);
                 SaveCityProcurement(d);
                 SaveCityAssets(d);
+                SaveCompanyGovernance(d);
                 SaveCityRetail(d);
                 SaveCityLife(d);
                 SaveCityClothing(d);
@@ -80,7 +82,7 @@ namespace PCShopSell.Core.Session
                 ledger = Ledger.Entries.Select(e => new SaveLedgerEntry
                 {
                     day = e.Date.TotalDays, category = e.Category, cents = e.Amount.Cents, memo = e.Memo,
-                    balanceAfter = e.BalanceAfter.Cents,
+                    balanceAfter = e.BalanceAfter.Cents, cashAccountId = e.CashAccountId,
                 }).ToArray(),
                 marketFactors = Market.FactorValues(),
                 news = Market.News.Select(n => new SaveNews
@@ -200,7 +202,7 @@ namespace PCShopSell.Core.Session
             MigrateFoodShelfLife(d);
             ulong rng = ulong.Parse(d.rngState ?? "1", System.Globalization.CultureInfo.InvariantCulture);
             var s = new GameSession(city, rng, Money.Zero, GameTimestamp.From(new GameDate(d.day), d.minute), false, !d.noPhone);
-            s.Restore(d, rng);
+            using (RuntimePerformanceProbe.Measure("Load.Restore")) s.Restore(d, rng);
             return s;
         }
 
@@ -210,7 +212,7 @@ namespace PCShopSell.Core.Session
             Clock.Restore(new GameDate(d.day), d.minute);
             RestorePropertyMarket(d);
             Ledger.Restore(Money.FromCents(d.balanceCents), (d.ledger ?? Array.Empty<SaveLedgerEntry>()).Select(e =>
-                new LedgerEntry(new GameDate(e.day), e.category, Money.FromCents(e.cents), e.memo, Money.FromCents(e.balanceAfter))));
+                new LedgerEntry(new GameDate(e.day), e.category, Money.FromCents(e.cents), e.memo, Money.FromCents(e.balanceAfter), cashAccountId:e.cashAccountId)));
             LoadCityFinance(d);
 
             var history = new Dictionary<PartCategory, List<double>>();
@@ -339,6 +341,7 @@ namespace PCShopSell.Core.Session
             RestoreCompanies(d);
             foreach (OwnedShop shop in _shops) ClearUnstaffedAssembly(shop);
             LoadCityAssets(d);
+            LoadCompanyGovernance(d);
             LoadResidentialLeases(d);
             if (d.shopFootfallVersion < 2) MigrateWeeklyCommercialRent();
             LoadCityProcurement(d);
@@ -374,6 +377,7 @@ namespace PCShopSell.Core.Session
             InitializeExpansionResidents();
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);
+            LoadEmployeeWellbeing();
             MigrateStoreMainCategories();
             foreach (var restaurant in _shops.Where(shop => shop.Rented && RestaurantIngredientsOnly(shop)))
                 NormalizeRestaurantIngredientStorage(restaurant);
@@ -421,6 +425,7 @@ namespace PCShopSell.Core.Session
 
         private static SaveEmployee ToSave(Employee e) => new SaveEmployee
         {
+            hasEmployeeWellbeing = e.Wellbeing != null, wellbeing = e.Wellbeing?.Copy(),
             candidateLeavesAt = e.CandidateLeavesAt,
             hasCharm = true, employeeCharm = EmployeeCharm(e),
             hasEmployeeIntelligence = true, employeeIntelligence = e.Intelligence,
@@ -436,6 +441,8 @@ namespace PCShopSell.Core.Session
 
         private static Employee FromSave(SaveEmployee e) => new Employee
         {
+            // JsonUtility 可为缺失的嵌套对象构造空实例，须用显式标记识别旧档。
+            Wellbeing = e.hasEmployeeWellbeing ? e.wellbeing?.Copy() : null,
             CandidateLeavesAt = e.candidateLeavesAt,
             Intelligence = e.hasEmployeeIntelligence ? Math.Max(0,Math.Min(100,e.employeeIntelligence)) : 50,
             Dexterity = e.hasEmployeeWorkAttributes ? Math.Max(0, Math.Min(100, e.dexterity)) : 50,

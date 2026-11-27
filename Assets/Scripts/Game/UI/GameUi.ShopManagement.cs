@@ -122,6 +122,12 @@ namespace PCShopSell.Game.UI
             Line(right, S.City.StreetName(selected.Place.StreetId) + " · " + kind, 15, Ui.Dim);
             string shopId = selected.Place.Id;
             Line(right, $"今日收入 {S.GetCityFinance(today, today, shopId).OperatingIn} · 近 7 日收支差额 {SignedReportCash(S.GetCityFinance(from, today, shopId).OperatingNet)}", 16);
+            if(!S.PlayerManagesShop(selected))
+            {
+                Line(right,"公司管理层经营",20,Ui.Accent);BuildGovernanceStore(right,selected);
+                CompanyButton(right,"查看股权与交接",()=>{_governancePage=2;OpenCompanyGovernance(S.CompanyTicker(S.CompanyOfShop(selected)));});return;
+            }
+            if(S.CompanyOfShop(selected)!=null)Line(right,"公司经营资金 "+S.ShopAvailableCash(selected),15,Ui.Dim);
 
             var tabs = Ui.Row(right, 38);
             Ui.Tab(tabs, "概况", () => { view.Procurement = false; w.Rebuild(); }, !view.Procurement, 86);

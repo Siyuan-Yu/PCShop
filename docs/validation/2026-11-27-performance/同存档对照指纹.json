@@ -1,0 +1,8 @@
+{
+  "faint-expected.json": "26273b28437accb7727cea70e2659ff36ca001a3d02dbd578280ecbad692f11f",
+  "faint-initial.json": "ebacc179371e03c5ad3b3ccee708e8eb1fbf1c6a62ac68242cb0461d196410d3",
+  "hospital-expected.json": "3235c5fb4436117bb3bf2e47888ee7767eaefe2ab59ae51899901a90afe0ca1b",
+  "hospital-initial.json": "aec95d551fb4a7b397a498db32f0caed7fdc08b9cf56c0c3de1e93e99bc01f0e",
+  "sleep-expected.json": "00b90ba66318df643ed0f373ef2a562bb63657cf09ceaae4ccbdb1b9684e35a8",
+  "sleep-initial.json": "f776d2ce754058f30c80397eaff11cba412230c88fe6043df149a1984cc1b77e"
+}

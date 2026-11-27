@@ -78,6 +78,10 @@ namespace PCShopSell.Tests
             using(var sim=new ShopSimulation("test",ShopSize.Large,clock,ledger,new HardwareMarket(random),random,ShopSimulationTests.BusySettings()))
             {
                 sim.RetailKind="food";sim.PlayerPresent=true;sim.Markup=3;sim.SalesBonusOf=()=>bonus;
+                // 隔离售价和销售员加成；老板在店另有声誉加成，原测试并非零购买意愿。
+                typeof(ShopSimulation).GetField("OwnerOnSiteOf",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+                    .SetValue(sim,new Func<bool>(()=>false));
+                Assert.AreEqual(bonus,sim.GoodsPurchaseIntentAtPrice(Gifts.Snack,sim.GoodsPriceOf(Gifts.Snack).Yuan),1e-9);
                 sim.Stock.ForceAddGoods(Gifts.Snack,1000);int accepted=0;
                 sim.CustomerReadyToPay+=c=>{accepted++;sim.Checkout(c.Id);};clock.Advance(60);
                 Assert.Greater(sim.TodayCustomers,0);
@@ -105,10 +109,18 @@ namespace PCShopSell.Tests
                 var ids = GameSession.OpeningFurniture("restaurant");
                 for(int i=0;i<ids.Length;i++)s.CurrentShop.Layout.Add(new PlacedFurniture{Id=ids[i],X=1+i,Z=2});
                 s.PlayerShop.ForcedClosed=false;s.PlayerShop.SalesBonusOf=()=>salesBonus;
+                typeof(ShopSimulation).GetField("OwnerOnSiteOf",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+                    .SetValue(s.PlayerShop,new Func<bool>(()=>false));
                 var state=s.SpecialBusiness("pc");state.MenuMarkup=3;
+                Assert.AreEqual(salesBonus,s.PlayerShop.MarkupPurchaseIntent(state.MenuMarkup),1e-9);
                 s.AdvanceClock(240);
-                if(salesBonus==0)Assert.AreEqual(1,state.NextId,"0%购买意愿不会生成堂食订单");
-                else Assert.Greater(state.NextId,1,"销售加成能让高价菜品实际成交下单");
+                if(salesBonus==0)
+                {
+                    Assert.IsEmpty(state.Orders.Where(o=>!o.IsFishOrder),"鱼餐预订邀请不是普通堂食成交");Assert.Zero(state.Paid);
+                    Assert.IsNotEmpty(state.RestaurantCompletedVisits);
+                    Assert.True(state.RestaurantCompletedVisits.All(v=>v.Reason==LeaveReason.TooExpensive),"零购买意愿的来客应记为价格流失，而不是堂食订单");
+                }
+                else Assert.Greater(state.Orders.Count(o=>!o.IsFishOrder)+state.RestaurantCompletedVisits.Count(v=>v.Reason!=LeaveReason.TooExpensive),0,"销售加成能让高价菜品实际下单，不能用来客编号或鱼餐预订当作成交证明");
                 using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                     Assert.AreEqual(3,loaded.SpecialBusiness("pc").MenuMarkup);
             }

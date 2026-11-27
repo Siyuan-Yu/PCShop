@@ -204,7 +204,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(2 * (43 + order.Fish.DinnerSurcharge), order.Price);
             var shortage = s.RestaurantOrderIngredients(s.CurrentShop, order);
             Assert.True(shortage.MissingFish);
-            StringAssert.Contains("后仓缺大米 0.25 千克", shortage.Blocker);
+            StringAssert.Contains("冰箱缺大米 0.25 千克", shortage.Blocker);
             StringAssert.Contains("冰箱缺青菜 1 份、" + order.Fish.Name + " 1 条", shortage.Blocker);
             IngredientsFor(s);
             Assert.False(s.StartRestaurantCooking(order.Id));
@@ -394,12 +394,16 @@ namespace PCShopSell.Tests
             var item=Seller(s);Assert.True(s.OfferUsedPrice(item.Id,40));Assert.True(s.InspectUsed(item.Id));
             Assert.True(s.ListUsedItem(item.Id,100));return item;
         }
-        private static void WaitForUsedBuyer(GameSession s)
+        private static void WaitForUsedBuyer(GameSession s, ShopInteriorView view=null)
         {
             var sim=s.PlayerShop;sim.Settings.BaseCustomersPerHour=600;
             sim.Settings.MinBrowseMinutes=1;sim.Settings.MaxBrowseMinutes=1;sim.Settings.CashCarryChance=1;
             sim.Settings.PatienceMinutes=1000;sim.CustomerCanBrowse=c=>true;
-            for(int n=0;n<90&&sim.Queue.Count==0;n++)s.AdvanceClock(1);
+            for(int n=0;n<90&&sim.Queue.Count==0;n++)
+            {
+                s.AdvanceClock(1);
+                if(view!=null)for(int frame=0;frame<60;frame++)view.Update(s,.05f,.05f);
+            }
             Assert.That(sim.Queue.Count,Is.EqualTo(1),"顾客应从二手货架拿货并排队结账");
         }
         [TestCase(false)][TestCase(true)]
@@ -528,6 +532,8 @@ namespace PCShopSell.Tests
         {
             using(var s=Make("secondhand"))
             {
+                // 本例验证常规连续收购；首次教学上架后会主动关闭窗口。
+                s.CompleteOpeningUsedDeskLesson();
                 var root=new GameObject("UsedResaleUi");root.SetActive(false);
                 var controller=root.AddComponent<PCShopSell.Game.GameController>();
                 typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller,s);
@@ -561,8 +567,10 @@ namespace PCShopSell.Tests
                     Button("ListUsed_"+item.Id).onClick.Invoke();
                     var warning = ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>())
                         .Single(t=>t.name=="Window_暂时无法上架");
-                    Assert.True(warning.GetComponentsInChildren<UnityEngine.UI.Text>()
-                        .Any(t=>t.text.Contains("二手转售品") && t.text.Contains("按 F")));
+                    string warningText=string.Join("\n",warning.GetComponentsInChildren<UnityEngine.UI.Text>().Select(t=>t.text));
+                    warningText=System.Text.RegularExpressions.Regex.Replace(warningText,"<[^>]+>","");
+                    StringAssert.Contains("二手转售品",warningText);
+                    StringAssert.Contains("按 F",warningText);
                     Assert.False(item.Listed);
                     Assert.True(ui.CloseTopWindow());
                     Assert.True(s.SetShelfKind(2,"secondhand"));
@@ -631,7 +639,7 @@ namespace PCShopSell.Tests
                     var view=new PCShopSell.Game.Runtime.ShopInteriorView(host.transform,s.PlayerShop.Size);
                     view.SetActive(true);view.Update(s,0,0);
                     Assert.True(host.GetComponentsInChildren<Transform>(true).Any(t=>t.name=="LampShade"),"二手货架显示旧物模型");
-                    WaitForUsedBuyer(s);s.PlayerShop.Settings.BaseCustomersPerHour=0;
+                    WaitForUsedBuyer(s,view);s.PlayerShop.Settings.BaseCustomersPerHour=0;
                     var buyer=s.PlayerShop.Queue.Single();buyer.PersonId=null; // Ambient visitor: exercise the indoor route without a city commute.
                     var visitors=(System.Collections.IDictionary)typeof(PCShopSell.Game.Runtime.ShopInteriorView).GetField("_visitors",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(view);
                     for(int n=0;n<1800;n++)
@@ -813,8 +821,8 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(balance,s.Ledger.Balance);
                 Assert.True(s.ClearRestaurantOrder(order.Id));
                 Assert.AreEqual(DiningStage.Completed,order.Stage);Assert.AreEqual(balance+Money.FromYuan(order.Price),s.Ledger.Balance);
-                Assert.True(s.RequestRestaurantWork(order.Id,RestaurantJob.Clear,7,.9));Assert.Contains(order,s.SpecialBusiness("pc").Orders);
-                Until(s,()=>!s.SpecialBusiness("pc").Orders.Contains(order));
+                Assert.False(s.SpecialBusiness("pc").Orders.Contains(order),"收桌同时收款并移除桌单");
+                Assert.False(s.ClearRestaurantOrder(order.Id),"已结清桌单不能重复收款");
                 Assert.AreEqual(balance+Money.FromYuan(order.Price),s.Ledger.Balance);
             }
         }
@@ -855,6 +863,8 @@ namespace PCShopSell.Tests
             using(var s=Make("restaurant"))
             {
                 IngredientsFor(s);var order=Order(s);var host=new GameObject("RestaurantMovementUi");host.SetActive(false);
+                Assert.True(s.SetShelfKind(s.ShelfIndexes().Single(),"drink"));
+                s.RefreshQuestProgress();
                 var controller=host.AddComponent<PCShopSell.Game.GameController>();
                 var view=new PCShopSell.Game.Runtime.ShopInteriorView(host.transform,s.PlayerShop.Size);
                 typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller,s);
@@ -870,7 +880,11 @@ namespace PCShopSell.Tests
                     Assert.IsNull(s.CityIntent,"店内任务应接管此前的出门导航");
                     Assert.AreEqual(DiningStage.Waiting,order.Stage);
                     s.Time.SetPaused(true);s.Tick(.2);view.Update(s,0,.2f);Assert.AreEqual(at,view.OwnerWorld);
-                    s.Time.SetSpeed(1);s.Tick(.2);view.Update(s,0,.2f);Assert.AreNotEqual(at,view.OwnerWorld);
+                    s.Time.SetSpeed(1);Assert.True(s.Time.IsRunning,"恢复速度后不得残留暂停锁");
+                    Assert.False(s.RequiredTutorialPaused,$"教程暂停：shelf={s.OpeningShelfTutorialPaused} counter={s.OpeningCounterTutorialPaused} staff={s.OpeningStaffStep} renovation={s.OpeningRenovationStep}");
+                    s.Tick(.2);view.Update(s,0,.2f);
+                    var worker=s.RestaurantActor("pc",GameSession.RestaurantPlayer);
+                    Assert.AreNotEqual(at,view.OwnerWorld,$"worker={JsonUtility.ToJson(worker)} now={s.Clock.Now.TotalMinutes} fraction={s.Time.FractionalMinute}");
                     Until(s,()=>order.Stage==DiningStage.Cooking);view.Update(s,0,0);
                     Assert.Less(Vector3.Distance(view.OwnerWorld-PCShopSell.Game.Runtime.ShopInteriorView.Origin,new Vector3(2,0,2)),1.3f);
                 }
@@ -896,10 +910,10 @@ namespace PCShopSell.Tests
                     Until(s,()=>order.Stage==DiningStage.Eating);view.Update(s,0,0);
                     Assert.False(figure.transform.Find("RestaurantCarriedDish").gameObject.activeSelf);
                     Assert.NotNull(root.GetComponentsInChildren<Transform>().SingleOrDefault(t=>t.name=="SpecialGoods_meal:"+order.Id));
-                    Until(s,()=>order.TableCleared);
-                    Assert.AreEqual(DiningStage.Checkout,order.Stage);Assert.Zero(s.SpecialBusiness("pc").Paid);
-                    Until(s,()=>order.Stage==DiningStage.Checkout);
-                    Assert.True(s.ClearRestaurantOrder(order.Id));Assert.AreEqual(1,s.SpecialBusiness("pc").Paid);
+                    Until(s,()=>!s.SpecialBusiness("pc").Orders.Contains(order));
+                    Assert.AreEqual(DiningStage.Completed,order.Stage);
+                    Assert.AreEqual(1,s.SpecialBusiness("pc").Paid,"服务员收桌时同步收款");
+                    Assert.False(s.ClearRestaurantOrder(order.Id));
                 }
                 finally{UnityEngine.Object.DestroyImmediate(root);}
             }
@@ -1032,15 +1046,23 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(cash, s.Ledger.Balance);
             }
         }
-        [Test] public void PlayerConfirmedPricesDoNotChangeWhenSeriesHeatOrTechnologyChanges()
+        [Test] public void ModelPricesFollowMarketWhileConfirmedPartPricesRemainFixedAcrossReload()
         {
             using(var s=Make("models"))
             {
                 var product=ModelProducts.Regular.First();long chosen=s.PlayerShop.GoodsPriceOf(product.Id).Yuan;
                 Assert.True(s.PlayerShop.SetGoodsSalePrice(product.Id,chosen));
                 var part=PartCatalog.Get("cpu0");long partPrice=s.PlayerShop.PriceOf(part,true).Yuan;Assert.True(s.PlayerShop.SetPartSalePrice(part,true,partPrice));
-                s.Clock.Restore(new GameDate(90),600);Assert.AreEqual(chosen,s.PlayerShop.GoodsPriceOf(product.Id).Yuan);Assert.AreEqual(partPrice,s.PlayerShop.PriceOf(part,true).Yuan);
-                using(var loaded=Reload(s)){Assert.AreEqual(chosen,loaded.PlayerShop.GoodsPriceOf(product.Id).Yuan);Assert.AreEqual(partPrice,loaded.PlayerShop.PriceOf(part,true).Yuan);}
+                // 127/129 交接规则：模型按已选加价跟随行情，配件已确认售价仍锁定。
+                s.Clock.Restore(new GameDate(90),600);
+                long marketPrice = s.PlayerShop.GoodsPriceOf(product.Id).Yuan;
+                Assert.AreNotEqual(chosen,marketPrice);
+                Assert.AreEqual(partPrice,s.PlayerShop.PriceOf(part,true).Yuan);
+                using(var loaded=Reload(s))
+                {
+                    Assert.AreEqual(marketPrice,loaded.PlayerShop.GoodsPriceOf(product.Id).Yuan);
+                    Assert.AreEqual(partPrice,loaded.PlayerShop.PriceOf(part,true).Yuan);
+                }
             }
         }
         [TestCase("restaurant",false)][TestCase("restaurant",true)][TestCase("secondhand",false)]
@@ -1058,7 +1080,7 @@ namespace PCShopSell.Tests
                 {
                     ui.OpenDock();
                     var texts=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Text>()).Select(text=>text.text).ToArray();
-                    Assert.True(texts.Any(text=>text.Contains(kind=="restaurant"?"打开冰箱":"每日收购预算")));
+                    Assert.True(texts.Any(text=>text.Contains(kind=="restaurant"?"管理食材":"每日收购预算")));
                     foreach(var furniture in s.CurrentShop.Layout)
                     {
                         var model=PCShopSell.Game.Runtime.FurnitureVisuals.Build(root.transform,FurnitureCatalog.Get(furniture.Id),false);
@@ -1078,8 +1100,8 @@ namespace PCShopSell.Tests
                 s.Backpack.Food.Ingredient.Add(new FoodBatch{Id="veg",Name="青菜",Count=1,ExpireDay=16});
                 s.Backpack.AddGift("produce:veg",2);
                 Assert.True(s.StoreBackpackInWarehouse());
-                Assert.True(s.MoveFridgeWarehouseFood("rice", 1, true));
-                Assert.True(s.MoveFridgeWarehouseFood("ing:veg", 3, true));
+                Assert.False(s.MoveFridgeWarehouseFood("rice", 1, true),"一键入库已优先冷藏，后仓不能重复转入");
+                Assert.False(s.MoveFridgeWarehouseFood("ing:veg", 3, true));
                 Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));Assert.Zero(s.ShopLocker.Food.RiceKg);
                 Assert.AreEqual(3,s.CurrentShop.Fridge.Food.Ingredient.Sum(b=>b.Count));
                 Assert.IsEmpty(s.Backpack.Food.Ingredient);Assert.Zero(s.Backpack.GiftCount("produce:veg"));
@@ -1135,12 +1157,15 @@ namespace PCShopSell.Tests
             s.Backpack.Food.RiceKg = 2.5;
             Assert.True(s.MoveFridgeFood("rice", 1, true));
             Assert.True(s.StoreInBox("rice"));
-            Assert.AreEqual(1, s.KitchenRice(shop));
+            Assert.AreEqual(2, s.KitchenRice(shop));
             Assert.True(s.UnloadBackpack());
-            Assert.AreEqual(1.5, shop.Locker.Food.RiceKg);
+            Assert.AreEqual(2.5, s.KitchenRice(shop));
+            Assert.Zero(shop.Locker.Food.RiceKg);
             shop.Temp.Food.RiceKg = .5;
             Assert.True(s.MoveTemp("rice", 1, "box"));
-            Assert.AreEqual(2, shop.Locker.Food.RiceKg);
+            Assert.AreEqual(.5, shop.Locker.Food.RiceKg);
+            Assert.True(s.MoveFridgeWarehouseFood("rice", 1, false));
+            Assert.AreEqual(1.5,shop.Locker.Food.RiceKg);
             Assert.True(s.TakeFromBox("rice"));
             Assert.AreEqual(1, s.Backpack.Food.RiceKg);
             Assert.True(s.MoveFridgeWarehouseFood("rice", 1, true));

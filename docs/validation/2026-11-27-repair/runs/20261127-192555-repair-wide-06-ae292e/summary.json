@@ -1,0 +1,14 @@
+{
+  "tag": "repair-wide-06",
+  "filter": "^PCShopSell.Tests.GameDateTests\\.;^PCShopSell.Tests.GameSessionTests\\.;^PCShopSell.Tests.GameTimestampTests\\.;^PCShopSell.Tests.GoodsTests\\.;^PCShopSell.Tests.HomeSleepNavigationTests\\.;^PCShopSell.Tests.HomeTests\\.;^PCShopSell.Tests.HomeWorkbenchTests\\.;^PCShopSell.Tests.IndustrialArtTests\\.;^PCShopSell.Tests.InteractionFlowTests\\.;^PCShopSell.Tests.InteractionRevisionTests\\.",
+  "started": "2026-11-27T19:25:55.8579121+08:00",
+  "seconds": 40.22,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 148,
+  "passed": 139,
+  "failed": 9,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-wide-20261127\\20261127-192555-repair-wide-06-ae292e"
+}

@@ -45,7 +45,12 @@ namespace PCShopSell.Tests
         private static void Advance(GameSession s,long until)
         {
             for(int guard=0;s.Clock.Now.TotalMinutes<until&&guard<10000;guard++)
-            {s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;s.AdvanceClock((int)Math.Min(60,until-s.Clock.Now.TotalMinutes));}
+            {
+                s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;
+                long before = s.Clock.Now.TotalMinutes;
+                s.AdvanceClock((int)Math.Min(60,until-before));
+                Assert.Greater(s.Clock.Now.TotalMinutes, before, "世界时钟未推进，请先通过正式交互结束现场活动：" + s.RunningCityActivity?.DefinitionId);
+            }
             Assert.GreaterOrEqual(s.Clock.Now.TotalMinutes,until);
         }
         internal static void CompleteLeadOuting(GameSession s,int index,bool remote=false)
@@ -80,10 +85,8 @@ namespace PCShopSell.Tests
                 s.Tick(.05);
                 Assert.AreEqual(CityActivityPhase.Running, activity.State);
                 Assert.False(s.CommunityHasOuting(index));
-                Advance(s, activity.ActualStart + activity.Duration / 3);
+                Assert.True(s.FinishManualCityActivity(activity.Id), "餐厅用餐需要主动结束");
                 Assert.True(activity.MealApplied);
-                Assert.AreEqual(CityActivityPhase.Running, activity.State);
-                Advance(s, activity.ActualStart + activity.Duration);
                 Assert.AreEqual(CityActivityPhase.Completed, activity.State, activity.EndReason);
                 Assert.AreEqual(1, activity.ServiceChoice);
                 Assert.AreEqual(price.Cents, activity.EntryCostCents);
@@ -109,12 +112,7 @@ namespace PCShopSell.Tests
             }
             Assert.True(s.SelectVenueService(def,0),s.VenueServiceBlocker(def,0));
             Assert.AreEqual(CityActivityPhase.Running,activity.State,def+" start="+start+" now="+s.Clock.Now.TotalMinutes+" hours="+venue.OpenMinute+"-"+venue.CloseMinute+" place="+s.CurrentPlace?.Id+" "+activity.EndReason);
-            long end=s.Clock.Now.TotalMinutes+activity.Duration+1;
-            while(s.Clock.Now.TotalMinutes<end)
-            {
-                s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;
-                Advance(s,Math.Min(end,s.Clock.Now.TotalMinutes+15));
-            }
+            Assert.True(s.FinishManualCityActivity(activity.Id), "散步需要主动结束后结算时间");
             Assert.AreEqual(CityActivityPhase.Completed,activity.State,def+" start="+start+" now="+s.Clock.Now.TotalMinutes+" hours="+venue.OpenMinute+"-"+venue.CloseMinute+" place="+s.CurrentPlace?.Id+" "+activity.EndReason);
             Assert.True(s.CommunityHasOuting(index));
         }
@@ -154,7 +152,7 @@ namespace PCShopSell.Tests
             Advance(s,s.DistrictStoryState.InvitationDueAt);
             Assert.NotNull(s.CurrentDistrictNode);
         }
-        private static void Meet(GameSession s,string choice=null)
+        internal static void Meet(GameSession s,string choice=null)
         {
             var node=s.CurrentDistrictNode;
             Assert.NotNull(node);
@@ -266,7 +264,9 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                var person=s.CityPersonState("lin");person.Route=null;person.LocationPlaceId=person.WorkPlaceId;
+                var person=s.CityPersonState("lin");
+                person.WorkPlaceId=s.City.Places.First(p=>s.DistrictTierOf(p)==1 && p.Kind==PlaceKind.Shop).Id;
+                person.Route=null;person.LocationPlaceId=person.WorkPlaceId;
                 Assert.NotNull(s.DistrictAccessBlocker(s.City.GetPlace(person.WorkPlaceId)));
                 Assert.AreEqual(person.WorkPlaceId, s.DistrictPersonCurrentPlace(person).Id);
                 Assert.False(s.GoToDistrictPerson("lin"));
@@ -395,14 +395,15 @@ namespace PCShopSell.Tests
                 using(var loaded=Reload(s))
                 {
                     int invitations=0;
-                    loaded.Popup+=(title,body)=>{if(title.EndsWith("发来主线邀请"))invitations++;};
+                    loaded.Notice+=message=>{if(message.StartsWith("李秀兰主动联系了你"))invitations++;};
                     Assert.True(loaded.Ledger.TryDebit(loaded.Clock.Today,"验收支出",Money.FromYuan(900000),"达标后经营投入不撤回邀请"));
                     // Position the clock just before the deadline without triggering unrelated
                     // three-day sleep/hospital time jumps; full chains above exercise real elapsed days.
                     typeof(GameClock).GetProperty("Today").SetValue(loaded.Clock,new GameDate((int)((due-1)/1440)));
                     typeof(GameClock).GetProperty("MinuteOfDay").SetValue(loaded.Clock,(int)((due-1)%1440));
                     loaded.RefreshDistrictNarrative();Assert.IsNull(loaded.CurrentDistrictNode);Assert.Zero(invitations);
-                    Advance(loaded,due);Assert.AreEqual("community.intro",loaded.CurrentDistrictNode.Id);
+                    Advance(loaded,due);Assert.NotNull(loaded.CurrentDistrictNode,loaded.DistrictInvitationStatus);
+                    Assert.AreEqual("community.intro",loaded.CurrentDistrictNode.Id);
                     Assert.AreEqual(1,invitations);loaded.RefreshDistrictNarrative();Assert.AreEqual(1,invitations);
                     Assert.Zero(loaded.DistrictAccessTier);
                 }
@@ -621,8 +622,9 @@ namespace PCShopSell.Tests
                 a.ActualStart++;a.Participants[0].PersonId="lin";record.Invoke(s,new object[]{a});Assert.Zero(state.CommunityOutings);
                 a.Participants[0].PersonId="landlady";a.ServiceDefinitionId="dinner";record.Invoke(s,new object[]{a});Assert.Zero(state.CommunityOutings);
                 a.ServiceDefinitionId=null;record.Invoke(s,new object[]{a});Assert.AreEqual(1,state.CommunityOutings);
-                s.Meet("landlady",0);s.AddRelation("landlady",-s.Relation("landlady"));AskLeadLocally(s,0);Assert.False(s.CommunityHasClue(0));
-                s.AddRelation("landlady",30);AskLeadLocally(s,0);Assert.True(s.CommunityHasClue(0));
+                Assert.True(s.CommunityHasClue(0), "合格活动结束时直接告知线索，不再额外要求事后刷好感");
+                record.Invoke(s,new object[]{a});
+                Assert.AreEqual(1,state.CommunityOutings, "重复结算不增加另一条线索");
             }
         }
         [TestCase(false)]
@@ -638,7 +640,8 @@ namespace PCShopSell.Tests
                 var a=s.ScheduleCityActivity("hike",Array.Empty<string>(),start);Assert.NotNull(a);
                 At(s,venue);Advance(s,start);Assert.True(s.SelectVenueService("hike",0));
                 s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;
-                Advance(s,start+90);
+                Assert.True(s.FinishManualCityActivity(a.Id));
+                Assert.AreEqual(start+90,s.Clock.Now.TotalMinutes);
                 Assert.AreEqual(allDay ? 60 : venue.CloseMinute, s.Clock.MinuteOfDay);
                 Assert.AreEqual(CityActivityPhase.Completed,a.State);Assert.True(a.RewardApplied);
             }
@@ -662,11 +665,12 @@ namespace PCShopSell.Tests
             {
                 var homes = s.City.Blocks.Select(block => s.City.GetPlace(block.homeId)).ToArray();
                 Assert.AreEqual(s.City.Blocks.Count, homes.Select(home => home.Id).Distinct().Count());
+                Assert.AreEqual(s.CityPeople.Count,s.CityPeople.Select(person=>person.PersonId).Distinct().Count(),"居民身份不能因扩充住宅而重复");
+                foreach (var resident in s.CityPeople)
+                    Assert.True(s.City.HasPlace(resident.HomePlaceId), resident.PersonId);
                 foreach (var home in homes)
                 {
                     Assert.AreEqual(PlaceKind.Home, home.Kind);
-                    Assert.True(s.CityPeople.Any(person => person.HomePlaceId == home.Id), home.Id);
-                    Assert.Less(s.CityPeople.Count(person => person.HomePlaceId == home.Id), 3, home.Id);
                     Street(s, s.StandOf(home), home.NodeId);
                     Assert.AreEqual(home, s.NearbyPlace, home.Id);
                 }
@@ -687,8 +691,8 @@ namespace PCShopSell.Tests
                 using (var migrated = GameSession.Load(s.City, legacy))
                 {
                     Assert.AreEqual(65, migrated.Relation("landlady"));
-                    foreach (var home in homes)
-                        Assert.True(migrated.CityPeople.Any(person => person.HomePlaceId == home.Id), home.Id);
+                    foreach (var resident in migrated.CityPeople)
+                        Assert.True(migrated.City.HasPlace(resident.HomePlaceId), resident.PersonId);
                     foreach (var resident in migrated.CityPeople.Where(person => person.Task == CityPersonTask.Home && person.Route == null))
                         Assert.AreEqual(resident.HomePlaceId, resident.LocationPlaceId, resident.PersonId);
                 }

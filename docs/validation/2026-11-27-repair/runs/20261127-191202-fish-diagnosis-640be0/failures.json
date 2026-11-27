@@ -1,0 +1,102 @@
+[
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_crucian\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_carp\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_bass\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_white_stripe\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_topmouth_gudgeon\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_bitterling\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_loach\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_yellow_catfish\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_catfish\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_grass_carp\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_black_carp\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_silver_carp\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_bighead_carp\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_bream\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_yellowtail\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_culter\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_mandarin\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_snakehead\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_swamp_eel\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold(\"fish_farmed_sturgeon\")",
+    "message": "  出售失败：场所=life_fishing 营业=False 阶段=Ready 暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.EverySpeciesCanBeCaughtKeptReloadedAndSold (System.String fishId) [0x00131] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\FishingTests.cs:120\n"
+  }
+]

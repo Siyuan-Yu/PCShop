@@ -1,0 +1,14 @@
+{
+  "tag": "pricing-followup",
+  "filter": "MarkupRangeTests.ActualRetailPurchases;MarkupRangeTests.ExpensiveMenuActually",
+  "started": "2026-11-27T20:42:00.5332434+08:00",
+  "seconds": 18.04,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 4,
+  "passed": 4,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-20261127\\20261127-204200-pricing-followup-dd2266"
+}

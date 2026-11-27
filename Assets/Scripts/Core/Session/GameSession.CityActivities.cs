@@ -162,14 +162,14 @@ namespace PCShopSell.Core.Session
         {
             var definition=CityPerson(person.PersonId);
             if(definition==null||!City.HasPlace(person.WorkPlaceId))return false;
+            if (!CityWithinHours((int)(minute % 1440), definition.WorkStart, definition.WorkEnd)) return false;
             var workplace=City.GetPlace(person.WorkPlaceId);
             if (!CityNpcWorkAllowed(workplace, person.HomePlaceId)) return false;
             if(workplace.Kind==PlaceKind.Shop&&IsVacant(workplace))return false;
             if (CityLifeCatalog.LeisureAt(workplace.Id) != LeisureGame.None && IsOwnedVenue(workplace)) return false;
             if (workplace.Id.StartsWith("expansion_shop_", StringComparison.Ordinal) &&
                 (IsMyShop(workplace) || VentureAt(workplace.Id) != null || IsPlayerPropertyOccupied(workplace.Id))) return false;
-            return CityWithinHours((int)(minute%1440),definition.WorkStart,definition.WorkEnd)
-                &&(person.WorkPlaceId==person.HomePlaceId||CityVenueFits(workplace,minute,1));
+            return person.WorkPlaceId==person.HomePlaceId||CityVenueFits(workplace,minute,1);
         }
         private bool AuthoredCityWorkOverlaps(CityPersonState person,long from,long until)
         {
@@ -544,7 +544,7 @@ namespace PCShopSell.Core.Session
                     if((now<a.ScheduledStart && !a.RendezvousReady && !immediateDeparture)||!playerReady||!participantsReady)continue;
                     if (!CityVenueFits(venue, now, 1))
                     { EndCityActivity(a, CityActivityPhase.Cancelled, "场所已经打烊，尚未消费", now); continue; }
-                    if (NpcVenueStaffingBlocker(venue) != null)
+                    if (NpcVenueStaffingBlocker(venue,a) != null)
                     {
                         if (now > a.ScheduledStart + CityArrivalWindowMinutes)
                             EndCityActivity(a, CityActivityPhase.Blocked, "场所暂时无人值班，尚未消费", now);

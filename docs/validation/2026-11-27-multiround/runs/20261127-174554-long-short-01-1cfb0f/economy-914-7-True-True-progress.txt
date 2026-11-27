@@ -1,0 +1,3 @@
+day=0 elapsed=5.00s bytes=748445 cash=303400 worth=618600
+day=7 elapsed=37.80s bytes=830962 cash=101100 worth=648800
+FINAL requested=7 reached=9 gameOver=False reason=

@@ -1,0 +1,4 @@
+day=1 seconds=0.82 bytes=167398 entries=2 cash=19999927078
+day=31 seconds=31.78 bytes=280208 entries=51 cash=19998855492
+day=61 seconds=62.76 bytes=365375 entries=98 cash=19997506308
+day=91 seconds=94.01 bytes=442871 entries=147 cash=19995767059

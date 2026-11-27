@@ -40,7 +40,7 @@ namespace PCShopSell.Tests
                 for(double offset=-roadWidth/2.0-1.3;offset<=roadWidth/2.0+1.3;offset+=.2)
                 {
                     var want=new MapPoint(middle.X-dy/length*offset,middle.Y+dx/length*offset);
-                    var args=new object[]{want,0.0};var actual=(MapPoint)constrain.Invoke(s,args);
+                    var actual=(MapPoint)constrain.Invoke(s,new object[]{want});
                     Assert.That(actual.X,Is.EqualTo(want.X).Within(.00001),"Street width "+roadWidth+" offset "+offset);
                     Assert.That(actual.Y,Is.EqualTo(want.Y).Within(.00001),"Street width "+roadWidth+" offset "+offset);
                 }
@@ -136,6 +136,7 @@ namespace PCShopSell.Tests
         {
             using (var s = AtStreet("st"))
             {
+                s.Time.SetSpeed(1);
                 if (automatic) Assert.IsTrue(s.GoTo("mk"));
                 else s.SetSteer(-1, 0);
                 for (int i = 0; i < 10; i++) s.Tick(.1);
@@ -173,6 +174,7 @@ namespace PCShopSell.Tests
         {
             using(var s=AtStreet("st"))
             {
+                s.Time.SetSpeed(1);
                 Walk(s,0,1,100);double x=s.PlayerPosition.X;
                 Walk(s,1,1,2);
                 double intended=CityTravelTiming.PlayerScaledSecondsMeters(Vehicles.Walk,

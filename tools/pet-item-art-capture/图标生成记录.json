@@ -1,0 +1,108 @@
+{
+  "tool": "内置 image_gen",
+  "date": "2026-11-27",
+  "mode": "edit",
+  "atlases": [
+    {
+      "name": "parts",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-9facdd4a-3e40-4213-b0f3-4ad4fd054d2e.png",
+      "prompt": "Use case: style-transfer. Edit target: first reference, a square 5 by 5 item icon atlas. Second reference is STYLE ONLY, the approved gouache goods concept. Redraw the ENTIRE first atlas as actual game inventory sprites: hand-painted matte gouache, confident warm dark brown contours, simple chunky readable silhouettes, softly painted broad shadows and tiny paperlike brush variation. Absolutely not glossy 3D, photorealistic metal, neon bloom or pixel art. Keep ALL 25 subjects, original order, exact equal 5x5 cell layout; each object centered in its own cell, fully contained with generous 15% padding; no item crosses cells. Preserve category and tier differences and main colors. Row1: basic CPU, boxed mid CPU, premium CPU, basic motherboard, mid motherboard. Row2: premium motherboard, basic green RAM, white twin RAM, dark purple twin RAM, single-fan GPU. Row3: dual-fan GPU, triple-fan GPU, basic 2.5-inch SSD, mid SSD, green M2 SSD. Row4: basic tower+PSU, white tower+PSU, premium dark tower+PSU, blue glass gaming PC, basic office PC. Row5: purple premium gaming PC, small shelf bracket set, medium uprights shelf set, reinforced shelf frame, plain sealed brown carton. Background genuinely transparent alpha everywhere between objects, no cards, no shadows on background, no navy background, no labels, no text, no logos, no gridlines. Supply one square atlas with all 25 separate icons, maintain slot alignment exactly.",
+      "保存到": "Assets/Resources/ItemPortraits/parts.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/parts.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "food",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-5da8fe64-5275-475b-ad0a-9bda4314f1db.png",
+      "prompt": "Use case: style-transfer. First reference is the EDIT TARGET, a square equal 5x5 item atlas. Second reference is the approved painterly style. Redraw every cell of the target in a hand-painted gouache inventory icon style: bold warm dark-brown outlines, matte pigments, broad simplified shading, slightly imperfect painted contours, restrained paper brush texture. Food ingredients, packaged drinks, fast food, cooked rice bowls and four takeout meals. Preserve ALL 25 different subjects in the exact same original slots; distinguish ingredients and meal tiers by large shapes and colors, no invented dishes. Keep the exact 5 columns by 5 rows and row-major order, no extra icons and no merging cells. Each icon centered in its original equal square cell with a clear 12% cell margin. Crucial: render as a 2D hand-painted illustration, not a polished 3D product photo, no shiny plastic, no PBR metals, no bloom, no neon emission. Preserve only main silhouette and large identity features readable at 34 pixels. Genuinely transparent alpha background, no shadows on backdrop, no panels, no text or labels, no watermark, no grid lines. Deliver one square atlas, all 25 slots aligned for slicing.",
+      "保存到": "Assets/Resources/ItemPortraits/food.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/food.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "clothes",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-a146f5e7-ca49-482d-bb27-444e38b52e66.png",
+      "prompt": "Use case: style-transfer. First reference is the EDIT TARGET, a square equal 5x5 item atlas. Second reference is the approved painterly style. Redraw every cell of the target in a hand-painted gouache inventory icon style: bold warm dark-brown outlines, matte pigments, broad simplified shading, slightly imperfect painted contours, restrained paper brush texture. Twenty-five clothing products, each the exact matching garment or outfit in its original slot. Keep summer versus winter weight, jacket/suit/coat silhouettes and original main colors. Simplify tiny folds into two or three broad painted shapes; no fabric photo texture. Keep the exact 5 columns by 5 rows and row-major order, no extra icons and no merging cells. Each icon centered in its original equal square cell with a clear 12% cell margin. Crucial: render as a 2D hand-painted illustration, not a polished 3D product photo, no shiny plastic, no PBR metals, no bloom, no neon emission. Preserve only main silhouette and large identity features readable at 34 pixels. Genuinely transparent alpha background, no shadows on backdrop, no panels, no text or labels, no watermark, no grid lines. Deliver one square atlas, all 25 slots aligned for slicing.",
+      "保存到": "Assets/Resources/ItemPortraits/clothes.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/clothes.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "pets",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-9319ac78-9bcd-433c-a6fc-88bc69a6fbe4.png",
+      "prompt": "Use case: style-transfer. First reference is the EDIT TARGET, a square equal 5x5 item atlas. Second reference is the approved painterly style. Redraw every cell of the target in a hand-painted gouache inventory icon style: bold warm dark-brown outlines, matte pigments, broad simplified shading, slightly imperfect painted contours, restrained paper brush texture. Twenty-five pet products and shop upgrades. Keep blue basic cat food, red basic dog food, litter sack, treats, feather wand, balls, lead, green/gold middle-tier packages, purple/red premium packages, carrier, pet bed, three pet pens, phone, QR plaque, self checkout, camera and workbench in exactly the same slots. Package animal pictograms must distinguish cat food from dog food without words. Keep the exact 5 columns by 5 rows and row-major order, no extra icons and no merging cells. Each icon centered in its original equal square cell with a clear 12% cell margin. Crucial: render as a 2D hand-painted illustration, not a polished 3D product photo, no shiny plastic, no PBR metals, no bloom, no neon emission. Preserve only main silhouette and large identity features readable at 34 pixels. Genuinely transparent alpha background, no shadows on backdrop, no panels, no text or labels, no watermark, no grid lines. Deliver one square atlas, all 25 slots aligned for slicing.",
+      "保存到": "Assets/Resources/ItemPortraits/pets.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/pets.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "fish",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-c43bc187-58b9-495c-9c78-dbb38628a87e.png",
+      "prompt": "Use case: style-transfer. First reference is the EDIT TARGET, a square equal 5x5 item atlas. Second reference is the approved painterly style. Redraw every cell of the target in a hand-painted gouache inventory icon style: bold warm dark-brown outlines, matte pigments, broad simplified shading, slightly imperfect painted contours, restrained paper brush texture. Twenty freshwater fish in the first four rows, preserve each species' specific body shape and large color markings in its original slot. Fifth row starter rod, pro rod, worm tin, dough balls, fishing lure. Simplify scales as broad pigment indications; no glossy individual scales. Keep the exact 5 columns by 5 rows and row-major order, no extra icons and no merging cells. Each icon centered in its original equal square cell with a clear 12% cell margin. Crucial: render as a 2D hand-painted illustration, not a polished 3D product photo, no shiny plastic, no PBR metals, no bloom, no neon emission. Preserve only main silhouette and large identity features readable at 34 pixels. Genuinely transparent alpha background, no shadows on backdrop, no panels, no text or labels, no watermark, no grid lines. Deliver one square atlas, all 25 slots aligned for slicing.",
+      "保存到": "Assets/Resources/ItemPortraits/fish.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/fish.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "furniture_home",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-603c5486-478c-4290-a94c-c364c6dafc69.png",
+      "prompt": "Use case: style-transfer. Edit target is reference 1, an equal square 5x5 game icon atlas. Reference 2 is STYLE ONLY, approved hand-painted gouache goods concept. Redraw ALL 25 target cells in the same hand-painted 2D gouache style, warm dark brown contour strokes, matte pigment, broad simple shadow planes, understated paper brush texture. Preserve all 25 home furniture items and their exact cells. Beds, wardrobes, cooker table, stool, three fans, storage boxes, four refrigerators, three air conditioners, curtain, rug, plant, desk, sofa. Critical correction from the approved style: ALL refrigerators and air conditioners must be CLEAN unblemished pale enamel or clean dark premium finish. NO rust, yellow grime, scratches or worn corners on these appliances. Only the explicitly broken fan may look broken. Keep each bed's existing blue bedding, other main colors and furniture shapes. Exact 5 columns and 5 rows, unchanged row-major order, centered icons with 12% clear margin inside every cell, no cross-cell overlap. Readable at 34 pixels. Genuine transparent alpha between sprites. NO dark backdrop, card backgrounds, background cast shadows, text, labels, logos, grids, watermark; NO photorealism, PBR metallic highlights, shiny plastics or pixel art. A unified production-ready painted sprite atlas.",
+      "保存到": "Assets/Resources/ItemPortraits/furniture_home.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/furniture_home.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "furniture_shop",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-0313dca3-b01d-4041-9807-9505d1ebd5bb.png",
+      "prompt": "Use case: style-transfer. Edit target is reference 1, an equal square 5x5 game icon atlas. Reference 2 is STYLE ONLY, approved hand-painted gouache goods concept. Redraw ALL 25 target cells in the same hand-painted 2D gouache style, warm dark brown contour strokes, matte pigment, broad simple shadow planes, understated paper brush texture. Preserve all 25 exact shop fixtures in their original cells: shelves and racks, till counter, display table, assembly bench, mirror, appraisal desk, glass cabinet, stove, dining table, prep table, pass counter, two posters, plant, sofa, dispenser, LED sign, gold shop sign, three feather toy stands and two ball trays. Clean appliances and worktables; never increase dirt. Posters remain simple recognizable illustrations without text. LED/sign panels are painted light colors, no glow bloom. Exact 5 columns and 5 rows, unchanged row-major order, centered icons with 12% clear margin inside every cell, no cross-cell overlap. Readable at 34 pixels. Genuine transparent alpha between sprites. NO dark backdrop, card backgrounds, background cast shadows, text, labels, logos, grids, watermark; NO photorealism, PBR metallic highlights, shiny plastics or pixel art. A unified production-ready painted sprite atlas.",
+      "保存到": "Assets/Resources/ItemPortraits/furniture_shop.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/furniture_shop.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "models",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-c8447310-465b-4072-a461-0212b5cccfe9.png",
+      "prompt": "Use case: style-transfer. Edit target is reference 1, an equal square 5x5 game icon atlas. Reference 2 is STYLE ONLY, approved hand-painted gouache goods concept. Redraw ALL 25 target cells in the same hand-painted 2D gouache style, warm dark brown contour strokes, matte pigment, broad simple shadow planes, understated paper brush texture. Preserve the exact 25 original subjects and slots: three boat models; courier and repairer robot; nightwatch raincoat robot, sprout mascot, mushroom mascot, greenhouse, star observatory; rover, beacon tower, roses, lilies, sunflowers; potted plant, red cigarette box, dark-green premium cigarette box, wine gift crate, blue-white ceramic liquor bottles; deluxe pet toy tray, nutrition hamper, three distinct architectural map pages. Keep their original distinguishing shapes; no text or logos. Simplify tiny miniature details without changing identity. Exact 5 columns and 5 rows, unchanged row-major order, centered icons with 12% clear margin inside every cell, no cross-cell overlap. Readable at 34 pixels. Genuine transparent alpha between sprites. NO dark backdrop, card backgrounds, background cast shadows, text, labels, logos, grids, watermark; NO photorealism, PBR metallic highlights, shiny plastics or pixel art. A unified production-ready painted sprite atlas.",
+      "保存到": "Assets/Resources/ItemPortraits/models.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/models.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "antiques",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-86043280-6700-4f12-bbbe-1ae795466a21.png",
+      "prompt": "Use case: style-transfer. Edit target is reference 1, an equal square 5x5 game icon atlas. Reference 2 is STYLE ONLY, approved hand-painted gouache goods concept. Redraw ALL 25 target cells in the same hand-painted 2D gouache style, warm dark brown contour strokes, matte pigment, broad simple shadow planes, understated paper brush texture. Preserve ALL 25 subjects and exact slots including any unused catalog cells: wristwatch, mantel clock, pocket watch, radio, cassette player; wooden speaker, jazz record, folk records, record case, open photo book; pen case, vintage camera, table lamp, used speaker, metal watch; ceramic crane, patinated bronze vessel, accounts book, repairs book, streets book; five distinct lanterns. Clock dials use simple abstract tick marks. No readable lettering. Exact 5 columns and 5 rows, unchanged row-major order, centered icons with 12% clear margin inside every cell, no cross-cell overlap. Readable at 34 pixels. Genuine transparent alpha between sprites. NO dark backdrop, card backgrounds, background cast shadows, text, labels, logos, grids, watermark; NO photorealism, PBR metallic highlights, shiny plastics or pixel art. A unified production-ready painted sprite atlas.",
+      "保存到": "Assets/Resources/ItemPortraits/antiques.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/antiques.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    },
+    {
+      "name": "extra",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a20459-b9f7-7733-96f3-95549dfa86f9\\exec-df759f50-5981-4c56-be8f-bea95f3f6880.png",
+      "prompt": "Use case: style-transfer. Edit target is reference 1, an equal square 5x5 game icon atlas. Reference 2 is STYLE ONLY, approved hand-painted gouache goods concept. Redraw ALL 25 target cells in the same hand-painted 2D gouache style, warm dark brown contour strokes, matte pigment, broad simple shadow planes, understated paper brush texture. Preserve exact 25 subjects and cells: orange folded lotus lantern, floral round lantern, pink lotus lantern, ornate pavilion lantern, dog food bag; vegetable fried rice, egg fried rice, meat fried rice, red engine, transmission; electric motor, battery/controller, tyres, steering suspension, clothing rack; folded clothes bench, fish meal, basic black PC, white blue gaming PC, dark purple gaming PC; red takeaway bag, tray with plate, timber pallet, sealed parcel, cash bundle/coin. Cash should use generic fictional notes with no real portrait or readable denominations. Matte painted light accents on computers, no neon glow. Exact 5 columns and 5 rows, unchanged row-major order, centered icons with 12% clear margin inside every cell, no cross-cell overlap. Readable at 34 pixels. Genuine transparent alpha between sprites. NO dark backdrop, card backgrounds, background cast shadows, text, labels, logos, grids, watermark; NO photorealism, PBR metallic highlights, shiny plastics or pixel art. A unified production-ready painted sprite atlas.",
+      "保存到": "Assets/Resources/ItemPortraits/extra.png",
+      "参考图": [
+        "基准提交中的 Assets/Resources/ItemPortraits/extra.png",
+        "docs/art-direction/concept/props/concept/goods.jpg"
+      ]
+    }
+  ],
+  "参考版本": "f052f89c668b8c6351cc9b02f269c05ba30dfbfc"
+}

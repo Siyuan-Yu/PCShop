@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Failed(Child)" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 11:48:44Z" end-time="2026-11-27 11:48:47Z" duration="3.1287268">
+  <test-suite type="TestSuite" id="3140" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1842" result="Failed" site="Child" start-time="2026-11-27 11:48:44Z" end-time="2026-11-27 11:48:47Z" duration="3.128727" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="5276" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1842" result="Failed" site="Child" start-time="2026-11-27 11:48:44Z" end-time="2026-11-27 11:48:47Z" duration="3.111446" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="51360" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="5277" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1842" result="Failed" site="Child" start-time="2026-11-27 11:48:44Z" end-time="2026-11-27 11:48:47Z" duration="3.109263" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="SetUpFixture" id="4397" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1842" result="Failed" site="Child" start-time="2026-11-27 11:48:44Z" end-time="2026-11-27 11:48:47Z" duration="3.107341" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="3181" name="BrandBusinessTests" fullname="PCShopSell.Tests.BrandBusinessTests" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" testcasecount="22" result="Passed" start-time="2026-11-27 11:48:45Z" end-time="2026-11-27 11:48:46Z" duration="1.107747" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3201" name="NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad" fullname="PCShopSell.Tests.BrandBusinessTests.NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad" methodname="NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad" classname="PCShopSell.Tests.BrandBusinessTests" runstate="Runnable" seed="891937858" result="Passed" start-time="2026-11-27 11:48:45Z" end-time="2026-11-27 11:48:46Z" duration="1.088770" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BrandBusinessTests.NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad
+REGRESSION DONE PCShopSell.Tests.BrandBusinessTests.NewMainlineRequiresActualOrderEvidenceThenUnlocksRoad Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="4380" name="PurchasePlanTests" fullname="PCShopSell.Tests.PurchasePlanTests" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" testcasecount="16" result="Failed" site="Child" start-time="2026-11-27 11:48:46Z" end-time="2026-11-27 11:48:47Z" duration="0.927143" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="4385" name="EmployeePurchaseWindowReopensAtTheLastBrowsedSource" fullname="PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource" methodname="EmployeePurchaseWindowReopensAtTheLastBrowsedSource" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" seed="11198976" result="Failed" label="Error" start-time="2026-11-27 11:48:46Z" end-time="2026-11-27 11:48:47Z" duration="0.918188" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[System.InvalidOperationException : Sequence contains more than one matching element]]></message>
+                <stack-trace><![CDATA[  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x0004a] in <de4a1a1490a74771a34fee0d1d586658>:0 
+  at PCShopSell.Tests.PurchasePlanTests.<EmployeePurchaseWindowReopensAtTheLastBrowsedSource>g__Button|6_0 (System.String caption, PCShopSell.Tests.PurchasePlanTests+<>c__DisplayClass6_1& ) [0x0000d] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\PurchasePlanTests.cs:163 
+  at PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource () [0x0041e] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\PurchasePlanTests.cs:239 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 ]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource
+REGRESSION DONE PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource Failed:Error
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="4427" name="QuestTests" fullname="PCShopSell.Tests.QuestTests" classname="PCShopSell.Tests.QuestTests" runstate="Runnable" testcasecount="41" result="Passed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.029179" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="4428" name="Quests_AreInOrder_AndHaveText" fullname="PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText" methodname="Quests_AreInOrder_AndHaveText" classname="PCShopSell.Tests.QuestTests" runstate="Runnable" seed="2145364114" result="Passed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.007275" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText
+REGRESSION DONE PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="4666" name="ShopCompetitionTests" fullname="PCShopSell.Tests.ShopCompetitionTests" classname="PCShopSell.Tests.ShopCompetitionTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.041672" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="4680" name="RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule" fullname="PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule" classname="PCShopSell.Tests.ShopCompetitionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.035277" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4678" name="RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule(&quot;restaurant&quot;,12)" fullname="PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule(&quot;restaurant&quot;,12)" methodname="RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule" classname="PCShopSell.Tests.ShopCompetitionTests" runstate="Runnable" seed="1226474775" result="Passed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.024433" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule("restaurant",12)
+REGRESSION DONE PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule("restaurant",12) Passed
+]]></output>
+              </test-case>
+              <test-case id="4679" name="RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule(&quot;secondhand&quot;,45)" fullname="PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule(&quot;secondhand&quot;,45)" methodname="RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule" classname="PCShopSell.Tests.ShopCompetitionTests" runstate="Runnable" seed="281524489" result="Passed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.005895" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule("secondhand",45)
+REGRESSION DONE PCShopSell.Tests.ShopCompetitionTests.RestaurantAndUsedShopVisitsAreSlowedByTheSameCompetitionRule("secondhand",45) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestFixture" id="4683" name="ShopCoreGameplayTests" fullname="PCShopSell.Tests.ShopCoreGameplayTests" classname="PCShopSell.Tests.ShopCoreGameplayTests" runstate="Runnable" testcasecount="68" result="Failed" site="Child" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.787176" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="4726" name="UsedBuyerVisiblyWalksFromStreetToShelfThenHoldsGoodsAtCheckout" fullname="PCShopSell.Tests.ShopCoreGameplayTests.UsedBuyerVisiblyWalksFromStreetToShelfThenHoldsGoodsAtCheckout" methodname="UsedBuyerVisiblyWalksFromStreetToShelfThenHoldsGoodsAtCheckout" classname="PCShopSell.Tests.ShopCoreGameplayTests" runstate="Runnable" seed="1802328446" result="Passed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.482211" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopCoreGameplayTests.UsedBuyerVisiblyWalksFromStreetToShelfThenHoldsGoodsAtCheckout
+REGRESSION DONE PCShopSell.Tests.ShopCoreGameplayTests.UsedBuyerVisiblyWalksFromStreetToShelfThenHoldsGoodsAtCheckout Passed
+]]></output>
+            </test-case>
+            <test-case id="4723" name="UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt" fullname="PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt" methodname="UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt" classname="PCShopSell.Tests.ShopCoreGameplayTests" runstate="Runnable" seed="360756633" result="Failed" start-time="2026-11-27 11:48:47Z" end-time="2026-11-27 11:48:47Z" duration="0.273291" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: String containing "按 F"
+  But was:  "暂时无法上架
+时间已暂停
+关闭
+请先摆放货架，并将品类设为“二手转售品”。
+
+在店内走到货架旁按 <b><color=#79532B>F</color></b>，选择“选择摆什么”或“换品类”，再从“零售商品”中选“二手转售品”。设置好后，回到收购鉴定台确认上架。
+知道了"
+]]></message>
+                <stack-trace><![CDATA[at NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0
+at NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0
+at PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt () [0x002e3] in D:\tmp\pcshop-suburb-day-mam5h57m\preview\Assets\Tests\EditMode\ShopCoreGameplayTests.cs:570
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt
+REGRESSION DONE PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt Failed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

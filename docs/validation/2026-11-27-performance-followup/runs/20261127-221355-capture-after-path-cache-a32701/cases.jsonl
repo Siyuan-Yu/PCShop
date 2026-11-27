@@ -1,0 +1,14 @@
+{"name":"PCShopSell.Tests.PathfinderTests.DisconnectedNodes_ReturnNotFound","result":"Passed","message":"","stack":"","seconds":0.0137867}
+{"name":"PCShopSell.Tests.PathfinderTests.FindsShortestPath_NotTheDetourEdge","result":"Passed","message":"","stack":"","seconds":0.0017326}
+{"name":"PCShopSell.Tests.PathfinderTests.MatchesBruteForce_OnRandomGraphs","result":"Passed","message":"","stack":"","seconds":0.6916604}
+{"name":"PCShopSell.Tests.PathfinderTests.SameNode_ReturnsZeroDistancePath","result":"Passed","message":"","stack":"","seconds":0.001262}
+{"name":"PCShopSell.Tests.PathfinderTests.UnknownEndpoint_Throws","result":"Passed","message":"","stack":"","seconds":0.0017456}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedDistrictMembershipPreservesFirstMatchAndUnknownStreets","result":"Passed","message":"","stack":"","seconds":0.0217309}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth","result":"Passed","message":"","stack":"","seconds":0.0335767}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedNpcWorkplaceFollowsMovingHomeAndChangedDefinition","result":"Passed","message":"","stack":"","seconds":0.0901609}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedPathsInvalidateOnNewEdgesAndDoNotLeakBetweenMaps","result":"Passed","message":"","stack":"","seconds":0.0010831}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels","result":"Passed","message":"","stack":"","seconds":0.0203596}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.StreetServiceSpatialIndexKeepsOriginalClearanceAndMeetingNodes","result":"Passed","message":"","stack":"","seconds":0.4540576}
+{"name":"PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"sleep\")","result":"Passed","message":"","stack":"","seconds":4.570635}
+{"name":"PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"faint\")","result":"Passed","message":"","stack":"","seconds":2.9047138}
+{"name":"PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"hospital\")","result":"Passed","message":"","stack":"","seconds":4.3649819}

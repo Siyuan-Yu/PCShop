@@ -1,0 +1,27 @@
+公司股权、董事会与双向控股 · 2026-11-27
+
+工程：D:/UnityProjects/PCShop/PCShop
+分支：art/experiment
+Unity：2022.3.6f1
+隔离预览：D:/tmp/pcshop-suburb-day-mam5h57m/preview
+最终界面来源：D:/tmp/pcshop-governance-ui-final
+复拍日志：D:/tmp/pcshop-governance-ui-final.log
+完成标记：COMPANY_GOVERNANCE_UI_CAPTURE_DONE
+导出：12 张 1920×1080 PNG，12 份活跃 UI 文字和展示状态说明。
+原始截图未做图像修绘。
+
+最终源码编译：D:/tmp/pcshop-governance-final-compile.log
+结果：Exiting batchmode successfully now!
+退出：Application will terminate with return code 0
+未发现 C# 编译错误或脚本警告。
+最终编译包含最后补充的公司信任与 NPC 报价成交量结算；这些结算修正不改变本组准备状态的界面布局。
+git diff --check 通过；有既有工作区文件的 LF/CRLF 转换提示，不是空白错误。
+
+界面范围：股东名册与报价、董事提名、董事会议案、增发预览、主动接管、经理及预算选择、反向控股、留任、公司门店只读页、公司页嵌入、居家工作台和花园门槛。
+
+本轮遵照用户“先不验收”，没有运行测试框架或完整玩法验收。
+持股、董事、议案及交接为准备的展示状态；没有模拟真实成交、跨日经营、保存重载或多年资金平衡。
+没有改动玩家正式存档，没有生成发布包，没有提交或上传。
+主工程原有 Unity 编辑器进程未用于本次复拍。
+复拍入口：tools/company-governance/CompanyGovernanceCapture.cs
+规则与代码入口：docs/156-company-equity-and-control-2026-11-27.md

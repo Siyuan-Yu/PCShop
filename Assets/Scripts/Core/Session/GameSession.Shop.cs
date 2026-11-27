@@ -32,10 +32,12 @@ namespace PCShopSell.Core.Session
         public string Description;
         public int ShiftStart = 9 * 60, ShiftEnd = 21 * 60;
         public EmployeeSchedule Schedule = new EmployeeSchedule();
+        public EmployeeWellbeing Wellbeing;
         public int BuildsCompleted;
         public bool OnDuty(GameTimestamp t) => TryShift(t.TotalMinutes, out _, out _);
         public bool TryShift(long at, out long start, out long end)
         {
+            if(Wellbeing?.OnLeave(at)==true){start=end=-1;return false;}
             if(Schedule!=null && at>=Schedule.ActiveStart && at<Schedule.ActiveEnd) {start=Schedule.ActiveStart;end=Schedule.ActiveEnd;return true;}
             int a=Schedule!=null&&Schedule.PendingAt>=0&&at>=Schedule.PendingAt?Schedule.PendingStart:ShiftStart;
             int b=Schedule!=null&&Schedule.PendingAt>=0&&at>=Schedule.PendingAt?Schedule.PendingEnd:ShiftEnd;
@@ -148,6 +150,7 @@ namespace PCShopSell.Core.Session
 
         public void SetMarkup(double markup)
         {
+            if(ShopAuthorityBlocker(_focus) is string authority){Fail(authority);return;}
             double previous = PlayerShop.Markup;
             PlayerShop.Markup = markup;
             if (PlayerShop.Markup != previous) RecordConfirmedShopPricing();
@@ -155,12 +158,14 @@ namespace PCShopSell.Core.Session
 
         public void ConfirmGoodsSalePrice(string id, long yuan)
         {
+            if(ShopAuthorityBlocker(_focus) is string authority){Fail(authority);return;}
             if (PlayerShop.GoodsPriceOf(id).Yuan != yuan && PlayerShop.SetGoodsSalePrice(id, yuan))
                 RecordConfirmedShopPricing();
         }
 
         public void ConfirmPartSalePrice(PartDef part, bool boxed, long yuan)
         {
+            if(ShopAuthorityBlocker(_focus) is string authority){Fail(authority);return;}
             if (part != null && PlayerShop.PriceOf(part, boxed).Yuan != yuan && PlayerShop.SetPartSalePrice(part, boxed, yuan))
                 RecordConfirmedShopPricing();
         }

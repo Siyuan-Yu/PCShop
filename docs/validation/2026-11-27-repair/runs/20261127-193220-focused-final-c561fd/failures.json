@@ -1,0 +1,17 @@
+[
+  {
+    "name": "PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"restaurant\")",
+    "message": "  Expected: 2\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce (System.String kind) [0x00194] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\QuestTests.cs:161\n"
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText",
+    "message": "  Expected and actual are both <System.String[4]>\n  Values differ at index [1]\n  Expected string length 17 but was 15. Strings differ at index 0.\n  Expected: \"racing_enrollment\"\n  But was:  \"bank_securities\"\n  -----------^\n",
+    "stack": "at NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText () [0x00094] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\QuestTests.cs:31\n"
+  },
+  {
+    "name": "PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce",
+    "message": "  Expected: 2\n  But was:  0.0d\n",
+    "stack": "at PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce () [0x00149] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\QuestTests.cs:282\n"
+  }
+]

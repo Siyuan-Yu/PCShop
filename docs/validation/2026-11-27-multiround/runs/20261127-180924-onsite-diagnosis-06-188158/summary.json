@@ -1,0 +1,14 @@
+{
+  "tag": "onsite-diagnosis-06",
+  "filter": "InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking",
+  "started": "2026-11-27T18:09:24.9378487+08:00",
+  "seconds": 35.93,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 9,
+  "passed": 6,
+  "failed": 3,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-180924-onsite-diagnosis-06-188158"
+}

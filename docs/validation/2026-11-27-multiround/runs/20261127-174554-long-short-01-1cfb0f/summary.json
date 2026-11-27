@@ -1,0 +1,14 @@
+{
+  "tag": "long-short-01",
+  "filter": "EconomySurvivesBoundedDaysAndRepeatedReload\\(.*?,7,",
+  "started": "2026-11-27T17:45:54.2338443+08:00",
+  "seconds": 126.5,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 3,
+  "passed": 3,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-174554-long-short-01-1cfb0f"
+}

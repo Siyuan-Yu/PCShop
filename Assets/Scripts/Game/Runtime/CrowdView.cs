@@ -24,6 +24,7 @@ namespace PCShopSell.Game.Runtime
             public Transform ActivityName;
             public FigureMotion Motion;
             public Transform NightBike;
+            public int ClothingStamp = -1;
         }
 
         private const float MetroEndX = -97f, VillageEndX = 102f;
@@ -38,6 +39,12 @@ namespace PCShopSell.Game.Runtime
         private GameSession _citySession;
         private StreetWorldBuilder _streets;
         private readonly Dictionary<string, Walker> _cityWalkers = new Dictionary<string, Walker>();
+        private readonly Dictionary<string, Walker> _cityWalkerPool = new Dictionary<string, Walker>();
+        private readonly List<string> _cityPoolOrder = new List<string>();
+        private readonly HashSet<string> _cityWanted = new HashSet<string>();
+        private readonly List<string> _cityLeaving = new List<string>();
+        private int _cityPoolDay = -1;
+        private const int CityWalkerPoolLimit = 32;
         private readonly Dictionary<string, ResidentDef> _cityResidents = new Dictionary<string, ResidentDef>();
         private readonly HashSet<string> _expoPresented=new HashSet<string>();
 
@@ -52,6 +59,29 @@ namespace PCShopSell.Game.Runtime
         /// <summary>Views follow the session's one authoritative person position. Visibility never advances a person or deletes history.</summary>
         public void SyncCity(GameSession session, Vector3 playerWorld, Camera camera = null, StreetWorldBuilder streets = null)
         {
+            bool sessionChanged = _citySession != session;
+            if (sessionChanged || _cityPoolDay != session.Clock.Today.TotalDays)
+            {
+                // 已定稿人物造型不随日期变化；仅淘汰确实换季的动态人物，避免零点批量销毁。
+                for (int i = _cityPoolOrder.Count - 1; i >= 0; i--)
+                {
+                    string id = _cityPoolOrder[i];
+                    var cached = _cityWalkerPool[id];
+                    if (!sessionChanged && cached.ClothingStamp == CityNpcClothing.StyleStamp(session, id)) continue;
+                    if (cached.Go != null) Kill.It(cached.Go);
+                    _cityWalkerPool.Remove(id); _cityPoolOrder.RemoveAt(i);
+                }
+                _cityPoolDay = session.Clock.Today.TotalDays;
+                if (sessionChanged)
+                {
+                    foreach (var active in _cityWalkers.Values)
+                    {
+                        if (active.Go != null) Kill.It(active.Go);
+                        _walkers.Remove(active);
+                    }
+                    _cityWalkers.Clear(); _cityResidents.Clear();
+                }
+            }
             _citySession = session;
             _streets = streets;
             _expoPresented.Clear();
@@ -66,15 +96,16 @@ namespace PCShopSell.Game.Runtime
                 foreach (var old in _walkers) if (old.Go != null) Kill.It(old.Go);
                 _walkers.Clear(); _arrived.Clear(); _cityMode = true;
             }
-            var wanted = new HashSet<string>();
+            var wanted = _cityWanted;
+            wanted.Clear();
             foreach (var state in session.CityPeople)
             {
                 var definition = session.CityPerson(state.PersonId); if (definition == null) continue;
                 bool atReception = TryLeisureReception(session, state, out Vector3 reception);
-                Vector3 position = atReception ? reception : CityPresentationPosition(session, state);
                 bool privateInterior = !atReception && !IsNightRider(session, state)
                     && (session.CityPersonInside(state) || CityPersonInVehicle(state) || _expoPresented.Contains(state.PersonId));
                 if (privateInterior) continue;
+                Vector3 position = atReception ? reception : CityPresentationPosition(session, state);
                 if (camera != null)
                 {
                     Vector3 screen = camera.WorldToViewportPoint(position + Vector3.up);
@@ -90,7 +121,21 @@ namespace PCShopSell.Game.Runtime
                         resident = new ResidentDef(definition.Staff, state.WorkPlaceId, definition.WorkStart, definition.WorkEnd, false, stories: definition.Stories);
                         _cityResidents[state.PersonId] = resident;
                     }
-                    view = Spawn(resident, position); CityNpcClothing.Apply(view.Go, session, state.PersonId); _cityWalkers[state.PersonId] = view; _walkers.Add(view);
+                    if (_cityWalkerPool.TryGetValue(state.PersonId, out view) && view.Go != null)
+                    {
+                        _cityWalkerPool.Remove(state.PersonId); _cityPoolOrder.Remove(state.PersonId);
+                        view.Go.transform.position = position;
+                        view.Go.SetActive(true);
+                        view.Motion?.ResetMotion();
+                    }
+                    else
+                    {
+                        _cityWalkerPool.Remove(state.PersonId); _cityPoolOrder.Remove(state.PersonId);
+                        view = Spawn(resident, position);
+                        CityNpcClothing.Apply(view.Go, session, state.PersonId);
+                        view.ClothingStamp = CityNpcClothing.StyleStamp(session, state.PersonId);
+                    }
+                    _cityWalkers[state.PersonId] = view; _walkers.Add(view);
                 }
                 // Membership and labels are refreshed at low frequency. Never snap an existing
                 // actor here: its root and walking rig are advanced every rendered frame below.
@@ -104,11 +149,24 @@ namespace PCShopSell.Game.Runtime
                 if(view.ActivityName!=null){view.ActivityName.gameObject.SetActive(participating || (position-playerWorld).sqrMagnitude <= 18*18);view.ActivityName.rotation=CameraRig.Rotation;}
             }
             SyncAmbient(session, camera);
-            foreach (string id in new List<string>(_cityWalkers.Keys))
+            _cityLeaving.Clear();
+            foreach (string id in _cityWalkers.Keys) if (!wanted.Contains(id)) _cityLeaving.Add(id);
+            foreach (string id in _cityLeaving)
             {
-                if (wanted.Contains(id)) continue;
-                var view = _cityWalkers[id]; if (view.Go != null) Kill.It(view.Go);
+                var view = _cityWalkers[id];
+                if (view.Go != null && view.ClothingStamp == CityNpcClothing.StyleStamp(session, id))
+                {
+                    view.Go.SetActive(false);
+                    _cityWalkerPool[id] = view; _cityPoolOrder.Add(id);
+                }
+                else if (view.Go != null) Kill.It(view.Go);
                 _walkers.Remove(view); _cityWalkers.Remove(id);
+            }
+            while (_cityPoolOrder.Count > CityWalkerPoolLimit)
+            {
+                string id = _cityPoolOrder[0]; _cityPoolOrder.RemoveAt(0);
+                if (_cityWalkerPool.TryGetValue(id, out var cached) && cached.Go != null) Kill.It(cached.Go);
+                _cityWalkerPool.Remove(id);
             }
         }
 

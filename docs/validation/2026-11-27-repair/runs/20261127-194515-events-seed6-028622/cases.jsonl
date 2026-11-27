@@ -1,0 +1,4 @@
+{"name":"PCShopSell.Tests.EventSystemTests.Events_FireOverTime_AndEveryChoiceResolves(6)","result":"Passed","message":"","stack":"","seconds":98.3157446}
+{"name":"PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(7)","result":"Passed","message":"","stack":"","seconds":0.1711097}
+{"name":"PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(41)","result":"Passed","message":"","stack":"","seconds":0.1560487}
+{"name":"PCShopSell.Tests.GameplayAuditTests.NewGameOpeningQuotesRemainObservable(914)","result":"Passed","message":"","stack":"","seconds":0.150749}

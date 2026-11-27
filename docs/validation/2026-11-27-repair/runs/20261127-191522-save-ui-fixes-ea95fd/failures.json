@@ -1,0 +1,52 @@
+[
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce",
+    "message": "System.NullReferenceException : Object reference not set to an instance of an object",
+    "stack": "  at PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce () [0x00175] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:403 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome () [0x00030] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:268\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload",
+    "message": "  请先领取上一次淘到的旧物。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.CompleteLeadOuting (PCShopSell.Core.Session.GameSession s, System.Int32 index, System.Boolean remote) [0x002df] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:101\nat PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload () [0x002ff] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:596\n"
+  },
+  {
+    "name": "PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses",
+    "message": "  residence_s_oldhomes_01\n  Expected: less than 3\n  But was:  3\n",
+    "stack": "at PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses () [0x00108] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\DistrictProgressionTests.cs:669\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.FishGiftGoesToAnActualCompanionAndCannotAlsoEnterTheBackpack",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.Invite (PCShopSell.Core.Session.GameSession s, System.Int32 number, System.Int32 choice) [0x00044] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:102\nat PCShopSell.Tests.FishingTests.FishGiftGoesToAnActualCompanionAndCannotAlsoEnterTheBackpack () [0x00007] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:442\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,0,800)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.Invite (PCShopSell.Core.Session.GameSession s, System.Int32 number, System.Int32 choice) [0x00044] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:102\nat PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x00013] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:432\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,1,1600)",
+    "message": "  暂时没有店员在岗，暂停营业。\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.Invite (PCShopSell.Core.Session.GameSession s, System.Int32 number, System.Int32 choice) [0x00044] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:102\nat PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment (System.Int32 number, System.Int32 choice, System.Int32 cost) [0x00013] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:432\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.PassPickerOpensManualFishingForWalkInsAndConfirmedInvitations(0,0,480,900)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.PassPickerOpensManualFishingForWalkInsAndConfirmedInvitations (System.Int32 invitation, System.Int32 option, System.Int32 duration, System.Int32 cost) [0x0033a] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:249\n"
+  },
+  {
+    "name": "PCShopSell.Tests.FishingTests.QiaosongChoicesGiveDifferentCompletionOutcomesAndRemainSaved",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.FishingTests.QiaosongChoicesGiveDifferentCompletionOutcomesAndRemainSaved () [0x0004d] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\FishingTests.cs:453\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkshopRegressionTests.ShopHoursDropdown_SurvivesLiveRefreshAndCommitsSelection",
+    "message": "  收起列表后柜台自动刷新应恢复\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkshopRegressionTests+<ShopHoursDropdown_SurvivesLiveRefreshAndCommitsSelection>d__16.MoveNext () [0x0077c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkshopRegressionTests.cs:365\nat UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0004e] in .\\Library\\PackageCache\\com.unity.test-framework@1.1.33\\UnityEngine.TestRunner\\NUnitExtensions\\Attributes\\TestEnumerator.cs:46\n"
+  }
+]

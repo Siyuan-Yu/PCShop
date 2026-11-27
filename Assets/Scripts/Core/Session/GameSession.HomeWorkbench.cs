@@ -127,12 +127,13 @@ namespace PCShopSell.Core.Session
         }
         public (Money income,Money expense) WorkbenchPersonalCash(GameDate from,GameDate to)
         {
-            var entries=Ledger.Entries.Where(e=>e.Date>=from&&e.Date<=to && e.BusinessKind!=LedgerBusinessKind.InternalTransfer
+            var entries=Ledger.Entries.Where(e=>e.CashAccountId==null&&e.Date>=from&&e.Date<=to && e.BusinessKind!=LedgerBusinessKind.InternalTransfer
                 && e.BusinessKind!=LedgerBusinessKind.AssetInvestment && e.BusinessKind!=LedgerBusinessKind.Financing);
             return (Money.FromCents(entries.Where(e=>e.Amount.IsPositive).Sum(e=>e.Amount.Cents)),Money.FromCents(-entries.Where(e=>e.Amount.IsNegative).Sum(e=>e.Amount.Cents)));
         }
         public bool SetWorkbenchHours(string shopId,int openHour,int closeHour,bool allDay)
         {
+            if(ShopAuthorityBlocker(ShopAt(shopId)) is string authority)return Fail(authority);
             var shop=ShopAt(shopId);if(!CanUseHomeWorkbench||shop?.Rented!=true)return Fail("请选择自己的营业门店。");
             if(openHour<0||openHour>23||closeHour<0||closeHour>23||!allDay&&openHour==closeHour)return Fail("开关门请选择不同整点。");
             shop.Sim.SetHours(allDay?0:openHour*60,allDay?1440:closeHour*60);return true;
@@ -144,10 +145,12 @@ namespace PCShopSell.Core.Session
         }
         public bool SetWorkbenchGoodsPrice(string shopId,string id,long yuan)
         {
+            if(ShopAuthorityBlocker(ShopAt(shopId)) is string authority)return Fail(authority);
             var shop=ShopAt(shopId);return CanUseHomeWorkbench&&shop?.Rented==true&&shop.Sim.OnShelfGoods(id)>0&&shop.Sim.SetGoodsSalePrice(id,yuan);
         }
         public bool SetWorkbenchPartPrice(string shopId,string id,bool boxed,long yuan)
         {
+            if(ShopAuthorityBlocker(ShopAt(shopId)) is string authority)return Fail(authority);
             if(!PartCatalog.Exists(id))return false;
             var shop=ShopAt(shopId);var part=PartCatalog.Get(id);
             return CanUseHomeWorkbench&&shop?.Rented==true&&part!=null&&shop.Sim.ShelfFillOf(part.Category).Parts.Any(l=>l.Part.Id==id&&l.Boxed==boxed&&l.Count>0)

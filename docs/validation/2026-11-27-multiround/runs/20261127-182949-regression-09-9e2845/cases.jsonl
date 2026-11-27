@@ -1,0 +1,184 @@
+{"name":"PCShopSell.Tests.PathWalkerTests.NonAdjacentNodes_Throw","result":"Passed","message":"","stack":"","seconds":0.0075076}
+{"name":"PCShopSell.Tests.PathWalkerTests.PositionAt_ClampsToEnds","result":"Passed","message":"","stack":"","seconds":0.0043052}
+{"name":"PCShopSell.Tests.PathWalkerTests.PositionAt_InterpolatesAlongSegments","result":"Passed","message":"","stack":"","seconds":0.0006962}
+{"name":"PCShopSell.Tests.PathWalkerTests.SingleNodePath_StaysPut","result":"Passed","message":"","stack":"","seconds":0.0002676}
+{"name":"PCShopSell.Tests.PathWalkerTests.TotalLength_IsSumOfEdges","result":"Passed","message":"","stack":"","seconds":0.0002116}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth","result":"Passed","message":"","stack":"","seconds":0.0237022}
+{"name":"PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels","result":"Passed","message":"","stack":"","seconds":0.0257573}
+{"name":"PCShopSell.Tests.PlayerWorkTests.AttendedWeeklyWageGetsBankruptcyGraceUntilClaimDeadline","result":"Failed","message":"  Expected: True\r\n  But was:  False\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.AttendedWeeklyWageGetsBankruptcyGraceUntilClaimDeadline () [0x000cd] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:185\r\n","seconds":0.5089841}
+{"name":"PCShopSell.Tests.PlayerWorkTests.BrokeWorkerCanFinishTheWeekWithWorkMealsAndSleep_WithoutBuyingStockOrFood","result":"Failed","message":"  Expected: True\r\n  But was:  False\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.BrokeWorkerCanFinishTheWeekWithWorkMealsAndSleep_WithoutBuyingStockOrFood () [0x000cc] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:247\r\n","seconds":5.1120507}
+{"name":"PCShopSell.Tests.PlayerWorkTests.CannotSignAtOwnShopOrFromElsewhere","result":"Passed","message":"","stack":"","seconds":0.0038199}
+{"name":"PCShopSell.Tests.PlayerWorkTests.ContractAllowsStaffEntryAfterClosing_OvernightShiftDoesNotFaintAtFour_AndDaytimeSleepWorks","result":"Passed","message":"","stack":"","seconds":0.7849442}
+{"name":"PCShopSell.Tests.PlayerWorkTests.DifferentStoresSaveTheirOwnWageShiftAndFatigue(\"服装\",10,18,135,5,6)","result":"Passed","message":"","stack":"","seconds":0.0030566}
+{"name":"PCShopSell.Tests.PlayerWorkTests.DifferentStoresSaveTheirOwnWageShiftAndFatigue(\"家具\",9,19,155,8,10)","result":"Passed","message":"","stack":"","seconds":0.0027156}
+{"name":"PCShopSell.Tests.PlayerWorkTests.DifferentStoresSaveTheirOwnWageShiftAndFatigue(\"面包\",22,30,175,11,12)","result":"Passed","message":"","stack":"","seconds":0.0026602}
+{"name":"PCShopSell.Tests.PlayerWorkTests.DifferentStoresSaveTheirOwnWageShiftAndFatigue(\"便利店\",23,31,185,12,14)","result":"Passed","message":"","stack":"","seconds":0.0027364999999999999}
+{"name":"PCShopSell.Tests.PlayerWorkTests.EnteringEmployerStartsAutomatically_AndBlocksTravelUntilEnd","result":"Passed","message":"","stack":"","seconds":0.3023431}
+{"name":"PCShopSell.Tests.PlayerWorkTests.ExistingStoreOffersAverageAround150_WithDifferentLengthsAndNightShifts","result":"Passed","message":"","stack":"","seconds":0.4126969}
+{"name":"PCShopSell.Tests.PlayerWorkTests.FullDayProvidesLunchAndAppliesFatigue_WithoutUsingPackedFood","result":"Passed","message":"","stack":"","seconds":0.2813682}
+{"name":"PCShopSell.Tests.PlayerWorkTests.FullWeekPaysOnce_AfterClaim_AndAllowsRenewal","result":"Failed","message":"  Expected: True\r\n  But was:  False\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.FullWeekPaysOnce_AfterClaim_AndAllowsRenewal () [0x00044] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:118\r\n","seconds":2.03505}
+{"name":"PCShopSell.Tests.PlayerWorkTests.HospitalInterruptsShiftAndReleasesLock_InsteadOfWorkingFromHome","result":"Passed","message":"","stack":"","seconds":0.7909831}
+{"name":"PCShopSell.Tests.PlayerWorkTests.LastDayAbsenceStillClosesPayroll_AndCanClaimAwayFromShop","result":"Failed","message":"  Expected: True\r\n  But was:  False\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.LastDayAbsenceStillClosesPayroll_AndCanClaimAwayFromShop () [0x0006e] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:137\r\n","seconds":1.6854549}
+{"name":"PCShopSell.Tests.PlayerWorkTests.LastNightPaysOnlyAfterNextMorning_AndMidnightJsonKeepsCorrectShiftDay","result":"Failed","message":"  Expected: True\r\n  But was:  False\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.LastNightPaysOnlyAfterNextMorning_AndMidnightJsonKeepsCorrectShiftDay () [0x000b5] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:321\r\n","seconds":0.4167084}
+{"name":"PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt(1,141)","result":"Failed","message":"  工资周结，迟到不会直接扣现金\r\n  Expected: ¥0\r\n  But was:  ¥141\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt (System.Int32 late, System.Int64 pay) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:88\r\n","seconds":0.3213189}
+{"name":"PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt(30,141)","result":"Failed","message":"  工资周结，迟到不会直接扣现金\r\n  Expected: ¥0\r\n  But was:  ¥141\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt (System.Int32 late, System.Int64 pay) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:88\r\n","seconds":0.2641203}
+{"name":"PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt(31,132)","result":"Failed","message":"  工资周结，迟到不会直接扣现金\r\n  Expected: ¥0\r\n  But was:  ¥132\r\n","stack":"at PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt (System.Int32 late, System.Int64 pay) [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PlayerWorkTests.cs:88\r\n","seconds":0.2758147}
+{"name":"PCShopSell.Tests.PlayerWorkTests.LatenessReducesOnlyTodaysWage_WithNoExtraDebt(539,0)","result":"Passed","message":"","stack":"","seconds":0.0061717}
+{"name":"PCShopSell.Tests.PlayerWorkTests.MidShiftJsonRestoreKeepsWorkLockAndDoesNotDuplicateWageOrFatigue","result":"Passed","message":"","stack":"","seconds":0.5826465}
+{"name":"PCShopSell.Tests.PlayerWorkTests.OldOrInvalidWorkDataDoesNotCreateAWorkLock","result":"Passed","message":"","stack":"","seconds":0.007631}
+{"name":"PCShopSell.Tests.PlayerWorkTests.SigningWithoutAttendingKeepsDebtAndEarnsNoWagesButLifeContinues","result":"Passed","message":"","stack":"","seconds":0.0102562}
+{"name":"PCShopSell.Tests.PlayerWorkTests.ZeroCashAndEmptyStockCanSignSevenDayContract_WithoutDeposit","result":"Passed","message":"","stack":"","seconds":0.0031461}
+{"name":"PCShopSell.Tests.PurchasePlanTests.BrowseSourceSurvivesCompletingAndSavingWithoutChangingPurchaseLines","result":"Passed","message":"","stack":"","seconds":0.88258}
+{"name":"PCShopSell.Tests.PurchasePlanTests.CatalogIncludesAllExistingPhysicalGoods_AndFurnitureFoodReachStorage","result":"Passed","message":"","stack":"","seconds":0.7215612}
+{"name":"PCShopSell.Tests.PurchasePlanTests.Complete_EnablesDailyPlanAndRepeatsTheWholeListOnAnotherDay","result":"Passed","message":"","stack":"","seconds":0.9136732}
+{"name":"PCShopSell.Tests.PurchasePlanTests.Complete_NextDayEligibilityAndOrderSurviveJsonSave","result":"Passed","message":"","stack":"","seconds":0.9624694}
+{"name":"PCShopSell.Tests.PurchasePlanTests.ElectronicsCountersResolveToOneQuoteAndMergeLegacyPurchaseLines","result":"Passed","message":"","stack":"","seconds":0.4106842}
+{"name":"PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource","result":"Failed:Error","message":"System.InvalidOperationException : Sequence contains no matching element","stack":"  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \r\n  at PCShopSell.Tests.PurchasePlanTests.<EmployeePurchaseWindowReopensAtTheLastBrowsedSource>g__Button|6_0 (System.String caption, PCShopSell.Tests.PurchasePlanTests+<>c__DisplayClass6_1& ) [0x0000d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:163 \r\n  at PCShopSell.Tests.PurchasePlanTests.EmployeePurchaseWindowReopensAtTheLastBrowsedSource () [0x00230] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:229 \r\n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\r\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 ","seconds":0.7518264}
+{"name":"PCShopSell.Tests.PurchasePlanTests.ExplicitAllSourcesSurvivesSavingAndOverridesSingleSupplierInference","result":"Passed","message":"","stack":"","seconds":0.8079106}
+{"name":"PCShopSell.Tests.PurchasePlanTests.LegacyFrequency_ZeroMeansDailyAndCopyKeepsCadence","result":"Passed","message":"","stack":"","seconds":0.0004234}
+{"name":"PCShopSell.Tests.PurchasePlanTests.MixedSources_AutoCostIgnoresOldBudget_AndShipsAllItemsExactlyOnceAfterJson","result":"Failed","message":"  Expected: 3\r\n  But was:  2\r\n","stack":"at PCShopSell.Tests.PurchasePlanTests.MixedSources_AutoCostIgnoresOldBudget_AndShipsAllItemsExactlyOnceAfterJson () [0x00020] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:282\r\n","seconds":0.3926325}
+{"name":"PCShopSell.Tests.PurchasePlanTests.MondayWednesdayFriday_FailedAttemptWaitsUntilNextScheduledDay","result":"Passed","message":"","stack":"","seconds":0.623642}
+{"name":"PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave","result":"Failed","message":"  Expected: ¥1,069\r\n  But was:  ¥3,039\r\n","stack":"at PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave () [0x0012a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:398\r\n","seconds":0.4135882}
+{"name":"PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem","result":"Failed","message":"  Expected: 1\r\n  But was:  2\r\n","stack":"at PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem () [0x00118] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\PurchasePlanTests.cs:427\r\n","seconds":0.4115191}
+{"name":"PCShopSell.Tests.PurchasePlanTests.PurchaseTransportControlsTravelTimeAndFreight","result":"Passed","message":"","stack":"","seconds":0.4090424}
+{"name":"PCShopSell.Tests.PurchasePlanTests.RecruitmentNotice_BringsFourCandidatesOnceAndPersistsAcrossReload","result":"Passed","message":"","stack":"","seconds":0.0354791}
+{"name":"PCShopSell.Tests.PurchasePlanTests.SwitchingBrowseSourceDoesNotLoseItemsOrModifyAnActiveTrip","result":"Passed","message":"","stack":"","seconds":0.4482382}
+{"name":"PCShopSell.Tests.PurchasePlanTests.ThreeDayFrequency_RepeatsAndSurvivesSaveWithoutDailyPurchases","result":"Passed","message":"","stack":"","seconds":1.3515648}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.ActualVenueAndExhibitionDateBothGateThePopulatedScene","result":"Passed","message":"","stack":"","seconds":0.7054446}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.ChoicesChangeTheEventCrowdAndStockWithoutRebuildingTheHall","result":"Passed","message":"","stack":"","seconds":16.8005691}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.ControllerFramesTheRealVenueMovesTheExistingPlayerAndRestoresTheStreetView","result":"Passed","message":"","stack":"","seconds":0.4846686}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.HostsAreShownOnlyAfterRealArrivalAndViewDoesNotAdvanceTheSimulation","result":"Passed","message":"","stack":"","seconds":0.4639903}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.OnsiteHudLeavesTheSceneUncoveredAndRemoteBrandAccessCannotOpenIt","result":"Passed","message":"","stack":"","seconds":0.4681839}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.ReloadReconstructsTheCurrentStageAndCannotAdvanceFromElsewhere","result":"Passed","message":"","stack":"","seconds":1.1846642}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.ReusingTheSceneAfterChangingSavesBuildsOnlyOneHallAndLeavesOldCrowdsInactive","result":"Passed","message":"","stack":"","seconds":0.837545}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.ScenePickingAndFocusRespectTheRotatedWorldVenue","result":"Passed","message":"","stack":"","seconds":0.4493828}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(0,1,1)","result":"Passed","message":"","stack":"","seconds":0.4226088}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(1,4,5)","result":"Passed","message":"","stack":"","seconds":0.560055}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(2,6,8)","result":"Passed","message":"","stack":"","seconds":0.5803752}
+{"name":"PCShopSell.Tests.QuarterlyExpoSceneTests.SignedEndorsersTravelToOpeningAndAppearOnceOnTheBrandStage","result":"Passed","message":"","stack":"","seconds":2.2240657}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.BookingUsesOneHundredOfEachProductAndOnlySignedKolsAndIsAtomic","result":"Passed","message":"","stack":"","seconds":0.4208723}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.ContactOrFriendshipCannotSubstituteForAContractAndExpiryMustCoverClosing","result":"Passed","message":"","stack":"","seconds":0.4055229}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.FullFourDaysNeedTwentyFourChoicesPayFourAttendanceDaysAndReturnActualUnsoldStock","result":"Passed","message":"","stack":"","seconds":16.0837071}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.HeadlessShowHasThreeChoicesKeepsTimeHeldAndCanResumeFromASavedDecision","result":"Passed","message":"","stack":"","seconds":0.7950082}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.InvalidatedContractRequiresReplacementAndActiveExhibitLocksTermination","result":"Passed","message":"","stack":"","seconds":0.4068389}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.LargerBoothsRequireMoreProductsSignedTalentAndAnActualPosterCommission(1,4,5)","result":"Passed","message":"","stack":"","seconds":0.4026461}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.LargerBoothsRequireMoreProductsSignedTalentAndAnActualPosterCommission(2,6,8)","result":"Passed","message":"","stack":"","seconds":0.4269024}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.MissingTheOpeningReturnsStockOnceButDoesNotRefundTheBooth","result":"Passed","message":"","stack":"","seconds":0.3961038}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.PoorDecisionsProduceLessTrustAndNoGuaranteedProcurementOrder","result":"Passed","message":"","stack":"","seconds":16.582793}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.PosterContactAndDeadlineAndProductCapacityAreValidatedBeforePayment","result":"Passed","message":"","stack":"","seconds":0.4027408}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.QuarterlyScheduleSpansFourDaysAndAdvancesByNinetyDays","result":"Passed","message":"","stack":"","seconds":0.4260075}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.SaveDuringTheShowKeepsCurrentDecisionMoneyStockWagesAndDoesNotReplay","result":"Passed","message":"","stack":"","seconds":7.622962}
+{"name":"PCShopSell.Tests.QuarterlyExpoTests.VenueCannotBeLeasedBoughtOrOpenedAsABusinessEvenFromAnInjectedListing","result":"Passed","message":"","stack":"","seconds":0.7959789}
+{"name":"PCShopSell.Tests.QuestTests.AdvanceLeaseKeepsRestaurantChoiceUntilHandover","result":"Passed","message":"","stack":"","seconds":0.0198112}
+{"name":"PCShopSell.Tests.QuestTests.AllFinished_NoTaskAndNoReplayAcknowledgement","result":"Passed","message":"","stack":"","seconds":0.0118697}
+{"name":"PCShopSell.Tests.QuestTests.BetweenStages_NoTaskUntilReputationReachesActualBusinessThreshold","result":"Passed","message":"","stack":"","seconds":0.0120529}
+{"name":"PCShopSell.Tests.QuestTests.BranchGuideWaitsUntilAnyRealVentureCanBeOpened","result":"Passed","message":"","stack":"","seconds":0.004868}
+{"name":"PCShopSell.Tests.QuestTests.BranchReviewWaitsForActualSettlement_ThenExplicitReview","result":"Passed","message":"","stack":"","seconds":0.0173655}
+{"name":"PCShopSell.Tests.QuestTests.CompletedTutorial_DoesNotRegressAfterRearrangingOrSaving","result":"Passed","message":"","stack":"","seconds":0.0088135}
+{"name":"PCShopSell.Tests.QuestTests.DirectGuideWaitsForRealRelationshipThreshold","result":"Passed","message":"","stack":"","seconds":0.0118805}
+{"name":"PCShopSell.Tests.QuestTests.DirectSupplyTutorialAcceptsFullPayment_WithoutForcingDebt","result":"Passed","message":"","stack":"","seconds":0.0129932}
+{"name":"PCShopSell.Tests.QuestTests.EmptyBackroom_NeedsAFirstBatchOfStock","result":"Passed","message":"","stack":"","seconds":0.0036721}
+{"name":"PCShopSell.Tests.QuestTests.EnterpriseGuideNeedsFullDelivery_AndCancelledContractDoesNotPass","result":"Passed","message":"","stack":"","seconds":0.005759}
+{"name":"PCShopSell.Tests.QuestTests.EveryGuidePageCanDescribeNewAndDevelopedSavesWithoutMutatingMoney","result":"Passed","message":"","stack":"","seconds":0.0068589}
+{"name":"PCShopSell.Tests.QuestTests.FirstBuildDeliveryUnlocksRestocking_WithoutRequiringFutureBusinesses","result":"Passed","message":"","stack":"","seconds":0.0039679}
+{"name":"PCShopSell.Tests.QuestTests.FirstBuildRequiresDelivery_NotJustStockOrAnAcceptedOrder","result":"Passed","message":"","stack":"","seconds":0.0118709}
+{"name":"PCShopSell.Tests.QuestTests.FirstDayBranchCanOpenAsPetShop","result":"Passed","message":"","stack":"","seconds":0.0033725}
+{"name":"PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"computer\")","result":"Passed","message":"","stack":"","seconds":0.0137864}
+{"name":"PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"restaurant\")","result":"Failed","message":"  Expected: 2\r\n  But was:  0.0d\r\n","stack":"at PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce (System.String kind) [0x00194] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:161\r\n","seconds":0.003235}
+{"name":"PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"clothing\")","result":"Passed","message":"","stack":"","seconds":0.0168279}
+{"name":"PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"models\")","result":"Passed","message":"","stack":"","seconds":0.0116091}
+{"name":"PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"secondhand\")","result":"Passed","message":"","stack":"","seconds":0.0135122}
+{"name":"PCShopSell.Tests.QuestTests.FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(\"pet\")","result":"Passed","message":"","stack":"","seconds":0.0122272}
+{"name":"PCShopSell.Tests.QuestTests.FittedShop_SkipsToShelvesStockAndFirstSale","result":"Passed","message":"","stack":"","seconds":0.0068357}
+{"name":"PCShopSell.Tests.QuestTests.FreshGameCannotAcknowledgeFutureLessonsByOpeningTheirPages","result":"Passed","message":"","stack":"","seconds":0.0026196}
+{"name":"PCShopSell.Tests.QuestTests.LaterAchievementsAreRememberedWhileEarlierTasksRemain","result":"Passed","message":"","stack":"","seconds":0.0191748}
+{"name":"PCShopSell.Tests.QuestTests.LegacyManualTrackingCannotSkipOpeningPrerequisites","result":"Passed","message":"","stack":"","seconds":0.0220528}
+{"name":"PCShopSell.Tests.QuestTests.OpeningChoiceDefaultsToPetShopAndHoldsTimeUntilConfirmed","result":"Passed","message":"","stack":"","seconds":0.0658302}
+{"name":"PCShopSell.Tests.QuestTests.OpeningMeal_ClockStandsStillExceptWhileCooking","result":"Passed","message":"","stack":"","seconds":0.039623}
+{"name":"PCShopSell.Tests.QuestTests.OpeningMeal_MustEatThenPackAll_AndResumeAfterSave","result":"Passed","message":"","stack":"","seconds":0.0424421}
+{"name":"PCShopSell.Tests.QuestTests.OpeningPurchaseTasksWaitForTheNextDayAndEnoughCash","result":"Passed","message":"","stack":"","seconds":0.0234142}
+{"name":"PCShopSell.Tests.QuestTests.ParkGuideWaitsForRealLandAndConstructionBudget","result":"Passed","message":"","stack":"","seconds":0.0032248}
+{"name":"PCShopSell.Tests.QuestTests.PetShopStarterGiftDoesNotSkipFirstWholesalePurchase(True)","result":"Passed","message":"","stack":"","seconds":0.027948}
+{"name":"PCShopSell.Tests.QuestTests.PetShopStarterGiftDoesNotSkipFirstWholesalePurchase(False)","result":"Passed","message":"","stack":"","seconds":0.025778}
+{"name":"PCShopSell.Tests.QuestTests.PhoneAndQr_ContinueIntoGrowthGuide","result":"Passed","message":"","stack":"","seconds":0.0043513}
+{"name":"PCShopSell.Tests.QuestTests.PricingGuideCompletesWhenAChangedPriceIsSaved","result":"Passed","message":"","stack":"","seconds":0.0122223}
+{"name":"PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText","result":"Failed","message":"  Expected and actual are both <System.String[4]>\r\n  Values differ at index [1]\r\n  Expected string length 17 but was 15. Strings differ at index 0.\r\n  Expected: \"racing_enrollment\"\r\n  But was:  \"bank_securities\"\r\n  -----------^\r\n","stack":"at NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\r\nat NUnit.Framework.CollectionAssert.AreEqual (System.Collections.IEnumerable expected, System.Collections.IEnumerable actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\r\nat PCShopSell.Tests.QuestTests.Quests_AreInOrder_AndHaveText () [0x00094] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:31\r\n","seconds":0.0027784}
+{"name":"PCShopSell.Tests.QuestTests.RentalThenBusinessConfirmationSurvivesLoadWithoutEarlyRewardsOrDoubleCharge","result":"Passed","message":"","stack":"","seconds":0.0104213}
+{"name":"PCShopSell.Tests.QuestTests.RentReward_ThenMallQuest_ThenPlaceFixtures","result":"Passed","message":"","stack":"","seconds":0.0034569}
+{"name":"PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce","result":"Failed","message":"  Expected: 2\r\n  But was:  0.0d\r\n","stack":"at PCShopSell.Tests.QuestTests.RestaurantOpeningRewardOnlyGrantsStockOnce () [0x00149] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\QuestTests.cs:282\r\n","seconds":0.0050367}
+{"name":"PCShopSell.Tests.QuestTests.RestockGuideRequiresWorkingAppBudgetAndOperatingReserve","result":"Passed","message":"","stack":"","seconds":0.0029082}
+{"name":"PCShopSell.Tests.QuestTests.SecondhandOpeningRequiresAResaleShelfEvenAfterLoadingOldProgress(False)","result":"Passed","message":"","stack":"","seconds":0.016196}
+{"name":"PCShopSell.Tests.QuestTests.SecondhandOpeningRequiresAResaleShelfEvenAfterLoadingOldProgress(True)","result":"Passed","message":"","stack":"","seconds":0.0151234}
+{"name":"PCShopSell.Tests.QuestTests.Standing_IsOneScaleForEveryone_AndStableForNpcs","result":"Passed","message":"","stack":"","seconds":0.0026644}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.BatchAcceptanceCanPrepareAllTenAndKeepTheNumbering","result":"Passed","message":"","stack":"","seconds":0.8131027}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.BatteryFailureHappensDuringDrivingAndForcesAbandonment","result":"Passed","message":"","stack":"","seconds":0.0019853}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.BatteryWarningPersistsUntilPaidWorkshopReplacementAndReducesPerformance","result":"Passed","message":"","stack":"","seconds":1.3733612}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.CharityCharges2000AtStartAndAwardsMedalOnlyAfterFinish","result":"Passed","message":"","stack":"","seconds":0.9571448}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.CharityDonationCharges500WithoutBookingOrRaceRewards","result":"Passed","message":"","stack":"","seconds":0.7946904}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.GearIsRealEquipmentPersistsAndDoesNotHealPlayer","result":"Passed","message":"","stack":"","seconds":1.3391729}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.GearReducesActualCrashInjuryAndSponsorPaysOnlyFormalFinishes","result":"Passed","message":"","stack":"","seconds":1.3495524}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.InjuryProtectionReducesTheSameActualCrashWithoutChangingVehicleDamage","result":"Passed","message":"","stack":"","seconds":1.5543131}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.NightRideFollowsAnActualCourseAndItsRouteSurvivesSaving","result":"Passed","message":"","stack":"","seconds":2.7332616}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.NightRideIsAnEveningAppointmentAndCanBeCancelledWithoutInstantRewards","result":"Passed","message":"","stack":"","seconds":0.7876757}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty","result":"Failed","message":"  Expected: True\r\n  But was:  False\r\n","stack":"at PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty () [0x0012c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\RacingEventBatchTests.cs:286\r\n","seconds":1.1952485}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.RematchRequiresAnActualRecordedOpponentAndBookingCancellationRemovesSpecialRace","result":"Passed","message":"","stack":"","seconds":1.1481345}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.RiderChallengeDrivesOneLapAndSchedulesRealMealWithoutCashPrize(True)","result":"Passed","message":"","stack":"","seconds":1.524917}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.RiderChallengeDrivesOneLapAndSchedulesRealMealWithoutCashPrize(False)","result":"Passed","message":"","stack":"","seconds":1.5179552}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.SpectatorRequiresRegistrationAndContactAndOnlyRewardsAttendance","result":"Passed","message":"","stack":"","seconds":1.7658241}
+{"name":"PCShopSell.Tests.RacingEventBatchTests.SponsorOfferHasNoUpfrontPaymentAndPersistsOnTheSelectedVehicle","result":"Passed","message":"","stack":"","seconds":1.5283052}
+{"name":"PCShopSell.Tests.RacingTests.AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave","result":"Passed","message":"","stack":"","seconds":1.5760541}
+{"name":"PCShopSell.Tests.RacingTests.ActualRaceCompletionCreditsOnceAndMeetsRacer","result":"Passed","message":"","stack":"","seconds":0.9614755}
+{"name":"PCShopSell.Tests.RacingTests.AllFourNewContactsHaveTheirOwnImportedPortrait","result":"Passed","message":"","stack":"","seconds":0.0012108}
+{"name":"PCShopSell.Tests.RacingTests.CatalogDealerSplitAndDistinctScooters","result":"Passed","message":"","stack":"","seconds":0.7849647}
+{"name":"PCShopSell.Tests.RacingTests.ChangingTheCommuteCarUpdatesSpeedWhileCarModeIsStillSelected","result":"Passed","message":"","stack":"","seconds":0.7694997}
+{"name":"PCShopSell.Tests.RacingTests.ClubGatheringBooksARealMealWithoutChargingBeforeArrival","result":"Passed","message":"","stack":"","seconds":0.8115545}
+{"name":"PCShopSell.Tests.RacingTests.CollectorTrialUsesBorrowedCarForTwoLaps","result":"Passed","message":"","stack":"","seconds":1.3364349}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(0,\"e_city\")","result":"Passed","message":"","stack":"","seconds":0.0175199}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(0,\"t_cargo\")","result":"Passed","message":"","stack":"","seconds":0.0363562}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(0,\"c_city\")","result":"Passed","message":"","stack":"","seconds":0.0126767}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(1,\"e_race\")","result":"Passed","message":"","stack":"","seconds":0.0104681}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(1,\"t_sport\")","result":"Passed","message":"","stack":"","seconds":0.0181268}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(1,\"c_su7\")","result":"Passed","message":"","stack":"","seconds":0.010726}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(2,\"e_race\")","result":"Passed","message":"","stack":"","seconds":0.0138146}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(2,\"t_sport\")","result":"Passed","message":"","stack":"","seconds":0.0245702}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(2,\"c_718\")","result":"Passed","message":"","stack":"","seconds":0.0138509}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(3,\"e_race\")","result":"Passed","message":"","stack":"","seconds":0.0168936}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(3,\"t_sport\")","result":"Passed","message":"","stack":"","seconds":0.029125}
+{"name":"PCShopSell.Tests.RacingTests.EveryTrackAndVehicleClassCanCompleteUsingDrivingInputs(3,\"c_fa\")","result":"Passed","message":"","stack":"","seconds":0.0168638}
+{"name":"PCShopSell.Tests.RacingTests.GarageMigratesOldFleetAndRoundTripsUpgrades","result":"Passed","message":"","stack":"","seconds":1.739512}
+{"name":"PCShopSell.Tests.RacingTests.GarageTravelStopsAtDoorAndRequiresManualRegistrationBeforeBuyingParking","result":"Passed","message":"","stack":"","seconds":1.3255644}
+{"name":"PCShopSell.Tests.RacingTests.InputsPauseRecoveryAndCollisionArePhysical","result":"Passed","message":"","stack":"","seconds":0.0107128}
+{"name":"PCShopSell.Tests.RacingTests.MapHasFourNonTradableReachableVenuesAndSeparateShops","result":"Passed","message":"","stack":"","seconds":0.7764537}
+{"name":"PCShopSell.Tests.RacingTests.MingRaceBooksBeforeLending3000AndWritesBothToSchedule","result":"Passed","message":"","stack":"","seconds":0.7717571}
+{"name":"PCShopSell.Tests.RacingTests.OldCourseBestDoesNotPreventNewBestOrRemoveCareerWins","result":"Passed","message":"","stack":"","seconds":1.8720122}
+{"name":"PCShopSell.Tests.RacingTests.OldSaveInsideAnIneligibleStarterGarageLoadsAtTheDoor","result":"Passed","message":"","stack":"","seconds":1.1733984}
+{"name":"PCShopSell.Tests.RacingTests.PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates","result":"Passed","message":"","stack":"","seconds":1.1515506}
+{"name":"PCShopSell.Tests.RacingTests.RaceRequiresPhysicalArrivalAndLocallyParkedVehicle","result":"Passed","message":"","stack":"","seconds":0.7636009}
+{"name":"PCShopSell.Tests.RacingTests.RacingEnrollmentRequiresCashAndNoLoansAndMustBeDoneAtGarage","result":"Passed","message":"","stack":"","seconds":1.5561486}
+{"name":"PCShopSell.Tests.RacingTests.RealUiCanShowDealerGarageReceptionAndDrivingHud","result":"Passed","message":"","stack":"","seconds":0.8879519}
+{"name":"PCShopSell.Tests.RacingTests.RegisteredRaceIsAvailableAllDayWithoutArrivedRivals(0)","result":"Passed","message":"","stack":"","seconds":0.7907495}
+{"name":"PCShopSell.Tests.RacingTests.RegisteredRaceIsAvailableAllDayWithoutArrivedRivals(1439)","result":"Passed","message":"","stack":"","seconds":0.7627508}
+{"name":"PCShopSell.Tests.RacingTests.ResizedTrackKeepsItsReceptionClearAndHasTheRequestedDrivingDimensions(0,20,416.175d)","result":"Passed","message":"","stack":"","seconds":0.397153}
+{"name":"PCShopSell.Tests.RacingTests.ResizedTrackKeepsItsReceptionClearAndHasTheRequestedDrivingDimensions(1,28,540.375d)","result":"Passed","message":"","stack":"","seconds":0.3873317}
+{"name":"PCShopSell.Tests.RacingTests.ResizedTrackKeepsItsReceptionClearAndHasTheRequestedDrivingDimensions(2,28,695.52d)","result":"Passed","message":"","stack":"","seconds":0.3879553}
+{"name":"PCShopSell.Tests.RacingTests.ResizedTrackKeepsItsReceptionClearAndHasTheRequestedDrivingDimensions(3,28,836.205d)","result":"Passed","message":"","stack":"","seconds":0.3923941}
+{"name":"PCShopSell.Tests.RacingTests.RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish","result":"Passed","message":"","stack":"","seconds":0.1021063}
+{"name":"PCShopSell.Tests.RacingTests.SettlementOnlyOnceNoPrizeForRetiringAndSavedRecords","result":"Passed","message":"","stack":"","seconds":1.3555711}
+{"name":"PCShopSell.Tests.RacingTests.TrackModelsBuildWithoutChangingSessionOrTakingScreenshots","result":"Passed","message":"","stack":"","seconds":0.2609668}
+{"name":"PCShopSell.Tests.RacingTests.TrackPracticeChargesOnceAndEndsOnlyAfterTwoLaps","result":"Passed","message":"","stack":"","seconds":1.0555239}
+{"name":"PCShopSell.Tests.RacingTests.TuningCharges800AndRepairsActualVehicle","result":"Passed","message":"","stack":"","seconds":1.3490909}
+{"name":"PCShopSell.Tests.RacingTests.UsedCarLoopUsesContactsRealStockCashAndSingleDelivery","result":"Passed","message":"","stack":"","seconds":1.6892895}
+{"name":"PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay","result":"Failed","message":"  首月 + 押金 + 中介费当场付\r\n  Expected: 19400000\r\n  But was:  19500000\r\n","stack":"at PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay () [0x00077] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:425\r\n","seconds":0.0023252}
+{"name":"PCShopSell.Tests.RealtyTests.AdvanceLeaseShowsDaysRemainingUntilHandover","result":"Passed","message":"","stack":"","seconds":0.1587593}
+{"name":"PCShopSell.Tests.RealtyTests.BigShop_NeedsReputation","result":"Passed","message":"","stack":"","seconds":0.0030793}
+{"name":"PCShopSell.Tests.RealtyTests.DebugRentStarterShop_OpensFittedPetShop","result":"Passed","message":"","stack":"","seconds":0.0020615}
+{"name":"PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent","result":"Failed","message":"  首月 + 押金 + 中介费 + 搬家费（旧店没押金）\r\n  Expected: 60800\r\n  But was:  50800\r\n","stack":"at PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent () [0x00168] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CampaignTests.cs:503\r\n","seconds":0.0040217}
+{"name":"PCShopSell.Tests.RealtyTests.NewGame_HasNoShop_StarterUnitListed","result":"Passed","message":"","stack":"","seconds":0.0022526}
+{"name":"PCShopSell.Tests.RealtyTests.OldSave_WithoutLease_KeepsTheShop","result":"Passed","message":"","stack":"","seconds":0.0076127}
+{"name":"PCShopSell.Tests.RealtyTests.OldUnstartedSaveRestoresStarterAndRemovesLeisureVacancyWithoutChangingMoney","result":"Passed","message":"","stack":"","seconds":0.0064118}
+{"name":"PCShopSell.Tests.RealtyTests.ProductionCityStartsWithAffordableOrdinaryShopInItsAgency","result":"Passed","message":"","stack":"","seconds":0.1445309}
+{"name":"PCShopSell.Tests.RealtyTests.ProtectedVenuesNeverEnterListingsAndStarterRemainsAvailable(7UL)","result":"Passed","message":"","stack":"","seconds":0.0073282}
+{"name":"PCShopSell.Tests.RealtyTests.ProtectedVenuesNeverEnterListingsAndStarterRemainsAvailable(19UL)","result":"Passed","message":"","stack":"","seconds":0.0059055}
+{"name":"PCShopSell.Tests.RealtyTests.SaveLoad_KeepsLeaseListingsAndNoShopState","result":"Passed","message":"","stack":"","seconds":0.0101674}
+{"name":"PCShopSell.Tests.RealtyTests.SignLease_AtAgency_PaysRentDepositAndFee","result":"Passed","message":"","stack":"","seconds":0.0056113}
+{"name":"PCShopSell.Tests.RealtyTests.UpcomingListing_OpensOnDay_ThenExpires","result":"Passed","message":"","stack":"","seconds":0.0676752}

@@ -25,7 +25,7 @@ namespace PCShopSell.Tests
             {
                 nodes.Add(new LayoutNodeData { id = entry.Item1, x = entry.Item2, y = entry.Item3 });
                 edges.Add(new LayoutEdgeData { a = "pc", b = entry.Item1 });
-                places.Add(new LayoutPlaceData { id = entry.Item1, node = entry.Item1, name = entry.Item1, kind = "shop", size = "small", explicitEntrance = true });
+                places.Add(new LayoutPlaceData { id = entry.Item1, node = entry.Item1, name = entry.Item1, kind = "shop", size = "small", explicitEntrance = true, tradable = true });
             }
             data.places = places.ToArray(); data.nodes = nodes.ToArray(); data.edges = edges.ToArray();
             var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(5000000), GameTimestamp.From(new GameDate(15), 600), startWithShop: true);
@@ -37,7 +37,7 @@ namespace PCShopSell.Tests
         {
             s.DebugAddListing(id, day, 60, Money.FromYuan(1000));
             GameSessionTests.Teleport(s, "agency");
-            Assert.True(s.SignRetailLease(id, true, kind), id);
+            Assert.True(s.SignRetailLease(id, true, kind), id + ": " + s.LeaseBlocker(s.Listings.FirstOrDefault(l => l.PlaceId == id), true));
         }
 
         [TestCase(2)] [TestCase(3)] [TestCase(4)]
@@ -170,11 +170,15 @@ namespace PCShopSell.Tests
             using (var s = Make())
             {
                 GameSessionTests.Teleport(s, "pc"); Assert.True(s.SetShopMainCategory(kind));
+                var method = typeof(GameSession).GetMethod("SpecialVisitInterval", BindingFlags.Instance | BindingFlags.NonPublic,
+                    null, new[] { typeof(OwnedShop), typeof(int) }, null);
+                long unshared=(long)method.Invoke(s,new object[]{s.MainShop,minutes});
                 Rent(s, "a", kind); Rent(s, "b", kind);
-                var method = typeof(GameSession).GetMethod("SpecialVisitInterval", BindingFlags.Instance | BindingFlags.NonPublic);
-                const double footfallIncrease = 3;
-                long expected = Math.Max(1, (long)Math.Round(minutes * 300.0 * 3 / (s.ShopArrivalDemand(s.MainShop.Place)*footfallIncrease)));
-                Assert.AreEqual(expected, method.Invoke(s, new object[] { s.MainShop, minutes }));
+                GameSessionTests.Teleport(s,"pc"); // 保持老板在场加成一致，只改变竞争店数。
+                Assert.AreEqual(3,s.ShopCompetitionCount(s.MainShop.Place,kind));
+                long shared=(long)method.Invoke(s,new object[]{s.MainShop,minutes});
+                Assert.Greater(shared,unshared,"竞争应降低同类门店的到访频率");
+                Assert.AreEqual(unshared*3,shared,2,"相同客流和声誉下，三家店分摊客流；允许整分钟取整差");
             }
         }
 

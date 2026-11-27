@@ -1,0 +1,14 @@
+{
+  "tag": "baseline-09",
+  "filter": "^PCShopSell.Tests.PerformanceRegressionTests\\.;^PCShopSell.Tests.PlayerWorkTests\\.;^PCShopSell.Tests.PurchasePlanTests\\.;^PCShopSell.Tests.QuarterlyExpoSceneTests\\.;^PCShopSell.Tests.QuarterlyExpoTests\\.;^PCShopSell.Tests.QuestTests\\.;^PCShopSell.Tests.RacingEventBatchTests\\.;^PCShopSell.Tests.RacingTests\\.;^PCShopSell.Tests.RealtyTests\\.;^PCShopSell.Tests.ResidentialAgencyTests\\.",
+  "started": "2026-11-27T17:55:37.9032378+08:00",
+  "seconds": 164.73,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 183,
+  "passed": 164,
+  "failed": 19,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-20261127\\20261127-175537-baseline-09-f32263"
+}

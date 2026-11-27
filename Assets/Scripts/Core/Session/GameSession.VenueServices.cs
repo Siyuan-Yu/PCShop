@@ -281,7 +281,7 @@ namespace PCShopSell.Core.Session
                 return "请从该活动的现场入口开始";
             if (IsGameOver || _sleeping || IsWorking || Racing || CityActivityExclusive) return "请先结束当前活动";
             if (DistrictAccessBlocker(CurrentPlace) is string access) return access;
-            if (NpcVenueStaffingBlocker(CurrentPlace) is string staffing) return staffing;
+            if (NpcVenueStaffingBlocker(CurrentPlace, booking) is string staffing) return staffing;
             if (!VenueRendezvousReady(booking)) return "等同行者到齐后开始";
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, booking.Duration)) return "距离场所打烊太近，无法开始";
             if (!string.IsNullOrEmpty(booking.EventGiftId) && !booking.EventGiftDelivered && Backpack.GiftCount(booking.EventGiftId) == 0)

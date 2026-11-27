@@ -58,6 +58,11 @@ namespace PCShopSell.Core.Session
         }
         private int BlockedDistrictOnTrip(Trip trip)
         {
+            // 全片区已开放时，不必为底栏每个目的地重复扫描整条折线路线。
+            bool anyClosed = false;
+            foreach (var gate in DistrictRoadGates)
+                if (!DistrictRoadOpen(gate.Tier)) { anyClosed = true; break; }
+            if (!anyClosed) return 0;
             for(int i=1;i<trip.Points.Count;i++)
                 if(TryDistrictRoadStop(trip.Points[i-1],trip.Points[i],out _,out int tier))return tier;
             return 0;
@@ -624,7 +629,7 @@ namespace PCShopSell.Core.Session
             _district.Chapter=Math.Max(0,Math.Min(3,_district.Chapter));
             if(CurrentDistrictNode==null)
             {
-                if(_district.NodeId!=null){_district.Chapter=_district.UnlockedTier;_district.PendingChapter=0;_district.InvitationDueAt=0;}
+                if(!string.IsNullOrEmpty(_district.NodeId)){_district.Chapter=_district.UnlockedTier;_district.PendingChapter=0;_district.InvitationDueAt=0;}
                 _district.NodeId=null;_district.MeetingPeople=Array.Empty<string>();_district.MeetingNodeId=null;
             }
             _district.Completed=_district.Completed.Where(id=>DistrictNarrativeCatalog.Nodes.Any(n=>n.Id==id)).ToArray();

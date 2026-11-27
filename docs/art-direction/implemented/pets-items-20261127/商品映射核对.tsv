@@ -1,0 +1,229 @@
+原始键	物品	归一键	命中
+cig	一条好烟	cig	是
+cig_hi	一条名烟	cig_hi	是
+wine	两瓶好酒	wine	是
+baijiu	两瓶白酒	baijiu	是
+drink	一箱饮料	drink	是
+snack	一盒点心	snack	是
+soda	可乐（瓶）	soda	是
+fruit	一箱水果	fruit	是
+visit_hamper	家常臻选礼盒	visit_hamper	是
+flower_rose	玫瑰花束	flower_rose	是
+flower_lily	百合花束	flower_lily	是
+flower_sun	向日葵花束	flower_sun	是
+flower_pot	绿植盆栽	flower_pot	是
+produce:rice	大米（0.5千克/袋）	rice	是
+produce:veg	青菜	veg	是
+produce:egg	鸡蛋	egg	是
+produce:tofu	豆腐	tofu	是
+produce:pork	五花肉	pork	是
+produce:fish_crucian	鲫鱼	fish_crucian	是
+produce:fish_carp	鲤鱼	fish_carp	是
+produce:fish_bass	鲈鱼	fish_bass	是
+produce:fish_white_stripe	白条	fish_white_stripe	是
+produce:fish_topmouth_gudgeon	麦穗鱼	fish_topmouth_gudgeon	是
+produce:fish_bitterling	鳑鲏	fish_bitterling	是
+produce:fish_loach	泥鳅	fish_loach	是
+produce:fish_yellow_catfish	黄颡鱼	fish_yellow_catfish	是
+produce:fish_catfish	鲶鱼	fish_catfish	是
+produce:fish_grass_carp	草鱼	fish_grass_carp	是
+produce:fish_black_carp	青鱼	fish_black_carp	是
+produce:fish_silver_carp	鲢鱼	fish_silver_carp	是
+produce:fish_bighead_carp	鳙鱼	fish_bighead_carp	是
+produce:fish_bream	鳊鱼	fish_bream	是
+produce:fish_yellowtail	鲴鱼	fish_yellowtail	是
+produce:fish_culter	翘嘴	fish_culter	是
+produce:fish_mandarin	鳜鱼	fish_mandarin	是
+produce:fish_snakehead	黑鱼	fish_snakehead	是
+produce:fish_swamp_eel	黄鳝	fish_swamp_eel	是
+produce:fish_farmed_sturgeon	养殖鲟鱼	fish_farmed_sturgeon	是
+fast:burger	鸡腿汉堡	fast:burger	是
+fast:chicken	香酥炸鸡	fast:chicken	是
+fast:fries	薯条	fast:fries	是
+fast:cola	可乐	fast:cola	是
+fast:rice	鸡肉蔬菜饭	fast:rice	是
+fast:combo	汉堡炸鸡套餐（含可乐）	fast:combo	是
+model:harbor:skiff	晨湾·邮差小艇	model:harbor:skiff	是
+model:harbor:beacon	晨湾·雾灯巡航船	model:harbor:beacon	是
+model:harbor:tide	晨湾·潮汐渡轮	model:harbor:tide	是
+model:rainbot:courier	雨巷·纸伞邮差	model:rainbot:courier	是
+model:rainbot:repairer	雨巷·钟表修理员	model:rainbot:repairer	是
+model:rainbot:nightwatch	雨巷·夜巡灯手	model:rainbot:nightwatch	是
+model:garden:sprout	苔园·豆芽访客	model:garden:sprout	是
+model:garden:mushroom	苔园·蘑菇旅人	model:garden:mushroom	是
+model:garden:greenhouse	苔园·玻璃花房	model:garden:greenhouse	是
+model:starlight:lamp	星灯·口袋观测站	model:starlight:lamp	是
+model:starlight:rover	星灯·陨石采样车	model:starlight:rover	是
+model:starlight:tower	星灯·云上信标塔	model:starlight:tower	是
+model:harbor:flagship	晨湾·远航旗舰	model:harbor:flagship	是
+model:rainbot:workshop	雨巷·钟楼工坊	model:rainbot:workshop	是
+model:garden:conservatory	苔园·四季庭院	model:garden:conservatory	是
+model:starlight:observatory	星灯·穹顶天文台	model:starlight:observatory	是
+clothing:cotton_short	巷日·棉风短袖套装	cotton_short	是
+clothing:sport_basic	巷日·晨练运动套装	sport_basic	是
+clothing:shirt	干净衬衫	shirt	是
+clothing:knit_basic	巷日·细纹长袖套装	knit_basic	是
+clothing:winter_basic	巷日·暖棉厚装	winter_basic	是
+clothing:winter_active	巷日·冬行厚装	winter_active	是
+clothing:jacket	休闲夹克	jacket	是
+clothing:trail_light	远迹·轻途运动装	trail_light	是
+clothing:linen_day	远迹·晴昼亚麻套装	linen_day	是
+clothing:shirt_quality	远迹·青石衬衫套装	shirt_quality	是
+clothing:coat_quality	远迹·山风厚装	coat_quality	是
+clothing:formal_quality	远迹·会面西装	formal_quality	是
+clothing:suit	合身西装	suit	是
+clothing:studio_short	序章·留白短袖套装	studio_short	是
+clothing:studio_sport	序章·弧线运动装	studio_sport	是
+clothing:studio_jacket	序章·城市夹克	studio_jacket	是
+clothing:studio_winter	序章·雪原厚装	studio_winter	是
+clothing:studio_formal	序章·夜航礼服套装	studio_formal	是
+clothing:lux_short	岚序·云隙短袖套装	lux_short	是
+clothing:lux_shirt	岚序·纸庭长袖套装	lux_shirt	是
+clothing:lux_sport	岚序·轻峰运动装	lux_sport	是
+clothing:lux_jacket	岚序·暮线夹克	lux_jacket	是
+clothing:lux_winter	岚序·北岸厚装	lux_winter	是
+clothing:lux_formal	岚序·星序西装	lux_formal	是
+pet:catfood	基础猫粮	pet:catfood	是
+pet:dogfood	基础狗粮	pet:dogfood	是
+pet:litter	膨润土猫砂	pet:litter	是
+pet:treat	宠物零食	pet:treat	是
+pet:wand	逗猫棒	pet:wand	是
+pet:ball	宠物软球	pet:ball	是
+pet:leash	牵引绳	pet:leash	是
+pet:mid:catfood	优选猫粮	pet:mid:catfood	是
+pet:mid:dogfood	优选狗粮	pet:mid:dogfood	是
+pet:mid:litter	豆腐猫砂	pet:mid:litter	是
+pet:mid:bowl	陶瓷慢食碗	pet:mid:bowl	是
+pet:mid:brush	软针梳毛刷	pet:mid:brush	是
+pet:high:catfood	鲜肉冻干猫粮	pet:high:catfood	是
+pet:high:dogfood	鲜肉冻干狗粮	pet:high:dogfood	是
+pet:high:litter	低尘混合猫砂	pet:high:litter	是
+pet:high:carrier	透气宠物外出包	pet:high:carrier	是
+pet:high:bed	厚垫宠物窝	pet:high:bed	是
+oldmarket:watch	老式手上链腕表	oldmarket:watch	是
+oldmarket:clock	木壳座钟	oldmarket:clock	是
+oldmarket:pocket	银色怀表	oldmarket:pocket	是
+oldmarket:radio:faulty	便携旧收音机 · 待修	oldmarket:radio	是
+oldmarket:radio	便携旧收音机 · 已修复	oldmarket:radio	是
+oldmarket:cassette:faulty	老式磁带随身听 · 待修	oldmarket:cassette	是
+oldmarket:cassette	老式磁带随身听 · 已修复	oldmarket:cassette	是
+oldmarket:speaker:faulty	木壳有源音箱 · 待修	oldmarket:speaker	是
+oldmarket:speaker	木壳有源音箱 · 已修复	oldmarket:speaker	是
+oldmarket:jazz	爵士黑胶唱片	oldmarket:jazz	是
+oldmarket:folk	民谣唱片套装	oldmarket:folk	是
+oldmarket:record	首版唱片收藏盒	oldmarket:record	是
+oldmarket:book	湖城旧街影集	oldmarket:book	是
+oldmarket:pen	旧款钢笔礼盒	oldmarket:pen	是
+oldmarket:camera	机械相机收藏机	oldmarket:camera	是
+clothing:company_basic	自有通勤衫	company_basic	是
+model:starlight:company	自有拼装模型	model:starlight:company	是
+furn:restaurant_prep	旧餐馆加工台	restaurant_prep	是
+furn:restaurant_stove	餐馆炒锅灶台	restaurant_stove	是
+furn:pet_house_small	小型宠物屋	pet_house_small	是
+furn:pet_house_medium	中型宠物屋	pet_house_medium	是
+furn:pet_house_large	大型宠物屋	pet_house_large	是
+furn:pet_wand_fixture	低档逗猫棒（代养区）	pet_wand_fixture	是
+furn:pet_ball_fixture	低档软球（代养区）	pet_ball_fixture	是
+furn:pet_wand_fixture_mid	中档逗猫棒（代养区）	pet_wand_fixture_mid	是
+furn:pet_ball_fixture_mid	中档软球（代养区）	pet_ball_fixture_mid	是
+furn:pet_wand_fixture_high	高档逗猫棒（代养区）	pet_wand_fixture_high	是
+furn:pet_ball_fixture_high	高档软球（代养区）	pet_ball_fixture_high	是
+furn:restaurant_pass	旧传菜台	restaurant_pass	是
+furn:restaurant_table	餐馆餐桌	restaurant_table	是
+furn:used_buydesk	收购鉴定台	used_buydesk	是
+furn:used_display	二手销售展示台	used_display	是
+furn:model_paintbench	喷漆台	model_paintbench	是
+furn:used_repairbench	二手修复台	used_repairbench	是
+furn:home_workbench	居家办公台	home_workbench	是
+furn:bed_board	硬板床	bed_board	是
+furn:wardrobe_cloth	布衣柜	wardrobe_cloth	是
+furn:fitting_mirror	全身镜	fitting_mirror	是
+furn:table_cooker	折叠小桌（电饭锅）	table_cooker	是
+furn:stool	塑料矮凳	stool	是
+furn:fan_broken	坏电风扇	fan_broken	是
+furn:fan_fixed	电风扇（修好了）	fan_fixed	是
+furn:junk	纸箱和塑料盆	junk	是
+furn:fridge_small	单门冰箱	fridge_small	是
+furn:fridge	双门冰箱	fridge	是
+furn:bed_spring	弹簧床	bed_spring	是
+furn:bed_good	实木床 + 乳胶床垫	bed_good	是
+furn:wardrobe_wood	实木衣柜	wardrobe_wood	是
+furn:fan_new	落地扇	fan_new	是
+furn:aircon	二手冷暖空调	aircon	是
+furn:curtain	窗帘	curtain	是
+furn:rug	小地毯	rug	是
+furn:plant	绿萝盆栽	plant	是
+furn:desk	书桌	desk	是
+furn:sofa	小沙发	sofa	是
+furn:poster	墙上海报	poster	是
+furn:box	纸箱	box	是
+furn:shop_plant	门店绿植	shop_plant	是
+furn:shop_sofa	等候沙发	shop_sofa	是
+furn:shop_dispenser	饮水机	shop_dispenser	是
+furn:shop_poster	品牌海报	shop_poster	是
+furn:shop_led	LED 灯屏	shop_led	是
+furn:shop_box	店铺纸箱	shop_box	是
+furn:shelf	货架	shelf	是
+furn:rack_strong	加固货架	rack_strong	是
+furn:rack_heavy	重型货架	rack_heavy	是
+furn:shop_counter	收银台	shop_counter	是
+furn:shop_display	展示台	shop_display	是
+furn:shop_bench	装机操作台	shop_bench	是
+furn:aircon_large	大店冷暖空调	aircon_large	是
+part:cpu0:box	锐芯 R3-3100	cpu0	是
+part:cpu1:box	锐芯 R5-5600	cpu1	是
+part:cpu2:box	英擎 i7-K70	cpu2	是
+part:mb0:box	鹰嘴 A320M	mb0	是
+part:mb1:box	鹰嘴 B550 战神	mb1	是
+part:mb2:box	禾田 Z790 旗舰	mb2	是
+part:ram0:box	白鲸 DDR4 8G	ram0	是
+part:ram1:box	白鲸 DDR4 16G	ram1	是
+part:ram2:box	雷霆 DDR5 32G	ram2	是
+part:gpu0:box	星耀 GT 550	gpu0	是
+part:gpu1:box	星耀 RX 660	gpu1	是
+part:gpu2:box	星耀 RTX 880	gpu2	是
+part:ssd0:box	闪存侠 256G	ssd0	是
+part:ssd1:box	闪存侠 512G	ssd1	是
+part:ssd2:box	闪存侠 1TB	ssd2	是
+part:psu0:box	铁甲 400W 电源机箱套装	psu0	是
+part:psu1:box	铁甲 550W 电源机箱套装	psu1	是
+part:psu2:box	铁甲 750W 电源机箱套装	psu2	是
+fish_crucian	鲫鱼	fish_crucian	是
+fish_carp	鲤鱼	fish_carp	是
+fish_bass	鲈鱼	fish_bass	是
+fish_white_stripe	白条	fish_white_stripe	是
+fish_topmouth_gudgeon	麦穗鱼	fish_topmouth_gudgeon	是
+fish_bitterling	鳑鲏	fish_bitterling	是
+fish_loach	泥鳅	fish_loach	是
+fish_yellow_catfish	黄颡鱼	fish_yellow_catfish	是
+fish_catfish	鲶鱼	fish_catfish	是
+fish_grass_carp	草鱼	fish_grass_carp	是
+fish_black_carp	青鱼	fish_black_carp	是
+fish_silver_carp	鲢鱼	fish_silver_carp	是
+fish_bighead_carp	鳙鱼	fish_bighead_carp	是
+fish_bream	鳊鱼	fish_bream	是
+fish_yellowtail	鲴鱼	fish_yellowtail	是
+fish_culter	翘嘴	fish_culter	是
+fish_mandarin	鳜鱼	fish_mandarin	是
+fish_snakehead	黑鱼	fish_snakehead	是
+fish_swamp_eel	黄鳝	fish_swamp_eel	是
+fish_farmed_sturgeon	养殖鲟鱼	fish_farmed_sturgeon	是
+used:0	二手物品 0	used:0	是
+used:1	二手物品 1	used:1	是
+used:2	二手物品 2	used:2	是
+used:3	二手物品 3	used:3	是
+used:4	二手物品 4	used:4	是
+used:5	二手物品 5	oldmarket:camera	是
+used:6	二手物品 6	used:6	是
+used:7	二手物品 7	oldmarket:speaker	是
+life:book_accounts	小店记账入门	life:book_accounts	是
+life:book_repairs	旧设备维修手记	life:book_repairs	是
+life:book_streets	湖城街巷故事	life:book_streets	是
+life:dog_food	犬用主粮（一份）	life:dog_food	是
+community:nutrition	献血营养包	community:nutrition	是
+community:lantern:0	纸艺圆月灯	community:lantern:0	是
+community:lantern:1	纸艺莲花灯	community:lantern:1	是
+community:lantern:2	纸艺方宫灯	community:lantern:2	是
+community:lantern:3	精制圆月灯	community:lantern:3	是
+community:lantern:4	精制莲花灯	community:lantern:4	是
+community:lantern:5	精制方宫灯	community:lantern:5	是

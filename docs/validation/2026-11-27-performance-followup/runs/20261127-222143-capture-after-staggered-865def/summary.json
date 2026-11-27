@@ -1,0 +1,14 @@
+{
+  "tag": "capture-after-staggered",
+  "filter": "SimulationPerformanceCapture;PerformanceRegressionTests;PathfinderTests;CityTravelTimingTests;SleepPerformanceTests",
+  "started": "2026-11-27T22:21:43.6488845+08:00",
+  "seconds": 92.12,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 44,
+  "passed": 44,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-222143-capture-after-staggered-865def"
+}

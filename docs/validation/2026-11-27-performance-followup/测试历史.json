@@ -1,0 +1,4013 @@
+{
+  "runs": [
+    {
+      "tag": "capture-after-path-cache",
+      "filter": "SimulationPerformanceCapture;PerformanceRegressionTests;PathfinderTests",
+      "started": "2026-11-27T22:13:55.7811052+08:00",
+      "seconds": 34.41,
+      "timeout": false,
+      "exitCode": 0,
+      "result": "Passed",
+      "total": 14,
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-221355-capture-after-path-cache-a32701",
+      "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701",
+      "observedCases": 14,
+      "observedCounts": {
+        "Passed": 14
+      }
+    },
+    {
+      "tag": "capture-after-indexed-search",
+      "filter": "SimulationPerformanceCapture;PerformanceRegressionTests;PathfinderTests;CityTravelTimingTests;ShopFootfallTests",
+      "started": "2026-11-27T22:16:31.2734155+08:00",
+      "seconds": 37.36,
+      "timeout": false,
+      "exitCode": 2,
+      "result": "Failed(Child)",
+      "total": 50,
+      "passed": 46,
+      "failed": 4,
+      "skipped": 0,
+      "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-221631-capture-after-indexed-search-aa82da",
+      "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da",
+      "observedCases": 50,
+      "observedCounts": {
+        "Passed": 46,
+        "Failed": 4
+      }
+    },
+    {
+      "tag": "capture-after-staggered",
+      "filter": "SimulationPerformanceCapture;PerformanceRegressionTests;PathfinderTests;CityTravelTimingTests;SleepPerformanceTests",
+      "started": "2026-11-27T22:21:43.6488845+08:00",
+      "seconds": 92.12,
+      "timeout": false,
+      "exitCode": 0,
+      "result": "Passed",
+      "total": 44,
+      "passed": 44,
+      "failed": 0,
+      "skipped": 0,
+      "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-222143-capture-after-staggered-865def",
+      "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def",
+      "observedCases": 44,
+      "observedCounts": {
+        "Passed": 44
+      }
+    },
+    {
+      "tag": "final-regression",
+      "filter": "SleepPerformanceTests;PerformanceRegressionTests;CompanyWellbeingRegressionTests;SaveGhostStateTests;CityActivityTests;CityStoryTests;OnsitePlayTests;DistrictDetailTests;DistrictProgressionTests;PathfinderTests;WorldMapTests;CityTravelTimingTests;ShopFootfallTests",
+      "started": "2026-11-27T22:42:57.8514451+08:00",
+      "seconds": 152.37,
+      "timeout": false,
+      "exitCode": 2,
+      "result": "Failed(Child)",
+      "total": 196,
+      "passed": 192,
+      "failed": 4,
+      "skipped": 0,
+      "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-224257-final-regression-d3de67",
+      "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67",
+      "observedCases": 196,
+      "observedCounts": {
+        "Failed": 4,
+        "Passed": 192
+      }
+    },
+    {
+      "tag": "activity-fixtures-current-flow",
+      "filter": "CityActivityTests",
+      "started": "2026-11-27T22:45:47.1414216+08:00",
+      "seconds": 22.44,
+      "timeout": false,
+      "exitCode": 0,
+      "result": "Passed",
+      "total": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "directory": "D:\\tmp\\pcshop-perf-fix-20261127\\20261127-224546-activity-fixtures-current-flow-2c7354",
+      "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354",
+      "observedCases": 15,
+      "observedCounts": {
+        "Passed": 15
+      }
+    }
+  ],
+  "latestCounts": {
+    "Passed": 199
+  },
+  "history": {
+    "PCShopSell.Tests.PathfinderTests.DisconnectedNodes_ReturnNotFound": [
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.DisconnectedNodes_ReturnNotFound",
+        "result": "Passed",
+        "seconds": 0.013787,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.DisconnectedNodes_ReturnNotFound",
+        "result": "Passed",
+        "seconds": 0.000449,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.DisconnectedNodes_ReturnNotFound",
+        "result": "Passed",
+        "seconds": 0.000445,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.DisconnectedNodes_ReturnNotFound",
+        "result": "Passed",
+        "seconds": 0.000391,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PathfinderTests.FindsShortestPath_NotTheDetourEdge": [
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.FindsShortestPath_NotTheDetourEdge",
+        "result": "Passed",
+        "seconds": 0.001733,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.FindsShortestPath_NotTheDetourEdge",
+        "result": "Passed",
+        "seconds": 0.000408,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.FindsShortestPath_NotTheDetourEdge",
+        "result": "Passed",
+        "seconds": 0.000565,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.FindsShortestPath_NotTheDetourEdge",
+        "result": "Passed",
+        "seconds": 0.000472,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PathfinderTests.MatchesBruteForce_OnRandomGraphs": [
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.MatchesBruteForce_OnRandomGraphs",
+        "result": "Passed",
+        "seconds": 0.69166,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.MatchesBruteForce_OnRandomGraphs",
+        "result": "Passed",
+        "seconds": 0.145743,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.MatchesBruteForce_OnRandomGraphs",
+        "result": "Passed",
+        "seconds": 0.146586,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.MatchesBruteForce_OnRandomGraphs",
+        "result": "Passed",
+        "seconds": 0.14991,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PathfinderTests.SameNode_ReturnsZeroDistancePath": [
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.SameNode_ReturnsZeroDistancePath",
+        "result": "Passed",
+        "seconds": 0.001262,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.SameNode_ReturnsZeroDistancePath",
+        "result": "Passed",
+        "seconds": 0.000784,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.SameNode_ReturnsZeroDistancePath",
+        "result": "Passed",
+        "seconds": 0.000787,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.SameNode_ReturnsZeroDistancePath",
+        "result": "Passed",
+        "seconds": 0.000508,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PathfinderTests.UnknownEndpoint_Throws": [
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.UnknownEndpoint_Throws",
+        "result": "Passed",
+        "seconds": 0.001746,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.UnknownEndpoint_Throws",
+        "result": "Passed",
+        "seconds": 0.000807,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.UnknownEndpoint_Throws",
+        "result": "Passed",
+        "seconds": 0.000829,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PathfinderTests.UnknownEndpoint_Throws",
+        "result": "Passed",
+        "seconds": 0.00081,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.CachedDistrictMembershipPreservesFirstMatchAndUnknownStreets": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedDistrictMembershipPreservesFirstMatchAndUnknownStreets",
+        "result": "Passed",
+        "seconds": 0.021731,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedDistrictMembershipPreservesFirstMatchAndUnknownStreets",
+        "result": "Passed",
+        "seconds": 0.01872,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedDistrictMembershipPreservesFirstMatchAndUnknownStreets",
+        "result": "Passed",
+        "seconds": 0.018722,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedDistrictMembershipPreservesFirstMatchAndUnknownStreets",
+        "result": "Passed",
+        "seconds": 0.010953,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth",
+        "result": "Passed",
+        "seconds": 0.033577,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth",
+        "result": "Passed",
+        "seconds": 0.019322,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth",
+        "result": "Passed",
+        "seconds": 0.019152,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNearestNodeMatchesExhaustiveSearchAndInvalidatesAfterMapGrowth",
+        "result": "Passed",
+        "seconds": 0.019589,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.CachedNpcWorkplaceFollowsMovingHomeAndChangedDefinition": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNpcWorkplaceFollowsMovingHomeAndChangedDefinition",
+        "result": "Passed",
+        "seconds": 0.090161,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNpcWorkplaceFollowsMovingHomeAndChangedDefinition",
+        "result": "Passed",
+        "seconds": 0.004486,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNpcWorkplaceFollowsMovingHomeAndChangedDefinition",
+        "result": "Passed",
+        "seconds": 0.004526,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedNpcWorkplaceFollowsMovingHomeAndChangedDefinition",
+        "result": "Passed",
+        "seconds": 0.003288,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.CachedPathsInvalidateOnNewEdgesAndDoNotLeakBetweenMaps": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedPathsInvalidateOnNewEdgesAndDoNotLeakBetweenMaps",
+        "result": "Passed",
+        "seconds": 0.001083,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedPathsInvalidateOnNewEdgesAndDoNotLeakBetweenMaps",
+        "result": "Passed",
+        "seconds": 0.001036,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedPathsInvalidateOnNewEdgesAndDoNotLeakBetweenMaps",
+        "result": "Passed",
+        "seconds": 0.001062,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.CachedPathsInvalidateOnNewEdgesAndDoNotLeakBetweenMaps",
+        "result": "Passed",
+        "seconds": 0.001664,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels",
+        "result": "Passed",
+        "seconds": 0.02036,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels",
+        "result": "Passed",
+        "seconds": 0.021535,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels",
+        "result": "Passed",
+        "seconds": 0.021039,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.FurnitureDetectsInPlaceMutationAndRoomResizeButRetainsUnchangedModels",
+        "result": "Passed",
+        "seconds": 0.0213,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.StreetServiceSpatialIndexKeepsOriginalClearanceAndMeetingNodes": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.StreetServiceSpatialIndexKeepsOriginalClearanceAndMeetingNodes",
+        "result": "Passed",
+        "seconds": 0.454058,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.StreetServiceSpatialIndexKeepsOriginalClearanceAndMeetingNodes",
+        "result": "Passed",
+        "seconds": 0.467249,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.StreetServiceSpatialIndexKeepsOriginalClearanceAndMeetingNodes",
+        "result": "Passed",
+        "seconds": 0.372727,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.StreetServiceSpatialIndexKeepsOriginalClearanceAndMeetingNodes",
+        "result": "Passed",
+        "seconds": 0.374427,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"sleep\")": [
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"sleep\")",
+        "result": "Passed",
+        "seconds": 4.570635,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"sleep\")",
+        "result": "Passed",
+        "seconds": 3.21451,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"sleep\")",
+        "result": "Passed",
+        "seconds": 3.010609,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      }
+    ],
+    "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"faint\")": [
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"faint\")",
+        "result": "Passed",
+        "seconds": 2.904714,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"faint\")",
+        "result": "Passed",
+        "seconds": 1.910329,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"faint\")",
+        "result": "Passed",
+        "seconds": 1.701024,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      }
+    ],
+    "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"hospital\")": [
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"hospital\")",
+        "result": "Passed",
+        "seconds": 4.364982,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-path-cache",
+        "started": "2026-11-27T22:13:55.7811052+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221355-capture-after-path-cache-a32701"
+      },
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"hospital\")",
+        "result": "Passed",
+        "seconds": 3.236528,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.SimulationPerformanceCapture.SameInitialSaveMustProduceIdenticalFinalSave(\"hospital\")",
+        "result": "Passed",
+        "seconds": 2.959141,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")",
+        "result": "Passed",
+        "seconds": 0.33695,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")",
+        "result": "Passed",
+        "seconds": 0.337615,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")",
+        "result": "Passed",
+        "seconds": 0.041455,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Tricycle,\"t_cargo\",\"t_sport\",\"dealer\")": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Tricycle,\"t_cargo\",\"t_sport\",\"dealer\")",
+        "result": "Passed",
+        "seconds": 0.028191,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Tricycle,\"t_cargo\",\"t_sport\",\"dealer\")",
+        "result": "Passed",
+        "seconds": 0.030505,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Tricycle,\"t_cargo\",\"t_sport\",\"dealer\")",
+        "result": "Passed",
+        "seconds": 0.033945,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Car,\"c_city\",\"c_su7\",\"motor_cars\")": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Car,\"c_city\",\"c_su7\",\"motor_cars\")",
+        "result": "Passed",
+        "seconds": 0.027262,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Car,\"c_city\",\"c_su7\",\"motor_cars\")",
+        "result": "Passed",
+        "seconds": 0.050741,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Car,\"c_city\",\"c_su7\",\"motor_cars\")",
+        "result": "Passed",
+        "seconds": 0.042533,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.CancelOrRetargetNearFinalApproachKeepsRealPosition": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.CancelOrRetargetNearFinalApproachKeepsRealPosition",
+        "result": "Passed",
+        "seconds": 1.683323,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.CancelOrRetargetNearFinalApproachKeepsRealPosition",
+        "result": "Passed",
+        "seconds": 1.683725,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.CancelOrRetargetNearFinalApproachKeepsRealPosition",
+        "result": "Passed",
+        "seconds": 1.744648,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.DrawingScaleChangeDoesNotMultiplyAnAlreadyScaledEdgeAgain": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.DrawingScaleChangeDoesNotMultiplyAnAlreadyScaledEdgeAgain",
+        "result": "Passed",
+        "seconds": 0.014239,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.DrawingScaleChangeDoesNotMultiplyAnAlreadyScaledEdgeAgain",
+        "result": "Passed",
+        "seconds": 0.013295,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.DrawingScaleChangeDoesNotMultiplyAnAlreadyScaledEdgeAgain",
+        "result": "Passed",
+        "seconds": 0.013524,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)",
+        "result": "Passed",
+        "seconds": 0.019445,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)",
+        "result": "Passed",
+        "seconds": 0.019396,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)",
+        "result": "Passed",
+        "seconds": 0.020714,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)",
+        "result": "Passed",
+        "seconds": 0.021825,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)",
+        "result": "Passed",
+        "seconds": 0.020755,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)",
+        "result": "Passed",
+        "seconds": 0.021847,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)",
+        "result": "Passed",
+        "seconds": 0.025799,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)",
+        "result": "Passed",
+        "seconds": 0.025517,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)",
+        "result": "Passed",
+        "seconds": 0.026508,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)",
+        "result": "Passed",
+        "seconds": 0.033842,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)",
+        "result": "Passed",
+        "seconds": 0.032023,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)",
+        "result": "Passed",
+        "seconds": 0.03455,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(1)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(1)",
+        "result": "Passed",
+        "seconds": 0.020279,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(1)",
+        "result": "Passed",
+        "seconds": 0.021147,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(1)",
+        "result": "Passed",
+        "seconds": 0.02078,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(2)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(2)",
+        "result": "Passed",
+        "seconds": 0.021604,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(2)",
+        "result": "Passed",
+        "seconds": 0.025286,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(2)",
+        "result": "Passed",
+        "seconds": 0.02216,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(4)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(4)",
+        "result": "Passed",
+        "seconds": 0.026376,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(4)",
+        "result": "Passed",
+        "seconds": 0.029735,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(4)",
+        "result": "Passed",
+        "seconds": 0.025408,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(8)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(8)",
+        "result": "Passed",
+        "seconds": 0.042559,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(8)",
+        "result": "Passed",
+        "seconds": 0.052769,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(8)",
+        "result": "Passed",
+        "seconds": 0.033516,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.NewDestinationResumesManualPauseWithoutReleasingWindowHold": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.NewDestinationResumesManualPauseWithoutReleasingWindowHold",
+        "result": "Passed",
+        "seconds": 0.023399,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.NewDestinationResumesManualPauseWithoutReleasingWindowHold",
+        "result": "Passed",
+        "seconds": 0.007672,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.NewDestinationResumesManualPauseWithoutReleasingWindowHold",
+        "result": "Passed",
+        "seconds": 0.007026,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength",
+        "result": "Passed",
+        "seconds": 0.006468,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength",
+        "result": "Passed",
+        "seconds": 0.006603,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength",
+        "result": "Passed",
+        "seconds": 0.006009,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.SavingMidRoutePreservesPositionRemainingDistanceAndArrival": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.SavingMidRoutePreservesPositionRemainingDistanceAndArrival",
+        "result": "Passed",
+        "seconds": 0.877267,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.SavingMidRoutePreservesPositionRemainingDistanceAndArrival",
+        "result": "Passed",
+        "seconds": 0.908321,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.SavingMidRoutePreservesPositionRemainingDistanceAndArrival",
+        "result": "Passed",
+        "seconds": 0.907585,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(EBike,3)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(EBike,3)",
+        "result": "Passed",
+        "seconds": 0.000362,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(EBike,3)",
+        "result": "Passed",
+        "seconds": 0.000362,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(EBike,3)",
+        "result": "Passed",
+        "seconds": 0.000518,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Tricycle,2.4d)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Tricycle,2.4d)",
+        "result": "Passed",
+        "seconds": 0.000133,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Tricycle,2.4d)",
+        "result": "Passed",
+        "seconds": 0.000136,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Tricycle,2.4d)",
+        "result": "Passed",
+        "seconds": 0.000152,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Van,3.84d)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Van,3.84d)",
+        "result": "Passed",
+        "seconds": 0.000111,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Van,3.84d)",
+        "result": "Passed",
+        "seconds": 0.000121,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Van,3.84d)",
+        "result": "Passed",
+        "seconds": 0.000125,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Car,4.32d)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Car,4.32d)",
+        "result": "Passed",
+        "seconds": 0.000106,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Car,4.32d)",
+        "result": "Passed",
+        "seconds": 0.000117,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Car,4.32d)",
+        "result": "Passed",
+        "seconds": 0.000116,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Taxi,4.8d)": [
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Taxi,4.8d)",
+        "result": "Passed",
+        "seconds": 0.000103,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Taxi,4.8d)",
+        "result": "Passed",
+        "seconds": 0.000118,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Taxi,4.8d)",
+        "result": "Passed",
+        "seconds": 0.000108,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.IndexedPathSearchMatchesOriginalTieBreakingAndDistances": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.IndexedPathSearchMatchesOriginalTieBreakingAndDistances",
+        "result": "Passed",
+        "seconds": 0.210865,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.IndexedPathSearchMatchesOriginalTieBreakingAndDistances",
+        "result": "Passed",
+        "seconds": 0.215972,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.IndexedPathSearchMatchesOriginalTieBreakingAndDistances",
+        "result": "Passed",
+        "seconds": 0.238974,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.PerformanceRegressionTests.ReloadReusesOnlyGeographicFootfallAndKeepsSaveAndRentUnchanged": [
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.ReloadReusesOnlyGeographicFootfallAndKeepsSaveAndRentUnchanged",
+        "result": "Passed",
+        "seconds": 0.009743,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.ReloadReusesOnlyGeographicFootfallAndKeepsSaveAndRentUnchanged",
+        "result": "Passed",
+        "seconds": 0.008762,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.PerformanceRegressionTests.ReloadReusesOnlyGeographicFootfallAndKeepsSaveAndRentUnchanged",
+        "result": "Passed",
+        "seconds": 0.008079,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.ActualLakeMapHasOrderedQuotesAffordableStartAndCachedEstimates": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.ActualLakeMapHasOrderedQuotesAffordableStartAndCachedEstimates",
+        "result": "Passed",
+        "seconds": 0.299474,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.ActualLakeMapHasOrderedQuotesAffordableStartAndCachedEstimates",
+        "result": "Passed",
+        "seconds": 0.09015,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier",
+        "result": "Failed",
+        "seconds": 0.182393,
+        "message": "  Expected: True\n  But was:  False\n",
+        "stack": "at PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier () [0x0014f] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:177\n",
+        "rawResult": "Failed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier",
+        "result": "Passed",
+        "seconds": 0.187652,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.CloserMetroAndHousingEachIncreaseDailyPeopleAndRent": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.CloserMetroAndHousingEachIncreaseDailyPeopleAndRent",
+        "result": "Passed",
+        "seconds": 0.000685,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.CloserMetroAndHousingEachIncreaseDailyPeopleAndRent",
+        "result": "Passed",
+        "seconds": 0.000577,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.DistancesFollowRoadsAndUnreachableSourcesDoNotCountAsNearby": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.DistancesFollowRoadsAndUnreachableSourcesDoNotCountAsNearby",
+        "result": "Passed",
+        "seconds": 0.000381,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.DistancesFollowRoadsAndUnreachableSourcesDoNotCountAsNearby",
+        "result": "Passed",
+        "seconds": 0.000374,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.LargerPremisesHaveMorePassingPeopleAndStrictlyHigherRent": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.LargerPremisesHaveMorePassingPeopleAndStrictlyHigherRent",
+        "result": "Passed",
+        "seconds": 0.000558,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.LargerPremisesHaveMorePassingPeopleAndStrictlyHigherRent",
+        "result": "Passed",
+        "seconds": 0.000639,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.ListingQuoteSigningAndJsonReloadAgree": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.ListingQuoteSigningAndJsonReloadAgree",
+        "result": "Passed",
+        "seconds": 0.016176,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.ListingQuoteSigningAndJsonReloadAgree",
+        "result": "Passed",
+        "seconds": 0.010973,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"computer\")": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"computer\")",
+        "result": "Failed",
+        "seconds": 0.045095,
+        "message": "  Expected: 35.176654859117285d +/- 2\n  But was:  42\n",
+        "stack": "at PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation (System.String kind) [0x000e5] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:88\n",
+        "rawResult": "Failed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"computer\")",
+        "result": "Passed",
+        "seconds": 0.028598,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"pet\")": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"pet\")",
+        "result": "Failed",
+        "seconds": 0.030012,
+        "message": "  Expected: 35.176654859117285d +/- 2\n  But was:  42\n",
+        "stack": "at PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation (System.String kind) [0x000e5] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:88\n",
+        "rawResult": "Failed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"pet\")",
+        "result": "Passed",
+        "seconds": 0.031241,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(0)": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(0)",
+        "result": "Passed",
+        "seconds": 0.013128,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(0)",
+        "result": "Passed",
+        "seconds": 0.01489,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(2)": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(2)",
+        "result": "Passed",
+        "seconds": 0.011498,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.OldSaveRequotesListingsAndPreservesWeeklyContracts(2)",
+        "result": "Passed",
+        "seconds": 0.013262,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize",
+        "result": "Failed",
+        "seconds": 0.005733,
+        "message": "  Expected: 12.745614035087719d +/- 1.0000000000000001E-09d\n  But was:  9.1789416687588119d\n",
+        "stack": "at PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize () [0x000a1] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:67\n",
+        "rawResult": "Failed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize",
+        "result": "Passed",
+        "seconds": 0.006424,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"restaurant\")": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"restaurant\")",
+        "result": "Passed",
+        "seconds": 0.014981,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"restaurant\")",
+        "result": "Passed",
+        "seconds": 0.014884,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"secondhand\")": [
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"secondhand\")",
+        "result": "Passed",
+        "seconds": 0.010254,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-indexed-search",
+        "started": "2026-11-27T22:16:31.2734155+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-221631-capture-after-indexed-search-aa82da"
+      },
+      {
+        "name": "PCShopSell.Tests.ShopFootfallTests.SpecializedShopsUseFootfallForVisitFrequency(\"secondhand\")",
+        "result": "Passed",
+        "seconds": 0.010254,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"sleep\")": [
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"sleep\")",
+        "result": "Passed",
+        "seconds": 5.628816,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"sleep\")",
+        "result": "Passed",
+        "seconds": 5.85173,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"faint\")": [
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"faint\")",
+        "result": "Passed",
+        "seconds": 3.164619,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"faint\")",
+        "result": "Passed",
+        "seconds": 3.361123,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"hospital\")": [
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"hospital\")",
+        "result": "Passed",
+        "seconds": 5.562315,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"hospital\")",
+        "result": "Passed",
+        "seconds": 5.655629,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SleepPerformanceTests.FailedDeferredRestDoesNotOverwriteAValidSaveOrRetryMinute": [
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.FailedDeferredRestDoesNotOverwriteAValidSaveOrRetryMinute",
+        "result": "Passed",
+        "seconds": 0.004447,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.FailedDeferredRestDoesNotOverwriteAValidSaveOrRetryMinute",
+        "result": "Passed",
+        "seconds": 0.004466,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"sleep\")": [
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"sleep\")",
+        "result": "Passed",
+        "seconds": 17.337329,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"sleep\")",
+        "result": "Passed",
+        "seconds": 18.012369,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"faint\")": [
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"faint\")",
+        "result": "Passed",
+        "seconds": 6.315457,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"faint\")",
+        "result": "Passed",
+        "seconds": 6.634008,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"hospital\")": [
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"hospital\")",
+        "result": "Passed",
+        "seconds": 17.321808,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "capture-after-staggered",
+        "started": "2026-11-27T22:21:43.6488845+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-222143-capture-after-staggered-865def"
+      },
+      {
+        "name": "PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"hospital\")",
+        "result": "Passed",
+        "seconds": 17.993797,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks",
+        "result": "Failed",
+        "seconds": 0.359332,
+        "message": "  momo working in closed life_mcn at 第1年1月1日 19:01\n  Expected: True\n  But was:  False\n",
+        "stack": "at PCShopSell.Tests.CityActivityTests+<>c__DisplayClass1_0.<AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks>g__Check|0 () [0x000d3] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:63\nat PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks () [0x000d1] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:72\n",
+        "rawResult": "Failed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks",
+        "result": "Passed",
+        "seconds": 0.772149,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.AppointmentTravelWaitsForTheDepartureWindowWithoutChargingTaxiFare": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.AppointmentTravelWaitsForTheDepartureWindowWithoutChargingTaxiFare",
+        "result": "Passed",
+        "seconds": 0.069639,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.AppointmentTravelWaitsForTheDepartureWindowWithoutChargingTaxiFare",
+        "result": "Passed",
+        "seconds": 0.071379,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.FutureAcceptanceAndCancellationNeverChargeOrGrantCompletion": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.FutureAcceptanceAndCancellationNeverChargeOrGrantCompletion",
+        "result": "Passed",
+        "seconds": 0.052291,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.FutureAcceptanceAndCancellationNeverChargeOrGrantCompletion",
+        "result": "Passed",
+        "seconds": 0.054089,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad",
+        "result": "Passed",
+        "seconds": 0.518353,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad",
+        "result": "Passed",
+        "seconds": 0.544147,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.GardenRingTossSettlesOnceAndKeepsTheSamePartyForTheNextRide": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.GardenRingTossSettlesOnceAndKeepsTheSamePartyForTheNextRide",
+        "result": "Passed",
+        "seconds": 0.116273,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.GardenRingTossSettlesOnceAndKeepsTheSamePartyForTheNextRide",
+        "result": "Passed",
+        "seconds": 0.121429,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302)",
+        "result": "Failed",
+        "seconds": 0.051476,
+        "message": "  Expected: Completed\n  But was:  Running\n",
+        "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x00131] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:105\n",
+        "rawResult": "Failed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302)",
+        "result": "Passed",
+        "seconds": 0.237075,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422)",
+        "result": "Failed",
+        "seconds": 0.045377,
+        "message": "  Expected: Completed\n  But was:  Running\n",
+        "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x00131] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:105\n",
+        "rawResult": "Failed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422)",
+        "result": "Passed",
+        "seconds": 0.199754,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60)",
+        "result": "Failed",
+        "seconds": 0.044845,
+        "message": "  Expected: Completed\n  But was:  Running\n",
+        "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x00131] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:105\n",
+        "rawResult": "Failed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60)",
+        "result": "Passed",
+        "seconds": 0.15322,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce",
+        "result": "Passed",
+        "seconds": 0.451355,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce",
+        "result": "Passed",
+        "seconds": 0.443233,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.TenStreetNetworkHasRoutesToEveryConfiguredEntrance": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.TenStreetNetworkHasRoutesToEveryConfiguredEntrance",
+        "result": "Passed",
+        "seconds": 0.094279,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.TenStreetNetworkHasRoutesToEveryConfiguredEntrance",
+        "result": "Passed",
+        "seconds": 0.09265,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(0,True)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(0,True)",
+        "result": "Passed",
+        "seconds": 0.051132,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(0,True)",
+        "result": "Passed",
+        "seconds": 0.051412,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(5,False)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(5,False)",
+        "result": "Passed",
+        "seconds": 0.051089,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(5,False)",
+        "result": "Passed",
+        "seconds": 0.049493,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(6,False)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(6,False)",
+        "result": "Passed",
+        "seconds": 0.051525,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(6,False)",
+        "result": "Passed",
+        "seconds": 0.054545,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(5,600)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(5,600)",
+        "result": "Passed",
+        "seconds": 0.069239,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(5,600)",
+        "result": "Passed",
+        "seconds": 0.079587,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(0,1230)": [
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(0,1230)",
+        "result": "Passed",
+        "seconds": 0.097034,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      },
+      {
+        "name": "PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(0,1230)",
+        "result": "Passed",
+        "seconds": 0.098233,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "activity-fixtures-current-flow",
+        "started": "2026-11-27T22:45:47.1414216+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224546-activity-fixtures-current-flow-2c7354"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.AcceptingStoryDinnerSchedulesWithoutConsumingTimeMoneyOrRelationship": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.AcceptingStoryDinnerSchedulesWithoutConsumingTimeMoneyOrRelationship",
+        "result": "Passed",
+        "seconds": 0.13992,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.CancellingActivityClearsOnlyItsMatchingPersonRoute": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.CancellingActivityClearsOnlyItsMatchingPersonRoute",
+        "result": "Passed",
+        "seconds": 0.050203,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.ChoosingFriendshipDoesNotRequireOrConsumePromotionMoney": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.ChoosingFriendshipDoesNotRequireOrConsumePromotionMoney",
+        "result": "Passed",
+        "seconds": 0.048238,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.CompletionNotificationOnlyProgressesCompletedActivityAndIsIdempotent": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.CompletionNotificationOnlyProgressesCompletedActivityAndIsIdempotent",
+        "result": "Passed",
+        "seconds": 0.075792,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.LegacyCreatorPrivateInvitationNoLongerChargesOrFastForwards": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.LegacyCreatorPrivateInvitationNoLongerChargesOrFastForwards",
+        "result": "Passed",
+        "seconds": 0.078501,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute",
+        "result": "Passed",
+        "seconds": 0.053416,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.PromotionFeeNeverCreatesRevenueOrPersonalRomanceProgress": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.PromotionFeeNeverCreatesRevenueOrPersonalRomanceProgress",
+        "result": "Passed",
+        "seconds": 0.05117,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CityStoryTests.ReservationRetainsTravelAndLeaveApprovalAcrossSave": [
+      {
+        "name": "PCShopSell.Tests.CityStoryTests.ReservationRetainsTravelAndLeaveApprovalAcrossSave",
+        "result": "Passed",
+        "seconds": 0.076018,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.BlockTradeTransfersRealSharesAndCashAndRejectsOversell": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.BlockTradeTransfersRealSharesAndCashAndRejectsOversell",
+        "result": "Passed",
+        "seconds": 0.015182,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.CompanyOperatingCashIsSeparateAndPersists": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.CompanyOperatingCashIsSeparateAndPersists",
+        "result": "Passed",
+        "seconds": 0.016049,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.CompletedShiftChangesMoraleOnceAndTransferPreservesIt": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.CompletedShiftChangesMoraleOnceAndTransferPreservesIt",
+        "result": "Passed",
+        "seconds": 0.334693,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.DilutionBelowDirectorThresholdRemovesBoardPrivilege": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.DilutionBelowDirectorThresholdRemovesBoardPrivilege",
+        "result": "Passed",
+        "seconds": 0.803938,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.ExactlyHalfAndAggregatedPublicDoNotControlCompany": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.ExactlyHalfAndAggregatedPublicDoNotControlCompany",
+        "result": "Passed",
+        "seconds": 0.003475,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.ExistingSharesCanExitBeforeGarden": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.ExistingSharesCanExitBeforeGarden",
+        "result": "Passed",
+        "seconds": 0.00477,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.GovernanceRefreshAndReloadNeverMintInvestorCash": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.GovernanceRefreshAndReloadNeverMintInvestorCash",
+        "result": "Passed",
+        "seconds": 0.030399,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.IpoTransfersInstitutionCashToCompanyExactlyOnceAndPersists": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.IpoTransfersInstitutionCashToCompanyExactlyOnceAndPersists",
+        "result": "Passed",
+        "seconds": 0.040457,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueRechecksSubscriberFundsAtSettlement": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueRechecksSubscriberFundsAtSettlement",
+        "result": "Passed",
+        "seconds": 0.770516,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueWaitsForVoteAndDoesNotRepeatAfterReload": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueWaitsForVoteAndDoesNotRepeatAfterReload",
+        "result": "Passed",
+        "seconds": 0.844472,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.LeaveIsNextShiftPaidAndCannotBeRepeatedOrCreditedTwice": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.LeaveIsNextShiftPaidAndCannotBeRepeatedOrCreditedTwice",
+        "result": "Passed",
+        "seconds": 1.638598,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.LosingMajorityBeforeHandoverCancelsIt": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.LosingMajorityBeforeHandoverCancelsIt",
+        "result": "Passed",
+        "seconds": 0.00442,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(0)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(0)",
+        "result": "Passed",
+        "seconds": 0.00536,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(1)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(1)",
+        "result": "Passed",
+        "seconds": 0.003305,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(2)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(2)",
+        "result": "Passed",
+        "seconds": 0.006581,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcManagedCompanyDeniesEmployeeAndShopChanges": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcManagedCompanyDeniesEmployeeAndShopChanges",
+        "result": "Passed",
+        "seconds": 0.004835,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcTakeoverKeepsPersonalShopAndHonoursRetentionAfterReload(True)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcTakeoverKeepsPersonalShopAndHonoursRetentionAfterReload(True)",
+        "result": "Passed",
+        "seconds": 0.643394,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcTakeoverKeepsPersonalShopAndHonoursRetentionAfterReload(False)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcTakeoverKeepsPersonalShopAndHonoursRetentionAfterReload(False)",
+        "result": "Passed",
+        "seconds": 0.724561,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(7)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(7)",
+        "result": "Passed",
+        "seconds": 0.181092,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(41)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(41)",
+        "result": "Passed",
+        "seconds": 0.212957,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(914)": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(914)",
+        "result": "Passed",
+        "seconds": 0.190612,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.RequestsMayDeferOnceAndAgreementDoesNotInstantlyRaiseMorale": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.RequestsMayDeferOnceAndAgreementDoesNotInstantlyRaiseMorale",
+        "result": "Passed",
+        "seconds": 0.003702,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.ReturnedBuyerWithUndeliveredGoodsCannotStartLeave": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.ReturnedBuyerWithUndeliveredGoodsCannotStartLeave",
+        "result": "Passed",
+        "seconds": 0.003572,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.SalaryChangeDuringShiftPreservesCurrentPayrollThroughReload": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.SalaryChangeDuringShiftPreservesCurrentPayrollThroughReload",
+        "result": "Passed",
+        "seconds": 0.363077,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.CompanyWellbeingRegressionTests.TakeoverSurvivesSaveAndExecutesOnlyOnce": [
+      {
+        "name": "PCShopSell.Tests.CompanyWellbeingRegressionTests.TakeoverSurvivesSaveAndExecutesOnlyOnce",
+        "result": "Passed",
+        "seconds": 0.650093,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictDetailTests.DelayedInvitationSurvivesSaveAndAnotherSleep": [
+      {
+        "name": "PCShopSell.Tests.DistrictDetailTests.DelayedInvitationSurvivesSaveAndAnotherSleep",
+        "result": "Passed",
+        "seconds": 0.829179,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(600,1)": [
+      {
+        "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(600,1)",
+        "result": "Passed",
+        "seconds": 0.340537,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(720,1)": [
+      {
+        "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(720,1)",
+        "result": "Passed",
+        "seconds": 0.43243,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(1140,1)": [
+      {
+        "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(1140,1)",
+        "result": "Passed",
+        "seconds": 1.21692,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(720,2)": [
+      {
+        "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(720,2)",
+        "result": "Passed",
+        "seconds": 0.426154,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(1140,3)": [
+      {
+        "name": "PCShopSell.Tests.DistrictDetailTests.SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(1140,3)",
+        "result": "Passed",
+        "seconds": 1.181252,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictDetailTests.SleepingToTenBeforeSavedDeadlineStillInvitesAtFourteenOhOne": [
+      {
+        "name": "PCShopSell.Tests.DistrictDetailTests.SleepingToTenBeforeSavedDeadlineStillInvitesAtFourteenOhOne",
+        "result": "Passed",
+        "seconds": 1.349078,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.AgencyPeopleWaitOnStreetBeforeBookingAndAfterLegacyReload": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.AgencyPeopleWaitOnStreetBeforeBookingAndAfterLegacyReload",
+        "result": "Passed",
+        "seconds": 0.273715,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.CommunityInvitationRequiresOwnCashAndNoOutstandingBankOrFriendLoans": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.CommunityInvitationRequiresOwnCashAndNoOutstandingBankOrFriendLoans",
+        "result": "Passed",
+        "seconds": 0.083033,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.CuttingTheThreeCheckpointEdgesSeparatesEveryHigherDistrictFromTheStarterArea": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.CuttingTheThreeCheckpointEdgesSeparatesEveryHigherDistrictFromTheStarterArea",
+        "result": "Passed",
+        "seconds": 0.051532,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0)",
+        "result": "Passed",
+        "seconds": 0.117303,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1)",
+        "result": "Passed",
+        "seconds": 0.073146,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2)",
+        "result": "Passed",
+        "seconds": 0.074336,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.EarlyArrivalKeepsExactMeetingDateTimeAndRemainingWait(15)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.EarlyArrivalKeepsExactMeetingDateTimeAndRemainingWait(15)",
+        "result": "Passed",
+        "seconds": 0.076197,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.EarlyArrivalKeepsExactMeetingDateTimeAndRemainingWait(1500)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.EarlyArrivalKeepsExactMeetingDateTimeAndRemainingWait(1500)",
+        "result": "Passed",
+        "seconds": 0.073277,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.ElectronicsMarketOutingCannotBeBookedOnSupplierWeekend": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.ElectronicsMarketOutingCannotBeBookedOnSupplierWeekend",
+        "result": "Passed",
+        "seconds": 0.053294,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.FirstPresetCreatesRealFittedShopsAndCashOnceButDoesNotUnlockRoads": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.FirstPresetCreatesRealFittedShopsAndCashOnceButDoesNotUnlockRoads",
+        "result": "Passed",
+        "seconds": 7.045041,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(1)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(1)",
+        "result": "Passed",
+        "seconds": 0.05035,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(2)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(2)",
+        "result": "Passed",
+        "seconds": 0.049582,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(3)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(3)",
+        "result": "Passed",
+        "seconds": 0.063433,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.HomeVisitRequiresFamiliarResidentToBePresent": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.HomeVisitRequiresFamiliarResidentToBePresent",
+        "result": "Passed",
+        "seconds": 0.051815,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.HomeWorkingLeadUsesAssignedResidenceInsteadOfOldAuthoredAddress": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.HomeWorkingLeadUsesAssignedResidenceInsteadOfOldAuthoredAddress",
+        "result": "Passed",
+        "seconds": 0.10325,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.IncompleteWrongPersonAndWrongServiceOutingsDoNotRevealClues": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.IncompleteWrongPersonAndWrongServiceOutingsDoNotRevealClues",
+        "result": "Passed",
+        "seconds": 0.050003,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.InvitationAndRealMeetingUnlockOnlyFirstGateAndSurviveReload": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.InvitationAndRealMeetingUnlockOnlyFirstGateAndSurviveReload",
+        "result": "Passed",
+        "seconds": 8.878493,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce",
+        "result": "Passed",
+        "seconds": 0.111404,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions",
+        "result": "Passed",
+        "seconds": 0.074143,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.LockedDistrictLeadRetainsActualLocationAndDoesNotSendPlayerHome",
+        "result": "Passed",
+        "seconds": 0.053001,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(False)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(False)",
+        "result": "Passed",
+        "seconds": 0.20877,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(True)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(True)",
+        "result": "Passed",
+        "seconds": 0.1985,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.MetroCannotBypassGateOrChargeFareForRejectedTrip": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.MetroCannotBypassGateOrChargeFareForRejectedTrip",
+        "result": "Passed",
+        "seconds": 0.048259,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial",
+        "result": "Passed",
+        "seconds": 0.070241,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.QuestContactNavigationUsesCurrentWorkplace": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.QuestContactNavigationUsesCurrentWorkplace",
+        "result": "Passed",
+        "seconds": 0.051572,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.ReturningQuestContactNavigationUsesStreetPositionBeforeArrival": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.ReturningQuestContactNavigationUsesStreetPositionBeforeArrival",
+        "result": "Passed",
+        "seconds": 0.053024,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.SavedPagesBringTangFromLockedCommunityToAccessibleHandover": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.SavedPagesBringTangFromLockedCommunityToAccessibleHandover",
+        "result": "Passed",
+        "seconds": 0.235384,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.SaveReloadInFlightStillStopsAtRoadAndDoesNotUnlockAnything": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.SaveReloadInFlightStillStopsAtRoadAndDoesNotUnlockAnything",
+        "result": "Passed",
+        "seconds": 0.103731,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.TaxiCannotBypassGateAndDoesNotChargeForBlockedRoad": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.TaxiCannotBypassGateAndDoesNotChargeForBlockedRoad",
+        "result": "Passed",
+        "seconds": 0.05205,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload",
+        "result": "Passed",
+        "seconds": 9.023194,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.TrailActivityCompletesAtClosingOrAcrossMidnight(False)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.TrailActivityCompletesAtClosingOrAcrossMidnight(False)",
+        "result": "Passed",
+        "seconds": 0.27356,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.TrailActivityCompletesAtClosingOrAcrossMidnight(True)": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.TrailActivityCompletesAtClosingOrAcrossMidnight(True)",
+        "result": "Passed",
+        "seconds": 0.197133,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses": [
+      {
+        "name": "PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses",
+        "result": "Passed",
+        "seconds": 0.133154,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.AFlightCanBeSavedAndResumedWithoutRerollingItsLanding": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.AFlightCanBeSavedAndResumedWithoutRerollingItsLanding",
+        "result": "Passed",
+        "seconds": 0.33566,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.BasketballChargeKeepsRisingPastTheHoopDistanceAndHighAimStillMisses",
+        "result": "Passed",
+        "seconds": 0.33524,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.BasketballUsesActualAimPowerFlightAndDistinctTrainingModes": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.BasketballUsesActualAimPowerFlightAndDistinctTrainingModes",
+        "result": "Passed",
+        "seconds": 0.497801,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.BasketballUsesTheNewShotPositionAfterReload": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.BasketballUsesTheNewShotPositionAfterReload",
+        "result": "Passed",
+        "seconds": 0.388446,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.GolfClubPowerAndAngleChangeRealLandingAndFiveShotsComplete": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.GolfClubPowerAndAngleChangeRealLandingAndFiveShotsComplete",
+        "result": "Passed",
+        "seconds": 0.485886,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(0,600)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(0,600)",
+        "result": "Passed",
+        "seconds": 0.472995,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(1,2400)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(1,2400)",
+        "result": "Passed",
+        "seconds": 0.454226,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(2,0)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(2,0)",
+        "result": "Passed",
+        "seconds": 0.485528,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(3,1800)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.GroupPaymentUsesActualFourPersonBillAndCorrectHost(3,1800)",
+        "result": "Passed",
+        "seconds": 0.479136,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.GroupTopicsBindTheActualPersonAndCannotBeSpammed": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.GroupTopicsBindTheActualPersonAndCannotBeSpammed",
+        "result": "Passed",
+        "seconds": 0.619768,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(54)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(54)",
+        "result": "Passed",
+        "seconds": 0.301903,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(57)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(57)",
+        "result": "Passed",
+        "seconds": 0.275194,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(51)",
+        "result": "Passed",
+        "seconds": 0.321022,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(52)",
+        "result": "Passed",
+        "seconds": 0.474123,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(53)",
+        "result": "Passed",
+        "seconds": 0.31761,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(54)",
+        "result": "Passed",
+        "seconds": 0.302684,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(55)",
+        "result": "Passed",
+        "seconds": 0.411294,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(56)",
+        "result": "Passed",
+        "seconds": 0.342188,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(57)",
+        "result": "Passed",
+        "seconds": 0.29065,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(58)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(58)",
+        "result": "Passed",
+        "seconds": 0.304797,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(76)",
+        "result": "Passed",
+        "seconds": 0.370732,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.LateSportsPurchaseIsBlockedAndEarlySettlementChargesOnlyUsedTime": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.LateSportsPurchaseIsBlockedAndEarlySettlementChargesOnlyUsedTime",
+        "result": "Passed",
+        "seconds": 0.258615,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.LeavingTastingEarlyDoesNotChargeTheReservedTime": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.LeavingTastingEarlyDoesNotChargeTheReservedTime",
+        "result": "Passed",
+        "seconds": 0.325306,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.LowIntelligenceCanNegotiateButFailsAndNeverCreatesAnInstantOrder": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.LowIntelligenceCanNegotiateButFailsAndNeverCreatesAnInstantOrder",
+        "result": "Passed",
+        "seconds": 0.574085,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.MixedDrinkAndRemainingTasteTimeSurviveJson": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.MixedDrinkAndRemainingTasteTimeSurviveJson",
+        "result": "Passed",
+        "seconds": 0.355019,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,0,True)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,0,True)",
+        "result": "Passed",
+        "seconds": 0.490276,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(0,0,0,False)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(0,0,0,False)",
+        "result": "Passed",
+        "seconds": 0.466959,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,1,0,False)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,1,0,False)",
+        "result": "Passed",
+        "seconds": 0.482919,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,1,False)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(1,0,1,False)",
+        "result": "Passed",
+        "seconds": 0.474274,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.NewFloorNeedsAllThreeExercisesAndActualFeedback": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.NewFloorNeedsAllThreeExercisesAndActualFeedback",
+        "result": "Passed",
+        "seconds": 0.661871,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime",
+        "result": "Passed",
+        "seconds": 0.508648,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.PhotoInvitationUsesRealExhibitionDatesAndRequiresSavedDifferentSubjects": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.PhotoInvitationUsesRealExhibitionDatesAndRequiresSavedDifferentSubjects",
+        "result": "Passed",
+        "seconds": 0.486477,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat",
+        "result": "Passed",
+        "seconds": 0.377291,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.StandingStillDoesNotCompleteTheMissingOnsiteTask": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.StandingStillDoesNotCompleteTheMissingOnsiteTask",
+        "result": "Passed",
+        "seconds": 0.493479,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.SuccessfulProcurementCreatesOneRealOfferOnlyAfterShotsAndDiscussion": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.SuccessfulProcurementCreatesOneRealOfferOnlyAfterShotsAndDiscussion",
+        "result": "Passed",
+        "seconds": 0.360254,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(0,True)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(0,True)",
+        "result": "Passed",
+        "seconds": 0.487887,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(1,False)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(1,False)",
+        "result": "Passed",
+        "seconds": 0.500397,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(2,False)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(2,False)",
+        "result": "Passed",
+        "seconds": 0.486878,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce",
+        "result": "Passed",
+        "seconds": 0.568483,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.TeacherGameNeedsFivePhysicalPossessions": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.TeacherGameNeedsFivePhysicalPossessions",
+        "result": "Passed",
+        "seconds": 0.580729,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_court\",54,300)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_court\",54,300)",
+        "result": "Passed",
+        "seconds": 0.392057,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_court_mid\",54,300)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_court_mid\",54,300)",
+        "result": "Passed",
+        "seconds": 0.376999,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_fitness\",54,300)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_fitness\",54,300)",
+        "result": "Passed",
+        "seconds": 0.396897,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_golf\",57,150)": [
+      {
+        "name": "PCShopSell.Tests.OnsitePlayTests.VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(\"life_golf\",57,150)",
+        "result": "Passed",
+        "seconds": 0.373215,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SaveGhostStateTests.EmptyMarketFindStaysEmptyAndRealUnclaimedFindSurvivesJson": [
+      {
+        "name": "PCShopSell.Tests.SaveGhostStateTests.EmptyMarketFindStaysEmptyAndRealUnclaimedFindSurvivesJson",
+        "result": "Passed",
+        "seconds": 0.121462,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SaveGhostStateTests.JsonReloadKeepsOnDutyStaffWorkingWithoutInventingAVisit": [
+      {
+        "name": "PCShopSell.Tests.SaveGhostStateTests.JsonReloadKeepsOnDutyStaffWorkingWithoutInventingAVisit",
+        "result": "Passed",
+        "seconds": 0.091871,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SaveGhostStateTests.NoLinLoan_StaysNoLoanAfterReload": [
+      {
+        "name": "PCShopSell.Tests.SaveGhostStateTests.NoLinLoan_StaysNoLoanAfterReload",
+        "result": "Passed",
+        "seconds": 0.093447,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SaveGhostStateTests.NoScratchTicket_StaysNoTicketAfterReload_AndTicketCanBeBought": [
+      {
+        "name": "PCShopSell.Tests.SaveGhostStateTests.NoScratchTicket_StaysNoTicketAfterReload_AndTicketCanBeBought",
+        "result": "Passed",
+        "seconds": 0.092205,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SaveGhostStateTests.RealLinLoan_SurvivesReload": [
+      {
+        "name": "PCShopSell.Tests.SaveGhostStateTests.RealLinLoan_SurvivesReload",
+        "result": "Passed",
+        "seconds": 0.091211,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.SaveGhostStateTests.RealScratchTicket_SurvivesReload": [
+      {
+        "name": "PCShopSell.Tests.SaveGhostStateTests.RealScratchTicket_SurvivesReload",
+        "result": "Passed",
+        "seconds": 0.094177,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.WorldMapTests.AddEdge_AllowsLongerDetour_ButNotShorter": [
+      {
+        "name": "PCShopSell.Tests.WorldMapTests.AddEdge_AllowsLongerDetour_ButNotShorter",
+        "result": "Passed",
+        "seconds": 0.000474,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.WorldMapTests.AddEdge_DefaultsToStraightDistance": [
+      {
+        "name": "PCShopSell.Tests.WorldMapTests.AddEdge_DefaultsToStraightDistance",
+        "result": "Passed",
+        "seconds": 0.000276,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.WorldMapTests.DuplicateNodeOrEdge_Throws": [
+      {
+        "name": "PCShopSell.Tests.WorldMapTests.DuplicateNodeOrEdge_Throws",
+        "result": "Passed",
+        "seconds": 0.000361,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ],
+    "PCShopSell.Tests.WorldMapTests.UnknownNode_Throws": [
+      {
+        "name": "PCShopSell.Tests.WorldMapTests.UnknownNode_Throws",
+        "result": "Passed",
+        "seconds": 0.000332,
+        "message": "",
+        "stack": "",
+        "rawResult": "Passed",
+        "tag": "final-regression",
+        "started": "2026-11-27T22:42:57.8514451+08:00",
+        "artifact": "D:\\UnityProjects\\PCShop\\PCShop\\docs\\validation\\2026-11-27-performance-followup\\runs\\20261127-224257-final-regression-d3de67"
+      }
+    ]
+  }
+}

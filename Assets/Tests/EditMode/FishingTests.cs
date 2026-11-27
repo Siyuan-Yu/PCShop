@@ -97,8 +97,9 @@ namespace PCShopSell.Tests
         private static CityActivity Invite(GameSession s, int number, int choice = 0)
         {
             var a = BookFishing(s, number, choice);
-            s.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440));
+            CityTestPeople.ApproachAppointment(s,a);
             At(s, a.VenueId);
+            CityTestPeople.WaitForVenueStaff(s,a);
             Assert.IsTrue(s.StartVenueAppointment(a.Id), s.VenueAppointmentStartBlocker(a));
             s.AdvanceClock(3);
             Assert.IsTrue(s.FishingActive); return a;
@@ -117,10 +118,14 @@ namespace PCShopSell.Tests
             Assert.AreEqual(1, loaded.Backpack.Food.IngredientCount(fishId)); Assert.AreEqual(startingWeight + fish.Kg, loaded.Backpack.WeightKg, .001);
             Assert.IsNotNull(Ingredients.Get(fishId)); Assert.Greater(Ingredients.Get(fishId).Price.Yuan, fish.SalePrice);
             Assert.IsNull(Ingredients.GetRiceCookerRecipe(fishId));
-            var cash = loaded.Ledger.Balance; Assert.IsTrue(loaded.SellFishingCatch(fishId, 1));
+            var cash = loaded.Ledger.Balance; Assert.IsTrue(loaded.SellFishingCatch(fishId, 1),
+                $"出售失败：场所={loaded.CurrentPlace?.Id} 营业={loaded.IsPlaceOpen(loaded.CurrentPlace)} 阶段={loaded.CurrentFishing?.Phase} " + loaded.NpcVenueStaffingBlocker(loaded.CurrentPlace)
+                + " 保存前=" + Staff(s) + " 读档后=" + Staff(loaded));
             Assert.AreEqual(cash + Money.FromYuan(fish.SalePrice), loaded.Ledger.Balance);
             Assert.IsFalse(loaded.SellFishingCatch(fishId, 1));
         }
+        private static string Staff(GameSession s) => string.Join(";",s.CityPeople.Where(p=>p.WorkPlaceId==GameSession.FishingVenueId)
+            .Select(p=>$"{p.PersonId}:{p.LocationPlaceId}:{p.Task}:route={p.Route?.ArriveMinute}:act={p.ActivityId}:visit={p.VisitId}:duty={s.IsOnDutyVenueNpc(s.City.GetPlace(GameSession.FishingVenueId),p)}"));
         [Test]
         public void TwentySpeciesHaveDistinctPoolsPreferencesAndBoundedMovement()
         {
@@ -207,12 +212,12 @@ namespace PCShopSell.Tests
             var cash = s.Ledger.Balance;
             if (booking != null)
             {
-                var time = new GameTimestamp(booking.ScheduledStart);
-                s.Clock.Restore(time.Date, time.MinuteOfDay);
+                CityTestPeople.ApproachAppointment(s,booking);
                 var venue = s.CurrentPlace;
                 s.Leave();
                 s.ArriveAtNode(venue.NodeId);
                 Assert.IsTrue(s.Enter(venue, booking.Id));
+                CityTestPeople.WaitForVenueStaff(s,booking);
                 s.AdvanceClock(3);
                 Assert.IsFalse(booking.EntryPaid);
                 Assert.IsFalse(s.FishingActive);
@@ -242,6 +247,15 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(36, entry.GetComponent<LayoutElement>().preferredHeight);
                 if (booking != null) StringAssert.Contains("付款并开始钓鱼", entry.GetComponentInChildren<Text>().text);
                 entry.onClick.Invoke();
+                if (booking == null)
+                {
+                    ui.RebuildWindows();
+                    var confirm = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
+                        .Single(button => button.name == "VenueWalkInStart");
+                    Assert.True(confirm.interactable);
+                    Assert.AreEqual(cash, s.Ledger.Balance, "选择项目时不提前扣款");
+                    confirm.onClick.Invoke();
+                }
                 Assert.True(ui.FishingInputActive);
                 Assert.AreEqual(duration, s.RunningCityActivity.Duration);
                 Assert.AreEqual(cash - Money.FromYuan(cost), s.Ledger.Balance);
@@ -446,7 +460,7 @@ namespace PCShopSell.Tests
         {
             using var s = Make(); var a = Invite(s, 60); s.Player.Intelligence = 50;
             Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); Assert.AreEqual(1, s.CurrentFishing.Style);
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); Assert.AreEqual(1, s.CurrentFishing.Style);
+            Assert.IsFalse(s.ChooseCityActivity(a.Id, 2)); Assert.AreEqual(1, s.CurrentFishing.Style);
             using var loaded = Reload(s); UseRemainingCasts(loaded); Assert.True(loaded.CancelCityActivity(a.Id, true));
             Assert.AreEqual(52, loaded.Player.Intelligence); Assert.IsFalse(loaded.Flags.Contains("fishing:qiaosong-story"));
             using var other = Make(); var story = Invite(other, 60); Assert.IsTrue(other.ChooseCityActivity(story.Id, 2));

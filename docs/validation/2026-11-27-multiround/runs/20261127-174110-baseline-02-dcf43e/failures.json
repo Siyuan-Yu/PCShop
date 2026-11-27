@@ -1,0 +1,57 @@
+[
+  {
+    "name": "PCShopSell.Tests.BuyerHistoryTests.StoreBuyersShowOnlyThisStoreAndReturnToOverviewAfterEditing",
+    "message": "System.InvalidOperationException : Sequence contains no matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.BuyerHistoryTests.<StoreBuyersShowOnlyThisStoreAndReturnToOverviewAfterEditing>g__Button|6_1 (System.String text, PCShopSell.Tests.BuyerHistoryTests+<>c__DisplayClass6_1& ) [0x0000d] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\BuyerHistoryTests.cs:153 \n  at PCShopSell.Tests.BuyerHistoryTests.StoreBuyersShowOnlyThisStoreAndReturnToOverviewAfterEditing () [0x0043e] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\BuyerHistoryTests.cs:179 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks",
+    "message": "  racer_0 working in closed race_0 at 第1年1月6日 10:00\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests+<>c__DisplayClass1_0.<AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks>g__Check|0 () [0x00070] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityActivityTests.cs:58\nat PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks () [0x00014] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityActivityTests.cs:60\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x0006f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityActivityTests.cs:92\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x0006f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityActivityTests.cs:92\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x0006f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityActivityTests.cs:92\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce",
+    "message": "  Expected: Completed\n  But was:  Running\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce () [0x002b1] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityActivityTests.cs:203\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityAssetIntegrationTests.EquityFullLiquidationClearsCostAndCannotRoundTripProfit",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityAssetIntegrationTests.EquityFullLiquidationClearsCostAndCannotRoundTripProfit () [0x0002b] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityAssetIntegrationTests.cs:85\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityAssetIntegrationTests.EquityHistoryHoldingsAndRandomContinuationSurviveSaveLoad",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityAssetIntegrationTests.EquityHistoryHoldingsAndRandomContinuationSurviveSaveLoad () [0x00008] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityAssetIntegrationTests.cs:97\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityAssetIntegrationTests.MaximumStockBuyUsesWholeLotsWithinTheCurrentQuote",
+    "message": "  Expected: 200\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.CityAssetIntegrationTests.MaximumStockBuyUsesWholeLotsWithinTheCurrentQuote () [0x00027] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityAssetIntegrationTests.cs:118\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityAssetIntegrationTests.StockBatchValidatesEveryOrderBeforeSellingAndUsesSaleProceedsForPurchase",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityAssetIntegrationTests.StockBatchValidatesEveryOrderBeforeSellingAndUsesSaleProceedsForPurchase () [0x0001a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityAssetIntegrationTests.cs:161\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityClothingTests.ClothingCatalogHasDistinctAffordableWarmAndLuxuryCoolChoices",
+    "message": "  Expected: 280\n  But was:  266\n",
+    "stack": "at PCShopSell.Tests.CityClothingTests.ClothingCatalogHasDistinctAffordableWarmAndLuxuryCoolChoices () [0x0006a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityClothingTests.cs:19\n"
+  }
+]

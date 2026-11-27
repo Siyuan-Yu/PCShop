@@ -25,24 +25,20 @@ namespace PCShopSell.Game
                 {
                     if (_eventCatView == null)
                     {
-                        _eventCatView = new GameObject("TemporaryShopCat"); var r = _eventCatView.transform;
-                        var fur = Mats.Lit(new Color(.7f, .52f, .34f)); var dark = Mats.Lit(ArtDirection.Ink);
-                        Prims.Shape(PrimitiveType.Sphere, r, "CatBody", new Vector3(0, .23f, 0), new Vector3(.4f, .37f, .65f), fur);
-                        Prims.Shape(PrimitiveType.Sphere, r, "CatHead", new Vector3(0, .45f, -.27f), new Vector3(.36f, .33f, .32f), fur);
-                        foreach (float x in new[] { -.12f, .12f })
-                        {
-                            Prims.Box(r, "CatEar", new Vector3(x, .63f, -.25f), new Vector3(.12f, .18f, .13f), fur);
-                            Prims.Shape(PrimitiveType.Sphere, r, "CatEye", new Vector3(x * .7f, .48f, -.43f), new Vector3(.04f, .05f, .025f), dark);
-                            Prims.Box(r, "CatPaw", new Vector3(x, .08f, -.15f), new Vector3(.15f, .13f, .27f), fur);
-                        }
-                        Prims.Box(r, "CatTail", new Vector3(.2f, .18f, .3f), new Vector3(.12f, .1f, .55f), fur);
+                        _eventCatView = PetSceneModels.BuildAnimal(null,false,ArtDirection.Hex("B38557"),true,out var head,out var tail,out var legs);
+                        _eventCatView.name = "TemporaryShopCat";
+                        _eventCatView.AddComponent<PetCompanionMotion>().Bind(false,head,tail,legs);
+                        var r = _eventCatView.transform;
                         _eventCatBowl = Prims.Shape(PrimitiveType.Cylinder, r, "WaterBowl", new Vector3(.55f, .08f, -.3f), new Vector3(.3f, .1f, .3f), Mats.Lit(ArtDirection.Blue));
-                        Prims.SignText(r, "来歇脚的小猫", new Vector3(0, 1, 0), 1.6f, .24f, ArtDirection.Cream);
                     }
-                    _eventCatView.transform.SetParent(parent, false);
+                    _eventCatView.SetActive(true);
+                    _eventCatView.GetComponent<PetCompanionMotion>().Playing = Session.Time.IsRunning;
+                    if (_eventCatView.transform.parent != parent)
+                    { _eventCatView.transform.SetParent(parent, false); _eventCatView.GetComponent<PetCompanionMotion>().ResetTravel(); }
                     _eventCatView.transform.localPosition = InInterior && Session.CurrentPlace?.Id == cat.ShopId ? new Vector3(.8f, 0, 1.2f) : new Vector3(1.2f, 0, -1);
                     _eventCatBowl.SetActive(cat.Water);
                 }
+                else if (_eventCatView != null) _eventCatView.SetActive(false);
             }
             var samples = Session.ShopEventTasks.Where(t => t.Kind == "sample" && t.Status != "在途").ToArray();
             foreach (string id in _eventSampleViews.Keys.Where(id => !samples.Any(t => t.Id == id)).ToArray())

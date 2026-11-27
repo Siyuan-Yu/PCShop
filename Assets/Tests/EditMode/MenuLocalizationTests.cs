@@ -145,7 +145,9 @@ namespace PCShopSell.Tests
                 Assert.False(SaveStore.InspectSlot(false).Exists);
                 Assert.True(SaveStore.InspectSlot(true).Exists);
                 Assert.IsNotEmpty(SaveStore.InspectSlot(true).SavedAt);
-                File.Move(SaveStore.AutoPath, SaveStore.AutoPath + ".bak");
+                // 连续自动保存本来就会生成备份；删除主文件来验证已有备份回退。
+                Assert.True(File.Exists(SaveStore.AutoPath + ".bak"));
+                File.Delete(SaveStore.AutoPath);
                 Assert.True(SaveStore.InspectSlot(true).Exists);
                 Assert.IsNotEmpty(SaveStore.InspectSlot(true).SavedAt);
             }

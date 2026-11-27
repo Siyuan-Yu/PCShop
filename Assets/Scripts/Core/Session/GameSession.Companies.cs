@@ -19,6 +19,7 @@ namespace PCShopSell.Core.Session
         public int OrdinarySeats = 2;
         public int BudgetYuan = 45000;
         public int Project = -1, WorkMinutes, Completed;
+        public double WorkMinuteRemainder;
         public int PromotionUntilDay = -1;
         public CompanyDepartmentState Copy() => (CompanyDepartmentState)MemberwiseClone();
         public bool Delivered(CompanyProject project) => (Completed & (1 << (int)project)) != 0;
@@ -50,6 +51,7 @@ namespace PCShopSell.Core.Session
     public sealed class CompanyShopHistory
     {
         public string PlaceId, SalesAccountId;
+        public int OpenedDay = -1;
         public int ClosedDay = -1;
         public CompanyShopHistory Copy() => (CompanyShopHistory)MemberwiseClone();
     }
@@ -67,6 +69,7 @@ namespace PCShopSell.Core.Session
         public CompanyExpense[] Expenses = Array.Empty<CompanyExpense>();
         public long ReserveCents, ListingPriceCents;
         public int ListedDay = -1;
+        public int CashAccountingFromDay = -1;
         public CompanyRecord Copy() => new CompanyRecord
         {
             BrandId = BrandId, ShopIds = (ShopIds ?? Array.Empty<string>()).ToArray(),
@@ -76,7 +79,7 @@ namespace PCShopSell.Core.Session
             Posts = (Posts ?? Array.Empty<CompanyPost>()).Select(x => x.Copy()).ToArray(),
             PendingPosts = (PendingPosts ?? Array.Empty<CompanyPost>()).Select(x => x.Copy()).ToArray(),
             Expenses = (Expenses ?? Array.Empty<CompanyExpense>()).Select(x => x.Copy()).ToArray(),
-            ReserveCents = ReserveCents, ListingPriceCents = ListingPriceCents, ListedDay = ListedDay
+            ReserveCents = ReserveCents, ListingPriceCents = ListingPriceCents, ListedDay = ListedDay,CashAccountingFromDay=CashAccountingFromDay
         };
     }
 
@@ -149,13 +152,13 @@ namespace PCShopSell.Core.Session
             _companies.Add(new CompanyRecord
             {
                 BrandId = brand.Id, ShopIds = shops.Distinct().ToArray(),
-                StoreHistory = shops.Distinct().Select(CompanyStoreSnapshot).ToArray(),
+                StoreHistory = shops.Distinct().Select(id=>CompanyStoreSnapshot(id,brand.Founded)).ToArray(),CashAccountingFromDay=Clock.Today.TotalDays,
                 Departments = new[] { new CompanyDepartmentState { Department = CompanyDepartment.Personnel } }
             });
         }
 
-        private CompanyShopHistory CompanyStoreSnapshot(string id) =>
-            new CompanyShopHistory { PlaceId = id, SalesAccountId = ShopAt(id)?.SalesAccountId };
+        private CompanyShopHistory CompanyStoreSnapshot(string id,int? openedDay=null) =>
+            new CompanyShopHistory { PlaceId = id, SalesAccountId = ShopAt(id)?.SalesAccountId,OpenedDay=openedDay??Clock.Today.TotalDays };
 
         private void RetireCompanyShop(OwnedShop shop)
         {
@@ -181,7 +184,7 @@ namespace PCShopSell.Core.Session
                     _companies.Add(record.Copy());
             foreach (var brand in _brands.Brands) EnsureCompany(brand, brand.ShopIds ?? Array.Empty<string>());
             foreach (var company in _companies.Where(x => x.StoreHistory.Length == 0))
-                company.StoreHistory = company.ShopIds.Select(CompanyStoreSnapshot).ToArray();
+                company.StoreHistory = company.ShopIds.Select(id=>CompanyStoreSnapshot(id,Brand(company.BrandId).Founded)).ToArray();
         }
 
         public string CompanyRegistrationBlocker(string kind) =>
@@ -201,6 +204,7 @@ namespace PCShopSell.Core.Session
         public bool EstablishCompanyDepartment(string id, CompanyDepartment department)
         {
             var company = Company(id);
+            if(CompanyOfficeBlocker(company) is string authority)return Fail(authority);
             if (IsGameOver || company == null || !Enum.IsDefined(typeof(CompanyDepartment), department)
                 || company.Departments.Any(x => x.Department == department)) return false;
             company.Departments = company.Departments.Append(new CompanyDepartmentState { Department = department }).ToArray();
@@ -209,6 +213,7 @@ namespace PCShopSell.Core.Session
 
         public bool ExpandCompanyDepartment(string id, CompanyDepartment department)
         {
+            if(CompanyOfficeBlocker(Company(id)) is string authority)return Fail(authority);
             var state = Company(id)?.Departments.FirstOrDefault(x => x.Department == department);
             if (IsGameOver || state == null || state.OrdinarySeats >= 12) return false;
             state.OrdinarySeats++;
@@ -217,6 +222,7 @@ namespace PCShopSell.Core.Session
 
         public string CompanyTransferBlocker(CompanyRecord company, string employeeId, CompanyDepartment department, bool leader)
         {
+            if(CompanyOfficeBlocker(company) is string authority)return authority;
             var row = FindEmployee(employeeId);
             if (IsGameOver || company == null || CompanyEmployerOf(row) != company) return "请选择本公司的员工";
             if (PendingCompanyPostOf(employeeId) != null || row.Person.TransferDay >= 0) return "该员工已有待生效的调岗";
@@ -247,6 +253,7 @@ namespace PCShopSell.Core.Session
         public bool ScheduleCompanyStorePost(string id, string employeeId, string storeId, EmployeeRole role)
         {
             var company = Company(id);
+            if(CompanyOfficeBlocker(company) is string authority)return Fail(authority);
             var employee = FindEmployee(employeeId);
             if (IsGameOver || company == null || CompanyEmployerOf(employee) != company || employee.Shop != null
                 || CompanyOfShop(ShopAt(storeId)) != company || PendingCompanyPostOf(employeeId) != null) return false;
@@ -261,6 +268,7 @@ namespace PCShopSell.Core.Session
 
         public string CompanyStoreManagerBlocker(CompanyRecord company, string employeeId, OwnedShop shop)
         {
+            if(CompanyOfficeBlocker(company) is string authority)return authority;
             var row = FindEmployee(employeeId);
             if (IsGameOver || company == null || CompanyEmployerOf(row) != company || CompanyOfShop(shop) != company) return "请选择本公司的员工及门店";
             if (PendingCompanyPostOf(employeeId) != null || row.Person.TransferDay >= 0) return "该员工已有待生效的调岗";
@@ -293,6 +301,7 @@ namespace PCShopSell.Core.Session
 
         public bool CancelCompanyPost(string id, string employeeId)
         {
+            if(CompanyOfficeBlocker(Company(id)) is string authority)return Fail(authority);
             var company = Company(id);
             if (IsGameOver || company == null || !company.PendingPosts.Any(x => x.EmployeeId == employeeId)) return false;
             company.PendingPosts = company.PendingPosts.Where(x => x.EmployeeId != employeeId).ToArray();
@@ -361,6 +370,7 @@ namespace PCShopSell.Core.Session
 
         public string CompanyRecruitmentBlocker(CompanyRecord company, OwnedShop shop)
         {
+            if(CompanyOfficeBlocker(company) is string authority)return authority;
             if (company == null || IsGameOver || CompanyOfShop(shop) != company) return "请选择本公司的门店";
             if (CompanyDepartmentLeader(company, CompanyDepartment.Personnel) == null) return "请先任命人事部负责人";
             if (RecruitmentNoticePosted) return "已有一批应聘者待到达";
@@ -381,6 +391,7 @@ namespace PCShopSell.Core.Session
 
         public bool SetCompanyProjectBudget(string id, int yuan)
         {
+            if(CompanyOfficeBlocker(Company(id)) is string authority)return Fail(authority);
             var company = Company(id);
             var finance = company?.Departments.FirstOrDefault(d => d.Department == CompanyDepartment.Finance);
             if (IsGameOver || finance == null || CompanyDepartmentLeader(company, CompanyDepartment.Finance) == null
@@ -391,6 +402,7 @@ namespace PCShopSell.Core.Session
 
         public string CompanyProjectBlocker(CompanyRecord company, CompanyProjectDefinition project)
         {
+            if(CompanyOfficeBlocker(company) is string authority)return authority;
             var state = company?.Departments.FirstOrDefault(x => x.Department == project.Department);
             if (IsGameOver || state == null) return "请先设立部门";
             if (CompanyDepartmentLeader(company, project.Department) == null) return "请先任命负责人";
@@ -425,6 +437,7 @@ namespace PCShopSell.Core.Session
             var state = company.Departments.First(x => x.Department == project.Department);
             state.Project = (int)project.Id;
             state.WorkMinutes = 0;
+            state.WorkMinuteRemainder = 0;
             return true;
         }
 
@@ -449,8 +462,10 @@ namespace PCShopSell.Core.Session
                 {
                     var employee = FindEmployee(post.EmployeeId)?.Person;
                     if (employee != null && employee.OnDuty(from) && !BrandExpoPersonReserved(PersonIdOf(employee)))
-                        department.WorkMinutes += (int)from.MinutesUntil(to);
+                        department.WorkMinuteRemainder += from.MinutesUntil(to) * EmployeeWorkRate(employee);
                 }
+                int wholeMinutes=(int)Math.Floor(department.WorkMinuteRemainder);
+                department.WorkMinutes+=wholeMinutes;department.WorkMinuteRemainder-=wholeMinutes;
                 if (department.WorkMinutes < project.Minutes) continue;
                 department.WorkMinutes = project.Minutes;
                 department.Project = -1;
@@ -464,8 +479,13 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        public double CompanyPromotionTraffic(OwnedShop shop) => CompanyOfShop(shop)?.Departments
-            .Any(x => x.Department == CompanyDepartment.Marketing && x.PromotionUntilDay > Clock.Today.TotalDays) == true ? .15 : 0;
+        public double CompanyPromotionTraffic(OwnedShop shop)
+        {
+            var company=CompanyOfShop(shop);if(company==null)return 0;
+            bool active=company.Departments.Any(x=>x.Department==CompanyDepartment.Marketing&&x.PromotionUntilDay>Clock.Today.TotalDays)
+                ||(GovernanceOf(CompanyTicker(company))?.PromotionUntilDay??-1)>Clock.Today.TotalDays;
+            return active ? .15 : 0;
+        }
         public bool CompanyResearchDelivered(OwnedShop shop, CompanyProject project) => CompanyOfShop(shop)?.Departments
             .Any(x => x.Department == CompanyDepartment.Research && x.Delivered(project)) == true;
         public GiftDef CompanyRetailProduct(OwnedShop shop) => !CompanyResearchDelivered(shop, CompanyProject.NewProduct) ? null
@@ -473,6 +493,7 @@ namespace PCShopSell.Core.Session
 
         public bool MakeCompanyProduct(OwnedShop shop, int quantity)
         {
+            if(ShopAuthorityBlocker(shop) is string authority)return Fail(authority);
             var product = CompanyRetailProduct(shop);
             var company = CompanyOfShop(shop);
             if (IsGameOver || product == null || company == null || quantity < 1 || quantity > 100) return false;
@@ -488,6 +509,7 @@ namespace PCShopSell.Core.Session
 
         public bool TrainCompanyEmployee(string id, string employeeId)
         {
+            if(EmployeeAuthorityBlocker(employeeId) is string authority)return Fail(authority);
             var company = Company(id);
             var row = FindEmployee(employeeId);
             if (IsGameOver || company == null || CompanyEmployerOf(row) != company
@@ -500,15 +522,17 @@ namespace PCShopSell.Core.Session
             Say(row.Person.Name + "完成岗位培训，智力 +2。");
             return true;
         }
-        public Money CompanyReserves => Money.FromCents(_companies.Sum(x => x.ReserveCents));
+        public Money CompanyReserves => Money.FromCents(_companies.Where(x=>x.ListedDay<0).Sum(x => x.ReserveCents));
 
         public (Money Revenue, Money Costs) CompanyAccounts(CompanyRecord company, int firstDay, int untilDay)
         {
             if (company == null) return (Money.Zero, Money.Zero);
             int founded = Brand(company.BrandId)?.Founded ?? 0;
             var entries = Ledger.Entries.Where(e => e.Date.TotalDays >= Math.Max(founded, firstDay) && e.Date.TotalDays < untilDay
+                && (e.CashAccountId==company.BrandId||e.CashAccountId==null&&(company.CashAccountingFromDay<0||e.Date.TotalDays<company.CashAccountingFromDay))
                 && (e.Attribution?.ActivityId == company.BrandId || e.ShopId != null && company.StoreHistory.Any(shop =>
                     shop.PlaceId == e.ShopId && (shop.ClosedDay < 0 || shop.ClosedDay >= e.Date.TotalDays)
+                    && (shop.OpenedDay<0||shop.OpenedDay<=e.Date.TotalDays)
                     && (shop.SalesAccountId == null || e.Attribution?.SalesAccountId == null || shop.SalesAccountId == e.Attribution.SalesAccountId))));
             long income = entries.Where(e => e.Amount.IsPositive && e.BusinessKind == LedgerBusinessKind.Operating).Sum(e => e.Amount.Cents);
             long outflow = -entries.Where(e => e.Amount.IsNegative &&
@@ -536,7 +560,10 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver || company == null) return "请先成立公司";
             if (company.ListedDay >= 0) return "公司已挂牌";
-            if (DistrictAccessTier < 2) return "公园片区开放后办理上市";
+            if (DistrictAccessTier < 3) return "花园开放后办理上市";
+            if (CompanyOfficeBlocker(company) is string authority) return authority;
+            EnsureGovernanceCompanies();
+            if(_companyInvestors.Where(i=>i.Id.StartsWith("capital_",StringComparison.Ordinal)).Sum(i=>i.CashCents)<CompanyListingPrice(company).Cents*CompanyPublicShares)return "机构认购资金不足，请等待市场资金或调整经营估值";
             if (requireVisit && !AtEnterpriseCenter) return "请到湖城企业服务中心的上市柜台";
             if (!CompanyShops(company).Any(x => ShopReadyForOperation(x) && !x.Sim.NotFitted)) return "需要至少一家实际营业的公司门店";
             int completeMonth = Clock.Today.TotalDays / GameDate.DaysPerMonth * GameDate.DaysPerMonth - GameDate.DaysPerMonth;
@@ -566,10 +593,10 @@ namespace PCShopSell.Core.Session
             var company = ListedCompanyOf(id);
             if (company == null) return CityInvestments.Get(id);
             return new CityEquityDefinition(id, CompanyName(company), "以所属门店实际经营财报定价。", (int)company.ListingPriceCents,
-                CompanyIndustryName(Brand(company.BrandId).Kind), 0, .08, .008, 15000, totalShares: CompanyTotalShares);
+                CompanyIndustryName(Brand(company.BrandId).Kind), 0, .08, .008, 15000, totalShares: _companyGovernance.FirstOrDefault(g=>g.Ticker==id)?.TotalShares??CompanyTotalShares);
         }
 
-        public long CompanyFounderHolding(CompanyRecord company) => company?.ListedDay >= 0 ? CompanyFounderShares : 0;
+        public long CompanyFounderHolding(CompanyRecord company) => 0; // 创始股份现已并入实际持仓，保留旧调用兼容。
         private void EnsureCompanyTicker(CompanyRecord company)
         {
             string id = CompanyTicker(company);
@@ -584,10 +611,11 @@ namespace PCShopSell.Core.Session
             var blocker = CompanyListingBlocker(company);
             if (blocker != null) return Fail(blocker);
             var price = CompanyListingPrice(company);
+            var governance=GovernanceOf(CompanyTicker(company));
             company.ListedDay = Clock.Today.TotalDays;
             company.ListingPriceCents = price.Cents;
-            company.ReserveCents += (price * CompanyPublicShares).Cents;
             EnsureCompanyTicker(company);
+            CompleteGovernanceIPO(company,governance,price.Cents);
             Ledger.RecordNonCash(Clock.Today, "公司挂牌", $"{CompanyName(company)} · 首发募集 {price * CompanyPublicShares}",
                 new LedgerAttribution(LedgerBusinessKind.InternalTransfer, activityId: id, transactionKind: "首次公开发行"));
             AddStockNews(CompanyTicker(company), Clock.Now.TotalMinutes, CompanyName(company) + "挂牌",

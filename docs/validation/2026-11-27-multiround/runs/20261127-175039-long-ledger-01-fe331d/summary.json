@@ -1,0 +1,14 @@
+{
+  "tag": "long-ledger-01",
+  "filter": "^PCShopSell.Tests.LongSessionRegressionTests.CompanyPayrollAndEquityLongHorizon",
+  "started": "2026-11-27T17:50:39.6048710+08:00",
+  "seconds": 600.14,
+  "timeout": true,
+  "exitCode": -1,
+  "result": "Timeout",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-175039-long-ledger-01-fe331d"
+}

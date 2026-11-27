@@ -42,6 +42,7 @@ namespace PCShopSell.Core.Session
 
         public void SetRestockTarget(string partId, int target)
         {
+            if(ShopAuthorityBlocker(_focus) is string authority){Fail(authority);return;}
             if (PartCatalog.Get(partId) == null) return;
             target = Math.Max(0, Math.Min(RestockMaxTarget, target));
             if (target == 0) _restock.Remove(partId);
@@ -134,7 +135,7 @@ namespace PCShopSell.Core.Session
 
             // 先按缺得最厉害的排，一个个往里放，放不下仓位的就少补
             double free = PlayerShop.Stock.FreeSpace - IncomingShopSpace;
-            long budget = Math.Max(0, Ledger.Balance.Cents - EffectiveRestockReserve.Cents - ClaimedProcurementBudget.Cents - Online1788.ShippingFee.Cents);
+            long budget = Math.Max(0, ShopAvailableCash(_focus).Cents - EffectiveRestockReserve.Cents - ClaimedProcurementBudget.Cents - Online1788.ShippingFee.Cents);
             if (RestockDailyBudgetYuan > 0) budget = Math.Min(budget, Math.Max(0, RestockDailyBudgetYuan * 100 - Online1788.ShippingFee.Cents));
             var lines = new List<(PartDef part, int count)>();
             foreach (var (part, count) in needs)

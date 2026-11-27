@@ -5,6 +5,46 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private Canvas _timeAdvanceCanvas;
+        private Text _timeAdvanceText;
+        private int _timeAdvancePercent = -1;
+
+        internal void ShowTimeAdvance()
+        {
+            HoldRepeat.CancelActiveHold();
+            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(null);
+            if (_timeAdvanceCanvas == null)
+            {
+                _timeAdvanceCanvas = Ui.CreateCanvas("UI_TimeAdvance", 1000);
+                var shield = Ui.Panel(_timeAdvanceCanvas.transform, "InputShield", new Color(0, 0, 0, .6f));
+                shield.rectTransform.Fill();
+                shield.raycastTarget = true;
+                var card = Ui.Panel(shield.transform, "Progress", Ui.PanelBg2);
+                card.rectTransform.Anchor(.5f, .5f, .5f, .5f, -240, -48, -240, -48);
+                _timeAdvanceText = Ui.Label(card.transform, "", 24, TextAnchor.MiddleCenter);
+                _timeAdvanceText.rectTransform.Fill(12);
+                _timeAdvanceText.raycastTarget = false;
+            }
+            _timeAdvanceCanvas.gameObject.SetActive(true);
+            _timeAdvancePercent = -1;
+            RefreshTimeAdvance();
+        }
+
+        internal void HideTimeAdvance()
+        {
+            if (_timeAdvanceCanvas != null) _timeAdvanceCanvas.gameObject.SetActive(false);
+        }
+
+        internal void RefreshTimeAdvance()
+        {
+            if (!S.IsTimeAdvancing) { HideTimeAdvance(); return; }
+            if (_timeAdvanceText == null) return;
+            if (S.TimeAdvanceError != null) { _timeAdvanceText.text = S.TimeAdvanceError; return; }
+            int percent = (int)(S.TimeAdvanceProgress * 100);
+            if (percent == _timeAdvancePercent) return;
+            _timeAdvancePercent = percent;
+            _timeAdvanceText.text = S.TimeAdvanceLabel + " · " + percent + "%";
+        }
 
         private Image _sleepBanner;
         private Text _sleepText;

@@ -265,6 +265,8 @@ namespace PCShopSell.Core.Session
         private void RestoreMarketHunt(SaveData save)
         {
             _marketHunt = save.oldMarketHunt?.Copy() ?? new OldMarketHuntState();
+            // 空的嵌套对象可能在 JSON 重载时被实例化；真实淘货编号始终从 1 开始。
+            if (_marketHunt.Pending != null && _marketHunt.Pending.Id <= 0) _marketHunt.Pending = null;
             if (!OldMarketHuntCatalog.ValidTier(_marketHunt.Tier) || !OldMarketHuntCatalog.PassSizes.Contains(_marketHunt.PassSize))
                 _marketHunt.Tier = _marketHunt.PassSize = _marketHunt.Remaining = 0;
             else

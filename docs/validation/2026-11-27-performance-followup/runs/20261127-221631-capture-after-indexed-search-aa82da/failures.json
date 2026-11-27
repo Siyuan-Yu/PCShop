@@ -1,0 +1,22 @@
+[
+  {
+    "name": "PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopFootfallTests.AgencyDetailDisplaysPeoplePerDayAndDistancesWithoutTrafficMultiplier () [0x0014f] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:177\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"computer\")",
+    "message": "  Expected: 35.176654859117285d +/- 2\n  But was:  42\n",
+    "stack": "at PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation (System.String kind) [0x000e5] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:88\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(\"pet\")",
+    "message": "  Expected: 35.176654859117285d +/- 2\n  But was:  42\n",
+    "stack": "at PCShopSell.Tests.ShopFootfallTests.NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation (System.String kind) [0x000e5] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:88\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize",
+    "message": "  Expected: 12.745614035087719d +/- 1.0000000000000001E-09d\n  But was:  9.1789416687588119d\n",
+    "stack": "at PCShopSell.Tests.ShopFootfallTests.RetailArrivalRateUsesTheEstimateWithoutDoubleCountingShopSize () [0x000a1] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\ShopFootfallTests.cs:67\n"
+  }
+]

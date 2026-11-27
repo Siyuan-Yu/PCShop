@@ -1,0 +1,15 @@
+{"name":"PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks","result":"Passed","message":"","stack":"","seconds":0.772149}
+{"name":"PCShopSell.Tests.CityActivityTests.AppointmentTravelWaitsForTheDepartureWindowWithoutChargingTaxiFare","result":"Passed","message":"","stack":"","seconds":0.0713789}
+{"name":"PCShopSell.Tests.CityActivityTests.FutureAcceptanceAndCancellationNeverChargeOrGrantCompletion","result":"Passed","message":"","stack":"","seconds":0.054089}
+{"name":"PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad","result":"Passed","message":"","stack":"","seconds":0.5441473}
+{"name":"PCShopSell.Tests.CityActivityTests.GardenRingTossSettlesOnceAndKeepsTheSamePartyForTheNextRide","result":"Passed","message":"","stack":"","seconds":0.1214292}
+{"name":"PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302)","result":"Passed","message":"","stack":"","seconds":0.2370752}
+{"name":"PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422)","result":"Passed","message":"","stack":"","seconds":0.1997541}
+{"name":"PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60)","result":"Passed","message":"","stack":"","seconds":0.1532203}
+{"name":"PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce","result":"Passed","message":"","stack":"","seconds":0.4432325}
+{"name":"PCShopSell.Tests.CityActivityTests.TenStreetNetworkHasRoutesToEveryConfiguredEntrance","result":"Passed","message":"","stack":"","seconds":0.0926502}
+{"name":"PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(0,True)","result":"Passed","message":"","stack":"","seconds":0.0514115}
+{"name":"PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(5,False)","result":"Passed","message":"","stack":"","seconds":0.0494927}
+{"name":"PCShopSell.Tests.CityActivityTests.WorkAvailabilityUsesWholesaleRestDays(6,False)","result":"Passed","message":"","stack":"","seconds":0.0545448}
+{"name":"PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(5,600)","result":"Passed","message":"","stack":"","seconds":0.0795865}
+{"name":"PCShopSell.Tests.CityActivityTests.ZhouLeavesClosedWholesaleWorkplaceAndDoesNotKeepItAsLeisureTarget(0,1230)","result":"Passed","message":"","stack":"","seconds":0.0982328}

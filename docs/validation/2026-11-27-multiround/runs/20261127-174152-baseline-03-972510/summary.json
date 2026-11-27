@@ -1,0 +1,14 @@
+{
+  "tag": "baseline-03",
+  "filter": "^PCShopSell.Tests.CityLayoutV7Tests\\.;^PCShopSell.Tests.CityProcurementTests\\.;^PCShopSell.Tests.CityRetailTests\\.;^PCShopSell.Tests.CityServiceTests\\.;^PCShopSell.Tests.CityStoryTests\\.;^PCShopSell.Tests.CityTravelTimingTests\\.;^PCShopSell.Tests.CityVisitSaveTests\\.;^PCShopSell.Tests.ClassmateDinnerTests\\.;^PCShopSell.Tests.CompetitionContextTests\\.;^PCShopSell.Tests.CustomDestinationTests\\.",
+  "started": "2026-11-27T17:41:52.6002251+08:00",
+  "seconds": 39.74,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 86,
+  "passed": 68,
+  "failed": 18,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-20261127\\20261127-174152-baseline-03-972510"
+}

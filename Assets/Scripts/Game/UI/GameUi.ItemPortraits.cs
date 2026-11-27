@@ -20,24 +20,37 @@ namespace PCShopSell.Game.UI
         }
 
         [Serializable]
+        private sealed class ItemArtRegion
+        {
+            public float x, y, width, height;
+            public Rect Rect => new Rect(x, y, width, height);
+        }
+
+        [Serializable]
         private sealed class ItemArtSheet
         {
             public string texture;
             public string[] items;
+            public ItemArtRegion[] regions;
         }
 
-        private static Dictionary<string, (string sheet, int cell)> _itemArt;
+        private static Dictionary<string, (string sheet, Rect region)> _itemArt;
         private static readonly Dictionary<string, Texture2D> ItemSheets = new Dictionary<string, Texture2D>();
-        private static Material _itemAtlasMaterial;
 
-        private static Dictionary<string, (string sheet, int cell)> LoadItemArt()
+        private static Dictionary<string, (string sheet, Rect region)> LoadItemArt()
         {
-            var result = new Dictionary<string, (string, int)>(StringComparer.Ordinal);
+            var result = new Dictionary<string, (string, Rect)>(StringComparer.Ordinal);
             var asset = Resources.Load<TextAsset>(ItemArtPath + "catalog");
             if (asset == null) return result;
             foreach (var sheet in JsonUtility.FromJson<ItemArtCatalog>(asset.text).sheets)
                 for (int cell = 0; cell < sheet.items.Length; cell++)
-                    if (!string.IsNullOrEmpty(sheet.items[cell])) result.Add(sheet.items[cell], (sheet.texture, cell));
+                    if (!string.IsNullOrEmpty(sheet.items[cell]))
+                    {
+                        float unit = 1f / ItemSheetColumns;
+                        Rect region = sheet.regions != null && cell < sheet.regions.Length ? sheet.regions[cell].Rect
+                            : new Rect(cell % ItemSheetColumns * unit, 1 - (cell / ItemSheetColumns + 1) * unit, unit, unit);
+                        result.Add(sheet.items[cell], (sheet.texture, region));
+                    }
             return result;
         }
 
@@ -81,19 +94,10 @@ namespace PCShopSell.Game.UI
         private static RectTransform FillItemPortrait(Transform parent, string key)
         {
             var rect = Ui.Rect(parent, "ItemPortrait_" + key);
-            var image = rect.gameObject.AddComponent<RawImage>();
+            var art = Ui.Rect(rect, "PaintedItem").Fill();
+            var image = art.gameObject.AddComponent<RawImage>();
             image.raycastTarget = false;
             string id = ItemArtId(key);
-            if (id == "used:6")
-            {
-                image.enabled = false;
-                // Reuse the UI palette for a compact console/controller silhouette.
-                var console = Ui.Panel(rect, "UsedGameConsole", Ui.PanelBg).rectTransform.Anchor(.1f, .18f, .9f, .82f);
-                Ui.Panel(console, "ConsoleScreen", Ui.ButtonBg).rectTransform.Anchor(.2f, .28f, .8f, .88f);
-                var controller = Ui.Panel(rect, "Controller", Ui.ButtonBg).rectTransform.Anchor(.06f, .12f, .94f, .45f);
-                Ui.Label(controller, "+   ••", 15, TextAnchor.MiddleCenter, Ui.Accent).rectTransform.Fill();
-                return rect;
-            }
             if (id.StartsWith("vehicle:", StringComparison.Ordinal))
             {
                 string model = id.Substring("vehicle:".Length);
@@ -101,7 +105,7 @@ namespace PCShopSell.Game.UI
                 image.texture = MotorPortraitArt.Get(model);
                 if (image.texture != null)
                 {
-                    var fitter = rect.gameObject.AddComponent<AspectRatioFitter>();
+                    var fitter = art.gameObject.AddComponent<AspectRatioFitter>();
                     fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
                     fitter.aspectRatio = (float)image.texture.width / image.texture.height;
                     return rect;
@@ -122,15 +126,11 @@ namespace PCShopSell.Game.UI
                 return rect;
             }
             image.texture = texture;
-            if (_itemAtlasMaterial == null && Resources.Load<Shader>("Shaders/ItemPortraitBackdrop") is Shader atlasShader
-                && atlasShader.isSupported)
-                _itemAtlasMaterial = new Material(atlasShader) { hideFlags = HideFlags.HideAndDontSave };
-            if (_itemAtlasMaterial != null) image.material = _itemAtlasMaterial;
-            float cellSize = 1f / ItemSheetColumns;
-            float insetX = 1f / texture.width, insetY = 1f / texture.height;
-            int col = entry.cell % ItemSheetColumns, row = entry.cell / ItemSheetColumns;
-            image.uvRect = new Rect(col * cellSize + insetX, 1f - (row + 1) * cellSize + insetY,
-                cellSize - 2 * insetX, cellSize - 2 * insetY);
+            // 图集自带透明通道；旧的蓝底色键会误删显卡、衣服和鱼的蓝色。
+            image.uvRect = entry.region;
+            var aspect = art.gameObject.AddComponent<AspectRatioFitter>();
+            aspect.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            aspect.aspectRatio = entry.region.width * texture.width / (entry.region.height * texture.height);
             return rect;
         }
 

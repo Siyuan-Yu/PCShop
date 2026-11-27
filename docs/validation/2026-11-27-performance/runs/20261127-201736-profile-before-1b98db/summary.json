@@ -1,0 +1,14 @@
+{
+  "tag": "profile-before",
+  "filter": "SimulationHotspotTests",
+  "started": "2026-11-27T20:17:36.3445405+08:00",
+  "seconds": 9.42,
+  "timeout": false,
+  "exitCode": 1,
+  "result": "NoResult",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-20261127\\20261127-201736-profile-before-1b98db"
+}

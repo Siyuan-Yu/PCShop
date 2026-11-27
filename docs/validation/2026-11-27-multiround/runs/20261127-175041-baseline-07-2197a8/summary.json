@@ -1,0 +1,14 @@
+{
+  "tag": "baseline-07",
+  "filter": "^PCShopSell.Tests.LedgerTests\\.;^PCShopSell.Tests.LifeEventBatchTests\\.;^PCShopSell.Tests.LifeGrowthTests\\.;^PCShopSell.Tests.MarketTests\\.;^PCShopSell.Tests.MarkupRangeTests\\.;^PCShopSell.Tests.McnIntroductionTests\\.;^PCShopSell.Tests.McnRecruitmentTests\\.;^PCShopSell.Tests.MenuLocalizationTests\\.;^PCShopSell.Tests.MoneyEventBatchTests\\.;^PCShopSell.Tests.MoneyTests\\.",
+  "started": "2026-11-27T17:50:41.4242531+08:00",
+  "seconds": 103.64,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 87,
+  "passed": 82,
+  "failed": 5,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-20261127\\20261127-175041-baseline-07-2197a8"
+}

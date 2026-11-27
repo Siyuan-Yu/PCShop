@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace PCShopSell.Core.World
@@ -44,7 +44,28 @@ namespace PCShopSell.Core.World
         private readonly Dictionary<string, List<WorldEdge>> _adjacency = new Dictionary<string, List<WorldEdge>>();
 
         public int NodeCount => _nodes.Count;
+        public int Revision { get; private set; }
         public IEnumerable<WorldNode> Nodes => _nodes.Values;
+
+        // 缓存仅属于这张路网；任何节点或边变化都会使路径失效。
+        private readonly Dictionary<(string from, string to), PathResult> _paths = new();
+        private readonly Queue<(string from, string to)> _pathOrder = new();
+        internal bool TryCachedPath(string from, string to, out PathResult path) => _paths.TryGetValue((from, to), out path);
+        internal PathResult RememberPath(string from, string to, PathResult path)
+        {
+            if (_paths.Count >= 2048) _paths.Remove(_pathOrder.Dequeue());
+            _paths.Add((from, to), path);
+            _pathOrder.Enqueue((from, to));
+            return path;
+        }
+        internal Pathfinder.SearchWorkspace PathSearch;
+        private void InvalidatePaths()
+        {
+            Revision++;
+            PathSearch = null;
+            _paths.Clear();
+            _pathOrder.Clear();
+        }
 
         public WorldNode AddNode(string id, double x, double y)
         {
@@ -56,6 +77,7 @@ namespace PCShopSell.Core.World
             var node = new WorldNode(id, x, y);
             _nodes.Add(id, node);
             _adjacency.Add(id, new List<WorldEdge>());
+            InvalidatePaths();
             return node;
         }
 
@@ -85,6 +107,7 @@ namespace PCShopSell.Core.World
 
             _adjacency[a].Add(new WorldEdge(b, len));
             _adjacency[b].Add(new WorldEdge(a, len));
+            InvalidatePaths();
         }
 
         public bool HasEdge(string a, string b)

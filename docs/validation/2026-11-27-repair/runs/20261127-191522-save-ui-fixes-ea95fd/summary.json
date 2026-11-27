@@ -1,0 +1,14 @@
+{
+  "tag": "save-ui-fixes",
+  "filter": "FishingTests;SaveGhostStateTests;CityVisitSaveTests;WorkshopRegressionTests;EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode;FurnitureMallKeepsVariantsTogetherAcrossShopTabs;FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen;DistrictProgressionTests",
+  "started": "2026-11-27T19:15:23.0396431+08:00",
+  "seconds": 162.64,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 115,
+  "passed": 105,
+  "failed": 10,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-20261127\\20261127-191522-save-ui-fixes-ea95fd"
+}

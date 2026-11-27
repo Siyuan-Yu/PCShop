@@ -1,0 +1,14 @@
+{
+  "tag": "focused-final",
+  "filter": "SocialEventBatchTests.Audio;SocialEventBatchTests.LeavingAudio;SocialEventBatchTests.InvitationsSettle;FishingTests.PassPicker;DistrictProgressionTests.VisibleHomes;ShopCoreGameplayTests.RestaurantButton;QuestTests",
+  "started": "2026-11-27T19:32:20.4158864+08:00",
+  "seconds": 62.99,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 59,
+  "passed": 56,
+  "failed": 3,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-20261127\\20261127-193220-focused-final-c561fd"
+}

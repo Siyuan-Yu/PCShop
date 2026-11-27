@@ -227,6 +227,7 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveLedgerEntry
     {
+        public string cashAccountId;
         public int day;
         public string category;
         public long cents;
@@ -341,6 +342,8 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveEmployee
     {
+        public bool hasEmployeeWellbeing;
+        public EmployeeWellbeing wellbeing;
         public long candidateLeavesAt;
         public string id, transferShopId, lastPurchaseNote;
         public int transferDay = -1;

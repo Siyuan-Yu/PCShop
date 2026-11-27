@@ -1,0 +1,14 @@
+{
+  "tag": "core-regression-03",
+  "filter": "^PCShopSell.Tests.CompanyWellbeingRegressionTests\\.;^PCShopSell.Tests.CityTravelTimingTests\\.;^PCShopSell.Tests.CityAssetIntegrationTests\\.;^PCShopSell.Tests.ClassmateDinnerTests\\.;RealTravelMealAndReloadSettleEachStageOnce;^PCShopSell.Tests.SaveGhostStateTests\\.;^PCShopSell.Tests.SaveStoreFallbackTests\\.",
+  "started": "2026-11-27T17:49:42.0104059+08:00",
+  "seconds": 39.74,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 64,
+  "passed": 64,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-174942-core-regression-03-a98fd1"
+}

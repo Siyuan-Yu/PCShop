@@ -249,19 +249,22 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.PendingEvent);
         }
 
-        [Test]
-        public void Events_FireOverTime_AndEveryChoiceResolves()
+        [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)] [TestCase(6)]
+        public void Events_FireOverTime_AndEveryChoiceResolves(int seed)
         {
             int resolved = 0;
-            for (ulong seed = 1; seed <= 6; seed++)
             {
                 var city = PCShopSell.Core.World.CityLayout.FromData(GameSessionTests.Layout());
-                var s = new GameSession(city, seed, Money.FromYuan(30000), GameTimestamp.From(new GameDate(0), 8 * 60));
+                using var s = new GameSession(city, (ulong)seed, Money.FromYuan(30000), GameTimestamp.From(new GameDate(0), 8 * 60));
+                var timer = System.Diagnostics.Stopwatch.StartNew();
+                string progress = System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("PCSHOP_QA_RESULTS")
+                    ?? System.IO.Path.GetTempPath(), "random-events-" + seed + ".txt");
                 s.EventsEnabled = true;
                 s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("ram0"), true, 10);
                 s.PlayerShop.Reputation = 10;
                 for (int day = 0; day < 60 && !s.IsGameOver; day++)
                 {
+                    System.IO.File.AppendAllText(progress, $"step={day} calendarDay={s.Clock.Today.TotalDays} resolved={resolved} elapsed={timer.Elapsed.TotalSeconds:F2}s\n");
                     for (int h = 0; h < 24; h++)
                     {
                         s.AdvanceClock(60);
@@ -274,8 +277,9 @@ namespace PCShopSell.Tests
                     }
                     s.Ledger.Credit(s.Clock.Today, "测试", Money.FromYuan(500), "补钱");
                 }
+                System.IO.File.AppendAllText(progress, $"FINAL calendarDay={s.Clock.Today.TotalDays} resolved={resolved} gameOver={s.IsGameOver} elapsed={timer.Elapsed.TotalSeconds:F2}s\n");
             }
-            Assert.Greater(resolved, 10, "60 天里应该遇到不少事件");
+            Assert.Greater(resolved, 1, "每个随机种子必须实际触发并结算多个事件");
         }
 
         [Test]

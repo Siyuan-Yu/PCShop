@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Passed" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.765447">
+  <test-suite type="TestSuite" id="3142" name="PCShopSellQA" fullname="PCShopSellQA" runstate="Runnable" testcasecount="1844" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.765447" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="5280" name="PCShopSell.Tests.EditMode.dll" fullname="D:/tmp/pcshop-suburb-day-mam5h57m/preview/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1844" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.738335" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="24532" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="5281" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1844" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.721317" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="SetUpFixture" id="4401" name="Tests" fullname="PCShopSell.Tests.QaSaveIsolation" classname="PCShopSell.Tests.QaSaveIsolation" runstate="Runnable" testcasecount="1844" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.705808" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="4105" name="MarkupRangeTests" fullname="PCShopSell.Tests.MarkupRangeTests" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.596499" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="4115" name="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" fullname="PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:16Z" duration="0.068353" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4113" name="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)" fullname="PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)" methodname="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="741055048" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:16Z" duration="0.047646" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0) Passed
+]]></output>
+              </test-case>
+              <test-case id="4114" name="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)" fullname="PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)" methodname="ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="1046996412" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:16Z" duration="0.010016" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ActualRetailPurchasesUseZeroOrSalesBonusAtTriplePrice(0.25d) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="ParameterizedMethod" id="4119" name="ExpensiveMenuActuallyRequiresPurchaseIntent" fullname="PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.525830" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4117" name="ExpensiveMenuActuallyRequiresPurchaseIntent(0)" fullname="PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)" methodname="ExpensiveMenuActuallyRequiresPurchaseIntent" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="1571146625" result="Passed" start-time="2026-11-27 12:42:16Z" end-time="2026-11-27 12:42:17Z" duration="0.390231" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0) Passed
+]]></output>
+              </test-case>
+              <test-case id="4118" name="ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)" fullname="PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)" methodname="ExpensiveMenuActuallyRequiresPurchaseIntent" classname="PCShopSell.Tests.MarkupRangeTests" runstate="Runnable" seed="730143562" result="Passed" start-time="2026-11-27 12:42:17Z" end-time="2026-11-27 12:42:17Z" duration="0.132746" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d)
+REGRESSION DONE PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0.25d) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

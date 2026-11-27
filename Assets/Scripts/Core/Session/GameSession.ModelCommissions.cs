@@ -62,7 +62,7 @@ namespace PCShopSell.Core.Session
         private readonly Dictionary<string, ModelCommissionBook> _modelCommissions =
             new Dictionary<string, ModelCommissionBook>();
 
-        public static double ModelPainterSpeed(Employee person) => .65 + Math.Clamp(person.Dexterity, 0, 100) * .0085;
+        public static double ModelPainterSpeed(Employee person) => (.65 + Math.Clamp(person.Dexterity, 0, 100) * .0085) * EmployeeWorkRate(person);
         public static double ModelPainterQuality(Employee person) => Math.Clamp(person.Dexterity, 0, 100) / 10d;
 
         public IReadOnlyList<ModelCommission> ModelCommissions(OwnedShop shop) =>

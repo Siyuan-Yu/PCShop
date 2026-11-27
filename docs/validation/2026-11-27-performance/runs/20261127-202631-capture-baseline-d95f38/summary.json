@@ -1,0 +1,14 @@
+{
+  "tag": "capture-baseline",
+  "filter": "SimulationPerformanceCapture",
+  "started": "2026-11-27T20:26:31.2104001+08:00",
+  "seconds": 39.96,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 3,
+  "passed": 3,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-20261127\\20261127-202631-capture-baseline-d95f38"
+}

@@ -218,6 +218,21 @@ namespace PCShopSell.Core.World
     /// </summary>
     public sealed class CityLayout
     {
+        private ShopFootfall _footfall;
+        private int _footfallRevision = -1, _footfallPlaces = -1;
+        internal ShopFootfall Footfall
+        {
+            get
+            {
+                if (_footfall == null || _footfallRevision != Map.Revision || _footfallPlaces != Places.Count)
+                {
+                    _footfall = new ShopFootfall(this);
+                    _footfallRevision = Map.Revision;
+                    _footfallPlaces = Places.Count;
+                }
+                return _footfall;
+            }
+        }
         private readonly Dictionary<string, Place> _places = new Dictionary<string, Place>();
         private readonly List<Place> _placeList = new List<Place>();
         private readonly List<PatrolRoute> _patrols = new List<PatrolRoute>();
@@ -230,9 +245,21 @@ namespace PCShopSell.Core.World
         public IReadOnlyList<LayoutLakePoint> LakeShore { get; private set; } = Array.Empty<LayoutLakePoint>();
         public IReadOnlyList<LayoutLakeBridge> LakeBridges { get; private set; } = Array.Empty<LayoutLakeBridge>();
         public IReadOnlyList<LayoutAgencyDistrictData> AgencyDistricts { get; private set; } = Array.Empty<LayoutAgencyDistrictData>();
+        private readonly Dictionary<string, LayoutAgencyDistrictData> _agencyByStreet = new Dictionary<string, LayoutAgencyDistrictData>(StringComparer.Ordinal);
         public string CanonicalPlaceId(string id) => HasPlace(id)?GetPlace(id).Id:id;
         public LayoutAgencyDistrictData AgencyDistrictFor(string street)
-        { foreach(var d in AgencyDistricts)if(Array.IndexOf(d.streets??Array.Empty<string>(),street)>=0)return d;return null; }
+        {
+            if (street != null && _agencyByStreet.TryGetValue(street, out var district)) return district;
+            // Preserve the original first-match behavior, including unknown/null streets.
+            foreach (var d in AgencyDistricts)
+                if (Array.IndexOf(d.streets ?? Array.Empty<string>(), street) >= 0)
+                {
+                    if (street != null) _agencyByStreet[street] = d;
+                    return d;
+                }
+            if (street != null) _agencyByStreet[street] = null;
+            return null;
+        }
         public string AgencyCoverageName(Place p)=>AgencyDistrictFor(p?.StreetId)?.name??StreetName(p?.StreetId);
         public IReadOnlyList<LayoutBlockData> Blocks { get; private set; } = Array.Empty<LayoutBlockData>();
         public IReadOnlyList<LayoutResidentData> ExpansionResidents { get; private set; } = Array.Empty<LayoutResidentData>();
@@ -379,8 +406,8 @@ namespace PCShopSell.Core.World
 
         public Place GetPlace(string id)
         {
-            if (!HasPlace(id)) throw new KeyNotFoundException($"地点不存在：{id}");
-            return _places[id];
+            if (id != null && _places.TryGetValue(id, out var place)) return place;
+            throw new KeyNotFoundException($"地点不存在：{id}");
         }
 
         /// <summary>第一个指定类型的地点；没有则返回 null。</summary>
@@ -395,13 +422,14 @@ namespace PCShopSell.Core.World
 
         /// <summary>离画面坐标 (x, y) 最近的节点。</summary>
         private readonly Dictionary<(double x, double y), string> _nearestNodeCache = new Dictionary<(double, double), string>();
+        private readonly Queue<(double x, double y)> _nearestNodeOrder = new();
         private int _nearestNodeCount = -1;
         public string NearestNode(double viewX, double viewY)
         {
             // NPC commute estimates repeatedly ask about exactly the same doorway.
             // Exact coordinates preserve tie-breaking; bound moving-position entries.
             if (_nearestNodeCount != Map.NodeCount)
-            { _nearestNodeCache.Clear(); _nearestNodeCount = Map.NodeCount; }
+            { _nearestNodeCache.Clear(); _nearestNodeOrder.Clear(); _nearestNodeCount = Map.NodeCount; }
             var key = (viewX, viewY);
             if (_nearestNodeCache.TryGetValue(key, out string cached)) return cached;
             string best = null;
@@ -419,8 +447,9 @@ namespace PCShopSell.Core.World
                     best = n.Id;
                 }
             }
-            if (_nearestNodeCache.Count >= 4096) _nearestNodeCache.Clear();
+            if (_nearestNodeCache.Count >= 4096) _nearestNodeCache.Remove(_nearestNodeOrder.Dequeue());
             _nearestNodeCache[key] = best;
+            _nearestNodeOrder.Enqueue(key);
             return best;
         }
 

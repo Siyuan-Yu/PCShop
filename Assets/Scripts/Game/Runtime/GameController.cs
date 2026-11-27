@@ -81,7 +81,9 @@ namespace PCShopSell.Game
             if (_bootstrapped) return;
             _bootstrapped = true;
             _eventsOn = showMenus;
-            Application.targetFrameRate = 60;
+            // Leave headroom above the 120 FPS acceptance target on high-refresh displays.
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 144;
 
             var json = Resources.Load<TextAsset>("Data/city_layout");
             City = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(json.text));
@@ -159,6 +161,7 @@ namespace PCShopSell.Game
                 Session.ShopCustomerArrived -= OnCustomerArrived;
                 Session.ShopGuestChanged -= OnShopGuestChanged;
                 Session.ResidenceSleepFinished -= Ui.OnResidenceSleepFinished;
+                Session.TimeAdvanceStarted -= Ui.ShowTimeAdvance;
                 Session.Clock.DayAdvanced -= OnDayAdvanced;
                 Session.CityTravelRequested-=OnCityTravelRequested;
                 Session.CityPlaceEntered-=OnCityPlaceEntered;
@@ -170,6 +173,9 @@ namespace PCShopSell.Game
             EnsureInterior(s.PlayerShop.Size, DistrictRoomArt.District(s.City, s.CurrentShop.Place.StreetId));
 
             Session = s;
+            s.DeferRestAdvances = true;
+            s.TimeAdvanceStarted += Ui.ShowTimeAdvance;
+            Ui.HideTimeAdvance();
             _frameOldHomeExit = City.IsLakeCity && s.CurrentPlace?.Id == "home";
             ActiveSaveSlot = saveSlot;
             _saveCampaignId = campaignId ?? Guid.NewGuid().ToString("N");
@@ -291,6 +297,9 @@ namespace PCShopSell.Game
                 Ui.SetWorldLoadingProgress(.97f);
                 SetStage("loading_people");
                 yield return null;
+                var people = NpcArtCatalog.Prewarm();
+                try { while (people.MoveNext()) yield return people.Current; }
+                finally { (people as IDisposable)?.Dispose(); }
                 CompleteWorld(world);
                 Ui.SetWorldLoadingProgress(.99f);
                 SetStage("loading_session");
@@ -591,14 +600,29 @@ namespace PCShopSell.Game
             }
             if (Ui.HandleOpeningCinematicInput()) return;
             float dt = Time.unscaledDeltaTime;
+            if (Session.IsTimeAdvancing)
+            {
+                using (SimulationMarker.Auto()) Session.PumpTimeAdvance(2.0);
+                Ui.RefreshTimeAdvance();
+                if (!Session.IsTimeAdvancing)
+                {
+                    using (ViewsMarker.Auto()) SyncViews(0);
+                    using (UiMarker.Auto()) Ui.Update(0);
+                }
+                return;
+            }
             if(UpdateRacing(dt))return;
             if (UpdateCommunityReveal(dt)) return;
             HandleKeys();
+            if (Session.IsTimeAdvancing) return;
             HandleMovement(dt);
+            if (Session.IsTimeAdvancing) return;
             UpdatePlacement();
             if (!Ui.AnyModalOpen && !Placing && !PetFocusActive && !Session.OpeningAgencyGuidePending && !Session.RequiredTutorialPaused) HandleClicks();
+            if (Session.IsTimeAdvancing) return;
 
             using (SimulationMarker.Auto()) Session.Tick(dt);
+            if (Session.IsTimeAdvancing) return;
             if (_wasPlayerWorking != Session.IsWorking) { _wasPlayerWorking = Session.IsWorking; _autosaveDue = true; }
             if (_autosaveDue && Session.CanSave && !Session.IsGameOver)
             {
@@ -618,8 +642,20 @@ namespace PCShopSell.Game
         /// <summary>不依赖 Update 的推进（自动化测试用）。</summary>
         public void Step(float dt)
         {
+            if (Session.IsTimeAdvancing)
+            {
+                using (SimulationMarker.Auto()) Session.PumpTimeAdvance(2.0);
+                Ui.RefreshTimeAdvance();
+                if (!Session.IsTimeAdvancing)
+                {
+                    using (ViewsMarker.Auto()) SyncViews(0);
+                    using (UiMarker.Auto()) Ui.Update(0);
+                }
+                return;
+            }
             UpdatePlacement();
             using (SimulationMarker.Auto()) Session.Tick(dt);
+            if (Session.IsTimeAdvancing) return;
             using (ViewsMarker.Auto()) SyncViews(dt);
             using (UiMarker.Auto()) Ui.Update(dt);
         }

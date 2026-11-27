@@ -1,0 +1,3 @@
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(7,7,False,False)","result":"Passed","message":"","stack":"","seconds":37.2640437}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(41,7,True,False)","result":"Passed","message":"","stack":"","seconds":38.0617907}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(914,7,True,True)","result":"Passed","message":"","stack":"","seconds":37.9437438}

@@ -33,9 +33,12 @@ namespace PCShopSell.Tests
         }
         private static void Attend(GameSession s, CityActivity activity)
         {
-            s.Clock.Restore(new GameDate((int)(activity.ScheduledStart / 1440)), (int)(activity.ScheduledStart % 1440));
+            CityTestPeople.ApproachAppointment(s,activity);
             At(s, activity.VenueId); s.Player.Health = 100; s.Player.Hunger = 100; s.Player.Energy = 100;
             Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));
+            CityTestPeople.WaitForVenueStaff(s,activity);
+            if(activity.State==CityActivityPhase.Gathering && !GameSession.IsAutomaticMeal(activity))
+                Assert.True(s.StartVenueAppointment(activity.Id),s.VenueAppointmentStartBlocker(activity));
             s.AdvanceClock(1);
             Assert.AreEqual(CityActivityPhase.Running, activity.State, activity.EndReason);
         }
@@ -328,6 +331,8 @@ namespace PCShopSell.Tests
             }
             else if (GameSession.IsKaraokeActivity(a))
                 Assert.IsTrue(loaded.AdvanceKaraokePlayback(a.Id, 1));
+            else if (loaded.CanFinishManualCityActivity(a.Id))
+                Assert.IsTrue(loaded.FinishManualCityActivity(a.Id));
             else loaded.AdvanceClock(a.Duration + 1);
             Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason);
             Assert.Greater(loaded.Relation(personId), relation);
@@ -379,7 +384,7 @@ namespace PCShopSell.Tests
             {
                 Attend(loaded, saved);
                 Assert.IsTrue(saved.EventGiftDelivered); Assert.AreEqual(0, loaded.Backpack.GiftCount(Gifts.VisitHamper));
-                loaded.AdvanceClock(91); Assert.That(saved.SettlementSummary, Does.Contain("礼盒"));
+                Assert.True(loaded.FinishManualCityActivity(saved.Id)); Assert.That(saved.SettlementSummary, Does.Contain("礼盒"));
                 Assert.AreEqual(balance - Money.FromYuan(1000), loaded.Ledger.Balance);
             }
         }
@@ -400,6 +405,26 @@ namespace PCShopSell.Tests
             Assert.IsFalse(loaded.AdvanceKaraokePlayback(saved.Id, 1));
             loaded.AdvanceClock(20); Assert.AreEqual(balance + Money.FromYuan(1500), loaded.Ledger.Balance);
             Assert.That(saved.SettlementSummary, Does.Contain("1,500"));
+        }
+
+        [Test]
+        public void AudioHostServicesOnlyHisOwnOnSiteReservation()
+        {
+            using var s=Make();
+            var appointment=Accept(s,"act_ktv_fuzhi");
+            CityTestPeople.ApproachAppointment(s,appointment);
+            At(s,appointment.VenueId);
+            Assert.True(s.PrepareVenueCompanions(s.CurrentPlace));
+            var host=s.CityPersonState("resident_fuzhi");
+            foreach(var staff in s.CityPeople.Where(p=>p.WorkPlaceId==appointment.VenueId && p!=host))
+            { staff.Task=CityPersonTask.Home;staff.LocationPlaceId=staff.HomePlaceId;staff.Route=null; }
+            Assert.NotNull(s.NpcVenueStaffingBlocker(s.CurrentPlace),"预约主持人不应给普通散客算作在岗店员");
+            Assert.IsNull(s.NpcVenueStaffingBlocker(s.CurrentPlace,appointment));
+            string location=host.LocationPlaceId;
+            host.LocationPlaceId=host.HomePlaceId;
+            Assert.NotNull(s.NpcVenueStaffingBlocker(s.CurrentPlace,appointment),"离场后不能远程提供服务");
+            host.LocationPlaceId=location;
+            Assert.True(s.StartVenueAppointment(appointment.Id),s.VenueAppointmentStartBlocker(appointment));
         }
 
         [TestCase(false)]

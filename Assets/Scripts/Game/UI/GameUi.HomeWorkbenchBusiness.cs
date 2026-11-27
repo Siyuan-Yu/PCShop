@@ -75,6 +75,16 @@ namespace PCShopSell.Game.UI
             int today = S.Clock.Today.TotalDays;
             if (S.PendingEvent != null)
             { var pending = S.PendingEvent; WbTodo(list, "待处理事件 · " + pending.Title, "需要你做出选择", Ui.Warn, "处理", () => ShowEvent(pending), "WorkbenchPendingEvent"); count++; }
+            foreach(var row in S.Employees.Where(r=>S.EmployeeNeedsAttention(r.Person)&&S.PlayerManagesEmployee(r.Person.Id)))
+            {
+                string id=row.Person.Id;var state=row.Person.Wellbeing;
+                WbTodo(list,row.Person.Name+" · "+S.EmployeeAttentionLabel(row.Person),
+                    state.NoticeAfterShift>=0?$"剩余 {Math.Max(0,state.NoticeAfterShift-state.CompletedShifts)} 个实际班次":state.Request?.Reason??"满意度偏低",Ui.Warn,"查看员工",()=>ShowEmployeeProfile(id),"WorkbenchEmployee_"+id);count++;
+            }
+            foreach(var company in S.GovernanceCompanies.Where(S.GovernanceNeedsAttention))
+            {
+                var g=company;WbTodo(list,S.GovernanceName(g.Ticker),g.HandoverAt>=0?"控制权交接 · "+new GameTimestamp(g.HandoverAt):g.Resolutions.Any(r=>!r.Closed)?"股东会议案待表决":"已取得过半表决权，可发起接管",Ui.Warn,"公司治理",()=>{_governancePage=g.HandoverAt>=0?2:1;OpenCompanyGovernance(g.Ticker);},"WorkbenchCompany_"+g.Ticker);count++;
+            }
             foreach (var loan in S.AppLoans.Where(l => !l.Repaid).OrderBy(l => l.DueDay))
             {
                 int days = loan.DueDay - today;
@@ -96,7 +106,7 @@ namespace PCShopSell.Game.UI
             }
             foreach (var alert in S.WorkbenchAlerts)
             { WbTodo(list, alert.Text, "生活托管提醒", Ui.Accent, "去设置", OpenHomeAutomation, "WorkbenchAlert_" + alert.Key); count++; }
-            foreach (var shop in S.MyShops.Where(s => !S.IsOwnedVenue(s.Place) && WbStockCount(s) == 0))
+            foreach (var shop in S.MyShops.Where(s => S.PlayerManagesShop(s)&&!S.IsOwnedVenue(s.Place) && WbStockCount(s) == 0))
             {
                 string shopId = shop.Place.Id;
                 WbTodo(list, S.ShopTitle(shop) + " · 库存已空", "进货或安排进货员补货", Ui.Accent, "去处理", () => GoWorkbenchShop(shopId, 2), "WorkbenchEmpty_" + shopId); count++;

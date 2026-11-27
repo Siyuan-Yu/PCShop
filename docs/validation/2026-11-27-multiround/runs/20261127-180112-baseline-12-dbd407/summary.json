@@ -1,0 +1,14 @@
+{
+  "tag": "baseline-12",
+  "filter": "^PCShopSell.Tests.SocialEventBatchTests\\.;^PCShopSell.Tests.SocialTests\\.;^PCShopSell.Tests.SteerTests\\.;^PCShopSell.Tests.StockAndCatalogTests\\.;^PCShopSell.Tests.SupplierPlanAllocationTests\\.;^PCShopSell.Tests.TimeControllerTests\\.;^PCShopSell.Tests.TravelTests\\.;^PCShopSell.Tests.UiCleanupTests\\.;^PCShopSell.Tests.UnifiedClockAndWeightTests\\.;^PCShopSell.Tests.VenueBusinessTests\\.",
+  "started": "2026-11-27T18:01:12.1811619+08:00",
+  "seconds": 224.17,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 221,
+  "passed": 150,
+  "failed": 71,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-20261127\\20261127-180112-baseline-12-dbd407"
+}

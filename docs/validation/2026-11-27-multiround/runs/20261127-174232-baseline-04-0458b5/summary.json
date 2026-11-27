@@ -1,0 +1,14 @@
+{
+  "tag": "baseline-04",
+  "filter": "^PCShopSell.Tests.DisplaySettingsTests\\.;^PCShopSell.Tests.DistrictCommerceTests\\.;^PCShopSell.Tests.DistrictDetailTests\\.;^PCShopSell.Tests.DistrictProgressionTests\\.;^PCShopSell.Tests.DistrictUiTests\\.;^PCShopSell.Tests.EmployeeAssignmentTests\\.;^PCShopSell.Tests.EnergyPayrollTests\\.;^PCShopSell.Tests.EventScriptTests\\.;^PCShopSell.Tests.EventSystemTests\\.;^PCShopSell.Tests.ExhibitionCustomerBatchTests\\.",
+  "started": "2026-11-27T17:42:32.8633834+08:00",
+  "seconds": 240.16,
+  "timeout": true,
+  "exitCode": -1,
+  "result": "Timeout",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-20261127\\20261127-174232-baseline-04-0458b5"
+}

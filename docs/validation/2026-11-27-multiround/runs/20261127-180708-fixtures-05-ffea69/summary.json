@@ -1,0 +1,14 @@
+{
+  "tag": "fixtures-05",
+  "filter": "^PCShopSell.Tests.HomeWorkbenchTests\\.;^PCShopSell.Tests.MenuLocalizationTests\\.;^PCShopSell.Tests.OnsitePlayTests\\.",
+  "started": "2026-11-27T18:07:08.0570704+08:00",
+  "seconds": 114.02,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 60,
+  "passed": 50,
+  "failed": 10,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-180708-fixtures-05-ffea69"
+}

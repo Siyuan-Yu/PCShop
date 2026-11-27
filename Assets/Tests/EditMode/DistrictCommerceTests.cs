@@ -25,9 +25,8 @@ namespace PCShopSell.Tests
         private static void Time(GameSession s,long minute)=>s.Clock.Restore(new GameDate((int)(minute/1440)),(int)(minute%1440));
         private static void Meet(GameSession s)
         {
-            string id=s.CurrentDistrictNode.Id;Assert.True(s.BeginDistrictMeeting(id));var state=s.DistrictStoryState;
-            Time(s,state.MeetingAt);At(s,state.MeetingPlaceId);
-            foreach(string person in state.MeetingPeople){var p=s.CityPersonState(person);p.Route=null;p.LocationPlaceId=state.MeetingPlaceId;}
+            string id=s.CurrentDistrictNode.Id;
+            DistrictProgressionTests.Meet(s);
             Assert.True(s.ActDistrictNode(id));
         }
         private static void Deliver(GameSession s,BrandOrder order)

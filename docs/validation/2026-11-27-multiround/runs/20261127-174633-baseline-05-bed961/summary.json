@@ -1,0 +1,14 @@
+{
+  "tag": "baseline-05",
+  "filter": "^PCShopSell.Tests.ExpoAcceptanceTests\\.;^PCShopSell.Tests.FastFoodTests\\.;^PCShopSell.Tests.FigureMotionTests\\.;^PCShopSell.Tests.FinanceEventBatchTests\\.;^PCShopSell.Tests.FishingTests\\.;^PCShopSell.Tests.FixtureTests\\.;^PCShopSell.Tests.FoodAndFridgeTests\\.;^PCShopSell.Tests.FoodExpiryTests\\.;^PCShopSell.Tests.GameClockTests\\.;^PCShopSell.Tests.GameDateTests\\.",
+  "started": "2026-11-27T17:46:33.4996307+08:00",
+  "seconds": 174.98,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 164,
+  "passed": 125,
+  "failed": 39,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-20261127\\20261127-174633-baseline-05-bed961"
+}

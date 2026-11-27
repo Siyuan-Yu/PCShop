@@ -1,0 +1,7 @@
+[
+  {
+    "name": "PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent(0)",
+    "message": "  Expected: <empty>\n  But was:  < <PCShopSell.Core.Session.DiningOrder> >\n",
+    "stack": "at PCShopSell.Tests.MarkupRangeTests.ExpensiveMenuActuallyRequiresPurchaseIntent (System.Double salesBonus) [0x0017f] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\MarkupRangeTests.cs:119\n"
+  }
+]

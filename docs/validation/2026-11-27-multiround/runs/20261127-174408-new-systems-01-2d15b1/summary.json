@@ -1,0 +1,14 @@
+{
+  "tag": "new-systems-01",
+  "filter": "^PCShopSell.Tests.CompanyWellbeingRegressionTests\\.",
+  "started": "2026-11-27T17:44:08.5374218+08:00",
+  "seconds": 88.13,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 20,
+  "passed": 19,
+  "failed": 1,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-focused-20261127\\20261127-174408-new-systems-01-2d15b1"
+}

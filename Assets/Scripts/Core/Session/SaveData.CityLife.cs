@@ -78,7 +78,14 @@ namespace PCShopSell.Core.Session
             _cityEmployeeAliases.Clear();for(int i=0;i<Math.Min(d.cityEmployeeIds?.Length??0,d.cityEmployeePersonIds?.Length??0);i++)_cityEmployeeAliases[d.cityEmployeeIds[i]]=d.cityEmployeePersonIds[i];
             _cityPeople.Clear();foreach(var p in d.cityPeople??Array.Empty<CityPersonState>())if(p!=null&&!string.IsNullOrEmpty(p.PersonId)&&!_cityPeople.ContainsKey(p.PersonId))
             {
-                var copy=p.Copy();if(!City.HasPlace(copy.HomePlaceId))copy.HomePlaceId=Home.Id;
+                var copy=p.Copy();
+                // JsonUtility 将可选字符串的 null 写回为空串；空串并不代表实际来访、赴约或地点。
+                copy.VisitId=string.IsNullOrEmpty(copy.VisitId)?null:copy.VisitId;
+                copy.ActivityId=string.IsNullOrEmpty(copy.ActivityId)?null:copy.ActivityId;
+                copy.LocationPlaceId=string.IsNullOrEmpty(copy.LocationPlaceId)?null:copy.LocationPlaceId;
+                copy.WorkPlaceId=string.IsNullOrEmpty(copy.WorkPlaceId)?null:copy.WorkPlaceId;
+                copy.LeisureTargetId=string.IsNullOrEmpty(copy.LeisureTargetId)?null:copy.LeisureTargetId;
+                if(!City.HasPlace(copy.HomePlaceId))copy.HomePlaceId=Home.Id;
                 if(copy.LocationPlaceId!=null&&!City.HasPlace(copy.LocationPlaceId))copy.LocationPlaceId=copy.HomePlaceId;
                 // JsonUtility can materialize a nested null route as an empty object. That is
                 // "no automatic route", not a missing destination requiring a move home.

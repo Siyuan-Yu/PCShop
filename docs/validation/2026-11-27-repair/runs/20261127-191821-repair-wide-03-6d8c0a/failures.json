@@ -1,0 +1,52 @@
+[
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.ConfirmedPlanHasFourAgencyDistrictsAndNoStarterShopStation",
+    "message": "  Expected: 8\n  But was:  18\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.ConfirmedPlanHasFourAgencyDistrictsAndNoStarterShopStation () [0x00007] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:34\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.LayoutMigrationDoesNotReplayCashOrDuplicateAssetsAndThenIsIdempotent",
+    "message": "  Expected: 8\n  But was:  18\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.LayoutMigrationDoesNotReplayCashOrDuplicateAssetsAndThenIsIdempotent () [0x000a5] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:110\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.MetroTravelsToChosenStationRatherThanLastEnumeratedStation",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.MetroTravelsToChosenStationRatherThanLastEnumeratedStation () [0x00077] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:94\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityLayoutV7Tests.ResidentialSceneryHasMultipleRowsAndDoesNotCollapseToFourApartmentBlocks",
+    "message": "  s_oldhomes\n  Expected: greater than or equal to 45\n  But was:  26\n",
+    "stack": "at PCShopSell.Tests.CityLayoutV7Tests.ResidentialSceneryHasMultipleRowsAndDoesNotCollapseToFourApartmentBlocks () [0x00080] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityLayoutV7Tests.cs:56\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash",
+    "message": "  Expected: 1\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash () [0x00078] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityRetailTests.cs:141\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityRetailTests.ModelsUseTheRealGoodsStockAndDistinctSeriesShelves",
+    "message": "  Expected: 12\n  But was:  16\n",
+    "stack": "at PCShopSell.Tests.CityRetailTests.ModelsUseTheRealGoodsStockAndDistinctSeriesShelves () [0x00085] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityRetailTests.cs:128\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute",
+    "message": "  Expected: Taxi\n  But was:  Walk\n",
+    "stack": "at PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute () [0x000d2] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CityStoryTests.cs:92\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CompetitionContextTests.ClothingPriceWarNamesTheActualRivalAndTemporarilyDiscountsOnlyThePromotedProduct",
+    "message": "  Expected: ¥915\n  But was:  ¥854\n",
+    "stack": "at PCShopSell.Tests.CompetitionContextTests.ClothingPriceWarNamesTheActualRivalAndTemporarilyDiscountsOnlyThePromotedProduct () [0x000f9] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CompetitionContextTests.cs:278\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CompetitionContextTests.SpecialShopReferralKeepsItsQuotedInventoryAndConsumesItOnDelivery(\"restaurant\")",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CompetitionContextTests.SpecialShopReferralKeepsItsQuotedInventoryAndConsumesItOnDelivery (System.String kind) [0x0019a] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CompetitionContextTests.cs:220\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CompetitionContextTests.StudentDiscountOrderUsesTheStoreInventoryAndAddsAwareness(\"restaurant\",\"produce:veg\")",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.CompetitionContextTests.StudentDiscountOrderUsesTheStoreInventoryAndAddsAwareness (System.String kind, System.String productId) [0x001ce] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\CompetitionContextTests.cs:112\n"
+  }
+]

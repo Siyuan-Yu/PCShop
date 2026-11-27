@@ -131,15 +131,43 @@ namespace PCShopSell.Core.Session
             return CommunityLeadHint(index)+"\n已记录线索，对应资料箱现在可以现场调查。";
         }
         private readonly Dictionary<string, string> _communityStreetNodes = new Dictionary<string, string>();
+        private readonly Dictionary<(int x, int y), List<MapPoint>> _communityDoorCells = new();
+        private int _communityDoorCount = -1, _communityMapRevision = -1;
 
         private string CommunityStreetNode(Place landmark)
         {
+            const double clearance = EnterRadius + 6;
+            (int x, int y) Cell(MapPoint p) => ((int)Math.Floor(p.X / clearance), (int)Math.Floor(p.Y / clearance));
+            if (_communityDoorCount != City.Places.Count || _communityMapRevision != City.Map.Revision)
+            {
+                _communityStreetNodes.Clear();
+                _communityDoorCells.Clear();
+                foreach (var place in City.Places)
+                {
+                    var door = DoorOf(place);
+                    var key = Cell(door);
+                    if (!_communityDoorCells.TryGetValue(key, out var doors))
+                        _communityDoorCells[key] = doors = new List<MapPoint>();
+                    doors.Add(door);
+                }
+                _communityDoorCount = City.Places.Count;
+                _communityMapRevision = City.Map.Revision;
+            }
             if (_communityStreetNodes.TryGetValue(landmark.Id, out var nodeId)) return nodeId;
             var origin = City.ViewPosition(landmark.NodeId);
-            var doors = City.Places.Select(DoorOf).ToArray();
+            bool Clear(MapPoint point)
+            {
+                var cell = Cell(point);
+                for (int x = cell.x - 1; x <= cell.x + 1; x++)
+                    for (int y = cell.y - 1; y <= cell.y + 1; y++)
+                        if (_communityDoorCells.TryGetValue((x, y), out var doors))
+                            foreach (var door in doors)
+                                if (DistanceCity(point, door) < clearance) return false;
+                return true;
+            }
             // Leave room for the interaction radius and for a player approaching from either side.
             nodeId = City.Map.Nodes.OrderBy(node => DistanceCity(City.ViewPosition(node.Id), origin))
-                .First(node => doors.All(door => DistanceCity(City.ViewPosition(node.Id), door) >= EnterRadius + 6)).Id;
+                .First(node => Clear(City.ViewPosition(node.Id))).Id;
             _communityStreetNodes[landmark.Id] = nodeId;
             return nodeId;
         }

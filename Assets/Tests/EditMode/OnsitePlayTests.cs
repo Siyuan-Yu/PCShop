@@ -25,14 +25,41 @@ namespace PCShopSell.Tests
         }
         private static void Attend(GameSession s,CityActivity a)
         {
-            s.Clock.Restore(new GameDate((int)(a.ScheduledStart/1440)),(int)(a.ScheduledStart%1440));s.Player.Health=s.Player.Hunger=s.Player.Energy=100;At(s,a.VenueId);Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));
-            Assert.AreEqual(CityActivityPhase.Gathering,a.State,a.EndReason);Assert.IsTrue(s.StartOnsiteActivity(a.Id, GameSession.OnsiteNumber(a.DefinitionId) == 56 ? false : (bool?)null),a.EndReason);
+            // 跳时后仍需实际推进世界，让值班人员完成通勤；不能假定 NPC 会瞬移到柜台。
+            long approach=a.ScheduledStart-120;
+            s.Clock.Restore(new GameDate((int)(approach/1440)),(int)(approach%1440));
+            CompanyWellbeingRegressionTests.Advance(s,120);
+            s.Player.Health=s.Player.Hunger=s.Player.Energy=100;At(s,a.VenueId);Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace),"集合失败："+a.State+" "+a.EndReason);
+            bool? treat=GameSession.OnsiteNumber(a.DefinitionId)==56?false:(bool?)null;
+            for(int minute=0;minute<GameSession.CityArrivalWindowMinutes && a.Active && s.NpcVenueStaffingBlocker(s.CurrentPlace,a)!=null;minute++)
+                CompanyWellbeingRegressionTests.Advance(s,1);
+            Assert.AreEqual(CityActivityPhase.Gathering,a.State,a.EndReason);
+            Assert.IsTrue(s.StartOnsiteActivity(a.Id,treat),(s.OnsiteStartBlocker(a,treat)??a.EndReason)+" 时间="+s.Clock.Now+" 场所="+a.VenueId+" 人员="+
+                string.Join(";",s.CityPeople.Where(p=>p.WorkPlaceId==a.VenueId).Select(p=>$"{p.PersonId} at={p.LocationPlaceId} task={p.Task} activity={p.ActivityId} arrive={p.Route?.ArriveMinute} now={s.Clock.Now.TotalMinutes}")));
             Assert.AreEqual(CityActivityPhase.Running,a.State,a.EndReason);Assert.NotNull(s.CurrentOnsite);
         }
         private static void Finish(GameSession s,CityActivity a)
         {
             if (GameSession.IsOnsiteSport(a)) Assert.True(s.FinishOnsiteSport());
             else Assert.True(s.FinishManualCityActivity(a.Id));
+        }
+        [TestCase(54)] [TestCase(57)]
+        public void InstructorCanServeOwnLessonButCannotBypassUnrelatedVenueStaffing(int number)
+        {
+            using var s=Make();var a=Book(s,number);long approach=a.ScheduledStart-120;
+            s.Clock.Restore(new GameDate((int)(approach/1440)),(int)(approach%1440));
+            CompanyWellbeingRegressionTests.Advance(s,120);At(s,a.VenueId);
+            Assert.True(s.PrepareVenueCompanions(s.CurrentPlace,a.Id));
+            Assert.IsNull(s.NpcVenueStaffingBlocker(s.CurrentPlace,a));
+            Assert.IsNotNull(s.NpcVenueStaffingBlocker(s.CurrentPlace),"不能因此让其他消费者绕过值班检查");
+            var instructor=s.CityPersonState(number==54?"life_coach":"life_golfer");
+            var location=instructor.LocationPlaceId;instructor.LocationPlaceId=null;
+            Assert.IsNotNull(s.NpcVenueStaffingBlocker(s.CurrentPlace,a),"教练未到场不能开课");
+            instructor.LocationPlaceId=location;
+            var definition=a.DefinitionId;a.DefinitionId="social_56";
+            Assert.IsNotNull(s.NpcVenueStaffingBlocker(s.CurrentPlace,a),"普通约球不能视为授课值班");
+            a.DefinitionId=definition;
+            Assert.True(s.StartOnsiteActivity(a.Id));
         }
         internal static void StepManualActivity(GameSession session, int steps)
         {
@@ -53,7 +80,8 @@ namespace PCShopSell.Tests
         {
             using var s = Make();
             At(s, venue);
-            var passes = CityLifeCatalog.SportPasses(venue);
+            // 社区运动场现有足球和篮球两类服务；本用例验证篮球/高尔夫时长票。
+            var passes = CityLifeCatalog.SportPasses(venue).Where(pass=>pass.LogicalId is "court" or "golf").ToArray();
             Assert.That(passes.Select(pass => pass.Minutes), Is.EqualTo(new[] { 120, 240, 360, 480 }));
             Assert.That(passes.Select(pass => CityLifeCatalog.ManualPlayAttempts(pass.Minutes)), Is.EqualTo(new[] { 3, 6, 9, 12 }));
             var cash = s.Ledger.Balance;

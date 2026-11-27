@@ -1,0 +1,14 @@
+{
+  "tag": "regression-09",
+  "filter": "^PCShopSell.Tests.PathWalkerTests\\.;^PCShopSell.Tests.PerformanceRegressionTests\\.;^PCShopSell.Tests.PlayerWorkTests\\.;^PCShopSell.Tests.PurchasePlanTests\\.;^PCShopSell.Tests.QuarterlyExpoSceneTests\\.;^PCShopSell.Tests.QuarterlyExpoTests\\.;^PCShopSell.Tests.QuestTests\\.;^PCShopSell.Tests.RacingEventBatchTests\\.;^PCShopSell.Tests.RacingTests\\.;^PCShopSell.Tests.RealtyTests\\.",
+  "started": "2026-11-27T18:29:49.4010870+08:00",
+  "seconds": 160.97,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 184,
+  "passed": 166,
+  "failed": 18,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-qa-regression-20261127\\20261127-182949-regression-09-9e2845"
+}

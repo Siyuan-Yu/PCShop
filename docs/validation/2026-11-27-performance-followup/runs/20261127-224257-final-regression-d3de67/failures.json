@@ -1,0 +1,22 @@
+[
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks",
+    "message": "  momo working in closed life_mcn at 第1年1月1日 19:01\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests+<>c__DisplayClass1_0.<AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks>g__Check|0 () [0x000d3] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:63\nat PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks () [0x000d1] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:72\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302)",
+    "message": "  Expected: Completed\n  But was:  Running\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x00131] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422)",
+    "message": "  Expected: Completed\n  But was:  Running\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x00131] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:105\n"
+  },
+  {
+    "name": "PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60)",
+    "message": "  Expected: Completed\n  But was:  Running\n",
+    "stack": "at PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals (System.Int32 minute) [0x00131] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityActivityTests.cs:105\n"
+  }
+]

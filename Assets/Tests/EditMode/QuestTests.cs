@@ -28,7 +28,7 @@ namespace PCShopSell.Tests
         public void Quests_AreInOrder_AndHaveText()
         {
             CollectionAssert.AreEqual(new[] { "first_meal", "rent", "mall", "place", "shelf", "stock", "sale", "hire", "phone", "qr" }, Quests.All.Take(10).Select(q => q.Id).ToArray());
-            CollectionAssert.AreEqual(new[] { "scooter", "racing_enrollment", "community_goal", "pricing" }, Quests.All.Skip(10).Take(4).Select(q => q.Id).ToArray());
+            CollectionAssert.AreEqual(new[] { "scooter", "bank_securities", "second_shop", "third_shop", "racing_enrollment" }, Quests.All.Skip(10).Take(5).Select(q => q.Id).ToArray());
             Assert.AreEqual(Quests.All.Count, Quests.All.Select(q => q.Id).Distinct().Count());
             foreach (QuestDef q in Quests.All)
             {
@@ -158,8 +158,9 @@ namespace PCShopSell.Tests
                 if(kind=="computer")Assert.AreEqual(2,stock);else Assert.Zero(stock);
                 if(kind=="restaurant")
                 {
-                    Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
-                    foreach(string id in GameSession.RecipeIngredients)Assert.AreEqual(4,s.KitchenIngredientCount(s.CurrentShop,id));
+                    Assert.AreEqual(2,s.CurrentShop.Fridge.Food.RiceKg+s.CurrentShop.Locker.Food.RiceKg);
+                    foreach(string id in GameSession.RecipeIngredients)
+                        Assert.AreEqual(4,s.CurrentShop.Fridge.Food.IngredientCount(id)+s.CurrentShop.Locker.Food.IngredientCount(id));
                 }
                 if(kind=="secondhand")Assert.AreEqual(2,s.SpecialBusiness(s.CurrentShop.Place.Id).Used.Count(i=>i.Owned&&i.Inspected&&!i.Sold));
                 if(kind=="clothing"||kind=="models")
@@ -174,7 +175,7 @@ namespace PCShopSell.Tests
                     loaded.RefreshQuestProgress();
                     foreach(string id in GameSession.OpeningFurniture(kind))Assert.AreEqual(1,loaded.FurnitureStored(id));
                     Assert.AreEqual(reward,Quests.Get("rent").RewardText(loaded));
-                    if(kind=="restaurant")Assert.AreEqual(2,loaded.KitchenRice(loaded.CurrentShop));
+                    if(kind=="restaurant")Assert.AreEqual(2,loaded.CurrentShop.Fridge.Food.RiceKg+loaded.CurrentShop.Locker.Food.RiceKg);
                     if(kind=="secondhand")loaded.SpecialBusiness(loaded.CurrentShop.Place.Id).Used.Clear();
                     GameSessionTests.Teleport(loaded,"pc");Assert.True(loaded.SetShopMainCategory("computer"));
                     loaded.RefreshQuestProgress();Assert.AreEqual(reward,Quests.Get("rent").RewardText(loaded),"转型不改写已领礼包，也不重发");
@@ -279,8 +280,8 @@ namespace PCShopSell.Tests
                 foreach(string id in s.MissingOpeningFurniture())s.DebugGiveFurniture(id,1);
                 s.RefreshQuestProgress();
                 Assert.Zero(s.FurnitureStored("restaurant_stove"),"已有灶台不再重复补发");
-                Assert.AreEqual(1,s.FurnitureStored("restaurant_table"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
-                s.RefreshQuestProgress();Assert.AreEqual(1,s.FurnitureStored("restaurant_table"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
+                Assert.AreEqual(1,s.FurnitureStored("restaurant_table"));Assert.AreEqual(2,s.CurrentShop.Fridge.Food.RiceKg+s.CurrentShop.Locker.Food.RiceKg);
+                s.RefreshQuestProgress();Assert.AreEqual(1,s.FurnitureStored("restaurant_table"));Assert.AreEqual(2,s.CurrentShop.Fridge.Food.RiceKg+s.CurrentShop.Locker.Food.RiceKg);
                 Assert.AreEqual(oldParts,PartCatalog.All.Sum(p=>s.PlayerShop.Stock.CountAll(p)));
             }
         }

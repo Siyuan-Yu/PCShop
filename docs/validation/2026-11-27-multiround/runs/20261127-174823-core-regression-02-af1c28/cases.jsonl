@@ -1,0 +1,64 @@
+{"name":"PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce","result":"Passed","message":"","stack":"","seconds":1.844532}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.BuyingAndResellingNpcPropertyLosesTransactionCosts","result":"Passed","message":"","stack":"","seconds":0.0081534}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.BuyingNpcPremisesPreservesTenantAndDoesNotCreatePlayerBusiness","result":"Passed","message":"","stack":"","seconds":0.0135422}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.EquityFullLiquidationClearsCostAndCannotRoundTripProfit","result":"Failed","message":"  Expected: False\r\n  But was:  True\r\n","stack":"at PCShopSell.Tests.CityAssetIntegrationTests.EquityFullLiquidationClearsCostAndCannotRoundTripProfit () [0x00016] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityAssetIntegrationTests.cs:85\r\n","seconds":0.0085854}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.EquityHistoryHoldingsAndRandomContinuationSurviveSaveLoad","result":"Passed","message":"","stack":"","seconds":0.0215377}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.LeaseConversionKeepsOperatingInstanceAndChargesExactPreviewOnce","result":"Passed","message":"","stack":"","seconds":0.0121221}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.MaximumStockBuyUsesIndividualSharesWithinTheCurrentQuote","result":"Passed","message":"","stack":"","seconds":0.0044691}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.ReadingCatalogAndPricesDoesNotMoveOrChargeOrAdvanceRandom","result":"Passed","message":"","stack":"","seconds":0.0036225}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.SellingSelfUseRequiresExplicitOperatingExit","result":"Passed","message":"","stack":"","seconds":0.0028275}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.StockBatchUsesReleasedShortMarginAndAccountsForBothFees","result":"Passed","message":"","stack":"","seconds":0.0132559}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.StockBatchValidatesEveryOrderBeforeSellingAndUsesSaleProceedsForPurchase","result":"Passed","message":"","stack":"","seconds":0.0163767}
+{"name":"PCShopSell.Tests.CityAssetIntegrationTests.StockMarketHasLargerMovesInBothDirectionsWithinDailyLimits","result":"Passed","message":"","stack":"","seconds":0.041042}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(EBike,\"e_city\",\"e_dash\",\"dealer\")","result":"Failed","message":"  Expected: 1982.7403624999999d +/- 1.0000000000000001E-05d\r\n  But was:  1982.1835999999998d\r\n","stack":"at PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime (PCShopSell.Core.Session.VehicleKind kind, System.String basicModel, System.String fasterModel, System.String dealer) [0x00315] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:100\r\n","seconds":0.0416437}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Tricycle,\"t_cargo\",\"t_sport\",\"dealer\")","result":"Failed","message":"  Expected: 1986.3433905263159d +/- 1.0000000000000001E-05d\r\n  But was:  1985.9028547368421d\r\n","stack":"at PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime (PCShopSell.Core.Session.VehicleKind kind, System.String basicModel, System.String fasterModel, System.String dealer) [0x00315] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:100\r\n","seconds":0.0278035}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime(Car,\"c_city\",\"c_su7\",\"motor_cars\")","result":"Failed","message":"  Expected: 1976.6389952d +/- 1.0000000000000001E-05d\r\n  But was:  1975.8854143999999d\r\n","stack":"at PCShopSell.Tests.CityTravelTimingTests.ActualCommuteModelControlsManualSpeedAndRouteTime (PCShopSell.Core.Session.VehicleKind kind, System.String basicModel, System.String fasterModel, System.String dealer) [0x00315] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CityTravelTimingTests.cs:100\r\n","seconds":0.0289525}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.CancelOrRetargetNearFinalApproachKeepsRealPosition","result":"Passed","message":"","stack":"","seconds":1.6191956}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.DrawingScaleChangeDoesNotMultiplyAnAlreadyScaledEdgeAgain","result":"Passed","message":"","stack":"","seconds":0.0136438}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(1)","result":"Passed","message":"","stack":"","seconds":0.0183668}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(2)","result":"Passed","message":"","stack":"","seconds":0.0201959}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(4)","result":"Passed","message":"","stack":"","seconds":0.0231884}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(8)","result":"Passed","message":"","stack":"","seconds":0.0297471}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(1)","result":"Passed","message":"","stack":"","seconds":0.0188344}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(2)","result":"Passed","message":"","stack":"","seconds":0.0218803}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(4)","result":"Passed","message":"","stack":"","seconds":0.0242289}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.ManualAutomaticAndIdleShareClockAndPhysicalPace(8)","result":"Passed","message":"","stack":"","seconds":0.031436}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.NewDestinationResumesManualPauseWithoutReleasingWindowHold","result":"Passed","message":"","stack":"","seconds":0.0064706}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.RealEdgeLengthControlsEtaNotCompressedDrawingLength","result":"Passed","message":"","stack":"","seconds":0.0078586}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.SavingMidRoutePreservesPositionRemainingDistanceAndArrival","result":"Passed","message":"","stack":"","seconds":0.8536005}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(EBike,3)","result":"Passed","message":"","stack":"","seconds":0.000446}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Tricycle,2.4d)","result":"Passed","message":"","stack":"","seconds":0.0001344}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Van,3.84d)","result":"Passed","message":"","stack":"","seconds":0.0001183}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Car,4.32d)","result":"Passed","message":"","stack":"","seconds":0.0001108}
+{"name":"PCShopSell.Tests.CityTravelTimingTests.VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(Taxi,4.8d)","result":"Passed","message":"","stack":"","seconds":0.0001081}
+{"name":"PCShopSell.Tests.ClassmateDinnerTests.ClassmateDinnerCompletesAfterChoosingMealAndKeepsContactAfterReload","result":"Passed","message":"","stack":"","seconds":2.0586237}
+{"name":"PCShopSell.Tests.ClassmateDinnerTests.InvitationUsesStartingClassmateContactAndCancellationDoesNotCharge","result":"Passed","message":"","stack":"","seconds":0.8205504}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.BlockTradeTransfersRealSharesAndCashAndRejectsOversell","result":"Passed","message":"","stack":"","seconds":0.007353}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.CompanyOperatingCashIsSeparateAndPersists","result":"Passed","message":"","stack":"","seconds":0.0175563}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.CompletedShiftChangesMoraleOnceAndTransferPreservesIt","result":"Passed","message":"","stack":"","seconds":0.3205379}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.DilutionBelowDirectorThresholdRemovesBoardPrivilege","result":"Failed","message":"  稀释后不再满足席位持股条件\r\n  Expected: False\r\n  But was:  True\r\n","stack":"at PCShopSell.Tests.CompanyWellbeingRegressionTests.DilutionBelowDirectorThresholdRemovesBoardPrivilege () [0x000b8] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CompanyWellbeingRegressionTests.cs:147\r\n","seconds":0.7890889}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.ExactlyHalfAndAggregatedPublicDoNotControlCompany","result":"Passed","message":"","stack":"","seconds":0.0036397}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.ExistingSharesCanExitBeforeGarden","result":"Passed","message":"","stack":"","seconds":0.0038095}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.GovernanceRefreshAndReloadNeverMintInvestorCash","result":"Passed","message":"","stack":"","seconds":0.0284991}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueRechecksSubscriberFundsAtSettlement","result":"Passed","message":"","stack":"","seconds":0.7505651}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.IssueWaitsForVoteAndDoesNotRepeatAfterReload","result":"Passed","message":"","stack":"","seconds":0.7635713}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.LeaveIsNextShiftPaidAndCannotBeRepeatedOrCreditedTwice","result":"Passed","message":"","stack":"","seconds":1.6236902}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.LosingMajorityBeforeHandoverCancelsIt","result":"Passed","message":"","stack":"","seconds":0.0043589}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(0)","result":"Passed","message":"","stack":"","seconds":0.0035764}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(1)","result":"Passed","message":"","stack":"","seconds":0.0032108}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NewEquityOperationsAreLockedBeforeGarden(2)","result":"Passed","message":"","stack":"","seconds":0.0031886}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.NpcManagedCompanyDeniesEmployeeAndShopChanges","result":"Passed","message":"","stack":"","seconds":0.0041112}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(7)","result":"Passed","message":"","stack":"","seconds":0.1801855}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(41)","result":"Passed","message":"","stack":"","seconds":0.210871}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RandomShareOperationsAreReplayableAndConserveOwnership(914)","result":"Passed","message":"","stack":"","seconds":0.1771634}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.RequestsMayDeferOnceAndAgreementDoesNotInstantlyRaiseMorale","result":"Passed","message":"","stack":"","seconds":0.0036473}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.ReturnedBuyerWithUndeliveredGoodsCannotStartLeave","result":"Passed","message":"","stack":"","seconds":0.0034599}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.SalaryChangeDuringShiftPreservesCurrentPayrollThroughReload","result":"Passed","message":"","stack":"","seconds":0.3649436}
+{"name":"PCShopSell.Tests.CompanyWellbeingRegressionTests.TakeoverSurvivesSaveAndExecutesOnlyOnce","result":"Passed","message":"","stack":"","seconds":0.738914}
+{"name":"PCShopSell.Tests.SaveGhostStateTests.NoLinLoan_StaysNoLoanAfterReload","result":"Passed","message":"","stack":"","seconds":1.154134}
+{"name":"PCShopSell.Tests.SaveGhostStateTests.NoScratchTicket_StaysNoTicketAfterReload_AndTicketCanBeBought","result":"Passed","message":"","stack":"","seconds":1.1600097}
+{"name":"PCShopSell.Tests.SaveGhostStateTests.RealLinLoan_SurvivesReload","result":"Passed","message":"","stack":"","seconds":1.1449018}
+{"name":"PCShopSell.Tests.SaveGhostStateTests.RealScratchTicket_SurvivesReload","result":"Passed","message":"","stack":"","seconds":1.1612706}
+{"name":"PCShopSell.Tests.SaveStoreFallbackTests.BothCorrupt_ReturnsNullAndKeepsFiles","result":"Passed","message":"","stack":"","seconds":0.4013068}
+{"name":"PCShopSell.Tests.SaveStoreFallbackTests.PrimaryThrowsWhileRestoring","result":"Passed","message":"","stack":"","seconds":0.8127015}
+{"name":"PCShopSell.Tests.SaveStoreFallbackTests.PrimaryNotJson","result":"Passed","message":"","stack":"","seconds":0.7974257}

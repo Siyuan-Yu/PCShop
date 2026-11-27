@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -60,21 +60,10 @@ namespace PCShopSell.Core.World
         }
         private Dictionary<string,double> Distances(string origin)
         {
-            var distances=new Dictionary<string,double>{{origin,0}};
-            var open=new SortedSet<(double distance,long order,string node)>();long order=0;
-            open.Add((0,order++,origin));
-            while(open.Count>0)
-            {
-                var next=open.Min;open.Remove(next);
-                if(next.distance>distances[next.node])continue;
-                foreach(var edge in _city.Map.NeighborsOf(next.node))
-                {
-                    double distance=next.distance+edge.Length;
-                    if(distances.TryGetValue(edge.To,out var known)&&distance>=known)continue;
-                    distances[edge.To]=distance;open.Add((distance,order++,edge.To));
-                }
-            }
-            return distances;
+            var map = _city.Map;
+            map.GetNode(origin);
+            var search = map.PathSearch ?? (map.PathSearch = new Pathfinder.SearchWorkspace(map));
+            return search.DistancesFrom(origin);
         }
     }
 }

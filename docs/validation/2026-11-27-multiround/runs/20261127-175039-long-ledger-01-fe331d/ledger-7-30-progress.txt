@@ -1,0 +1,3 @@
+day=1 seconds=1.22 bytes=167398 entries=2 cash=19999927078
+day=30 seconds=30.93 bytes=276120 entries=50 cash=19998867492
+FINAL requested=30 reached=30 gameOver=False reason=

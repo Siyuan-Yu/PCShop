@@ -1,0 +1,14 @@
+{
+  "tag": "story-venues",
+  "filter": "DistrictProgressionTests;SaveGhostStateTests;FishingTests;SocialEventBatchTests;OutdoorBatchTests;ShopCompetitionTests",
+  "started": "2026-11-27T19:18:49.6060910+08:00",
+  "seconds": 10.82,
+  "timeout": false,
+  "exitCode": 1,
+  "result": "NoResult",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-repair-20261127\\20261127-191849-story-venues-cdad77"
+}

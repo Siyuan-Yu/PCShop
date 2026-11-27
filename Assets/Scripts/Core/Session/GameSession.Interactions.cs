@@ -19,7 +19,7 @@ namespace PCShopSell.Core.Session
             return 0; // Selecting a browse source must never delete purchases from other sources.
         }
 
-        public bool CanEditShop => IsRenovating;
+        public bool CanEditShop => IsRenovating && ShopAuthorityBlocker(_focus)==null;
 
         public void ToggleAutoBuildAt(OwnedShop shop) => WithShop(shop, ToggleAutoBuild);
 
@@ -32,6 +32,7 @@ namespace PCShopSell.Core.Session
 
         public bool SetEmployeeShift(string id, int start, int end)
         {
+            if(EmployeeAuthorityBlocker(id) is string authority)return Fail(authority);
             var row = FindEmployee(id);
             if (row == null || IsGameOver) return Fail("员工不存在或不可安排。");
             if(start<0||start>=1440||end<0||end>=1440||start==end) return Fail("请输入有效的HH:mm；班次必须大于0且小于24小时，上下班不能相同。");

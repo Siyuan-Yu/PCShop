@@ -14,13 +14,14 @@ namespace PCShopSell.Core.Finance
         public string Memo { get; }
         public Money BalanceAfter { get; }
         public string EntryId { get; }
+        public string CashAccountId { get; }
         public LedgerAttribution Attribution { get; }
         public string ShopId => Attribution?.ShopId;
         public string SourceEventId => Attribution?.SourceEventId;
         public LedgerBusinessKind BusinessKind => Attribution?.BusinessKind ?? LedgerBusinessKind.Historical;
 
         public LedgerEntry(GameDate date, string category, Money amount, string memo, Money balanceAfter,
-            string entryId = null, LedgerAttribution attribution = null)
+            string entryId = null, LedgerAttribution attribution = null, string cashAccountId = null)
         {
             Date = date;
             Category = category;
@@ -28,6 +29,7 @@ namespace PCShopSell.Core.Finance
             Memo = memo;
             BalanceAfter = balanceAfter;
             EntryId = entryId;
+            CashAccountId = cashAccountId;
             Attribution = attribution ?? LedgerAttribution.FromCategory(category);
         }
     }
@@ -42,6 +44,9 @@ namespace PCShopSell.Core.Finance
         private readonly Dictionary<string, LedgerEntry> _sources = new Dictionary<string, LedgerEntry>();
         private long _nextEntryId = 1;
         internal Func<string, string> SalesAccountOfShop { get; set; }
+        internal Func<LedgerAttribution, string, string> CashAccountOf { get; set; }
+        internal Func<string, Money> CashAccountBalance { get; set; }
+        internal Action<string, Money> ChangeCashAccount { get; set; }
         public int Revision { get; private set; }
 
         public Money Balance { get; private set; }
@@ -74,7 +79,8 @@ namespace PCShopSell.Core.Finance
             if (!amount.IsPositive)
                 throw new ArgumentOutOfRangeException(nameof(amount), "支出金额必须为正。");
             if (Existing(attribution, -amount, out _)) return true;
-            if (Balance < amount) return false;
+            string account=CashAccountOf?.Invoke(attribution,category);
+            if ((account==null?Balance:CashAccountBalance(account)) < amount) return false;
             Append(date, category, -amount, memo, attribution);
             return true;
         }
@@ -155,8 +161,10 @@ namespace PCShopSell.Core.Finance
                 && SalesAccountOfShop?.Invoke(shopId) is string accountId)
                 attribution = attribution.AssignShopSale(shopId, accountId);
             if (Existing(attribution, signedAmount, out var existing)) return existing;
-            Balance += signedAmount;
-            var entry = new LedgerEntry(date, category, signedAmount, memo, Balance, (_nextEntryId++).ToString(), attribution);
+            string account=CashAccountOf?.Invoke(attribution,category);
+            if(account==null)Balance += signedAmount;
+            else if(signedAmount!=Money.Zero)ChangeCashAccount(account,signedAmount);
+            var entry = new LedgerEntry(date, category, signedAmount, memo, Balance, (_nextEntryId++).ToString(), attribution,account);
             _entries.Add(entry);
             if (!string.IsNullOrEmpty(entry.SourceEventId)) _sources[entry.SourceEventId] = entry;
             Revision++;

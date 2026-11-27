@@ -186,6 +186,7 @@ namespace PCShopSell.Core.Session
         public EmployeePurchaseTrip EmployeeTrip(string id) => _employeeTrips.FirstOrDefault(x => x.EmployeeId == id && !x.Returned);
         public string EmployeeStatus(EmployeeAssignment row)
         {
+            if(row.Person.Wellbeing?.OnLeave(Clock.Now.TotalMinutes)==true)return "带薪休假中";
             var post = CompanyPostOf(row.Person.Id);
             if (post != null) return post.ManagedStoreId != null ? "公司任命店长" : CompanyDepartmentName(post.Department) + (post.Leader ? "负责人" : "专员");
             if (row.Role == EmployeeRole.Unassigned) return "待安排工作";
@@ -255,9 +256,12 @@ namespace PCShopSell.Core.Session
 
         public bool DismissEmployee(string id)
         {
+            if(EmployeeAuthorityBlocker(id) is string authority)return Fail(authority);
             var row = FindEmployee(id);
             if (row == null || IsGameOver) return false;
-            if (_employeeTrips.Any(t => t.EmployeeId == id)) return Fail("员工或货物还在路上，等本次进货结束再辞退。");
+            if (EmployeeHandoverPending(id)) return Fail("员工或货物还在路上，等本次进货结束再辞退。");
+            SettleEmployeeExitPay(row.Person);
+            if(row.Person.Wellbeing!=null)row.Person.Wellbeing.EmploymentEndedAt=Clock.Now.TotalMinutes;
             ForgetCompanyEmployee(id);
             if (row.Role == EmployeeRole.Unassigned)
             {
@@ -283,6 +287,7 @@ namespace PCShopSell.Core.Session
 
         public bool ConfigureEmployeePurchase(string id, EmployeePurchasePlan plan)
         {
+            if(EmployeeAuthorityBlocker(id) is string authority)return Fail(authority);
             var row = FindEmployee(id);
             if (row == null || row.Role != EmployeeRole.Buyer || plan == null || !IsPurchaseTransport(plan.Transport)) return Fail("请选择进货员和有效的运输方式。");
             var copy = plan.Copy();
@@ -416,7 +421,7 @@ namespace PCShopSell.Core.Session
             // and unspent purchase claims are planning figures, not cash already spent.
             // Fit the trip (goods + actual travel/freight) to the real balance; partial
             // selection below continues through every later line when one cannot fit.
-            if (Ledger.Balance < q.Total) blocker = blocker ?? $"现金不足（本趟需 {q.Total}，现有 {Ledger.Balance}）";
+            if (ShopAvailableCash(row.Shop) < q.Total) blocker = blocker ?? $"经营资金不足（本趟需 {q.Total}，现有 {ShopAvailableCash(row.Shop)}）";
             q.Error = planningOnly?null:blocker;
             q.RequiredTotal = q.Total; q.Budget = q.Total;
             return q;
@@ -542,7 +547,7 @@ namespace PCShopSell.Core.Session
                 return full;
             }
             best.RequiredTotal = full.Total;
-            var available=Ledger.Balance;
+            var available=ShopAvailableCash(FindEmployee(id)?.Shop);
             if(available<Money.Zero)available=Money.Zero;
             best.Budget = full.Total > available ? available : full.Total;
             best.Skipped.AddRange(skipped);
@@ -552,6 +557,7 @@ namespace PCShopSell.Core.Session
 
         public bool DispatchEmployeePurchase(string id, EmployeePurchasePlan executionPlan = null)
         {
+            if(EmployeeAuthorityBlocker(id) is string authority)return Fail(authority);
             var row = FindEmployee(id);
             var savedPlan = row?.Person.PurchasePlan;
             int today = Clock.Today.TotalDays;
@@ -572,7 +578,7 @@ namespace PCShopSell.Core.Session
             var transportMotor=UsesPurchaseCourier(q.Transport)?null:EmployeeTransportMotor(q.Transport);
             if(!UsesPurchaseCourier(q.Transport)&&transportMotor==null)return Fail("当前没有可供员工使用的空闲车辆。");
             // 统一预付并锁定本趟报价与货源额度，途中不重复扣款。
-            if (!Ledger.CanAfford(q.Total)) return false;
+            if (ShopAvailableCash(row.Shop)<q.Total) return false;
             for (int i = 0; i < q.Lines.Count; i++)
             {
                 var line = q.Lines[i];

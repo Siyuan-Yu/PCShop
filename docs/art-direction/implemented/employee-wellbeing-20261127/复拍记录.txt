@@ -1,0 +1,27 @@
+员工满意度与请求 · 2026-11-27
+
+工程：D:/UnityProjects/PCShop/PCShop
+分支：art/experiment
+Unity：2022.3.6f1
+隔离预览：D:/tmp/pcshop-suburb-day-mam5h57m/preview
+最终画面来源：D:/tmp/pcshop-employees-ui-delivery
+复拍日志：D:/tmp/pcshop-employees-ui-delivery.log
+完成标记：EMPLOYEE_WELLBEING_UI_CAPTURE_DONE
+导出：10 张 1920×1080 PNG，10 份活跃界面文字，1 份展示状态说明。
+PNG 为 Unity 相机直接导出，没有对图像修绘。
+
+最终源码编译日志：D:/tmp/pcshop-employees-final-compile2.log
+编译结果：Exiting batchmode successfully now!
+退出：Application will terminate with return code 0
+未发现 C# 编译错误或脚本警告。
+最终编译包含旧档 hasEmployeeWellbeing 显式标记；该存档兼容修正不改变已复拍的 UI。
+git diff --check：通过；有一条原有工作区文件 LF/CRLF 自动转换提醒，不是空白错误。
+
+逐图检查：个人名册、同屏调薪／调班／休假、离职预告、请求待执行、公司名册／请求、公司总览、居家工作台。
+个人名册保留原自动装机及车辆占用入口；常见三员工展示状态下，详情主要数据与常用操作在首屏。
+
+边界：临时员工和请求均为准备的展示状态。仅第六帧调用了实际同意调班接口，满意度保持 48，请求为 Promised。
+没有运行测试框架，没有模拟多日结算、保存重载、休假完成或离职到期。
+没有生成发布包，没有提交或上传。主工程已有编辑器与正式存档未用于复拍。
+复拍入口：tools/employee-wellbeing/EmployeeWellbeingCapture.cs
+规则及后续验证项：docs/155-employee-wellbeing-2026-11-27.md
