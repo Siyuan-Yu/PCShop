@@ -111,6 +111,14 @@ namespace PCShopSell.Game.UI
                 fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
             }
 
+            // 标题招牌：暖炭底（与窗口标题栏同色）加琥珀底边，压在封面左侧的留白上。
+            var plate = Ui.Panel(w.Content, "TitlePlate", new Color(.227f, .216f, .200f, .86f));
+            plate.raycastTarget = false;
+            plate.rectTransform.Anchor(MenuLeft - .022f, .618f, .418f, .872f);
+            var plateRule = Ui.Panel(plate.transform, "TitlePlateRule", Ui.ButtonHot);
+            plateRule.raycastTarget = false;
+            plateRule.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -6);
+
             var coverTitle = Ui.Label(w.Content, L("game_title"), 132, TextAnchor.MiddleLeft, Ui.ChromeInk);
             coverTitle.fontStyle = FontStyle.Bold;
             coverTitle.resizeTextForBestFit = true;
@@ -118,7 +126,7 @@ namespace PCShopSell.Game.UI
             coverTitle.resizeTextMaxSize = 132;
             coverTitle.rectTransform.Anchor(MenuLeft, .682f, .445f, .84f);
             var shadow = coverTitle.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(.02f, .03f, .07f, .88f);
+            shadow.effectColor = new Color(.10f, .07f, .04f, .85f);
             shadow.effectDistance = new Vector2(3, -4);
             var subtitle = Ui.Label(w.Content, L("tagline"), 27, TextAnchor.MiddleLeft, Ui.ChromeGold);
             subtitle.resizeTextForBestFit = true;
@@ -154,7 +162,8 @@ namespace PCShopSell.Game.UI
             bool emphasized = false, bool interactable = true, bool compact = false)
         {
             int size = compact ? 23 : 31;
-            Color fill = key == "quit" ? Ui.ButtonDanger : emphasized ? Ui.ButtonHot : Ui.ButtonSecondary;
+            // 手绘老城：主操作琥珀金，其余为纸片底深字，退出为砖红；不再用深灰底。
+            Color fill = key == "quit" ? Ui.ButtonDanger : emphasized ? Ui.ButtonHot : Ui.ButtonBg;
             var button = Ui.Button(parent, L(key), click, size, fill, interactable);
             var caption = button.GetComponentInChildren<Text>();
             caption.alignment = compact ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
