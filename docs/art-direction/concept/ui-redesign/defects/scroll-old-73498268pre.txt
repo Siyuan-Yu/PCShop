@@ -1,0 +1,34 @@
+﻿滚动区普查（改版前 73498268^，1920x1080，起始存档空状态；列：视口高/内容高/占屏）
+[滚动] ShopDock/Counter | 视口高733 内容高385 超出0 (0.53屏) | UI_Dock/ShopDock/Scroll
+[滚动] ShopDock/Stock | 视口高733 内容高635 超出0 (0.87屏) | UI_Dock/ShopDock/Scroll
+[滚动] ShopDock/Pricing | 视口高733 内容高488 超出0 (0.67屏) | UI_Dock/ShopDock/Scroll
+[滚动] ShopDock/Orders | 视口高733 内容高178 超出0 (0.24屏) | UI_Dock/ShopDock/Scroll
+[滚动] ShopDock/Renovate | 视口高733 内容高294 超出0 (0.40屏) | UI_Dock/ShopDock/Scroll
+[滚动] ShopDock/Staff | 视口高733 内容高421 超出0 (0.57屏) | UI_Dock/ShopDock/Scroll
+[滚动] OpenBackpackPanel | 视口高650 内容高522 超出0 (0.80屏) | UI_Modal/Window_背包/Panel/Scroll
+[滚动] OpenBackpackPanel | 视口高360 内容高94 超出0 (0.26屏) | Panel/Scroll/Viewport/Content/Scroll
+[滚动] OpenMyPanel | 视口高838 内容高444 超出0 (0.53屏) | UI_Modal/Workspace_personal/Panel/FixedContent/MyPageContent
+[滚动] OpenBusinessPanel | 视口高730 内容高172 超出0 (0.24屏) | Panel/FixedContent/AssetStoreLayout/StreetTree/Scroll
+[滚动] OpenBusinessPanel | 视口高144 内容高71 超出0 (0.49屏) | Panel/FixedContent/AssetStoreLayout/StoreReport/Scroll
+[滚动] OpenQuests | 视口高670 内容高486 超出0 (0.73屏) | UI_Modal/Window_当前任务/Panel/Scroll
+[滚动] OpenLedger | 视口高376 内容高42 超出0 (0.11屏) | UI_Modal/Workspace_ledger/Panel/FixedContent/LedgerEntries
+[滚动] OpenCityProcurement | 视口高779 内容高118 超出0 (0.15屏) | Panel/FixedContent/Row/ManagedShopList/ManagedShopRows
+[滚动] OpenCityProcurement | 视口高666 内容高249 超出0 (0.37屏) | Panel/FixedContent/Row/ManagedShopDetails/ManagedShopDetailContent
+[滚动] OpenCityProperties | 视口高838 内容高751 超出0 (0.90屏) | UI_Modal/Workspace_personal/Panel/FixedContent/MyAssetsContent
+[滚动] OpenCityProperties | 视口高459 内容高66 超出0 (0.14屏) | Viewport/Content/PropertyCity/PropertyList/Scroll
+[滚动] OpenBrandOverview | 视口高790 内容高760 超出0 (0.96屏) | UI_Modal/Workspace_brands/Panel/Scroll
+[滚动] OpenBrandOverview | 视口高690 内容高52 超出0 (0.08屏) | Panel/Scroll/Viewport/Content/Scroll
+[滚动] OpenSchedulePanel | 视口高830 内容高630 超出0 (0.76屏) | UI_Modal/Workspace_calendar/Panel/Scroll
+[滚动] OpenContactsPanel | 视口高704 内容高438 超出0 (0.62屏) | UI_Modal/Workspace_people/Panel/FixedContent/PeopleContactsList
+[滚动] OpenReportWindow | 视口高630 内容高507 超出0 (0.80屏) | UI_Modal/Workspace_finance-trend/Panel/Scroll
+[滚动] OpenRelationsPanel | 视口高702 内容高365 超出0 (0.52屏) | Panel/FixedContent/Row/Detail/Scroll
+[滚动] OpenCityPeople | 视口高704 内容高438 超出0 (0.62屏) | UI_Modal/Workspace_people/Panel/FixedContent/PeopleContactsList
+[滚动] OpenCityWardrobe | 视口高710 内容高558 超出0 (0.79屏) | UI_Modal/Window_个人衣柜/Panel/Scroll
+[滚动] OpenCityClimate | 视口高440 内容高231 超出0 (0.53屏) | UI_Modal/Window_天气与穿衣/Panel/Scroll
+[滚动] OpenBenchWindow | 视口高573 内容高82 超出0 (0.14屏) | Window_装机台/Panel/FixedContent/Desk/Scroll
+[滚动] OpenIndustryNews | 视口高732 内容高688 超出0 (0.94屏) | UI_Modal/Workspace_market/Panel/FixedContent/MarketTabContent
+[滚动] OpenIndustryNews | 视口高130 内容高38 超出0 (0.29屏) | FixedContent/MarketTabContent/Viewport/Content/Scroll
+[滚动/超一屏] OpenCityModelCatalog | 视口高732 内容高1020 超出288 (1.39屏) | UI_Modal/Workspace_market/Panel/FixedContent/MarketTabContent
+[滚动] OpenRacingDestinations | 视口高620 内容高117 超出0 (0.19屏) | UI_Modal/Window_湖区赛车/Panel/Scroll
+[滚动] OpenProcurementBudget | 视口高540 内容高272 超出0 (0.50屏) | UI_Modal/Window_全店补货预算/Panel/Scroll
+[滚动] OpenExpoReception | 视口高570 内容高444 超出0 (0.78屏) | UI_Modal/Window_云帆会展中心 · 展会安排/Panel/Scroll

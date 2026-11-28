@@ -1,0 +1,76 @@
+﻿UI 缺陷普查（工具：GameSceneBuilder.UiDefectAudit，1920x1080，2026-11-28，已按 路径+文字 去重；留白单位=参考分辨率像素，误差约 ±3）
+[贴边]=任一侧留白不足(左右<8 或 上下<3)；[溢出]=文字超出底板；[降灰]=声明琥珀但被降成灰。
+[贴边] HUD@MyShop | "0.5×" | 字号17 | 留白 L2 R6 T10 B6 | 底板宽44 | Row/HudTimeControls/Row/HudSpeed_1/Text
+[贴边] HUD@MyShop | "步行" | 字号18 | 留白 L16 R37 T45 B2 | 底板宽88 | UI_Hud/BottomBar/Row/Button/Text
+[贴边] HUD@MyShop | "打车" | 字号18 | 留白 L16 R37 T45 B2 | 底板宽88 | UI_Hud/BottomBar/Row/Button/Text
+[贴边] HUD@MyShop | "叫货车" | 字号19 | 留白 L19 R44 T47 B0 | 底板宽115 | UI_Hud/BottomBar/Row/Button/Text
+[贴边] ShopDock/Counter | "我的电脑店" | 字号28 | 留白 L10 R321 T17 B1 | 底板宽440 | UI_Dock/ShopDock/ShopDockHeader/Row/Text
+[贴边] ShopDock/Counter | "● 已关门" | 字号15 | 留白 L16 R20 T5 B1 | 底板宽83 | UI_Dock/ShopDock/ShopOpenStatus/Text
+[贴边/溢出] ShopDock/Counter | "柜台" | 字号22 | 留白 L15 R43 T55 B-2 | 底板宽102 | UI_Dock/ShopDock/Tabs/Button/Text
+[贴边/溢出] ShopDock/Counter | "库存" | 字号22 | 留白 L15 R43 T55 B-2 | 底板宽102 | UI_Dock/ShopDock/Tabs/Button/Text
+[贴边/溢出] ShopDock/Counter | "定价" | 字号22 | 留白 L15 R43 T55 B-2 | 底板宽102 | UI_Dock/ShopDock/Tabs/Button/Text
+[贴边/溢出] ShopDock/Counter | "订单" | 字号22 | 留白 L15 R43 T55 B-2 | 底板宽102 | UI_Dock/ShopDock/Tabs/Button/Text
+[贴边/溢出] ShopDock/Counter | "装修" | 字号22 | 留白 L15 R43 T55 B-2 | 底板宽102 | UI_Dock/ShopDock/Tabs/Button/Text
+[贴边/溢出] ShopDock/Counter | "员工" | 字号22 | 留白 L15 R43 T55 B-2 | 底板宽102 | UI_Dock/ShopDock/Tabs/Button/Text
+[贴边] ShopDock/Counter | "预计 22 人/日" | 字号17 | 留白 L5 R140 T69 B0 | 底板宽229 | ShopLedgerBoard/ShopLedgerPage/Row/今日进店/ShopEntrantsEstimate
+[贴边] ShopDock/Counter | "0 人" | 字号48 | 留白 L5 R133 T37 B-1 | 底板宽225 | ShopLedgerBoard/ShopLedgerPage/Row/今日流失/Text
+[贴边] ShopDock/Counter | "0 人" | 字号48 | 留白 L5 R133 T37 B-1 | 底板宽225 | ShopLedgerBoard/ShopLedgerPage/Row/排队结账/Text
+[贴边] ShopDock/Counter | "玩家在店 <size=17>+20%</size>" | 字号14 | 留白 L9 R11 T3 B-1 | 底板宽106 | Row/Standing_知名度/Row/OwnerOnSiteBonus/Text
+[贴边] ShopDock/Counter | "进店客流 +20%" | 字号13 | 留白 L3 R139 T48 B3 | 底板宽220 | ShopLedgerBoard/ShopLedgerPage/Row/Standing_知名度/Text
+[贴边] ShopDock/Counter | "玩家在店 <size=17>+20%</size>" | 字号14 | 留白 L9 R11 T3 B-1 | 底板宽106 | Row/Standing_口碑/Row/OwnerOnSiteBonus/Text
+[贴边] ShopDock/Counter | "购买意愿 +3 个百分点" | 字号13 | 留白 L3 R115 T48 B3 | 底板宽220 | ShopLedgerBoard/ShopLedgerPage/Row/Standing_口碑/Text
+[贴边] ShopDock/Counter | "开门 08:00" | 字号15 | 留白 L6 R55 T7 B6 | 底板宽117 | Viewport/Content/Row/ShopOpeningTime/Text
+[贴边] ShopDock/Counter | "▾" | 字号18 | 留白 L96 R7 T10 B8 | 底板宽117 | Viewport/Content/Row/ShopOpeningTime/Text
+[贴边] ShopDock/Counter | "关门 22:00" | 字号15 | 留白 L6 R55 T7 B6 | 底板宽117 | Viewport/Content/Row/ShopClosingTime/Text
+[贴边] ShopDock/Counter | "▾" | 字号18 | 留白 L96 R7 T10 B8 | 底板宽117 | Viewport/Content/Row/ShopClosingTime/Text
+[贴边] ShopDock/Stock | "<b>1号货架</b> <size=14><color=#655E52>普通</color></size>" | 字号18 | 留白 L16 R17 T3 B1 | 底板宽94 | Content/StockShelf_2/Row/ShelfIdentity/Text
+[贴边] ShopDock/Stock | "<b>2号货架</b> <size=14><color=#655E52>普通</color></size>" | 字号18 | 留白 L16 R17 T3 B1 | 底板宽94 | Content/StockShelf_3/Row/ShelfIdentity/Text
+[贴边] ShopDock/Stock | "<b>3号货架</b> <size=14><color=#655E52>普通</color></size>" | 字号18 | 留白 L16 R17 T3 B1 | 底板宽94 | Content/StockShelf_4/Row/ShelfIdentity/Text
+[贴边] ShopDock/Stock | "<b>4号货架</b> <size=14><color=#655E52>普通</color></size>" | 字号18 | 留白 L16 R17 T3 B1 | 底板宽94 | Content/StockShelf_5/Row/ShelfIdentity/Text
+[贴边] ShopDock/Stock | "<b>5号货架</b> <size=14><color=#655E52>普通</color></size>" | 字号18 | 留白 L16 R17 T3 B1 | 底板宽94 | Content/StockShelf_6/Row/ShelfIdentity/Text
+[贴边] ShopDock/Stock | "<b>6号货架</b> <size=14><color=#655E52>普通</color></size>" | 字号18 | 留白 L16 R17 T3 B1 | 底板宽94 | Content/StockShelf_7/Row/ShelfIdentity/Text
+[降灰] ShopDock/Renovate | "重新布置" | ShopDock/Scroll/Viewport/Content/Button | exclusive=True
+[贴边] ShopDock/Renovate | "<b>开业设施清单</b>" | 字号21 | 留白 L4 R297 T7 B0 | 底板宽405 | Scroll/Viewport/Content/SectionBand/Text
+[贴边] ShopDock/Staff | "?" | 字号17 | 留白 L7 R11 T7 B2 | 底板宽36 | Content/OpeningStaffChecklist/Row/ShopStaffRolesHelp/Text
+[贴边] ShopDock/Staff | "<b>本店员工</b>" | 字号21 | 留白 L4 R327 T7 B0 | 底板宽405 | Scroll/Viewport/Content/SectionBand/Text
+[贴边] ShopDock/Staff | "<b>招聘</b>" | 字号21 | 留白 L4 R356 T7 B0 | 底板宽405 | Scroll/Viewport/Content/SectionBand/Text
+[贴边] OpenMyPanel | "说明 · 身体详细资料" | 字号17 | 留白 L507 R510 T4 B2 | 底板宽1127 | MyPageContent/Viewport/Content/Help_身体详细资料/Text
+[贴边] OpenBusinessPanel | "全部门店 · 1家" | 字号17 | 留白 L4 R43 T6 B4 | 底板宽136 | Scroll/Viewport/Content/AssetFilter_all/Text
+[贴边] OpenBusinessPanel | "▾" | 字号17 | 留白 L8 R11 T10 B8 | 底板宽33 | Viewport/Content/Row/AssetFold_s_start_street/Text
+[贴边] OpenBusinessPanel | "03 创业商业街" | 字号17 | 留白 L3 R26 T6 B4 | 底板宽116 | Viewport/Content/Row/AssetFilter_s_start/Text
+[贴边] OpenBusinessPanel | "▾" | 字号17 | 留白 L8 R11 T10 B8 | 底板宽33 | Viewport/Content/Row/AssetFold_s_start_电脑店/Text
+[贴边] OpenBusinessPanel | "电脑店 · 1家" | 字号17 | 留白 L3 R32 T6 B4 | 底板宽108 | Viewport/Content/Row/AssetFilter_电脑店/Text
+[贴边] OpenBusinessPanel | "收支明细" | 字号17 | 留白 L319 R320 T4 B2 | 底板宽696 | FixedContent/AssetStoreLayout/StoreReport/Button/Text
+[贴边] OpenQuests | "×" | 字号20 | 留白 L5 R11 T10 B2 | 底板宽35 | UI_Hud/QuestTracker/Button/Text
+[贴边] OpenQuests | "<b>任务目标</b>" | 字号21 | 留白 L3 R275 T7 B0 | 底板宽352 | Content/Row/QuestObjective/SectionBand/Text
+[贴边] OpenQuests | "<b>达成进度</b>" | 字号21 | 留白 L4 R187 T7 B0 | 底板宽265 | Content/Row/QuestStatus/SectionBand/Text
+[贴边] OpenLedger | "¥0" | 字号25 | 留白 L7 R159 T30 B4 | 底板宽202 | Panel/FixedContent/Row/LedgerTotal/Text
+[贴边] OpenLedger | "¥3,010,000" | 字号25 | 留白 L6 R82 T30 B2 | 底板宽202 | Panel/FixedContent/Row/LedgerTotal/Text
+[贴边] OpenCityProcurement | "我的电脑店 03 创业商业街" | 字号16 | 留白 L6 R342 T11 B9 | 底板宽443 | Viewport/Content/ManagedShop_player_shop/Row/Text
+[贴边] OpenCityProcurement | "全部 0" | 字号22 | 留白 L7 R12 T11 B5 | 底板宽77 | Viewport/Content/Row/Button/Text
+[贴边] OpenCityProcurement | "缺货 0" | 字号22 | 留白 L7 R12 T11 B5 | 底板宽77 | Viewport/Content/Row/Button/Text
+[贴边] OpenCityProperties | "已租" | 字号17 | 留白 L9 R11 T7 B3 | 底板宽52 | Viewport/Content/Row/Button/Text
+[贴边] OpenCityProperties | "我的电脑店 <size=13>经营</size>" | 字号17 | 留白 L5 R101 T5 B3 | 底板宽181 | Viewport/Content/Row/AssetPropertyRow_player_shop/Text
+[贴边] OpenBrandOverview | "<b>所有品牌 · 共0个</b>" | 字号21 | 留白 L4 R685 T7 B0 | 底板宽815 | Workspace_brands/Panel/FixedContent/SectionBand/Text
+[贴边] OpenStockFees | "五金杂货" | 字号14 | 留白 L23 R25 T6 B2 | 底板宽97 | UI_Labels/Button/Text
+[贴边/溢出] OpenStockFees | "烟酒茶行 <size=13><color=#D79780>已打烊</color></size>" | 字号15 | 留白 L20 R21 T-3 B-5 | 底板宽97 | UI_Labels/Button/Text
+[贴边] OpenStockFees | "我的电脑店 <size=13>关门</size>" | 字号18 | 留白 L35 R36 T4 B2 | 底板宽148 | UI_Labels/Button/Text
+[贴边] OpenStockFees | "我" | 字号16 | 留白 L4 R6 T3 B-1 | 底板宽34 | UI_Labels/PlayerMarker/Text
+[贴边] OpenStockFees | "<size=17>1年1/3 周三</size> <b>01:14</b>  <size=16>春 · 晴 · 8℃</size>" | 字号22 | 留白 L35 R46 T6 B-1 | 底板宽187 | UI_Hud/TopBar/Row/Button/Text
+[贴边/溢出] OpenStockFees | "<size=17>可用现金</size> ¥3,010,000" | 字号32 | 留白 L32 R58 T10 B-5 | 底板宽192 | UI_Hud/TopBar/Row/Button/Text
+[贴边] OpenStockFees | "窗口暂停" | 字号17 | 留白 L4 R5 T8 B6 | 底板宽66 | Row/HudTimeControls/Row/HudPauseTime/Text
+[贴边] OpenStockFees | "1×" | 字号17 | 留白 L7 R11 T10 B8 | 底板宽44 | Row/HudTimeControls/Row/HudSpeed_2/Text
+[贴边] OpenStockFees | "通知 <color=#F0C979>10</color>" | 字号20 | 留白 L35 R22 T3 B-1 | 底板宽105 | UI_Hud/TopBar/Row/HudNotifications/Text
+[贴边] OpenStockFees | "快捷前往中，约 89 分钟 · 按 WASD 随时接管" | 字号16 | 留白 L8 R14 T7 B5 | 底板宽261 | UI_Hud/HintStrip/Text
+[贴边] OpenMotorGarage | "通知 <color=#F0C979>11</color>" | 字号20 | 留白 L36 R22 T3 B1 | 底板宽105 | UI_Hud/TopBar/Row/HudNotifications/Text
+[贴边] OpenNoticeHistory | "快捷前往中，约 88 分钟 · 按 WASD 随时接管" | 字号16 | 留白 L8 R14 T7 B5 | 底板宽261 | UI_Hud/HintStrip/Text
+[贴边] OpenCityInvestments | "<size=17>1年1/3 周三</size> <b>01:15</b>  <size=16>春 · 晴 · 8℃</size>" | 字号22 | 留白 L35 R46 T6 B-1 | 底板宽187 | UI_Hud/TopBar/Row/Button/Text
+[贴边] OpenCityInvestments | "步行" | 字号18 | 留白 L19 R40 T45 B2 | 底板宽95 | UI_Hud/BottomBar/Row/Button/Text
+[贴边] OpenCityInvestments | "打车" | 字号18 | 留白 L19 R40 T45 B2 | 底板宽95 | UI_Hud/BottomBar/Row/Button/Text
+[贴边] OpenCityInvestments | "叫货车" | 字号19 | 留白 L24 R49 T47 B0 | 底板宽125 | UI_Hud/BottomBar/Row/Button/Text
+[贴边] OpenEconomicReport | "快捷前往中，约 87 分钟 · 按 WASD 随时接管" | 字号16 | 留白 L8 R14 T7 B5 | 底板宽261 | UI_Hud/HintStrip/Text
+[贴边] OpenFleetPanel | "<size=17>1年1/3 周三</size> <b>01:16</b>  <size=16>春 · 晴 · 8℃</size>" | 字号22 | 留白 L35 R46 T6 B-1 | 底板宽187 | UI_Hud/TopBar/Row/Button/Text
+[贴边] OpenHomeWorkbench | "旺铺招租" | 字号15 | 留白 L23 R25 T6 B2 | 底板宽97 | UI_Labels/Button/Text
+[贴边] OpenHomeWorkbench | "通知 <color=#F0C979>1</color>" | 字号20 | 留白 L36 R22 T3 B1 | 底板宽105 | UI_Hud/TopBar/Row/HudNotifications/Text
+[贴边] OpenHomeWorkbench | "快捷前往中，约 86 分钟 · 按 WASD 随时接管" | 字号16 | 留白 L8 R14 T7 B5 | 底板宽261 | UI_Hud/HintStrip/Text
+[贴边] OpenDisplayWindow | "<size=17>1年1/3 周三</size> <b>01:17</b>  <size=16>春 · 晴 · 8℃</size>" | 字号22 | 留白 L35 R46 T6 B-1 | 底板宽187 | UI_Hud/TopBar/Row/Button/Text
