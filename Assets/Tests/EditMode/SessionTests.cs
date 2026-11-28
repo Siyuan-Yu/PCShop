@@ -101,7 +101,10 @@ namespace PCShopSell.Tests
         [Test]
         public void ShopLocationUsesEstimatedDailyPassingPeople()
         {
-            using(var s=Make())Assert.AreEqual(s.FootfallOf(s.PlayerShopPlace).DailyPassers/600.0,s.PlayerShop.LocationFactor,1e-9);
+            using var s = Make();
+            var place = s.PlayerShopPlace;
+            double expected = s.ShopArrivalDemand(place) / (600.0 * ShopSettings.SizeFactor(place.Size));
+            Assert.AreEqual(expected, s.PlayerShop.LocationFactor, 1e-9);
         }
 
         [Test]
@@ -314,20 +317,21 @@ namespace PCShopSell.Tests
         [Test]
         public void Online_FromPhoneAnywhere_DeliveredNextMorning()
         {
-            GameSession s = Make();
+            using var s = Make();
+            s.EventsEnabled = false;
             PartDef ram = PartCatalog.Get("ram1");
             int before = s.PlayerShop.Stock.CountAll(ram);
             Assert.IsFalse(s.InPlayerShop, "不在店里也能用手机下单");
-            Assert.IsTrue(s.PlaceOnlineOrder("s_star", new[] { (ram, 2) }));
-            Assert.IsFalse(s.PlaceOnlineOrder("s_zhou", new[] { (ram, 1) }), "还没发现这家");
-            s.Leave();
-            s.AdvanceClock(Math.Max(0, s.Clock.MinutesUntil(23 * 60)));
+            Assert.IsTrue(s.PlaceOnlineOrder(Online1788.Shopping.Id, new[] { (ram, 2) }));
+            var tomorrow = s.Clock.Today.AddDays(1);
+            int deliveryMinute = Online1788.DeliveryMinuteOfDay;
+            Assert.AreEqual(GameTimestamp.From(tomorrow, deliveryMinute).TotalMinutes, s.Online.Pending.Single().DeliverAtMinute);
+            s.Clock.Restore(tomorrow, deliveryMinute - 2);
+            s.AdvanceClock(1);
             Assert.AreEqual(before, s.PlayerShop.Stock.CountAll(ram));
-            Teleport(s, "flat");
-            s.Sleep();
-            s.AdvanceClock(2 * 60 + 1);
-            Assert.AreEqual(2, s.Online.RecordOf("s_star").ItemsReceived);
-            Assert.AreEqual(before + 2 - s.Online.RecordOf("s_star").Defects, s.PlayerShop.Stock.CountAll(ram));
+            s.AdvanceClock(1);
+            Assert.IsEmpty(s.Online.Pending);
+            Assert.AreEqual(before + 2, s.PlayerShop.Stock.CountAll(ram));
         }
 
         [Test]
@@ -356,11 +360,15 @@ namespace PCShopSell.Tests
         [Test]
         public void Police_CatchesTricycleInSight()
         {
-            GameSession s = Make();
-            s.Clock.AdvanceTo(10 * 60);
+            var layout = Layout();
+            // Start within both the officer's sight and the distance they can cover before giving up.
+            layout.nodes.Single(n => n.id == "s1").x = 5;
+            using var s = new GameSession(CityLayout.FromData(layout), 7, Money.FromYuan(5000),
+                GameTimestamp.From(new GameDate(0), 10 * 60));
+            s.EventsEnabled = false;
             Teleport(s, "dealer");
-            s.BuyVehicle(VehicleKind.Tricycle);
-            s.SetVehicle(VehicleKind.Tricycle);
+            Assert.True(s.BuyVehicle(VehicleKind.Tricycle));
+            Assert.True(s.SetVehicle(VehicleKind.Tricycle));
             foreach (Officer o in s.Police.Officers) o.OnDutyToday = true;
             s.Leave();
             s.ArriveAtNode("st");

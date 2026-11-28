@@ -1,0 +1,52 @@
+[
+  {
+    "name": "PCShopSell.Tests.MultiShopTests.Rent_IsChargedForEveryShop",
+    "message": "  两家店的月租都扣\n  Expected: 500000\n  But was:  0\n",
+    "stack": "at PCShopSell.Tests.MultiShopTests.Rent_IsChargedForEveryShop () [0x000ba] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\MultiShopTests.cs:69\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.RacingEventBatchTests.RaceAidUsesARealHospitalAndChargesOnlyAtAttendanceWithoutHealthPenalty () [0x0012c] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\RacingEventBatchTests.cs:286\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopDockInteractionTests.CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours",
+    "message": "System.InvalidOperationException : Sequence contains no matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.ShopDockInteractionTests.<CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours>g__StockText|3_3 (PCShopSell.Tests.ShopDockInteractionTests+<>c__DisplayClass3_0& ) [0x00000] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:49 \n  at PCShopSell.Tests.ShopDockInteractionTests+<>c.<CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours>b__3_0 (PCShopSell.Core.Session.GameSession s, PCShopSell.Game.UI.GameUi ui) [0x0005e] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:50 \n  at PCShopSell.Tests.ShopDockInteractionTests.WithUi (System.Action`2[T1,T2] action) [0x00086] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:29 \n  at PCShopSell.Tests.ShopDockInteractionTests.CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours () [0x00001] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:43 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue",
+    "message": "  Expected: String containing \"尚未启用定期采购\"\n  But was:  \"<b>本店小顾</b> · 进货员\n在店待命 · <b><color=#934638>未安排进货</color></b>\n班次 09:00—21:00 · 日薪 ¥140\"\n",
+    "stack": "at NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual, System.String message, System.Object[] args) [0x00008] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat NUnit.Framework.StringAssert.Contains (System.String expected, System.String actual) [0x00001] in <10b6135e63434fdba4fc6c109928ab3b>:0\nat PCShopSell.Tests.ShopDockInteractionTests+<>c.<EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue>b__5_0 (PCShopSell.Core.Session.GameSession s, PCShopSell.Game.UI.GameUi ui) [0x0026b] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:135\nat PCShopSell.Tests.ShopDockInteractionTests.WithUi (System.Action`2[T1,T2] action) [0x00086] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:29\nat PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue () [0x00001] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:114\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(\"computer\")",
+    "message": "System.InvalidOperationException : Sequence contains more than one element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness (System.String kind) [0x0036d] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopManageTests.cs:63 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(\"clothing\")",
+    "message": "System.InvalidOperationException : Sequence contains more than one element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness (System.String kind) [0x0036d] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopManageTests.cs:63 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(\"models\")",
+    "message": "System.InvalidOperationException : Sequence contains more than one element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness (System.String kind) [0x0036d] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopManageTests.cs:63 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(\"flowers\")",
+    "message": "System.InvalidOperationException : Sequence contains more than one element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness (System.String kind) [0x0036d] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopManageTests.cs:63 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(\"produce\")",
+    "message": "System.InvalidOperationException : Sequence contains more than one element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness (System.String kind) [0x0036d] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopManageTests.cs:63 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness(\"food\")",
+    "message": "System.InvalidOperationException : Sequence contains more than one element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.ShopManageTests.StockAndPricingUseActualGoodsForTheCurrentBusiness (System.String kind) [0x0036d] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\ShopManageTests.cs:63 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  }
+]

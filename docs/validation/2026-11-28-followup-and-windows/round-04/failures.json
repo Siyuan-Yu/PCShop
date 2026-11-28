@@ -1,0 +1,27 @@
+[
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.Online_FromPhoneAnywhere_DeliveredNextMorning",
+    "message": "  还没发现这家\n  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.Online_FromPhoneAnywhere_DeliveredNextMorning () [0x0006c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:322\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.Police_CatchesTricycleInSight",
+    "message": "  Expected: \"被交警抓到了\"\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.Police_CatchesTricycleInSight () [0x000e2] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:370\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.RealLayout_MatchesDesign",
+    "message": "  保留原商业街18间商铺及独立中介/车行\n  Expected: 18\n  But was:  29\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.RealLayout_MatchesDesign () [0x00060] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:527\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameSessionTests.ShopLocationUsesEstimatedDailyPassingPeople",
+    "message": "  Expected: 0.46666666666666667d +/- 1.0000000000000001E-09d\n  But was:  0.25992553847978317d\n",
+    "stack": "at PCShopSell.Tests.GameSessionTests.ShopLocationUsesEstimatedDailyPassingPeople () [0x00013] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\SessionTests.cs:104\n"
+  },
+  {
+    "name": "PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.ShopDockInteractionTests+<>c.<EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue>b__5_0 (PCShopSell.Core.Session.GameSession s, PCShopSell.Game.UI.GameUi ui) [0x0034c] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:145\nat PCShopSell.Tests.ShopDockInteractionTests.WithUi (System.Action`2[T1,T2] action) [0x00086] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:31\nat PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue () [0x00001] in D:\\tmp\\pcshop-suburb-day-mam5h57m\\preview\\Assets\\Tests\\EditMode\\ShopDockInteractionTests.cs:119\n"
+  }
+]

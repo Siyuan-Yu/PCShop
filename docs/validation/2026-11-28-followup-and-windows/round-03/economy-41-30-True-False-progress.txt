@@ -1,0 +1,1 @@
+day=0 elapsed=2.30s bytes=748311 cash=310100 worth=617700

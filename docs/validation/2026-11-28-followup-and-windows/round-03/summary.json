@@ -1,0 +1,14 @@
+{
+  "tag": "rounds-03-endurance",
+  "filter": "LongSessionRegressionTests.CompanyPayrollAndEquityLongHorizon\\((?:7,30|41,90|914,365)\\);LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload\\(\\d+,(?:7|30|90),;SleepPerformanceTests",
+  "started": "2026-11-28T12:57:59.2032181+08:00",
+  "seconds": 720.22,
+  "timeout": true,
+  "exitCode": -1,
+  "result": "Timeout",
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\UnityProjects\\PCShop\\PCShop\\work\\qa-c04d280b\\20261128-125759-rounds-03-endurance-b41851"
+}

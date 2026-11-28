@@ -1,0 +1,10 @@
+{"name":"PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1302)","result":"Passed","message":"","stack":"","seconds":0.4429962}
+{"name":"PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(1422)","result":"Passed","message":"","stack":"","seconds":0.197799}
+{"name":"PCShopSell.Tests.CityActivityTests.NeighborhoodRestaurantAcceptsAndCompletesLateMeals(60)","result":"Passed","message":"","stack":"","seconds":0.1510638}
+{"name":"PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"sleep\")","result":"Passed","message":"","stack":"","seconds":5.8022108}
+{"name":"PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"faint\")","result":"Passed","message":"","stack":"","seconds":3.2179532}
+{"name":"PCShopSell.Tests.SleepPerformanceTests.DeferredRestMatchesSynchronousSaveAndBlocksPartialSaving(\"hospital\")","result":"Passed","message":"","stack":"","seconds":5.6571937}
+{"name":"PCShopSell.Tests.SleepPerformanceTests.FailedDeferredRestDoesNotOverwriteAValidSaveOrRetryMinute","result":"Passed","message":"","stack":"","seconds":0.0064382}
+{"name":"PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"sleep\")","result":"Passed","message":"","stack":"","seconds":18.0215226}
+{"name":"PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"faint\")","result":"Passed","message":"","stack":"","seconds":6.545452}
+{"name":"PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(\"hospital\")","result":"Passed","message":"","stack":"","seconds":18.004014}

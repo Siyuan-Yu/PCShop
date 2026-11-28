@@ -1,0 +1,14 @@
+{
+  "tag": "rounds-01-changes",
+  "filter": "AnimePortraitTests;RomanceConversationTests;VenueSponsorshipAndStoryTests;GameplayJourneyTests;BrandStoryUiTests;CompanyWellbeingRegressionTests;EmployeeAssignmentTests;PerformanceRegressionTests",
+  "started": "2026-11-28T12:54:07.3342911+08:00",
+  "seconds": 103.37,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 107,
+  "passed": 107,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\UnityProjects\\PCShop\\PCShop\\work\\qa-c04d280b\\20261128-125407-rounds-01-changes-f4a8fd"
+}

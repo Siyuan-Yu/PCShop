@@ -1,0 +1,14 @@
+{
+  "tag": "rounds-02-core",
+  "filter": "ShopCoreGameplayTests;ShopSimulationTests;ShopManageTests;BusinessRegressionTests;BrandBusinessTests;DistrictCommerceTests;MultiShopTests;ShopFootfallTests;HomeSleepNavigationTests;WorkshopRegressionTests;CityVisitSaveTests;SaveGhostStateTests;SaveStoreFallbackTests;RacingTests;RacingEventBatchTests;VenueAccessRegressionTests;SimplifiedShoppingTests;ShopDockInteractionTests",
+  "started": "2026-11-28T12:56:04.2517624+08:00",
+  "seconds": 56.1,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 313,
+  "passed": 303,
+  "failed": 10,
+  "skipped": 0,
+  "directory": "D:\\UnityProjects\\PCShop\\PCShop\\work\\qa-c04d280b\\20261128-125604-rounds-02-core-89fc36"
+}

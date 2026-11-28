@@ -60,7 +60,7 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(2,Named("Pricing_").Length,"只展示已陈列的商品，混售不受主售限制");
                     Assert.AreEqual(0,Named("Pricing_goods_"+storedProduct.Id).Length);
                     Assert.AreEqual(0,Named("Pricing_gpu0").Length);
-                    Assert.AreEqual(1,Named("ShopDock").Single().GetComponentsInChildren<UnityEngine.UI.ScrollRect>().Length,"定价复用面板整页滚动，不再嵌套固定高度的商品列表");
+                     Assert.AreEqual(1,Named("ShopDock").Single(t => t.name == "ShopDock").GetComponentsInChildren<UnityEngine.UI.ScrollRect>().Length,"定价复用面板整页滚动，不再嵌套固定高度的商品列表");
                     Assert.AreEqual(1,Named("Pricing_goods_"+product.Id).Length);
                     Assert.AreEqual(1,Named("Pricing_cpu0").Length);
                     string IntentSummary()=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Text>()).Single(t=>t.name=="PricingPurchaseIntentSummary").text;

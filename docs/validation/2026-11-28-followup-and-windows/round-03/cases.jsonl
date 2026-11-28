@@ -1,0 +1,7 @@
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.CompanyPayrollAndEquityLongHorizon(7,30)","result":"Passed","message":"","stack":"","seconds":31.229974}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.CompanyPayrollAndEquityLongHorizon(41,90)","result":"Passed","message":"","stack":"","seconds":93.6693003}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.CompanyPayrollAndEquityLongHorizon(914,365)","result":"Failed","message":"  单个长期压力用例超过六分钟\r\n  Expected: less than 360.0d\r\n  But was:  360.70418599999999d\r\n","stack":"at PCShopSell.Tests.LongSessionRegressionTests.CompanyPayrollAndEquityLongHorizon (System.Int32 seed, System.Int32 days) [0x0026f] in D:\\tmp\\pcshop-relationship-tests\\Assets\\Tests\\EditMode\\LongSessionRegressionTests.cs:74\r\n","seconds":360.7116003}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(7,7,False,False)","result":"Passed","message":"","stack":"","seconds":28.6018471}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(41,7,True,False)","result":"Passed","message":"","stack":"","seconds":27.6773521}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(914,7,True,True)","result":"Passed","message":"","stack":"","seconds":26.9207731}
+{"name":"PCShopSell.Tests.LongSessionRegressionTests.EconomySurvivesBoundedDaysAndRepeatedReload(7,30,False,False)","result":"Passed","message":"","stack":"","seconds":120.9911856}

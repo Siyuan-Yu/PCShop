@@ -1,0 +1,5 @@
+day=1 seconds=0.83 bytes=168151 entries=2 cash=19999965154
+day=31 seconds=32.37 bytes=281254 entries=52 cash=19998948867
+day=61 seconds=62.95 bytes=366363 entries=99 cash=19997683172
+day=90 seconds=93.67 bytes=440572 entries=147 cash=19996031460
+FINAL requested=90 reached=90 gameOver=False reason=

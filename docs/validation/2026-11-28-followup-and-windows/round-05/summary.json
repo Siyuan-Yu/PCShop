@@ -1,0 +1,14 @@
+{
+  "tag": "rounds-05-final",
+  "filter": "ShopCoreGameplayTests;ShopSimulationTests;ShopManageTests;BusinessRegressionTests;BrandBusinessTests;DistrictCommerceTests;MultiShopTests;ShopFootfallTests;HomeSleepNavigationTests;WorkshopRegressionTests;CityVisitSaveTests;SaveGhostStateTests;SaveStoreFallbackTests;RacingTests;RacingEventBatchTests;VenueAccessRegressionTests;SimplifiedShoppingTests;ShopDockInteractionTests;QuestTests;GameplayAuditTests;DistrictProgressionTests;PerformanceRegressionTests;GameSessionTests\\.(?:Online_FromPhoneAnywhere_DeliveredNextMorning|Police_CatchesTricycleInSight|ShopLocationUsesEstimatedDailyPassingPeople);LongSessionRegressionTests.ResumeArchivedStressCheckpointToTarget\\(914,365\\)",
+  "started": "2026-11-28T13:09:08.2606549+08:00",
+  "seconds": 202.3,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 407,
+  "passed": 407,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\UnityProjects\\PCShop\\PCShop\\work\\qa-c04d280b\\20261128-130908-rounds-05-final-f3e46e"
+}

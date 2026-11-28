@@ -1,0 +1,2 @@
+CITY_BAKE_RESULT 成功 trial=False meshes=3113 vertices=2419339 forestParts=34378 rawBytes=202502207 elapsedMs=54734
+WINDOWS_BUILD_RESULT Succeeded bytes=402376289 output=F:\PCShopSell_builds\PCShopSell-Windows-x64-20261128-131356-c04d280b\player\PCShopSell.exe

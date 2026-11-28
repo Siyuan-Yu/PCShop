@@ -59,14 +59,17 @@ namespace PCShopSell.Tests
         [Test]
         public void Rent_IsChargedForEveryShop()
         {
-            GameSession s = TwoShops();
+            using GameSession s = TwoShops();
             Money total = s.TotalShopRent;
             Assert.AreEqual((s.RentOf(s.MainShop) + Money.FromYuan(3000)).Cents, total.Cents);
             s.Leave();
             Money before = s.Ledger.Balance;
             CrossInto(s, 30);
-            long rent = s.Ledger.Entries.Where(e => e.Category == "房租" && e.Date.TotalDays == 30 && (e.Memo ?? "").StartsWith("我的电脑店")).Sum(e => System.Math.Abs(e.Amount.Cents));
-            Assert.AreEqual(total.Cents, rent, "两家店的月租都扣");
+            Assert.False(s.Ledger.Entries.Any(e => e.Category == "房租" && e.Date.TotalDays == 30));
+            CrossInto(s, 34);
+            var charges = s.Ledger.Entries.Where(e => e.Category == "房租" && e.Date.TotalDays == 34 && e.ShopId != null).ToArray();
+            CollectionAssert.AreEquivalent(new[] { "pc", "tea" }, charges.Select(e => e.ShopId));
+            Assert.AreEqual(total.Cents, charges.Sum(e => -e.Amount.Cents), "周日分别扣两家店的周租");
             Assert.Less(s.Ledger.Balance.Cents, before.Cents);
         }
 

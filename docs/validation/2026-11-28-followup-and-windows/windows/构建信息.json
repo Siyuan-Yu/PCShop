@@ -1,0 +1,19 @@
+{
+  "分支": "art/experiment",
+  "提交": "c04d280b905c10b343f9ab1df242e5df8e7b5a79",
+  "工作区改动": [
+    " M Assets/Scripts/Game/Runtime/DistrictGateView.cs",
+    " M Assets/Tests/EditMode/MultiShopTests.cs",
+    " M Assets/Tests/EditMode/RacingEventBatchTests.cs",
+    " M Assets/Tests/EditMode/SessionTests.cs",
+    " M Assets/Tests/EditMode/ShopDockInteractionTests.cs",
+    " M Assets/Tests/EditMode/ShopManageTests.cs",
+    " M tools/qa/QaPerformanceCapture.cs",
+    " M tools/qa/run-visual.ps1"
+  ],
+  "Unity": "2022.3.6f1",
+  "平台": "StandaloneWindows64",
+  "开始": "2026-11-28T13:13:56.4948977+08:00",
+  "运行时改动文件": "Assets/Scripts/Game/Runtime/DistrictGateView.cs",
+  "运行时文件SHA256": "F71A4883C207C4B51DA809BB9D926DE953A5F1111AC30004449C15F6AC3298F3"
+}

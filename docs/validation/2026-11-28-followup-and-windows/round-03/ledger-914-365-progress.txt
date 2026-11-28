@@ -1,0 +1,11 @@
+day=1 seconds=0.86 bytes=168151 entries=2 cash=19999949924
+day=31 seconds=32.76 bytes=281752 entries=53 cash=19999020208
+day=61 seconds=64.49 bytes=366862 entries=100 cash=19997729562
+day=91 seconds=96.35 bytes=444477 entries=149 cash=19996073588
+day=121 seconds=127.70 bytes=529775 entries=196 cash=19994428097
+day=151 seconds=159.08 bytes=582155 entries=243 cash=19993279487
+day=181 seconds=191.13 bytes=633851 entries=291 cash=19991526151
+day=211 seconds=222.94 bytes=683684 entries=338 cash=19990040939
+day=241 seconds=255.66 bytes=733888 entries=384 cash=19988636475
+day=271 seconds=295.62 bytes=784556 entries=432 cash=19987450409
+day=301 seconds=339.11 bytes=833456 entries=479 cash=19985935844

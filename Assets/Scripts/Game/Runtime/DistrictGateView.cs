@@ -9,8 +9,7 @@ namespace PCShopSell.Game.Runtime
     public sealed class DistrictGateView : MonoBehaviour
     {
         private GameController _game;
-        private readonly List<GameObject> _barriers=new List<GameObject>();
-        private readonly List<int> _tiers=new List<int>();
+        private readonly List<(GameObject root, Transform sign, int tier)> _barriers = new();
         public void Initialize(GameController game)
         {
             _game=game;
@@ -40,7 +39,7 @@ namespace PCShopSell.Game.Runtime
                 label.text = GameSession.FirstChapterTrial ? "试玩区域边界"
                     : "通往" + GameSession.DistrictName(gate.Tier) + " · 完成主线后放行";
                 var labelRect=label.rectTransform;labelRect.anchorMin=Vector2.zero;labelRect.anchorMax=Vector2.one;labelRect.offsetMin=Vector2.zero;labelRect.offsetMax=Vector2.zero;
-                _barriers.Add(root);_tiers.Add(gate.Tier);
+                _barriers.Add((root, rect, gate.Tier));
             }
         }
         private static void Box(Transform parent,Vector3 position,Vector3 scale,Color color)
@@ -54,11 +53,13 @@ namespace PCShopSell.Game.Runtime
         public void Refresh()
         {
             if(_game?.Session==null)return;
-            for(int i=0;i<_barriers.Count;i++)
+            bool outdoors = !_game.InHome && !_game.InInterior;
+            foreach (var barrier in _barriers)
             {
-                _barriers[i].SetActive(!_game.Session.DistrictRoadOpen(_tiers[i]) && !_game.InHome && !_game.InInterior);
-                var sign=_barriers[i].transform.Find("CheckpointSign");
-                if(sign!=null&&_game.Cam!=null)sign.rotation=Quaternion.LookRotation(sign.position-_game.Cam.transform.position,Vector3.up);
+                bool visible = outdoors && !_game.Session.DistrictRoadOpen(barrier.tier);
+                if (barrier.root.activeSelf != visible) barrier.root.SetActive(visible);
+                if (visible && _game.Cam != null)
+                    barrier.sign.rotation = Quaternion.LookRotation(barrier.sign.position - _game.Cam.transform.position, Vector3.up);
             }
         }
     }

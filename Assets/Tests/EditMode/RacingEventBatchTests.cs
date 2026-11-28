@@ -276,16 +276,25 @@ namespace PCShopSell.Tests
             using var s = Make(); var data = s.CreateSave();
             data.raceAidPerson = "racer_1"; data.raceAidDay = s.Clock.Today.TotalDays;
             using var loaded = GameSession.Load(s.City, data);
+            loaded.EventsEnabled = false;
             loaded.RaiseEvent("race_crash_help"); Assert.NotNull(loaded.PendingEvent);
             var balance = loaded.Ledger.Balance;
             Assert.IsTrue(loaded.ResolveEvent(0)); Assert.AreEqual(balance, loaded.Ledger.Balance);
             var a = loaded.CityActivities.Single(x => x.DefinitionId.StartsWith("race_aid_"));
             Assert.AreEqual(GameSession.HospitalBusiness, loaded.City.GetPlace(a.VenueId).Business);
-            loaded.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440));
-            At(loaded, a.VenueId); loaded.Player.Health = 100;
-            Assert.IsTrue(loaded.PrepareVenueCompanions(loaded.CurrentPlace)); loaded.AdvanceClock(91);
-            Assert.AreEqual(CityActivityPhase.Completed, a.State);
-            Assert.AreEqual(balance - Money.FromYuan(1500), loaded.Ledger.Balance);
+            Assert.AreEqual(a.VenueId, loaded.CityIntent?.TargetPlaceId);
+            loaded.Player.Health = 100;
+            loaded.Time.SetSpeed(8);
+            for (int frame = 0; frame < 4000 && a.Active; frame++)
+            {
+                loaded.Tick(.1);
+                if (loaded.CurrentPlace?.Id != a.VenueId)
+                    Assert.False(a.EntryPaid, "玩家在医院外时不应收费");
+            }
+            Assert.AreEqual(a.VenueId, loaded.CurrentPlace?.Id);
+            Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason);
+            var treatment = loaded.Ledger.Entries.Single(e => e.Attribution?.ActivityId == a.Id);
+            Assert.AreEqual(-Money.FromYuan(1500), treatment.Amount);
             Assert.GreaterOrEqual(loaded.Player.Health, 99);
         }
 

@@ -42,6 +42,7 @@ public static class QaPerformanceCapture
     static readonly List<double> steps=new List<double>();
     static readonly List<Result> results=new List<Result>();
     static readonly string RequestedCase=Argument("-pcshop-perf-case");
+    static readonly int SampleSeconds=int.TryParse(Argument("-pcshop-perf-seconds"),out var seconds)?seconds:0;
     static string Argument(string key){var args=Environment.GetCommandLineArgs();int at=Array.IndexOf(args,key);return at>=0&&at+1<args.Length?args[at+1]:null;}
     static readonly string[] cases=RequestedCase!=null?new[]{RequestedCase}:Hotspots?new[]{"park-1x","garden-1x","garden-4x"}:new[]{"suburb-1x","community-1x","park-1x","garden-1x","race-1x","shop-1x","home-1x","suburb-reload","garden-4x","home-sleep"};
     static bool RestCase=>index>=0&&index<cases.Length&&cases[index]=="home-sleep";
@@ -64,7 +65,7 @@ public static class QaPerformanceCapture
         public bool isRecovery,recoveryCompleted;
         public bool cpuMarkersValid;
         public double simulationP99Ms,viewsP99Ms,uiP99Ms,simulationMaxMs,viewsMaxMs,uiMaxMs;
-        public double over120BudgetPercent,slowestOnePercentFps;
+        public double over120BudgetPercent,over60BudgetPercent,over30BudgetPercent,slowestOnePercentFps;
         public int internalSpeed;
         public string displayedSpeed;
         public bool meets120P99;
@@ -223,11 +224,12 @@ public static class QaPerformanceCapture
                 if(RestCase && !game.Session.SleepUntil(480))throw new Exception("实际会话未接受睡眠请求");
                 sampling=true;since=now;startMinute=game.Session.Clock.Now.TotalMinutes;
             }
-            else if(sampling&&(RestCase ? !game.Session.IsTimeAdvancing : now-since>=(Hotspots&&!cases[index].EndsWith("4x")?30:60)&&frames.Count>=600))
+            else if(sampling&&(RestCase ? !game.Session.IsTimeAdvancing : now-since>=SampleDuration()&&frames.Count>=600))
             {FinishCase();Next();}
         }
         catch(Exception e){File.WriteAllText(Path.Combine(Output,"failure.txt"),e.ToString());SessionState.SetBool(Key,false);EditorApplication.Exit(1);}
     }
+    static int SampleDuration() => SampleSeconds > 0 ? SampleSeconds : Hotspots && !cases[index].EndsWith("4x") ? 30 : 60;
     static void Next()
     {
         var transition=Stopwatch.StartNew();
@@ -289,6 +291,8 @@ public static class QaPerformanceCapture
             simulationMaxMs=simulationSamples.Max(),viewsMaxMs=viewSamples.Max(),uiMaxMs=uiSamples.Max(),
             fps=1000/frames.Average(),frameMs=frames.Average(),p95Ms=sorted[(int)(sorted.Length*.95)],p99Ms=sorted[(int)(sorted.Length*.99)],maxMs=sorted.Last(),
             over120BudgetPercent=100.0*frames.Count(ms=>ms>1000.0/120)/frames.Count,
+            over60BudgetPercent=100.0*frames.Count(ms=>ms>1000.0/60)/frames.Count,
+            over30BudgetPercent=100.0*frames.Count(ms=>ms>1000.0/30)/frames.Count,
             slowestOnePercentFps=1000.0/sorted.Skip((int)(sorted.Length*.99)).Average(),
             internalSpeed=game.Session.Time.Speed,displayedSpeed=TimeController.SpeedLabel(game.Session.Time.Speed),
             pausedFrames=pausedFrames,recoveryFrames=recoveryFrames,

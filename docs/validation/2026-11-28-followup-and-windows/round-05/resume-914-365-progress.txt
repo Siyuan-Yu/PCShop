@@ -1,0 +1,4 @@
+day=330 seconds=31.09 bytes=880145 cash=19984283433
+day=360 seconds=63.32 bytes=930451 cash=19983020192
+day=365 seconds=68.69 bytes=939356 cash=19982689429
+FINAL target=365 reached=365 ending=

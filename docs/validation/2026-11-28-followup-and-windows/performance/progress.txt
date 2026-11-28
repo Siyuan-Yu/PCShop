@@ -1,0 +1,10 @@
+suburb-1x player_shop
+community-1x agency_s_services
+park-1x agency_s_sports
+garden-1x agency_s_night
+race-1x race_0
+shop-1x player_shop
+home-1x home
+suburb-reload player_shop
+garden-4x agency_s_night
+home-sleep home
