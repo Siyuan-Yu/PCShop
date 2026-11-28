@@ -188,7 +188,7 @@ namespace PCShopSell.Core.Session
                     ApplySharedCareBenefit(state,stay,action);
             state.Stays = state.Stays.Append(stay).ToArray();
             state.Offer = null;
-            Ledger.Credit(Clock.Today, "宠物代养", advance, stay.Name + " · 首周预付款",
+            Ledger.Credit(Clock.Today, FinanceReport.PetBoardingCategory, advance, stay.Name + " · 首周预付款",
                 LedgerAttribution.ForShop(shop.Place.Id, $"pet:{shop.Place.Id}:{stay.Id}:advance", "代养服务"));
             Say($"{ShopTitle(shop)} · {stay.Name}入住 {stay.Weeks} 周，已收首周预付款 {advance}，一周后结清余款。");
             PetCounterHandled?.Invoke(shop, true, playerHandled);
@@ -232,7 +232,7 @@ namespace PCShopSell.Core.Session
             if (finished) state.Stays = state.Stays.Where(p => p != stay).ToArray();
             else stay.NextVisitAt = Clock.Now.AddMinutes(WeekMinutes).TotalMinutes;
             string paymentMemo = firstWeekBalance ? "首周余款" : $"第 {stay.PaidWeeks} 周";
-            Ledger.Credit(Clock.Today, "宠物代养", amount, stay.Name + " · " + paymentMemo,
+            Ledger.Credit(Clock.Today, FinanceReport.PetBoardingCategory, amount, stay.Name + " · " + paymentMemo,
                 LedgerAttribution.ForShop(shop.Place.Id, "pet:" + shop.Place.Id + ":" + stay.Id + ":" + stay.PaidWeeks, "代养服务"));
             if (reputation > 0) shop.Sim.AdjustPersonalReputation(reputation);
             if (satisfied) AddRelation(stay.OwnerId, 2);

@@ -280,6 +280,7 @@ namespace PCShopSell.Game.UI
         {
             if (place.Id == "life_expo") { BuildExpoReception(w); return; }
             bool here = S.CurrentPlace == place;
+            if (here && place.Kind == PlaceKind.Shop) ShowAvailableCash(w);
             bool park = place.Id == "life_hike" || place.Id == GameSession.CommunityParkId;
             bool amusement = place.Id is CityLifeCatalog.CommunityFerrisVenue or CityLifeCatalog.GardenAmusementVenue;
             var gardenParty = place.Id == CityLifeCatalog.GardenAmusementVenue ? S.GardenParty : Array.Empty<string>();

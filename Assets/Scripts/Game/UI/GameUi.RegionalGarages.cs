@@ -260,6 +260,7 @@ namespace PCShopSell.Game.UI
             {
                 OpenWindow(withdraw?"转入进货车队":"购买货车",760,400,w=>
                 {
+                    if (!withdraw) ShowAvailableCash(w);
                     MotorIdentity(w.Content,model.Id,model.Name,withdraw?"转入进货车队":"¥"+model.Price.ToString("N0"));
                     Para(w.Content,"货车仅供员工外出进货使用，不可通勤、比赛或练习，也不占用任何车库车位。",18);
                     string why=withdraw?S.MotorStorageBlocker(modelId,false,null):S.MotorPurchaseBlocker(modelId,false,null);
@@ -271,6 +272,7 @@ namespace PCShopSell.Game.UI
             string garageId = S.GarageLeases.FirstOrDefault(g => S.GarageFreeSpaces(g.PlaceId) > 0)?.PlaceId ?? S.GarageLeases.FirstOrDefault()?.PlaceId;
             OpenWindow(withdraw ? "自用车辆 · 车辆用途" : "购买确认 · 车辆用途", 800, 680, w =>
             {
+                if (!withdraw) ShowAvailableCash(w);
                 MotorIdentity(w.Content, model.Id, model.Name, withdraw ? "从二手车行展位转出" : "¥" + model.Price.ToString("N0"));
                 var current = S.CommuteMotor(model.Kind);
                 var purpose = Ui.Row(w.Content, 42, 8);

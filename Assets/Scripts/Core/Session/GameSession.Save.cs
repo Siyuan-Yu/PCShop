@@ -365,6 +365,7 @@ namespace PCShopSell.Core.Session
             RestoreOutdoorBatch(d);
             RestoreCustomerBatch(d);
             RestoreLegacyShopSales(d);
+            RestorePetBoardingSalesAccounts();
             RestoreOldMarket(d);
             RestoreMarketHunt(d);
             RestoreShopEventBatch(d);

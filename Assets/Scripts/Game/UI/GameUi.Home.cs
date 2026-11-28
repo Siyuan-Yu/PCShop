@@ -50,7 +50,7 @@ namespace PCShopSell.Game.UI
             {
                 if (!S.CanSleepAt(S.CurrentPlace)) { w.Close(); return; }
                 w.TimeStatusOverride = $"当前 {Ui.Hm(S.Clock.MinuteOfDay)}";
-                RefreshWindowTimeStatus(w);
+                RefreshWindowHeader(w);
                 BuildBed(w, showHelp, () => { showHelp = !showHelp; w.Rebuild(); }, sleep =>
                 {
                     if (sleepConfirmed) return;
@@ -1543,6 +1543,7 @@ namespace PCShopSell.Game.UI
             OwnedShop destination = preferredShop ?? S.LastPurchaseDeliveryShop;
             OpenPhoneAppWindow("网购", w =>
             {
+                ShowAvailableCash(w);
                 RectTransform tabs = Ui.Row(w.Content, 46);
                 string[] names = { "家具", "店里摆设", "衣服", "礼品", "大米", "电脑配件" };
                 for (int i = 0; i < names.Length; i++)
@@ -1616,6 +1617,7 @@ namespace PCShopSell.Game.UI
         /// <summary>以前寄存在店里的货：自己来搬（装不下就分几趟），或者全叫货车送回家。</summary>
         private void BuildMallStash(Window w, RectTransform stash)
         {
+            ShowAvailableCash(w);
             Line(stash, $"寄存在店里的货（已付过钱，不过期）{S.MallStashCount} 件，共 {S.MallStashKg:0.##} 千克", 17, Ui.Accent);
             foreach (MallCartLine l in S.MallStash.ToList())
             {

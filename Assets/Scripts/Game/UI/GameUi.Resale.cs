@@ -413,6 +413,7 @@ namespace PCShopSell.Game.UI
                 int id=customer.Id;var row=Ui.Row(C,58,5);
                 Ui.Size(Ui.Label(row,customer.ItemName+"\n应收 "+customer.Spend,16),-1,58,1);
                 var checkout=Ui.Button(row,"结账",()=>_ctrl.Checkout(id),17,Ui.ButtonHot,_ctrl.CanRequestCheckout);
+                Ui.PreferMainAction(checkout);
                 Ui.Size(checkout,90,40).name="UsedCheckout_"+id;
                 _openingCounterButtons[id] = checkout;
                 _counterRefresh.Add(()=>checkout.interactable=_ctrl.CanRequestCheckout);

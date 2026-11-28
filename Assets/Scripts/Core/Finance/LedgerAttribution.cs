@@ -51,6 +51,7 @@ namespace PCShopSell.Core.Finance
             {
                 case "零售": case "装机": case "进货": case "工资": case "培训": case "招聘": case "推广":
                 case "运费": case "偿还货款": case "企业奖励": case "企业固定费": case "企业维护": case "进货退款":
+                case FinanceReport.PetBoardingCategory:
                     return new LedgerAttribution(LedgerBusinessKind.Operating, transactionKind: category);
                 case "贷款到账": case "偿还贷款": case "贷款利息": case "偿还房贷": case "房贷利息":
                     return new LedgerAttribution(LedgerBusinessKind.Financing, transactionKind: category);

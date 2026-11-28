@@ -16,6 +16,8 @@ namespace PCShopSell.Game.UI
         private RectTransform _questProgressBar, _questProgressFill, _questDetails;
         private Button _questActionButton;
         private Action _questAction;
+        private Place _trackedQuestTravelDestination;
+        private ShortcutMenu _trackedQuestShortcut;
         private string _questSeen;
         private bool _questInitialized;
         private Window _questWindow;
@@ -91,7 +93,7 @@ namespace PCShopSell.Game.UI
         {
             if (S.OpeningAgencyGuidePending)
             {
-                if (!AnyModalOpen && S.StartOpeningAgencyTravel()) UpdateOpeningMealGuide();
+                if (!AnyModalOpen && S.StartOpeningAgencyTravel()) UpdateFirstUseGuide();
                 return;
             }
             _questAction?.Invoke();
@@ -128,6 +130,8 @@ namespace PCShopSell.Game.UI
         private void UpdateQuestTracker()
         {
             if (_questPanel == null) return;
+            _trackedQuestTravelDestination = null;
+            _trackedQuestShortcut = null;
             if (OpeningMealPreludePending) { _questPanel.gameObject.SetActive(false); return; }
             QuestDef q = S.CurrentQuest();
             QuestDef done = S.PendingQuestCompletion();
@@ -179,9 +183,10 @@ namespace PCShopSell.Game.UI
                 _questPanel.gameObject.SetActive(show);
                 if (show)
                 {
-                    var (label, action) = QuestAction(sponsorGuide.Target, sponsorGuide.GuideDestination);
+                    var (label, action, travel) = QuestAction(sponsorGuide.Target, sponsorGuide.GuideDestination);
                     SetQuestCard("经营引导", sponsorGuide.Title, sponsorGuide.Short,
-                        GuideLocation(sponsorGuide.Target, sponsorGuide.GuideDestination), ProgressOf(sponsorGuide), label, action);
+                        GuideLocation(sponsorGuide.Target, sponsorGuide.GuideDestination), ProgressOf(sponsorGuide), label, action,
+                        travelDestination: travel);
                 }
                 return;
             }
@@ -205,27 +210,31 @@ namespace PCShopSell.Game.UI
                 SetQuestCard("试玩完成", "城郊经营目标已达成", "可以继续在城郊经营。", progress: "5 家店 · 100 万元自有现金 · 无贷款");
             else if (showMallTravel)
                 SetQuestCard("当前任务", q.Title, "去宜居家具城买齐开店设施。", GuideLocation(q.Target, q.GuideDestination),
-                    actionLabel: OpeningMallTravelLabel, action: S.StartOpeningMallTravel);
+                    actionLabel: OpeningMallTravelLabel, action: S.StartOpeningMallTravel, travelDestination: S.OpeningFurnitureMall);
             else if (showRenovationTravel)
                 SetQuestCard("当前任务", q.Title, "家具已买齐，先前往自己的店铺。", "到店后打开「装修」。",
-                    actionLabel: "前往店铺", action: S.StartOpeningRenovationTravel);
+                    actionLabel: "前往店铺", action: S.StartOpeningRenovationTravel, travelDestination: S.OpeningRenovationTravelDestination);
             else if (district != null) UpdateDistrictQuestCard(district);
             else if (invitation != null) SetQuestCard("主线 · 等待联系", "等待街区引荐", invitation,
                 "引荐条件已达成");
             else
             {
-                var (label, action) = QuestAction(q.Target, q.GuideDestination);
+                var (label, action, travel) = QuestAction(q.Target, q.GuideDestination);
                 string heading = q.Target == QuestTarget.CommunityGoal ? "主线目标" : "当前任务";
                 string next = q.Target == QuestTarget.RacingEnrollment ? S.RacingQualificationBlocker ?? q.Short : q.Short;
                 if (q.Target == QuestTarget.BankSecurities && S.BankTutorialPaused)
                     next = S.BankBorrowTutorialPending ? "在柜台了解借款" : "在柜台打开「证券交易」";
-                SetQuestCard(heading, q.Title, next, GuideLocation(q.Target, q.GuideDestination), ProgressOf(q)?.Split('\n')[0], label, action);
+                SetQuestCard(heading, q.Title, next, GuideLocation(q.Target, q.GuideDestination), ProgressOf(q)?.Split('\n')[0], label, action,
+                    travelDestination: travel);
             }
         }
 
         private void SetQuestCard(string heading, string title, string next, string status = null, string progress = null,
-            string actionLabel = null, Action action = null, float? completion = null)
+            string actionLabel = null, Action action = null, float? completion = null, Place travelDestination = null)
         {
+            _trackedQuestTravelDestination = travelDestination;
+            _trackedQuestShortcut = FindQuestShortcut(travelDestination);
+            if (_trackedQuestShortcut != null || QuestUsesOpeningTravelShortcut(travelDestination)) action = null;
             bool showProgress = !string.IsNullOrEmpty(progress);
             _questHeading.text = heading;
             _questTitle.text = title;
@@ -247,6 +256,11 @@ namespace PCShopSell.Game.UI
             }
             RefreshToastPlacement();
         }
+
+        private bool QuestUsesOpeningTravelShortcut(Place destination) => destination != null
+            && OpeningTravelGuide().destination == destination && FindQuestShortcut(destination, allowTemporaryDestination: true) != null;
+
+        private bool QuestUsesShortcut(Place destination) => FindQuestShortcut(destination) != null || QuestUsesOpeningTravelShortcut(destination);
 
         private static string QuestPaperInk(string text) => Ui.EmphasizeReading(text?.Replace("<color=#FFC966>", "<color=#80551F>"));
 
@@ -365,38 +379,41 @@ namespace PCShopSell.Game.UI
 
         private Place ScooterDealer => S.City.Places.FirstOrDefault(p => MotorCatalog.SoldBy(p.Id, VehicleKind.EBike));
 
-        private (string label, Action action) QuestAction(QuestTarget target, Place destination = null)
+        private (string label, Action action, Place travel) QuestAction(QuestTarget target, Place destination = null)
         {
             switch (target)
             {
                 case QuestTarget.Cooker:
-                    if (_ctrl.InHome) return ("打开电饭锅", OpenCookerWindow);
+                    if (_ctrl.InHome) return ("打开电饭锅", OpenCookerWindow, null);
                     return QuestPlaceAction("回家做饭", S.Home);
                 case QuestTarget.Bed:
-                    return ("回家睡觉", _ctrl.GoHomeToSleep);
+                    var home = S.CanSleepAt(S.CurrentPlace) ? S.CurrentPlace : SelectedShortcut(SleepShortcut);
+                    if (home == null || S.CityIntent?.TargetPlaceId == home.Id) return default;
+                    return home == S.CurrentPlace ? ("走到床边", () => _ctrl.GoHomeToSleep(home), null)
+                        : ("回家睡觉", () => _ctrl.GoHomeToSleep(home), home);
                 case QuestTarget.Agency:
                 case QuestTarget.Ventures: return QuestPlaceAction("前往中介", destination ?? (S.City.HasPlace("agency") ? S.City.GetPlace("agency") : null));
                 case QuestTarget.Mall: return QuestPlaceAction(OpeningMallTravelLabel, S.OpeningFurnitureMall);
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
                 case QuestTarget.BankSecurities:
-                    if (S.AtBank) return ("打开银行柜台", () => OpenBank(S.CurrentPlace));
-                    if (S.BankPlace == null || S.CityIntent?.TargetPlaceId == S.BankPlace.Id) return (null, null);
+                    if (S.AtBank) return ("打开银行柜台", () => OpenBank(S.CurrentPlace), null);
+                    if (S.BankPlace == null || S.CityIntent?.TargetPlaceId == S.BankPlace.Id) return default;
                     return QuestPlaceAction("前往银行", S.BankPlace);
                 case QuestTarget.VenueSponsorship:
-                    if (destination == null || S.CityIntent?.TargetPlaceId == destination.Id) return (null, null);
+                    if (destination == null || S.CityIntent?.TargetPlaceId == destination.Id) return default;
                     return QuestPlaceAction("前往" + destination.Name, destination);
                 case QuestTarget.ScooterDealer: return QuestPlaceAction("前往顺丰车行", ScooterDealer);
                 case QuestTarget.RacingEnrollment:
-                    if (S.RacingUnlocked || S.RacingQualificationBlocker != null) return (null, null);
+                    if (S.RacingUnlocked || S.RacingQualificationBlocker != null) return default;
                     if (S.CurrentPlace?.Id == GameSession.StarterRaceGarageId)
-                        return ("找负责人办理登记", OpenMotorGarage);
-                    return ("前往城郊赛场车库", () => S.BeginCityTravel(GameSession.StarterRaceGarageId, enter: false));
+                        return ("找负责人办理登记", OpenMotorGarage, null);
+                    return ("前往城郊赛场车库", () => S.BeginCityTravel(GameSession.StarterRaceGarageId, enter: false), null);
                 case QuestTarget.Market:
                     if (destination != null) return QuestPlaceAction("前往进货", destination);
                     if (S.ShopSupplyMarketId(S.RetailKind) is string marketId)
                         return QuestPlaceAction("前往批发市场", S.PurchaseDestination(S.City.GetPlace(marketId)));
                     return S.RetailKind == "secondhand" ? QuestShopAction(ShopTab.Counter, "打开柜台")
-                        : ("打开采购", OpenCityProcurement);
+                        : ("打开采购", OpenCityProcurement, null);
                 case QuestTarget.Renovate: return QuestShopAction(ShopTab.Renovate, "打开装修", destination);
                 case QuestTarget.Stock: return QuestShopAction(ShopTab.Stock, "打开库存", destination);
                 case QuestTarget.Counter: return QuestShopAction(ShopTab.Counter, "打开柜台", destination);
@@ -404,28 +421,28 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Pricing: return QuestShopAction(ShopTab.Pricing, "打开定价");
                 case QuestTarget.Orders:
                 case QuestTarget.Enterprise: return QuestShopAction(ShopTab.Orders, "打开订单");
-                case QuestTarget.Finance: return ("查看经营收支", OpenCityFinanceOverview);
-                case QuestTarget.Property: return ("查看商铺和住宅", OpenCityProperties);
-                case QuestTarget.Restock: return ("打开网购", OpenOnlinePanel);
-                case QuestTarget.Direct: return ("打开采购", OpenCityProcurement);
-                case QuestTarget.Creators: return ("打开品牌", OpenBrandBusiness);
-                default: return (null, null);
+                case QuestTarget.Finance: return ("查看经营收支", OpenCityFinanceOverview, null);
+                case QuestTarget.Property: return ("查看商铺和住宅", OpenCityProperties, null);
+                case QuestTarget.Restock: return ("打开网购", OpenOnlinePanel, null);
+                case QuestTarget.Direct: return ("打开采购", OpenCityProcurement, null);
+                case QuestTarget.Creators: return ("打开品牌", OpenBrandBusiness, null);
+                default: return default;
             }
         }
 
-        private (string label, Action action) QuestPlaceAction(string label, Place place)
+        private (string label, Action action, Place travel) QuestPlaceAction(string label, Place place)
         {
-            if (place == null) return (null, null);
-            return S.CurrentPlace == place ? ("打开" + place.Name, () => OnEnteredPlace(place))
-                : (label, () => S.BeginCityTravel(place.Id));
+            if (place == null || S.CityIntent?.TargetPlaceId == place.Id) return default;
+            return S.CurrentPlace == place ? ("打开" + place.Name, () => OnEnteredPlace(place), null)
+                : (label, () => S.BeginCityTravel(place.Id), place);
         }
 
-        private (string label, Action action) QuestShopAction(ShopTab tab, string label, Place destination = null)
+        private (string label, Action action, Place travel) QuestShopAction(ShopTab tab, string label, Place destination = null)
         {
             if (destination != null && S.CurrentPlace != destination)
                 return QuestPlaceAction(tab == ShopTab.Staff ? "前往要招人的店" : tab == ShopTab.Counter ? "前往店铺" : "前往新店", destination);
-            if (!S.HasShop) return (null, null);
-            if (S.InPlayerShop) return (label, () => { OpenDock(); SelectTab(tab); });
+            if (!S.HasShop) return default;
+            if (S.InPlayerShop) return (label, () => { OpenDock(); SelectTab(tab); }, null);
             return QuestPlaceAction("前往自己的店", S.PlayerShopPlace);
         }
 
@@ -541,8 +558,8 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, "完成奖励　" + QuestPaperInk(q.RewardText(S)), 18, Ui.Good);
             if (q.Target == QuestTarget.RacingEnrollment || q.Target == QuestTarget.BankSecurities)
             {
-                var (label, action) = QuestAction(q.Target, q.GuideDestination);
-                if (action != null)
+                var (label, action, travel) = QuestAction(q.Target, q.GuideDestination);
+                if (action != null && !QuestUsesShortcut(travel))
                     Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 44);
                 else
                     Ui.Size(Ui.Button(w.Content, "继续经营", w.Close, 18, Ui.ButtonHot), -1, 44);
@@ -561,9 +578,9 @@ namespace PCShopSell.Game.UI
             }
             else
             {
-                var (label, action) = QuestAction(q.Target, q.GuideDestination);
+                var (label, action, travel) = QuestAction(q.Target, q.GuideDestination);
                 var actions = Ui.Row(w.Content, 52, 12);
-                if (action != null)
+                if (action != null && !QuestUsesShortcut(travel))
                     Ui.Size(Ui.Button(actions, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), 0, 52, 1);
                 Ui.Size(Ui.Button(actions, "继续游戏", w.Close, 18), 0, 52, 1);
             }

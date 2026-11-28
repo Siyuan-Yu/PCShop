@@ -136,7 +136,8 @@ namespace PCShopSell.Core.Session
                 .Where(r => r.ShopId != null && r.Product != null && (r.CustomerId > 0 || r.Key?.Contains(":bulk:") == true))
                 .GroupBy(r => (r.Day, r.PaidCents, r.Product)).ToDictionary(group => group.Key, group => group.ToArray());
             var sales = Ledger.Entries.Select((entry, index) => (entry, index))
-                .Where(row => row.entry.Amount.IsPositive && FinanceReport.IsOperatingSale(row.entry)).ToArray();
+                .Where(row => row.entry.Category != FinanceReport.PetBoardingCategory
+                    && row.entry.Amount.IsPositive && FinanceReport.IsOperatingSale(row.entry)).ToArray();
             if (sales.Length == 0) return;
 
             var matched = new Dictionary<int, EventPaidReceipt>();
@@ -186,6 +187,34 @@ namespace PCShopSell.Core.Session
                     entry.BalanceAfter, entry.EntryId, attribution,entry.CashAccountId);
             }
             Ledger.Restore(Ledger.Balance, entries);
+        }
+
+        private void RestorePetBoardingSalesAccounts()
+        {
+            LedgerEntry[] entries = null;
+            for (int i = 0; i < Ledger.Entries.Count; i++)
+            {
+                var entry = Ledger.Entries[i];
+                if (entry.Category != FinanceReport.PetBoardingCategory || !entry.Amount.IsPositive
+                    || entry.BusinessKind != LedgerBusinessKind.Operating || entry.Attribution.SalesAccountId != null
+                    || entry.ShopId == null) continue;
+
+                var shop = ShopAt(entry.ShopId);
+                if (shop == null || entry.Date.TotalDays < shop.SalesStartDay) continue;
+                // Pet stay ids record the offer minute. An old stay can settle on the day a new shop opens.
+                string prefix = $"pet:{entry.ShopId}:";
+                string source = entry.SourceEventId;
+                if (source?.StartsWith(prefix, StringComparison.Ordinal) != true) continue;
+                int end = source.IndexOf(':', prefix.Length);
+                if (end < 0 || !long.TryParse(source.Substring(prefix.Length, end - prefix.Length), out long offeredAt)
+                    || offeredAt < (long)shop.SalesStartDay * GameTimestamp.MinutesPerDay) continue;
+
+                entries ??= Ledger.Entries.ToArray();
+                var attribution = entry.Attribution.AssignShopSale(entry.ShopId, shop.SalesAccountId);
+                entries[i] = new LedgerEntry(entry.Date, entry.Category, entry.Amount, entry.Memo,
+                    entry.BalanceAfter, entry.EntryId, attribution, entry.CashAccountId);
+            }
+            if (entries != null) Ledger.Restore(Ledger.Balance, entries);
         }
 
         private static bool IsSimulatedShopSale(LedgerEntry entry) =>

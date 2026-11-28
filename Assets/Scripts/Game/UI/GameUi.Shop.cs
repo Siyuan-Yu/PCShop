@@ -473,6 +473,7 @@ namespace PCShopSell.Game.UI
                 description.verticalOverflow = VerticalWrapMode.Truncate;
                 Ui.Trim(row, "CheckoutRowRule", Ui.FlatCardEdge, 0);
                 var checkout = Ui.Size(Ui.Button(row, "结账", () => _ctrl.Checkout(cust.Id), 18, Ui.ButtonHot, _ctrl.CanRequestCheckout), 100);
+                Ui.PreferMainAction(checkout);
                 _openingCounterButtons[cust.Id] = checkout;
                 _counterRefresh.Add(() => { description.text = CounterQueueText(cust); checkout.interactable = _ctrl.CanRequestCheckout; });
             }
@@ -623,7 +624,7 @@ namespace PCShopSell.Game.UI
                 }
                 if (entries.Length == 0)
                 {
-                    Line(w.Content, "今天暂无销售收款", 17, Ui.Dim);
+                    Line(w.Content, "今天暂无营业收款", 17, Ui.Dim);
                     return;
                 }
 
@@ -650,7 +651,10 @@ namespace PCShopSell.Game.UI
                 {
                     var entry = entries[i];
                     var row = Ui.Row(w.Content, 33, 8);
-                    var item = Ui.Size(Ui.Label(row, string.IsNullOrEmpty(entry.Memo) ? entry.Category : entry.Memo, 17), -1, 33, 1);
+                    string description = string.IsNullOrEmpty(entry.Memo) ? entry.Category : entry.Memo;
+                    if (entry.Category == FinanceReport.PetBoardingCategory && !string.IsNullOrEmpty(entry.Memo))
+                        description = "寄养 · " + description;
+                    var item = Ui.Size(Ui.Label(row, description, 17), -1, 33, 1);
                     item.supportRichText = false;
                     Ui.Size(Ui.Label(row, entry.Amount.ToString(), 18, TextAnchor.MiddleRight, Ui.Good), amountWidth, 33);
                 }
@@ -1091,8 +1095,8 @@ namespace PCShopSell.Game.UI
                     other += d.OtherIncome;
                     max = System.Math.Max(max, System.Math.Max(d.Revenue.Cents, d.Expense.Cents));
                 }
-                Line(w.Content, $"近 {days.Count} 天：销售 {rev}　经营支出 {exp}　经营现金净额 {rev + other - exp}", 19);
-                Line(w.Content, "<color=#386047>■</color> 销售收款　<color=#9C4634>■</color> 经营支出", 15, Ui.Dim);
+                Line(w.Content, $"近 {days.Count} 天：营业额 {rev}　经营支出 {exp}　经营现金净额 {rev + other - exp}", 19);
+                Line(w.Content, "<color=#386047>■</color> 营业收款　<color=#9C4634>■</color> 经营支出", 15, Ui.Dim);
 
                 Line(w.Content, $"{scope} · 其他经营收款 {other}；个人消费、借款和押金不计入本图。", 15, Ui.Dim);
                 Image plot = Ui.Panel(w.Content, "Chart", Ui.PanelBg2);

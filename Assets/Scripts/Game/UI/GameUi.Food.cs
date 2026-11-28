@@ -28,6 +28,7 @@ namespace PCShopSell.Game.UI
             string lastOrder = null;
             var window = OpenPhoneAppWindow("外卖", w =>
             {
+                ShowAvailableCash(w);
                 bool locked = tutorial && S.MealDeliveryTutorialPaused;
                 w.Closable = !locked;
                 if (w.CloseButton != null) w.CloseButton.interactable = !locked;
@@ -52,8 +53,6 @@ namespace PCShopSell.Game.UI
                 Ui.VList(menu, 8, 0);
                 var details = Ui.Size(Ui.FlatPanel(columns, "MealDeliveryDetails", Ui.FlatBand), 380, -1, 0).rectTransform;
                 Ui.VList(details, 8, 16);
-                Line(details, "可用现金", 16, Ui.Dim);
-                Line(details, S.Ledger.Balance.ToString(), 28, Ui.Accent);
                 Line(details, $"当前饱腹  {S.Player.Hunger:0} / 100", 19);
                 if (automatic)
                 {

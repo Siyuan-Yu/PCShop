@@ -140,7 +140,7 @@ namespace PCShopSell.Core.Session
             "走到货架旁按 F，或在「库存」选择货架。点「选择摆什么」或「换品类」，从「零售商品」里选「饮料」。堂食顾客可以加购陈列的饮料。";
 
         private const string OpeningMallTravelSeen = "tutorial:opening-mall-travel";
-        private bool _openingMallTutorialFocused;
+        private bool _openingTravelTutorialFocused;
         public Place OpeningFurnitureMall => City.Places.FirstOrDefault(place => place.Business == MallBusiness);
 
         public bool OpeningMallTravelPending => !QuestCompleted("mall") && !QuestCompleted("sale")
@@ -149,9 +149,9 @@ namespace PCShopSell.Core.Session
             && QuestStageReady(Quests.Get("mall")) && OpeningFurnitureMall is Place mall
             && (Vehicle != VehicleKind.Taxi || CityDestinationTravelBlocker(mall, out _, out _) == null);
 
-        private bool OpeningMallTutorialPaused => _openingMallTutorialFocused && OpeningMallTravelPending;
+        private bool OpeningTravelTutorialPaused => _openingTravelTutorialFocused && CanPauseForTutorial && CityIntent == null;
 
-        public void FocusOpeningMallTutorial(bool focused) => _openingMallTutorialFocused = focused;
+        public void FocusOpeningTravelTutorial(bool focused) => _openingTravelTutorialFocused = focused;
 
         public void StartOpeningMallTravel()
         {
@@ -195,6 +195,9 @@ namespace PCShopSell.Core.Session
             if (OpeningRenovationStep == OpeningRenovationLesson.Travel && BeginCityTravel(ExpansionStorefront(1).Place.Id))
                 Flags.Add(OpeningRenovationTravelSeen);
         }
+
+        public Place OpeningRenovationTravelDestination => OpeningRenovationStep == OpeningRenovationLesson.Travel
+            ? ExpansionStorefront(1)?.Place : null;
 
         public void VisitOpeningRenovationTab()
         {
@@ -383,7 +386,14 @@ namespace PCShopSell.Core.Session
         private const string StaffTabSeen = "tutorial:opening-staff-tab";
         private const string StaffRolesSeen = "tutorial:opening-staff-roles";
         private const string OpeningStaffRested = "tutorial:opening-staff-rested";
+        private const string OpeningStaffHomeShortcutSeen = "tutorial:opening-staff-home-shortcut";
         private long _openingStaffWaitUntil;
+
+        public bool OpeningStaffTravelHomePending => _openingStaffWaitUntil > Clock.Now.TotalMinutes
+            && !Flags.Contains(OpeningStaffHomeShortcutSeen) && CanPauseForTutorial && CityIntent == null && !CanSleepAt(CurrentPlace)
+            && OpeningStaffWaitTarget(FirstStaffingShop) == QuestTarget.Bed;
+
+        public void ConfirmOpeningStaffHomeShortcut() => Flags.Add(OpeningStaffHomeShortcutSeen);
 
         private bool FirstRecruitmentNotScheduled => _openingStaffWaitUntil == 0 && !EverHired
             && !QuestCompleted("hire") && MyShopCount == 1

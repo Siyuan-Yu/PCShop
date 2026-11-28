@@ -285,6 +285,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("购置代养玩具", 640, 375, w =>
             {
+                ShowAvailableCash(w);
                 Para(w.Content, "将玩具摆在宠物屋内或旁边，靠近宠物屋后即可使用。", 16, Ui.Dim);
                 for (int tier = 0; tier < PetShopCatalog.ToyTierCount; tier++)
                 {

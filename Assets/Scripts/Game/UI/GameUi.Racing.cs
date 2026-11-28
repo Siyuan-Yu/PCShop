@@ -75,6 +75,7 @@ namespace PCShopSell.Game.UI
         }
         private void BuildMotorDealer(Window w,Place p)
         {
+            ShowAvailableCash(w);
             bool workshop=p.Id=="motor_scooter_mod";
             Line(w.Content,workshop?"只改装小电驴 · 9:00—19:00":p.Id=="dealer"?"电驴与三轮车 · 9:00—19:00":"四轮车展厅 / 整备车间 · 9:00—19:00",20,Ui.Accent);
             Ui.Size(Ui.Button(w.Content,"改装 / 维修 / 回收",OpenMotorWorkshop,18),-1,40);
@@ -90,6 +91,7 @@ namespace PCShopSell.Game.UI
             if(S.CurrentPlace?.Kind!=PlaceKind.Dealer&&S.CurrentPlace?.Id!="motor_scooter_mod"){Toast("请到对应车行或顺丰改车办理整备。");return;}
             OpenWindow("车辆整备",1100,850,w=>
             {
+                ShowAvailableCash(w);
                 BuildDealerMotorTabs(w.Content,_workshopMotorClass,c=>{_workshopMotorClass=c;w.Rebuild();});
                 foreach(var item in S.Garage.Where(v=>MotorCatalog.DealerClass(MotorCatalog.Get(v.ModelId).Kind)==_workshopMotorClass))
                 {
@@ -137,7 +139,7 @@ namespace PCShopSell.Game.UI
                     if (S.RacingEnrollmentAvailable)
                     {
                         ProgressLine(w.Content, Quests.Get("racing_enrollment"), 17);
-                        var (label, action) = QuestAction(QuestTarget.RacingEnrollment);
+                        var (label, action, _) = QuestAction(QuestTarget.RacingEnrollment);
                         if (action != null)
                             Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 42);
                     }

@@ -164,7 +164,7 @@ namespace PCShopSell.Game.UI
             var e = row.Person;
             if (row.Shop != null) Line(card, "工作地点 · " + S.ShopTitle(row.Shop), 16);
             BuildWorkAttributeRow(card, (e.Intelligence, GameSession.EmployeeCharm(e), e.Dexterity, e.Stamina));
-            var (_, effect, attributes) = EmployeeRolePreview(e, row.Role, row.Shop);
+            var (_, effect, _) = EmployeeRolePreview(e, row.Role, row.Shop);
             Para(card, "效果 · " + effect, 17, Ui.Accent);
             Para(card, S.EmployeePaySummary(e), 15, Ui.Dim);
             BuildEmployeeWellbeingDetails(card,row,w);
@@ -211,7 +211,7 @@ namespace PCShopSell.Game.UI
             string destination = (row.Shop ?? S.CurrentShop)?.Place.Id;
             int destinationRows = Mathf.Clamp((S.MyShops.Count + 1) / 2, 1, 4);
             RectTransform footer = null;
-            OpenWindow("安排工作 · " + row.Person.Name, 1040, 630 + (destinationRows - 1) * 52, w =>
+            OpenWindow("安排工作 · " + row.Person.Name, 1040, EmployeeWorkDialogHeight + (destinationRows - 1) * 52, w =>
             {
                 var work = w.Content;
                 BuildEmployeeWorkHeader(work, row.Person);

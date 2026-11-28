@@ -22,6 +22,8 @@ namespace PCShopSell.Game.UI
         public RectTransform Content;
         public Text TitleText;
         public Text TimeStatusText;
+        internal Text AvailableCashText;
+        internal Money? ShownAvailableCash;
         internal Button CloseButton;
         internal string TimeStatusOverride;
         internal Action RefreshContent;
@@ -219,7 +221,7 @@ namespace PCShopSell.Game.UI
             bool pointerBusy = Input.GetMouseButton(0) || Input.GetMouseButtonUp(0);
             foreach (var window in _windows.ToArray())
             {
-                RefreshWindowTimeStatus(window);
+                RefreshWindowHeader(window);
                 window.RefreshContent?.Invoke();
                 if (window.LiveConversation && Time.unscaledTime >= window.LiveRefreshAt)
                 {
@@ -1160,16 +1162,53 @@ namespace PCShopSell.Game.UI
             var events = EventSystem.current;
             if (events != null && !events.alreadySelecting) events.SetSelectedGameObject(null);
             w.Rebuild();
-            RefreshWindowTimeStatus(w);
+            RefreshWindowHeader(w);
             if (showTitleBar && !w.Closed) RevealAppearance(prt, .14f, .72f);
             return w;
         }
 
-        private void RefreshWindowTimeStatus(Window w)
+        private void RefreshWindowHeader(Window w)
         {
-            if (w.TimeStatusText == null) return;
-            w.TimeStatusText.text = w.TimeStatusOverride
-                ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.RequiredTutorialPaused && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
+            if (w.TimeStatusText != null)
+                w.TimeStatusText.text = w.TimeStatusOverride
+                    ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.RequiredTutorialPaused && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
+            if (w.AvailableCashText == null || S == null) return;
+            Money balance = S.Ledger.Balance;
+            if (w.ShownAvailableCash == balance) return;
+            w.ShownAvailableCash = balance;
+            w.AvailableCashText.text = balance.ToString();
+            w.AvailableCashText.color = balance.IsNegative ? Ui.ChromeWarn : Ui.ChromeGold;
+        }
+
+        private void ShowAvailableCash(Window w)
+        {
+            if (w.TitleText == null || w.TimeStatusText == null) return;
+            var title = w.TitleText.rectTransform;
+            var header = (RectTransform)title.parent;
+            if (w.AvailableCashText == null)
+            {
+                var badge = Ui.Panel(header, "WindowAvailableCash", Ui.ChromeButton);
+                Ui.FlatBorder(badge, Ui.ChromeEdge);
+                badge.raycastTarget = false;
+                var icon = Ui.Artwork(badge.transform, UiIcon.Cash);
+                if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 4, -16, -48, -16);
+                Ui.Label(badge.transform, "可用现金", 17, TextAnchor.MiddleLeft, Ui.ChromeDim)
+                    .rectTransform.Anchor(0, 0, 0, 1, 52, 0, -122, 0);
+                w.AvailableCashText = Ui.Label(badge.transform, "", 25, TextAnchor.MiddleRight, Ui.ChromeGold);
+                w.AvailableCashText.fontStyle = FontStyle.Bold;
+                w.AvailableCashText.resizeTextForBestFit = true;
+                w.AvailableCashText.resizeTextMinSize = 13;
+                w.AvailableCashText.resizeTextMaxSize = 25;
+                w.AvailableCashText.verticalOverflow = VerticalWrapMode.Truncate;
+                w.AvailableCashText.rectTransform.Anchor(0, 0, 1, 1, 126, 0, 12, 0);
+            }
+
+            const float gap = 14;
+            float right = gap - w.TimeStatusText.rectTransform.offsetMin.x;
+            float width = Mathf.Clamp(header.rect.width - right - 218, 226, 270);
+            ((RectTransform)w.AvailableCashText.transform.parent)
+                .Anchor(1, .5f, 1, .5f, -right - width, -21, right, -21);
+            title.offsetMax = new Vector2(-right - width - gap, title.offsetMax.y);
         }
 
         internal static void FitWindowToContent(Window w)

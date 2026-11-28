@@ -15,6 +15,7 @@ namespace PCShopSell.Game.UI
         private Texture2D _mainMenuCover;
         private Texture2D _mainMenuLogo;
         private const float MenuLeft = .034f;
+        private const float MenuButtonWidth = .24f;
         public bool MainMenuOpen => _mainMenu != null && !_mainMenu.Closed;
         private static string L(string key) => MenuLocalization.Get(key);
 
@@ -110,14 +111,14 @@ namespace PCShopSell.Game.UI
                 art.texture = _mainMenuCover;
                 art.raycastTarget = false;
                 var fitter = art.gameObject.AddComponent<AspectRatioFitter>();
-                fitter.aspectRatio = _mainMenuCover.width / (float)_mainMenuCover.height;
                 fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fitter.aspectRatio = _mainMenuCover.width / (float)_mainMenuCover.height;
             }
 
-            var awning = Ui.Rect(w.Content, "MenuAwning").Anchor(MenuLeft, .90f, .37f, .95f);
+            var awning = Ui.Rect(w.Content, "MenuAwning").Anchor(MenuLeft, .896f, .373f, .95f);
             var green = new Color32(91, 122, 94, 255);
             var cream = new Color32(239, 230, 207, 255);
-            const int stripeCount = 24;
+            const int stripeCount = 21;
             for (int i = 0; i < stripeCount; i++)
             {
                 var stripe = Ui.Panel(awning, "AwningStripe", i % 2 == 0 ? green : cream);
@@ -127,7 +128,7 @@ namespace PCShopSell.Game.UI
             }
 
             _mainMenuLogo ??= Resources.Load<Texture2D>("Menu/PetShopLogo");
-            var logo = Ui.Rect(w.Content, "MenuLogo").Anchor(MenuLeft, .75f, .384f, .875f);
+            var logo = Ui.Rect(w.Content, "MenuLogo").Anchor(MenuLeft, .75f, .384f, .89f);
             if (_mainMenuLogo != null)
             {
                 var graphic = Ui.Rect(logo, "LogoArtwork").Fill().gameObject.AddComponent<RawImage>();
@@ -139,19 +140,19 @@ namespace PCShopSell.Game.UI
             }
             else
             {
-                var title = Ui.Label(logo, L("game_title"), 132, TextAnchor.MiddleLeft, Ui.ChromeInk);
+                var title = Ui.Label(logo, L("game_title"), 144, TextAnchor.MiddleLeft, Ui.ChromeInk);
                 title.fontStyle = FontStyle.Bold;
                 title.resizeTextForBestFit = true;
                 title.resizeTextMinSize = 32;
-                title.resizeTextMaxSize = 132;
+                title.resizeTextMaxSize = 144;
                 title.rectTransform.Fill();
             }
-            var subtitle = Ui.Label(w.Content, L("tagline"), 31, TextAnchor.MiddleLeft, Ui.ChromeInk);
+            var subtitle = Ui.Label(w.Content, L("tagline"), 35, TextAnchor.MiddleLeft, Ui.ChromeInk);
             subtitle.fontStyle = FontStyle.Bold;
             subtitle.resizeTextForBestFit = true;
             subtitle.resizeTextMinSize = 24;
-            subtitle.resizeTextMaxSize = 31;
-            subtitle.rectTransform.Anchor(MenuLeft, .69f, .389f, .739f);
+            subtitle.resizeTextMaxSize = 35;
+            subtitle.rectTransform.Anchor(MenuLeft + .017f, .696f, .389f, .741f);
             if (GameSession.FirstChapterTrial)
                 Ui.Label(w.Content, L("trial_edition"), 17, TextAnchor.MiddleLeft, Ui.ChromeGold)
                     .rectTransform.Anchor(MenuLeft, .652f, .389f, .684f);
@@ -161,61 +162,93 @@ namespace PCShopSell.Game.UI
             bool canResume = _canResumeMainMenu || latest != null;
             if (latest != null)
             {
-                var record = Ui.FlatPanel(w.Content, "MenuSaveSummary", Ui.HudTile);
-                record.rectTransform.Anchor(MenuLeft, .62f, .382f, .68f);
+                var record = Ui.Panel(w.Content, "MenuSaveSummary", Ui.HudTile);
+                Ui.StyleMenuPlate(record, Ui.Accent);
+                record.rectTransform.Anchor(MenuLeft, .618f, .377f, .678f);
                 var stripe = Ui.Panel(record.transform, "SummaryStripe", Ui.ButtonHot);
+                Ui.Round(stripe);
                 stripe.raycastTarget = false;
-                stripe.rectTransform.Anchor(0, 0, 0, 1, 13, 9, -19, 9);
+                stripe.rectTransform.Anchor(0, 0, 0, 1, 16, 10, -28, 10);
                 var date = new GameDate(latest.Day);
                 var summary = Ui.Label(record.transform, string.Format(L("menu_save_summary"),
-                    date.Year, date.Month, date.Day, Money.FromCents(latest.BalanceCents), latest.ShopCount), 24);
+                    date.Year, date.Month, date.Day, Money.FromCents(latest.BalanceCents), latest.ShopCount), 27);
+                summary.fontStyle = FontStyle.Bold;
                 summary.resizeTextForBestFit = true;
-                summary.resizeTextMinSize = 17;
-                summary.resizeTextMaxSize = 24;
-                summary.rectTransform.Anchor(0, 0, 1, 1, 32, 3, 8, 3);
+                summary.resizeTextMinSize = 20;
+                summary.resizeTextMaxSize = 27;
+                summary.rectTransform.Anchor(0, 0, 1, 1, 44, 5, 12, 5);
             }
 
             var actions = Ui.Rect(w.Content, "MenuActions").Fill();
-            int index = 0;
             if (canResume)
-                Place("resume", () =>
+                Place(.41f, "resume", () =>
                 {
                     if (_canResumeMainMenu) w.Close();
                     else if (!_ctrl.TryLoadGame(latest.Slot, latest.Automatic)) OpenMenuMessage("load_failed", "load_failed_body");
                 }, UiIcon.Play, true);
-            Place(hasSaves || _canResumeMainMenu ? "new_game" : "start", () =>
+            Place(canResume ? .52f : .41f, canResume || hasSaves ? "new_game" : "start", () =>
             {
                 if (_canResumeMainMenu) ConfirmMenuAction("new_game", "new_confirm", "new_game", _ctrl.NewGame);
                 else _ctrl.NewGame();
             }, UiIcon.Shop, !canResume);
-            Place("load", () => OpenLoadMenu(_canResumeMainMenu), UiIcon.Folder, enabled: hasSaves);
-            Place("settings", OpenSettingsMenu, UiIcon.Settings);
+            Place(canResume ? .63f : .575f, "load", () => OpenLoadMenu(_canResumeMainMenu), UiIcon.Folder, enabled: hasSaves);
+            Place(.74f, "settings", OpenSettingsMenu, UiIcon.Settings);
 
-            var secondary = Ui.Row(actions, 76, 12).Anchor(MenuLeft, .065f, .372f, .146f);
+            var secondary = Ui.Row(actions, 86, 14).Anchor(MenuLeft, .066f, .356f, .142f);
             Ui.Size(MainMenuAction(secondary, "help", OpenHelpMenu, UiIcon.Help, compact: true), 0, -1, 1);
             Ui.Size(MainMenuAction(secondary, "about", OpenAboutMenu, UiIcon.About, compact: true), 0, -1, 1);
-            Ui.Size(MainMenuAction(secondary, "quit", OpenQuitMenu, UiIcon.Door, compact: true), 0, -1, 1.16f);
+            Ui.Size(MainMenuAction(secondary, "quit", OpenQuitMenu, UiIcon.Door, compact: true), 0, -1, 1.20f);
 
-            void Place(string key, Action action, UiIcon icon, bool primary = false, bool enabled = true)
+            void Place(float y, string key, Action action, UiIcon icon, bool primary = false, bool enabled = true)
             {
-                float top = .59f - .11f * index++;
                 var control = MainMenuAction(actions, key, action, icon, primary, enabled);
-                control.image.rectTransform.Anchor(MenuLeft, top - .09f, MenuLeft + .246f, top);
+                control.image.rectTransform.Anchor(MenuLeft, 1 - y - .09f, MenuLeft + MenuButtonWidth, 1 - y);
             }
         }
 
         private static Button MainMenuAction(Transform parent, string key, Action click, UiIcon icon,
             bool emphasized = false, bool interactable = true, bool compact = false)
         {
-            int size = compact ? 24 : 35;
-            Color fill = key == "quit" ? Ui.ButtonDanger : emphasized ? Ui.ButtonHot : Ui.ButtonBg;
+            int size = compact ? 31 : 46;
+            bool danger = key == "quit";
+            Color fill = danger ? Ui.ButtonDanger : emphasized ? Ui.ButtonHot : Ui.HudTile;
             var button = Ui.Button(parent, L(key), click, size, fill, interactable, exclusiveEmphasis: false);
+            var edge = danger ? Ui.Warn : interactable ? Ui.FlatHotEdge : Ui.FlatButtonEdge;
+            Ui.StyleMenuPlate(button.image, edge);
             var caption = button.GetComponentInChildren<Text>();
             caption.fontStyle = FontStyle.Bold;
-            Ui.ButtonArtwork(button, icon, size: compact ? 44 : 56, trailingSpace: emphasized ? 56 : 8);
+            caption.verticalOverflow = VerticalWrapMode.Truncate;
+            caption.resizeTextForBestFit = true;
+            caption.resizeTextMinSize = 24;
+            caption.resizeTextMaxSize = size;
+
+            var artwork = Ui.Artwork(button.transform, icon);
+            caption.alignment = artwork == null ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
+            float captionLeft = artwork == null ? 12 : compact ? 66 : 140;
+            caption.rectTransform.Anchor(0, 0, 1, 1, captionLeft, 4, emphasized ? 64 : 12, 4);
+            if (artwork != null)
+            {
+                Ui.UseCaptionIcon(button, artwork);
+                if (icon == UiIcon.Play)
+                {
+                    var tile = Ui.Panel(button.transform, "PlayIconTile", Ui.Chrome);
+                    Ui.StyleMenuPlate(tile, Ui.FlatHotEdge);
+                    tile.raycastTarget = false;
+                    tile.rectTransform.Anchor(0, .5f, 0, .5f, 28, -28, -98, -28);
+                    artwork.transform.SetParent(tile.transform, false);
+                    artwork.rectTransform.Anchor(.5f, .5f, .5f, .5f, -22, -22, -22, -22);
+                }
+                else
+                {
+                    int iconSize = compact ? 44 : 76;
+                    float inset = compact ? 13 : 25;
+                    artwork.rectTransform.Anchor(0, .5f, 0, .5f,
+                        inset, -iconSize * .5f, -inset - iconSize, -iconSize * .5f);
+                }
+            }
             if (emphasized)
-                Ui.Label(button.transform, "›", 44, TextAnchor.MiddleCenter, Color.white)
-                    .rectTransform.Anchor(1, 0, 1, 1, -52, 0, 14);
+                Ui.Label(button.transform, "›", 55, TextAnchor.MiddleCenter, Color.white)
+                    .rectTransform.Anchor(1, 0, 1, 1, -65, 1, 16, 1);
             return button;
         }
 

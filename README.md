@@ -1,6 +1,8 @@
 # PETSHOP · PCShopSell
 
-**最新交接与 Windows 完整版（2026-11-28 16:41）**　交付分支为 `art/experiment`。当前玩法索引、新 UI 与图标、开店教学、通用三维动作、城郊道路、开场 CG、构建校验与待验收项目均已归档。[换机交接与 Windows 记录](docs/167-ui-animation-and-windows-2026-11-28.md) · [UI 设计稿与实机对照](docs/art-direction/implemented/ui-align-20261128/index.html)
+**最新源码交接（2026-11-28）**　交付分支为 `art/experiment`。封面复核、商店可用现金、结账强调色、寄养营业额、快捷前往教学及招聘岗位能力已归档，含 Unity 截图和下一轮室内背景、底栏改版规范。[最新交接与截图](docs/168-store-ui-and-opening-handoff-2026-11-28.md)
+
+**上一版 Windows 完整版（2026-11-28 16:41）**　玩法索引、UI 与图标、开店教学、通用三维动作、城郊道路、开场 CG、构建校验与待验收项目均已归档。[换机交接与 Windows 记录](docs/167-ui-animation-and-windows-2026-11-28.md) · [UI 设计稿与实机对照](docs/art-direction/implemented/ui-align-20261128/index.html)
 
 **前一版复测（2026-11-28）**　功能回归 407/407，恢复与深夜餐厅补测 10/10。归档写字楼和感情线实机复跑、十个 Game View 性能样本、365 天续跑及当时的 Windows x64 构建。[复测结果与构建记录](docs/166-qa-and-windows-2026-11-28.md)
 

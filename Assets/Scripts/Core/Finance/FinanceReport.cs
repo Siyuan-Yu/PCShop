@@ -4,7 +4,7 @@ using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Finance
 {
-    /// <summary>某一天的收支：营业额（零售 + 装机）和总支出。</summary>
+    /// <summary>某一天的营业收款和支出。</summary>
     public sealed class DayFinance
     {
         public GameDate Date;
@@ -94,12 +94,14 @@ namespace PCShopSell.Core.Finance
         }
         public const string RetailCategory = "零售";
         public const string BuildCategory = "装机";
+        public const string PetBoardingCategory = "宠物代养";
 
         public static bool IsOperatingSale(LedgerEntry entry) => IsOperatingSale(entry.Category, entry.Attribution);
 
         internal static bool IsOperatingSale(string category, LedgerAttribution attribution) =>
             attribution?.BusinessKind == LedgerBusinessKind.Operating
-            && (category == RetailCategory || category == BuildCategory || attribution.TransactionKind == "销售");
+            && (category == RetailCategory || category == BuildCategory || category == PetBoardingCategory
+                || attribution.TransactionKind == "销售");
 
         public static bool IsShopSale(LedgerEntry entry, string shopId, string salesAccountId) =>
             entry.Amount.IsPositive && IsOperatingSale(entry)

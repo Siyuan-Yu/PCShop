@@ -117,6 +117,7 @@ namespace PCShopSell.Game.UI
         }
         private void BuildCarryCatalog(Window w,Place source,string mode="retail")
         {
+            ShowAvailableCash(w);
             var host=w.Content;
             BuildStoreSplit(host,out var goodsColumn,out var cartColumn);
             w.Content=goodsColumn;
@@ -362,6 +363,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("已购车辆与赎回",760,650,w=>
             {
+                ShowAvailableCash(w);
                 foreach(var vehicle in Vehicles.All.Where(v=>v.Purchasable && S.Owns(v.Kind)))
                 {
                     var item=vehicle;

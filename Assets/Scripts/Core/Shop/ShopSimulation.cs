@@ -874,11 +874,20 @@ namespace PCShopSell.Core.Shop
 
         private void OnDayAdvanced(GameDate previous, GameDate today)
         {
-            if (TodayCustomers > 0)
+            var boardingRevenue = Money.Zero;
+            if (RetailKind == PetShopCatalog.ShopKind && ShopId != null)
+            {
+                string accountId = _ledger.SalesAccountOfShop?.Invoke(ShopId);
+                foreach (var entry in _ledger.Entries)
+                    if (entry.Date == previous && entry.Category == FinanceReport.PetBoardingCategory
+                        && FinanceReport.IsShopSale(entry, ShopId, accountId))
+                        boardingRevenue += entry.Amount;
+            }
+            if (TodayCustomers > 0 || boardingRevenue.IsPositive)
             {
                 _day.Date = previous;
                 _day.Customers = TodayCustomers;
-                _day.Revenue = TodaySales;
+                _day.Revenue = TodaySales + boardingRevenue;
                 DayClosed?.Invoke(_day);
             }
             _day = new DayReport();

@@ -72,7 +72,7 @@ namespace PCShopSell.Game.UI
             var splitSize = goods.parent.GetComponent<LayoutElement>();
             splitSize.flexibleHeight = 0; splitSize.minHeight = splitSize.preferredHeight = 640;
 
-            Ui.Size(Ui.Label(goods, $"现金 {S.Ledger.Balance} · 家具和礼品享门店价 85 折" + (_onlineTab == 3 ? "　" + (destination == null ? "送到家里的礼品会放进背包" : "礼品送达后放进所选门店后仓") : ""), 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 24);
+            Ui.Size(Ui.Label(goods, "家具和礼品享门店价 85 折" + (_onlineTab == 3 ? "　" + (destination == null ? "送到家里的礼品会放进背包" : "礼品送达后放进所选门店后仓") : ""), 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 24);
             var list = GoodsList(goods, 200);
             int NumberOf(ParcelEntry e) => _parcelCart.TryGetValue(e.Key, out int n) ? n : 0;
             foreach (var entry in entries)

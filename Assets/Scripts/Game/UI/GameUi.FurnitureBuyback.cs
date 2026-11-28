@@ -31,6 +31,7 @@ namespace PCShopSell.Game.UI
             OpenWindow($"{mall.Name} · 家具回收", 1240, 720, w =>
             {
                 if (session.CurrentPlace != mall) { w.Close(); return; }
+                ShowAvailableCash(w);
                 Line(w.Content, $"回收单价 · 家具标价 × {GameSession.FurnitureBuybackRate:P0}", 16, Ui.Accent);
                 BuildStoreSplit(w.Content, out var goods, out var summary);
 

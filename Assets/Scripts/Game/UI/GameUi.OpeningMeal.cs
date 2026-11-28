@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.World;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -39,43 +40,6 @@ namespace PCShopSell.Game.UI
         }
     }
 
-    internal sealed class RecruitmentGuideOutline : MaskableGraphic
-    {
-        internal readonly List<Rect> Buttons = new List<Rect>();
-
-        internal void Refresh(Color edgeColor)
-        {
-            color = edgeColor;
-            SetVerticesDirty();
-        }
-
-        protected override void OnPopulateMesh(VertexHelper mesh)
-        {
-            mesh.Clear();
-            var surface = rectTransform.rect;
-            const float edge = 3;
-            foreach (var button in Buttons)
-            {
-                Quad(button.xMin, button.yMax, button.xMax, button.yMax + edge, color);
-                Quad(button.xMin, button.yMin - edge, button.xMax, button.yMin, color);
-                Quad(button.xMin - edge, button.yMin - edge, button.xMin, button.yMax + edge, color);
-                Quad(button.xMax, button.yMin - edge, button.xMax + edge, button.yMax + edge, color);
-            }
-
-            void Quad(float left, float bottom, float right, float top, Color tint)
-            {
-                if (right <= left || top <= bottom) return;
-                int start = mesh.currentVertCount;
-                mesh.AddVert(new Vector3(left + surface.xMin, bottom + surface.yMin), tint, Vector2.zero);
-                mesh.AddVert(new Vector3(left + surface.xMin, top + surface.yMin), tint, Vector2.zero);
-                mesh.AddVert(new Vector3(right + surface.xMin, top + surface.yMin), tint, Vector2.zero);
-                mesh.AddVert(new Vector3(right + surface.xMin, bottom + surface.yMin), tint, Vector2.zero);
-                mesh.AddTriangle(start, start + 1, start + 2);
-                mesh.AddTriangle(start, start + 2, start + 3);
-            }
-        }
-    }
-
     /// <summary>
     /// 开局做饭强制引导：整个屋子压暗，只留电饭锅一块高亮；下面一张步骤卡说清楚该怎么做。
     /// 做完（吃了饭或装了饭盒）之前，核心层会拦住出门（GameSession.LeaveBlocker）。
@@ -87,7 +51,6 @@ namespace PCShopSell.Game.UI
         private Button _openingMealIntroNext;
         private Window _openingMealCooker;
         private GameSession _openingMealSession;
-        private Navigation _questActionNavigation;
         private const double OpeningMealRiceKg = 1.5;
         private int _openingMealCookStage;
         private string _openingMealFocus;
@@ -271,7 +234,6 @@ namespace PCShopSell.Game.UI
         private Text _firstUseGuideText, _firstUseGuideArrow;
         private readonly Image[] _firstUseGuideFrame = new Image[4];
         private readonly Image[] _firstUseGuideDim = new Image[4];
-        private RecruitmentGuideOutline _recruitmentOutline;
         private OpeningGuideInputBlock _firstUseInputBlock;
         private Button _requiredGuideTarget;
         private Navigation _requiredGuideNavigation;
@@ -299,7 +261,12 @@ namespace PCShopSell.Game.UI
             bool showLesson = false;
             bool staffRolesHelp = false;
             bool counterLesson = false;
-            bool mallTravelLesson = false;
+            bool travelLesson = false;
+            bool shortcutHint = false;
+            bool canGuideTravel = canShow && top == null && !PropertyContractOpen && _propertyContractPopups.Count == 0
+                && _scheduledPropertyPopups.Count == 0;
+            var (travelDestination, travelHint) = canGuideTravel ? OpeningTravelGuide() : default;
+            var travelShortcut = FindQuestShortcut(travelDestination, allowTemporaryDestination: true);
             bool petIntakeLesson = canShow && top == null && _ctrl.InInterior && !_ctrl.CheckoutPending
                 && !_ctrl.OpeningPetIntakeInstructionFollowed && S.OpeningPetIntakeLessonAvailable
                 && S.OpeningStaffStep == OpeningStaffLesson.None;
@@ -342,19 +309,11 @@ namespace PCShopSell.Game.UI
                     }
                 }
             }
-            else if (canShow && top == null && !PropertyContractOpen && _propertyContractPopups.Count == 0
-                && _scheduledPropertyPopups.Count == 0 && S.OpeningMallTravelPending)
+            else if (travelShortcut != null)
             {
-                bool focusChanged = !ReferenceEquals(_questActionButton, _requiredGuideTarget);
-                if (focusChanged || !_questPanel.gameObject.activeSelf || _questSeen != "mall")
-                    UpdateQuestTracker();
-                if (_questPanel.gameObject.activeSelf && _questSeen == "mall" && _questActionText.text == OpeningMallTravelLabel)
-                {
-                    if (focusChanged) Canvas.ForceUpdateCanvases();
-                    target = _questActionButton;
-                    text = "点「前往家具城」\n去买齐开店设施";
-                    mallTravelLesson = true;
-                }
+                travelLesson = true;
+                target = travelShortcut.Main;
+                text = travelHint;
             }
             else if (canShow && S.OpeningRenovationStep is var renovation && renovation != OpeningRenovationLesson.None)
             {
@@ -428,12 +387,27 @@ namespace PCShopSell.Game.UI
                 (target, text) = VenueSponsorGuideTarget(top);
                 top = AnyModalOpen ? _windows[_windows.Count - 1] : null;
             }
-            bool show = canShow && target != null && target.IsInteractable() && target.gameObject.activeInHierarchy
+            else if (canGuideTravel && S.CityIntent == null && _trackedQuestTravelDestination != S.CurrentPlace
+                && _trackedQuestShortcut is ShortcutMenu shortcut)
+            {
+                target = shortcut.Main;
+                bool choose = shortcut.Destination != _trackedQuestTravelDestination;
+                if (choose)
+                {
+                    if (shortcut.Dropdown == null || ChoiceDropdown.OpenInside(shortcut.Group)) target = null;
+                    else targetArea = (RectTransform)shortcut.Dropdown.transform;
+                }
+                text = (choose ? "在底栏切换目的地" : "点底栏快捷前往") + "\n"
+                    + ShortcutPlaceName(shortcut.Kind, _trackedQuestTravelDestination);
+                shortcutHint = true;
+            }
+            SetOpeningTravelShortcut(travelLesson ? travelShortcut : null, travelLesson ? travelDestination : null);
+            bool show = canShow && target != null && (target.IsInteractable() || shortcutHint && targetArea != null) && target.gameObject.activeInHierarchy
                 && (top == null || target.transform.IsChildOf(top.Root));
-            S.FocusOpeningMallTutorial(show && mallTravelLesson);
+            S.FocusOpeningTravelTutorial(show && travelLesson);
             S.FocusOpeningCounterTutorial(show && counterLesson);
             var allowedButtons = recruiting ? _openingRecruitChoices : null;
-            SetRequiredGuideTarget(show ? target : null, show ? targetArea : null, allowedButtons);
+            SetRequiredGuideTarget(show && !shortcutHint ? target : null, show && !shortcutHint ? targetArea : null, allowedButtons);
             if (_firstUseGuideRoot != null) _firstUseGuideRoot.gameObject.SetActive(show);
             if (!show || _tutorialCanvas == null) return;
             if (_firstUseGuideRoot == null)
@@ -456,9 +430,6 @@ namespace PCShopSell.Game.UI
                     frame.rectTransform.anchorMin = frame.rectTransform.anchorMax = Vector2.zero;
                     frame.rectTransform.pivot = Vector2.zero;
                 }
-                _recruitmentOutline = Ui.Rect(_firstUseGuideRoot, "RecruitmentSpotlight").Fill().gameObject
-                    .AddComponent<RecruitmentGuideOutline>();
-                _recruitmentOutline.raycastTarget = false;
                 var card = Ui.FlatPanel(_firstUseGuideRoot, "FirstUseHint", Ui.PanelBg, Ui.FlatHotEdge);
                 card.raycastTarget = false;
                 _firstUseGuideCard = card.rectTransform;
@@ -474,6 +445,7 @@ namespace PCShopSell.Game.UI
                 arrow.pivot = Vector2.zero;
             }
             _firstUseGuideRoot.SetAsLastSibling();
+            _firstUseInputBlock.gameObject.SetActive(!shortcutHint);
             _firstUseInputBlock.PassThrough = target;
             _firstUseInputBlock.PassThroughButtons = allowedButtons;
             var groupScroll = targetArea != null ? targetArea.GetComponentInParent<ScrollRect>() : null;
@@ -495,17 +467,12 @@ namespace PCShopSell.Game.UI
             }
             var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
             Rect hole = GuideTargetBounds(targetArea != null ? targetArea : (RectTransform)target.transform, size, 5);
-            Rect viewportBounds = default;
             if (viewport != null)
-            {
-                viewportBounds = GuideTargetBounds(viewport, size, 0);
-                hole = IntersectGuideBounds(hole, viewportBounds);
-            }
+                hole = IntersectGuideBounds(hole, GuideTargetBounds(viewport, size, 0));
             _firstUseGuideText.text = text;
-            _firstUseGuideArrow.gameObject.SetActive(!staffRolesHelp);
-            foreach (var dim in _firstUseGuideDim) dim.enabled = !staffRolesHelp;
+            _firstUseGuideArrow.gameObject.SetActive(!staffRolesHelp && (!recruiting || _openingRecruitHighlights.Count > 0));
+            foreach (var dim in _firstUseGuideDim) dim.enabled = !staffRolesHelp && !shortcutHint;
             foreach (var frame in _firstUseGuideFrame) frame.gameObject.SetActive(!recruiting && !staffRolesHelp);
-            _recruitmentOutline.gameObject.SetActive(recruiting);
             if (staffRolesHelp)
             {
                 const float hintWidth = 210, hintHeight = 44;
@@ -515,18 +482,6 @@ namespace PCShopSell.Game.UI
             }
             Color color = Ui.FlatHotEdge;
             color.a = .6f + .4f * (.5f + .5f * Mathf.Sin(Time.unscaledTime * 4));
-            if (recruiting)
-            {
-                var buttons = _recruitmentOutline.Buttons;
-                buttons.Clear();
-                foreach (var choice in allowedButtons)
-                {
-                    var bounds = GuideTargetBounds((RectTransform)choice.transform, size, .75f);
-                    if (viewport != null && choice.transform.IsChildOf(viewport)) bounds = IntersectGuideBounds(bounds, viewportBounds);
-                    if (bounds.width > 0 && bounds.height > 0) buttons.Add(bounds);
-                }
-                _recruitmentOutline.Refresh(color);
-            }
             // Keep the lesson text legible while its confirmation button is highlighted.
             Rect spotlight = showLesson
                 ? GuideTargetBounds(recruiting ? (RectTransform)top.Fitter.transform
@@ -555,13 +510,31 @@ namespace PCShopSell.Game.UI
             GuideRect(_firstUseGuideCard, x, Mathf.Clamp(y, 12, size.y - 92), width, 80);
             bool arrowAbove = recruiting || above;
             _firstUseGuideArrow.text = arrowAbove ? "▼" : "▲";
-            Rect arrowTarget = recruiting ? GuideTargetBounds((RectTransform)target.transform, size, .75f) : hole;
+            Rect arrowTarget = hole;
+            if (recruiting && _openingRecruitHighlights.Count > 0)
+            {
+                var recommended = _openingRecruitHighlights.Contains(target) ? target : _openingRecruitHighlights[0];
+                arrowTarget = GuideTargetBounds((RectTransform)recommended.transform, size, .75f);
+            }
             GuideRect(_firstUseGuideArrow.rectTransform, arrowTarget.center.x - 16,
                 arrowAbove ? arrowTarget.yMax + 2 : arrowTarget.yMin - 28, 32, 26);
         }
 
         private static Rect IntersectGuideBounds(Rect a, Rect b) => Rect.MinMaxRect(
             Mathf.Max(a.xMin, b.xMin), Mathf.Max(a.yMin, b.yMin), Mathf.Min(a.xMax, b.xMax), Mathf.Min(a.yMax, b.yMax));
+
+        private (Place destination, string hint) OpeningTravelGuide()
+        {
+            if (S.OpeningAgencyGuidePending)
+                return (S.City.GetPlace("agency"), "点底栏「中介」\n前往安居房产中介");
+            if (S.OpeningMallTravelPending)
+                return (S.OpeningFurnitureMall, "点底栏前往家具城\n购齐开店设施");
+            if (S.OpeningRenovationTravelDestination is Place shop)
+                return (shop, "点底栏「我的店铺」\n回店摆放开店设施");
+            if (S.OpeningStaffTravelHomePending)
+                return (SelectedShortcut(SleepShortcut), "今天已打烊\n点底栏的住宅快捷入口回家");
+            return (null, null);
+        }
 
         private (Button target, string text) OpeningRenovationGuideTarget(OpeningRenovationLesson step, Window top)
         {
@@ -570,13 +543,7 @@ namespace PCShopSell.Game.UI
                     ? (_openingRenovationConfirmButton, "确认歇业后进入装修\n今天可以摆放开店设施") : (null, null);
 
             if (step == OpeningRenovationLesson.Travel)
-            {
-                if (!_questPanel.gameObject.activeSelf || _questSeen != "place" || _questActionText.text != "前往店铺")
-                    UpdateQuestTracker();
-                if (_questSeen != "place" || _questActionText.text != "前往店铺") return (null, null);
-                if (!ReferenceEquals(_questActionButton, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
-                return (_questActionButton, "家具已买齐\n点「前往店铺」出发");
-            }
+                return (null, null);
 
             if (!DockOpen) OpenDock();
             if (step == OpeningRenovationLesson.RenovationTab)
@@ -749,7 +716,6 @@ namespace PCShopSell.Game.UI
             if (_tutorialCanvas == null) return;
             if (!ReferenceEquals(_openingMealSession, S))
             {
-                SetOpeningAgencyGuideVisible(false);
                 RestoreOpeningMealButtons();
                 _openingMealSession = S;
                 _openingMealIntroHeld = false;
@@ -757,7 +723,6 @@ namespace PCShopSell.Game.UI
                 _openingWalked = 0;
                 _openingMealCooker = null;
             }
-            if (UpdateOpeningAgencyGuide()) return;
             int step = S.OpeningMealStep;
             bool cookerOpen = _openingMealCooker != null && !_openingMealCooker.Closed
                 && _windows.Count > 0 && _windows[_windows.Count - 1] == _openingMealCooker;
@@ -878,47 +843,6 @@ namespace PCShopSell.Game.UI
             _guideTitle.text = text.title; _guideBody.text = text.body;
         }
 
-        private bool UpdateOpeningAgencyGuide()
-        {
-            bool show = S.OpeningAgencyGuidePending && !MainMenuOpen && !AnyModalOpen && !QuestAnnouncementBlocksGuide;
-            if (show && _openingMealInputBlock.PassThrough == null)
-            {
-                _questHidden = false;
-                UpdateQuestTracker();
-                show = !AnyModalOpen && _questActionButton.gameObject.activeInHierarchy;
-            }
-            SetOpeningAgencyGuideVisible(show);
-            if (!show) return false;
-
-            _guideRoot.gameObject.SetActive(true);
-            _openingMealInputBlock.gameObject.SetActive(true);
-            _guideCard.gameObject.SetActive(false);
-            _guideArrow.gameObject.SetActive(false);
-            foreach (var dim in _guideDim) dim.raycastTarget = false;
-            var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
-            DrawGuideSpotlight(size, GuideTargetBounds(_questPanel.rectTransform, size, 6));
-            return true;
-        }
-
-        private void SetOpeningAgencyGuideVisible(bool show)
-        {
-            if (show == (_openingMealInputBlock.PassThrough != null)) return;
-            if (show)
-            {
-                _openingMealInputBlock.PassThrough = _questActionButton;
-                _questActionNavigation = _questActionButton.navigation;
-                _questActionButton.navigation = new Navigation { mode = Navigation.Mode.None };
-                EventSystem.current?.SetSelectedGameObject(null);
-                _openingMealSession.Time.Hold();
-            }
-            else
-            {
-                _openingMealInputBlock.PassThrough = null;
-                _questActionButton.navigation = _questActionNavigation;
-                _openingMealSession.Time.Release();
-            }
-        }
-
         private readonly Vector3[] _guideTargetCorners = new Vector3[4];
 
         private Rect GuideTargetBounds(RectTransform target, Vector2 size, float padding)
@@ -927,8 +851,12 @@ namespace PCShopSell.Game.UI
             var canvas = (RectTransform)_tutorialCanvas.transform;
             var sourceCanvas = target.GetComponentInParent<Canvas>();
             var sourceCam = sourceCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : sourceCanvas.worldCamera;
-            Vector2 low = GuidePoint(canvas, RectTransformUtility.WorldToScreenPoint(sourceCam, _guideTargetCorners[0]), size);
-            Vector2 high = GuidePoint(canvas, RectTransformUtility.WorldToScreenPoint(sourceCam, _guideTargetCorners[2]), size);
+            bool samePlane = sourceCanvas.renderMode == _tutorialCanvas.renderMode && sourceCam == TutorialCam
+                && (sourceCam == null || Mathf.Approximately(sourceCanvas.planeDistance, _tutorialCanvas.planeDistance));
+            Vector2 InGuide(Vector3 corner) => samePlane ? (Vector2)canvas.InverseTransformPoint(corner) + size * .5f
+                : GuidePoint(canvas, RectTransformUtility.WorldToScreenPoint(sourceCam, corner), size);
+            Vector2 low = InGuide(_guideTargetCorners[0]);
+            Vector2 high = InGuide(_guideTargetCorners[2]);
             return Rect.MinMaxRect(low.x - padding, low.y - padding, high.x + padding, high.y + padding);
         }
 

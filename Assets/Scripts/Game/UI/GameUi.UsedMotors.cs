@@ -10,6 +10,7 @@ namespace PCShopSell.Game.UI
     {
         private void BuildUsedMotorShop(Window w,Place place)
         {
+            ShowAvailableCash(w);
             string id=place.Id;
             HelpLink(w.Content,"二手车交易说明","车友每周介绍车源。检测后可整备或挂牌；每 3 天可能收到报价，买家的报价保留 2 天。");
             var stock=S.UsedMotors.Where(c=>c.ShopId==id).ToArray();Line(w.Content,"展位 "+stock.Length+" / "+S.UsedMotorCapacity(id),20);

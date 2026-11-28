@@ -18,12 +18,16 @@ namespace PCShopSell.Game.UI
             public RectTransform Group;
             public float MinimumWidth;
             public Place[] Places=System.Array.Empty<Place>();
+            public Place Destination;
             public string Stamp;
         }
         private readonly List<ShortcutMenu> _shortcutMenus=new List<ShortcutMenu>();
         private bool _shortcutSelectionExplained;
         private const int OwnedShopShortcut = 0;
+        private const int CustomShortcut = 3;
         private const int SleepShortcut = 4;
+        private ShortcutMenu _openingTravelShortcut;
+        private Place _openingTravelDestination;
         private const float ShortcutCaptionPadding = 8;
         // 0: owned shop, 1: wholesale sources, 2: agencies, 3: custom destination, 4: residence.
         private Place[] ShortcutPlaces(int kind)
@@ -53,15 +57,16 @@ namespace PCShopSell.Game.UI
         };
         private Place SelectedShortcut(int kind, Place[] places = null)
         {
+            if (_openingTravelShortcut?.Kind == kind) return _openingTravelDestination;
             places ??= ShortcutPlaces(kind);
             string id = ShortcutSelection(kind);
-            if (kind == 3 && S.City.HasPlace(id) && S.City.GetPlace(id) is Place counter && counter.IsElectronicsCounter)
+            if (kind == CustomShortcut && S.City.HasPlace(id) && S.City.GetPlace(id) is Place counter && counter.IsElectronicsCounter)
                 return places.FirstOrDefault(p => p.Kind == PlaceKind.Wholesaler && p.NodeId == counter.NodeId);
-            if (kind == SleepShortcut) return places.FirstOrDefault(p => p.Id == id && S.CanSleepAt(p)) ?? S.Home;
-            if (kind == OwnedShopShortcut && !places.Any(p => p.Id == id) && S.MainShop.Rented && S.DistrictAccessBlocker(S.MainShop.Place) == null)
+            if (kind == SleepShortcut) return places.FirstOrDefault(p => p?.Id == id && S.CanSleepAt(p)) ?? S.Home;
+            if (kind == OwnedShopShortcut && !places.Any(p => p?.Id == id) && S.MainShop.Rented && S.DistrictAccessBlocker(S.MainShop.Place) == null)
                 return S.MainShop.Place;
-            return places.FirstOrDefault(p => p.Id == id)
-                ?? (kind == 3 ? null : places.FirstOrDefault(p => S.DistrictAccessBlocker(p) == null));
+            return places.FirstOrDefault(p => p != null && p.Id == id)
+                ?? (kind == CustomShortcut ? null : places.FirstOrDefault(p => p != null && S.DistrictAccessBlocker(p) == null));
         }
         // Already being inside still allows reopening the service or walking to the bed.
         private string ShortcutTravelBlocker(Place place) =>
@@ -86,10 +91,47 @@ namespace PCShopSell.Game.UI
         private void TravelShortcut(int kind)
         {
             var target=SelectedShortcut(kind);
-            if(target==null&&kind==3){OpenCustomDestinationPicker();return;}
+            if(target==null&&kind==CustomShortcut){OpenCustomDestinationPicker();return;}
             if(ShortcutBlocker(kind,target) is string blocker){Toast(blocker);return;}
-            if (kind == SleepShortcut) _ctrl.GoHomeToSleep(target);
+            if (S.OpeningAgencyGuidePending && target.Id == "agency") S.StartOpeningAgencyTravel();
+            else if (S.OpeningMallTravelPending && target == S.OpeningFurnitureMall) S.StartOpeningMallTravel();
+            else if (target == S.OpeningRenovationTravelDestination) S.StartOpeningRenovationTravel();
+            else if (kind == SleepShortcut)
+            {
+                bool firstStaffReturn = S.OpeningStaffTravelHomePending;
+                _ctrl.GoHomeToSleep(target);
+                if (firstStaffReturn && (S.CityIntent?.TargetPlaceId == target.Id || S.CurrentPlace == target))
+                    S.ConfirmOpeningStaffHomeShortcut();
+            }
             else _ctrl.GoToPlace(target);
+            if (_openingTravelShortcut?.Kind == kind) UpdateFirstUseGuide();
+        }
+
+        private ShortcutMenu FindQuestShortcut(Place destination, bool allowTemporaryDestination = false)
+        {
+            if (destination == null || destination == S.CurrentPlace || S.CityIntent != null) return null;
+            ShortcutMenu alternate = null, custom = null;
+            foreach (var menu in _shortcutMenus)
+            {
+                if (!menu.Main.gameObject.activeInHierarchy) continue;
+                if (menu.Destination == destination)
+                    return ShortcutBlocker(menu.Kind, destination) == null ? menu : null;
+                if (menu.Dropdown != null && menu.Dropdown.interactable && menu.Places.Contains(destination))
+                    alternate = menu;
+                if (menu.Kind == CustomShortcut) custom = menu;
+            }
+            if (alternate != null) return ShortcutBlocker(alternate.Kind, destination) == null ? alternate : null;
+            return allowTemporaryDestination && custom != null && ShortcutTravelBlocker(destination) == null ? custom : null;
+        }
+
+        private void SetOpeningTravelShortcut(ShortcutMenu menu, Place destination)
+        {
+            if (_openingTravelShortcut == menu && _openingTravelDestination == destination) return;
+            _openingTravelShortcut = menu;
+            _openingTravelDestination = destination;
+            RefreshShortcutMenus();
+            FitHudTopRow();
+            Canvas.ForceUpdateCanvases();
         }
         private void BuildShortcutButton(Transform parent,string label,int kind,float width)
         {
@@ -256,6 +298,7 @@ namespace PCShopSell.Game.UI
             {
                 var places=ShortcutPlaces(menu.Kind);
                 var destination=SelectedShortcut(menu.Kind, places);
+                menu.Destination = destination;
                 if (menu.Kind is SleepShortcut or OwnedShopShortcut)
                     places = places.GroupBy(place => place.StreetId).SelectMany(group => new Place[] { null }.Concat(group)).ToArray();
                 bool canTravel = destination == null ? menu.Kind == 3 : ShortcutBlocker(menu.Kind, destination) == null;

@@ -19,9 +19,10 @@ namespace PCShopSell.EditorTools
 {
     public static partial class GameSceneBuilder
     {
-        public static void UiAlignFromBatch() => RunSmokeBatch(CaptureAlignedUi);
+        public static void UiAlignFromBatch() => RunSmokeBatch(() => CaptureAlignedUi(false));
+        public static void MenuCoverFromBatch() => RunSmokeBatch(() => CaptureAlignedUi(true));
 
-        private static void CaptureAlignedUi()
+        private static void CaptureAlignedUi(bool menuOnly)
         {
             _outDir = Path.GetFullPath(Environment.GetEnvironmentVariable("PCSHOP_UI_ALIGN_CAPTURE") ?? "work/ui-align/capture");
             Directory.CreateDirectory(_outDir);
@@ -72,6 +73,7 @@ namespace PCShopSell.EditorTools
             Capture("menu-help", ui.OpenHelpMenu, keepMain: true);
             Capture("menu-about", ui.OpenAboutMenu, keepMain: true);
             Capture("menu-quit", ui.OpenQuitMenu, keepMain: true);
+            if (menuOnly) return;
             ui.CloseAllWindows();
             session.Leave();
             Frame(0);

@@ -358,7 +358,8 @@ namespace PCShopSell.Core.Session
         public bool MealDeliveryTutorialPaused => HasSmartphone && !MealDeliveryEnabled
             && Flags.Contains(MealDeliveryGuidePending) && CanPauseForTutorial;
         public bool RequiredTutorialPaused => MealDeliveryTutorialPaused || ScooterTutorialPaused || BankTutorialPaused
-            || OpeningMallTutorialPaused || OpeningRenovationStep != OpeningRenovationLesson.None || OpeningShelfTutorialPaused
+            || OpeningTravelTutorialPaused || (OpeningRenovationStep is OpeningRenovationLesson.RenovationTab or OpeningRenovationLesson.StartPlacement)
+            || OpeningShelfTutorialPaused
             || OpeningCounterTutorialPaused || OpeningStaffStep != OpeningStaffLesson.None || VenueSponsorGuidePaused;
 
         public const string OpeningMealLeaveBlock = "先做饭，吃一碗，再把剩下的饭全部装进背包，才能出门。";

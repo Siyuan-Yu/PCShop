@@ -41,6 +41,7 @@ namespace PCShopSell.Game.UI
             void Build(Window w)
             {
                 BuildVenueSponsorHeader(w, place, sponsor);
+                if (S.CurrentPlace == place) ShowAvailableCash(w);
                 if (!BuildVenueSponsorPage(w, place, sponsor, w.Content))
                     BuildOldMarket(w, place, activityId, tier, attempts,
                         index => { tier = index; w.Rebuild(); }, count => { attempts = count; w.Rebuild(); });
@@ -171,6 +172,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("旧物修理与回收", 740, 620, w =>
             {
+                ShowAvailableCash(w);
                 var progress = S.OldMarketProgress;
                 bool busy = progress.Pending != null;
                 bool manualVisit = S.ManualActivityClockPaused && S.RunningCityActivity?.VenueId == GameSession.OldMarketVenueId;

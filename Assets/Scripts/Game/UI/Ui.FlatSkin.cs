@@ -161,6 +161,16 @@ namespace PCShopSell.Game.UI
             shadow.effectDistance = new Vector2(0, offset);
         }
 
+        internal static void StyleMenuPlate(Image image, Color edge)
+        {
+            Round(image);
+            // An Outline also derives from Shadow. Keep the rim and drop shadow separate.
+            var shadow = image.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(.149f, .133f, .118f, .36f);
+            shadow.effectDistance = new Vector2(0, -2);
+            FlatBorder(image, edge, 1.5f);
+        }
+
         private static Color SurfaceEdge(Color color, string name)
         {
             if (color.a <= .01f) return Color.clear;
@@ -326,9 +336,9 @@ namespace PCShopSell.Game.UI
         private static FlatStyledButton _emphasizedButton;
         private static readonly Vector3[] ButtonCorners = new Vector3[4];
 
-        internal static void PreferMainAction(Button button)
+        internal static void PreferMainAction(Button button, bool preferred = true)
         {
-            if (button is FlatStyledButton styled) styled.PreferredMainAction = true;
+            if (button is FlatStyledButton styled) styled.PreferredMainAction = preferred;
         }
 
         internal static void SetModalButtonCanvas(Canvas canvas)

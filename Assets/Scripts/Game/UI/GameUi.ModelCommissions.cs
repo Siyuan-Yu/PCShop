@@ -67,10 +67,11 @@ namespace PCShopSell.Game.UI
             if (!workChoice && (order.Stage == ModelCommissionStage.Delivered || order.Stage == ModelCommissionStage.Returned)) return;
 
             var actions = Ui.Row(body, 34, 8);
-            void Action(string label, System.Func<bool> run, string blocker = null)
+            void Action(string label, System.Func<bool> run, string blocker = null, bool primary = false)
             {
                 var button = Ui.Size(Ui.Button(actions, label, () => { if (run()) w.Rebuild(); },
-                    15, Ui.ButtonBg, blocker == null), -1, 34, 1);
+                    15, primary ? Ui.ButtonHot : Ui.ButtonBg, blocker == null), -1, 34, 1);
+                if (primary) Ui.PreferMainAction(button);
                 if (blocker != null) button.Tip(blocker);
             }
 
@@ -106,7 +107,7 @@ namespace PCShopSell.Game.UI
                     if (!S.DeliverModelCommission(shop, order.Id)) return false;
                     _ctrl.Interior?.PlayOwnerCounterInteraction(FigureInteraction.Checkout);
                     return true;
-                });
+                }, primary: true);
             Action("归还模型", () =>
             {
                 OpenWindow("归还模型", 480, 240, confirm =>
