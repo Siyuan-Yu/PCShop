@@ -147,17 +147,17 @@ namespace PCShopSell.Game.UI
                 foreach (var entry in entries)
                 {
                     if (first) { Line(list, title, 16, Ui.Accent); first = false; }
-                    var button = Ui.Size(Ui.Button(list, $"<b>{entry.Name}</b>\n<size=15>{entry.Street} · {entry.Label}</size>", () =>
+                    var button = Ui.Size(Ui.Button(list, $"<b>{entry.Name}</b>\n<size=17>{entry.Street} · {entry.Label}</size>", () =>
                     {
                         selected = entry;
                         RefreshDetail();
-                    }, 17), -1, 50);
+                    }, 20), -1, 68);
                     button.name = "DestinationRow_" + entry.Place.Id;
                     var icon = Ui.Artwork(button.transform, DestinationIcon(entry));
-                    if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 9, -15, -39, -15);
+                    if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 9, -28, -65, -28);
                     var label = button.GetComponentInChildren<Text>();
                     label.alignment = TextAnchor.MiddleLeft;
-                    label.rectTransform.Anchor(0, 0, 1, 1, icon == null ? 10 : 48, 4, 10, 4);
+                    label.rectTransform.Anchor(0, 0, 1, 1, icon == null ? 10 : 76, 4, 10, 4);
                     buttons.Add(entry, button);
                 }
             }

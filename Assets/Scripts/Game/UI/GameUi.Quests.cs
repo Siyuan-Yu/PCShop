@@ -70,7 +70,8 @@ namespace PCShopSell.Game.UI
             _questText.rectTransform.Anchor(0, 0, 1, 1, 16, 58, 16, 76);
             _questText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            _questActionButton = Ui.Button(_questPanel.transform, "", ActivateQuestAction, 18, Ui.ButtonHot);
+            _questActionButton = Ui.Button(_questPanel.transform, "", ActivateQuestAction, 18, Ui.ButtonHot,
+                exclusiveEmphasis: false);
             _questActionButton.name = "QuestPrimaryAction";
             _questActionText = _questActionButton.GetComponentInChildren<Text>();
             ((RectTransform)_questActionButton.transform).Anchor(0, 0, .74f, 0, 14, 12, 4, -49);
@@ -111,7 +112,7 @@ namespace PCShopSell.Game.UI
             _questHidden = false;
             UpdateQuestTracker();
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
-            _questWindow = OpenWindow("当前任务", 900, 720, BuildGuideWindow, onClosed: () => _questWindow = null);
+            _questWindow = OpenWindow("当前任务", 960, 620, BuildGuideWindow, onClosed: () => _questWindow = null, fitContent: true);
         }
 
         /// <summary>冒烟截图用：弹出“完成了租铺任务、接下来去家具城”的任务完成窗口。</summary>
@@ -446,7 +447,7 @@ namespace PCShopSell.Game.UI
             UpdateQuestTracker();
             if (S.CurrentQuest() == null && S.CurrentDistrictNode == null && S.DistrictInvitationStatus == null && !S.FirstChapterTrialCompleted) return;
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
-            _questWindow = OpenWindow("当前任务", 900, 720, BuildGuideWindow, onClosed: () => _questWindow = null);
+            _questWindow = OpenWindow("当前任务", 960, 620, BuildGuideWindow, onClosed: () => _questWindow = null, fitContent: true);
         }
 
         /// <summary>展示任务完成或新任务。确认完成后再刷新任务卡和教学。</summary>
@@ -503,9 +504,9 @@ namespace PCShopSell.Game.UI
             Ui.Size(Line(heading, q.Title, 27, Ui.Accent), 0, -1, 1);
             Ui.Size(Ui.Label(heading, "进行中", 16, TextAnchor.MiddleCenter, Ui.Accent), 80);
 
-            var columns = Ui.Row(w.Content, 360, 16);
+            var columns = Ui.Row(w.Content, -1, 16);
             var objective = QuestDetailCard(columns, "QuestObjective", 1.35f);
-            Line(objective, "任务目标", 20, Ui.Accent);
+            SectionBand(objective, "任务目标");
             Para(objective, QuestPaperInk(q.Hint), 18);
             Ui.Size(Ui.Panel(objective, "QuestObjectiveRule", Ui.Edge), -1, 1);
             Line(objective, "下一步", 20, Ui.Accent);
@@ -515,7 +516,7 @@ namespace PCShopSell.Game.UI
                 q.Target == QuestTarget.RacingEnrollment && S.RacingQualificationBlocker != null ? Ui.Warn : Ui.TextColor);
 
             var status = QuestDetailCard(columns, "QuestStatus", 1);
-            Line(status, "达成进度", 20, Ui.Accent);
+            SectionBand(status, "达成进度");
             if (q.Target == QuestTarget.RacingEnrollment)
             {
                 Para(status, (S.HasOutstandingLoans ? "○ 待结清贷款" : "✓ 贷款已结清"), 18,
@@ -561,17 +562,16 @@ namespace PCShopSell.Game.UI
             else
             {
                 var (label, action) = QuestAction(q.Target, q.GuideDestination);
-                var actions = Ui.Row(w.Content, 44, 12);
+                var actions = Ui.Row(w.Content, 52, 12);
                 if (action != null)
-                    Ui.Size(Ui.Button(actions, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), 0, 44, 1);
-                Ui.Size(Ui.Button(actions, "继续游戏", w.Close, 18), 0, 44, 1);
+                    Ui.Size(Ui.Button(actions, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), 0, 52, 1);
+                Ui.Size(Ui.Button(actions, "继续游戏", w.Close, 18), 0, 52, 1);
             }
         }
 
         private static RectTransform QuestDetailCard(Transform parent, string name, float widthWeight)
         {
-            var card = name == "QuestObjective" ? Ui.PaperPanel(parent, name, Ui.NoteStock, lifted: true)
-                : Ui.FlatPanel(parent, name, Ui.FlatBand);
+            var card = Ui.FlatPanel(parent, name, Ui.FlatBand);
             card.raycastTarget = false;
             Ui.Size(card, 0, -1, widthWeight);
             var rect = card.rectTransform;

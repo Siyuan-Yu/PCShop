@@ -174,6 +174,24 @@ namespace PCShopSell.Game.Runtime
 
         public Vector3 Position => _root.transform.position;
 
+        internal bool Greet(Transform other)
+        {
+            if (other == null || !other.gameObject.activeInHierarchy || ShopInteriorView.PlanarDistance(Position, other.position) > 2.2f)
+                return false;
+            if (!GreetToward(other.position)) return false;
+            ShopInteriorView.FaceInteraction(other, Position, FigureInteraction.Greet);
+            return true;
+        }
+
+        internal bool GreetToward(Vector3 point)
+        {
+            if (!_motion.PlayInteraction(FigureInteraction.Greet)) return false;
+            Vector3 direction = point - Position;
+            direction.y = 0;
+            if (direction.sqrMagnitude > .0025f) _root.transform.rotation = Quaternion.LookRotation(direction);
+            return true;
+        }
+
         private Vector3? _expoPosition;
         public void PresentInExpo(Vector3? target, Quaternion facing,float dt)
         {

@@ -28,6 +28,7 @@ namespace PCShopSell.EditorTools
             for (int i = 0; i < 12; i++) { Feed(s); s.AdvanceClock(24 * 60); } // 真实报价历史
             while (!s.StockMarketOpen) s.AdvanceClock(1440);
             if (s.Clock.MinuteOfDay < 600) s.AdvanceClock(600-s.Clock.MinuteOfDay);
+            OpenGardenForStockPreview(s);
             Frame(0.05f);
             int lot = GameSession.StockLotSize;
             var ids = CityInvestments.All.Select(d => d.Id).ToArray();
@@ -87,6 +88,7 @@ namespace PCShopSell.EditorTools
             for (int i = 0; i < 6; i++) { Feed(s); s.AdvanceClock(24 * 60); }
             while (!s.StockMarketOpen) s.AdvanceClock(1440);
             if(s.Clock.MinuteOfDay<600)s.AdvanceClock(600-s.Clock.MinuteOfDay);
+            OpenGardenForStockPreview(s);
             int lot = GameSession.StockLotSize; var ids = CityInvestments.All.Select(d => d.Id).ToArray();
             Log("TRADE " + s.TradeCityInvestment(ids[0], 3 * lot, true, true) + " SHORT " + s.OpenStockShort(ids[5], lot, true));
             Log("LOAN " + BorrowForPreview(s, 50000, 1));
@@ -110,6 +112,14 @@ namespace PCShopSell.EditorTools
             Tab(3); ui.RebuildWindows(); Shot2("03-finance");
             Tab(4); ui.RebuildWindows(); Shot2("04-contacts");
             Log("WORKBENCH PAGES COMPLETE");
+        }
+
+        private static void OpenGardenForStockPreview(GameSession session)
+        {
+            // Reproduce an eligible securities account in this disposable preview session.
+            typeof(GameSession).GetMethod("GrantDistrictAccess", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(session, new object[] { 3 });
+            DrainStockPreviewNotices();
         }
 
         private static bool BorrowForPreview(GameSession session, long yuan, int months, bool atBank = false)

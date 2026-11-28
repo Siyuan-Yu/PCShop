@@ -35,15 +35,37 @@ namespace PCShopSell.Game.UI
             {
                 MenuTitle(w, title);
                 float availableWidth = Mathf.Min(windowWidth, w.Root.rect.width - 32) - 46;
-                int columns = Mathf.Clamp(Mathf.FloorToInt((availableWidth + gap) / (234 + gap)), 2, 5);
-                var header = Ui.Row(w.Content, cardHeight, gap);
-                Ui.Size(BuildSaveSlot(header, w, SaveStore.AutomaticSlot, saving, confirmProgress), 0, -1, 1);
-                var hint = Ui.Label(header, L(saving ? "pick_save_slot" : "pick_load_slot"), 17, TextAnchor.MiddleLeft, Ui.Dim);
-                Ui.Size(hint, (columns - 2) * gap, -1, columns - 1);
+                bool sidebar = availableWidth >= 1230;
+                float manualWidth = availableWidth - (sidebar ? 246 : 0);
+                int columns = Mathf.Clamp(Mathf.FloorToInt((manualWidth + gap) / (210 + gap)), 2, 5);
+                int rows = (SaveStore.SlotCount + columns - 1) / columns;
+                Transform manual = w.Content;
+                if (sidebar)
+                {
+                    var split = Ui.Row(w.Content, 26 + rows * (cardHeight + gap), 14);
+                    var automatic = Ui.Rect(split, "AutomaticSave");
+                    Ui.VList(automatic, gap, 0);
+                    Ui.Size(automatic, 232, -1, 0).GetComponent<LayoutElement>().minWidth = 0;
+                    Ui.Size(BuildSaveSlot(automatic, w, SaveStore.AutomaticSlot, saving, confirmProgress), -1, cardHeight);
+                    var grid = Ui.Rect(split, "ManualSaves");
+                    Ui.VList(grid, gap, 0);
+                    Ui.Size(grid, 0, -1, 1);
+                    manual = grid;
+                }
+                else
+                {
+                    var header = Ui.Row(w.Content, cardHeight, gap);
+                    Ui.Size(BuildSaveSlot(header, w, SaveStore.AutomaticSlot, saving, confirmProgress), 0, -1, 1);
+                    Ui.Size(Ui.Label(header, L(saving ? "pick_save_slot" : "pick_load_slot"), 18,
+                        TextAnchor.MiddleLeft, Ui.Dim), 0, -1, 1);
+                }
+                if (sidebar)
+                    Ui.Size(Ui.Label(manual, L(saving ? "pick_save_slot" : "pick_load_slot"), 18,
+                        TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
 
                 for (int firstSlot = 1; firstSlot <= SaveStore.SlotCount; firstSlot += columns)
                 {
-                    var row = Ui.Row(w.Content, cardHeight, gap);
+                    var row = Ui.Row(manual, cardHeight, gap);
                     for (int slot = firstSlot; slot < firstSlot + columns; slot++)
                     {
                         if (slot <= SaveStore.SlotCount)

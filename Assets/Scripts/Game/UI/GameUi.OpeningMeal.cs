@@ -264,8 +264,7 @@ namespace PCShopSell.Game.UI
         private readonly Dictionary<int, Button> _openingCounterButtons = new Dictionary<int, Button>();
         private System.Action _refreshOpeningRestaurantTables;
         private (int id, RestaurantJob job)? _openingCounterPendingAction, _openingCounterRejectedAction;
-        private Window _openingStaffLessonWindow;
-        private Button _openingStaffDockControl, _openingStaffLessonDone, _openingStaffFirstApplicant;
+        private Button _openingStaffRolesHelpButton, _openingStaffFirstApplicant;
         private Button _openingStaffRecruitmentNotice, _openingStaffPurchaseButton;
         private RectTransform _openingStaffCandidates;
         private RectTransform _firstUseGuideRoot, _firstUseGuideCard;
@@ -298,6 +297,7 @@ namespace PCShopSell.Game.UI
             Window top = AnyModalOpen ? _windows[_windows.Count - 1] : null;
             bool recruiting = top != null && top == _openingRecruitWindow;
             bool showLesson = false;
+            bool staffRolesHelp = false;
             bool counterLesson = false;
             bool mallTravelLesson = false;
             bool petIntakeLesson = canShow && top == null && _ctrl.InInterior && !_ctrl.CheckoutPending
@@ -404,20 +404,15 @@ namespace PCShopSell.Game.UI
                         else
                         {
                             bool purchase = staffing == OpeningStaffLesson.Purchase;
-                            target = purchase ? _openingStaffPurchaseButton : _openingStaffDockControl;
+                            staffRolesHelp = staffing == OpeningStaffLesson.Roles;
+                            target = purchase ? _openingStaffPurchaseButton : _openingStaffRolesHelpButton;
                             showLesson = purchase;
                             text = purchase ? "在进货员这一行\n点「安排进货」，设置采购清单"
-                                : "点「查看本店岗位」\n了解每个人负责的工作";
+                                : "点问号查看本店岗位";
                         }
                         if (!ReferenceEquals(target, _requiredGuideTarget)) RevealFirstUseDockControl(target);
                     }
                     if (!open || !ReferenceEquals(target, _requiredGuideTarget)) Canvas.ForceUpdateCanvases();
-                }
-                else if (top == _openingStaffLessonWindow && staffing == OpeningStaffLesson.Roles)
-                {
-                    target = _openingStaffLessonDone;
-                    showLesson = true;
-                    text = "看完本店分工后，点「已了解分工」";
                 }
                 else if (recruiting && staffing == OpeningStaffLesson.Hire)
                 {
@@ -506,10 +501,20 @@ namespace PCShopSell.Game.UI
                 viewportBounds = GuideTargetBounds(viewport, size, 0);
                 hole = IntersectGuideBounds(hole, viewportBounds);
             }
+            _firstUseGuideText.text = text;
+            _firstUseGuideArrow.gameObject.SetActive(!staffRolesHelp);
+            foreach (var dim in _firstUseGuideDim) dim.enabled = !staffRolesHelp;
+            foreach (var frame in _firstUseGuideFrame) frame.gameObject.SetActive(!recruiting && !staffRolesHelp);
+            _recruitmentOutline.gameObject.SetActive(recruiting);
+            if (staffRolesHelp)
+            {
+                const float hintWidth = 210, hintHeight = 44;
+                GuideRect(_firstUseGuideCard, Mathf.Min(hole.xMax + 10, size.x - hintWidth - 12),
+                    Mathf.Clamp(hole.center.y - hintHeight * .5f, 12, size.y - hintHeight - 12), hintWidth, hintHeight);
+                return;
+            }
             Color color = Ui.FlatHotEdge;
             color.a = .6f + .4f * (.5f + .5f * Mathf.Sin(Time.unscaledTime * 4));
-            _recruitmentOutline.gameObject.SetActive(recruiting);
-            foreach (var frame in _firstUseGuideFrame) frame.gameObject.SetActive(!recruiting);
             if (recruiting)
             {
                 var buttons = _recruitmentOutline.Buttons;
@@ -548,7 +553,6 @@ namespace PCShopSell.Game.UI
                 y = above ? spotlight.yMax + 20 : spotlight.yMin - 100;
             }
             GuideRect(_firstUseGuideCard, x, Mathf.Clamp(y, 12, size.y - 92), width, 80);
-            _firstUseGuideText.text = text;
             bool arrowAbove = recruiting || above;
             _firstUseGuideArrow.text = arrowAbove ? "▼" : "▲";
             Rect arrowTarget = recruiting ? GuideTargetBounds((RectTransform)target.transform, size, .75f) : hole;

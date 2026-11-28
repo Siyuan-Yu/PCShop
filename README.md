@@ -1,6 +1,8 @@
 # PETSHOP · PCShopSell
 
-**最新交接与 Windows 完整版（2026-11-28）**　交付分支为 `art/experiment`。最终功能回归 407/407，恢复与深夜餐厅补测 10/10。归档写字楼和感情线实机复跑、十个 Game View 性能样本、365 天续跑、待修优先级及 Windows x64 构建和校验记录。[复测结果与 Windows 交接](docs/166-qa-and-windows-2026-11-28.md)
+**最新交接与 Windows 完整版（2026-11-28 16:41）**　交付分支为 `art/experiment`。当前玩法索引、新 UI 与图标、开店教学、通用三维动作、城郊道路、开场 CG、构建校验与待验收项目均已归档。[换机交接与 Windows 记录](docs/167-ui-animation-and-windows-2026-11-28.md) · [UI 设计稿与实机对照](docs/art-direction/implemented/ui-align-20261128/index.html)
+
+**前一版复测（2026-11-28）**　功能回归 407/407，恢复与深夜餐厅补测 10/10。归档写字楼和感情线实机复跑、十个 Game View 性能样本、365 天续跑及当时的 Windows x64 构建。[复测结果与构建记录](docs/166-qa-and-windows-2026-11-28.md)
 
 **接管、感情线和资源清理（2026-11-28）**　接管首日与写字楼前台、24 位人物的三维与感情线、性能续修及过程图清理。原交付时感情线回归 58 项、公司回归 59 项通过。[完整玩法与换机入口](docs/165-current-handoff-and-resource-cleanup-2026-11-28.md)
 

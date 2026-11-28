@@ -60,9 +60,10 @@ namespace PCShopSell.Game
         [Serializable]
         private sealed class SlotHeader
         {
-            public string savedAt, saveCampaignId, rngState, currentPlace, shopCustomName;
+            public string savedAt, saveCampaignId, rngState, currentPlace, shopCustomName, leasePlace;
             public int day, minute;
             public long balanceCents;
+            public SaveShop[] extraShops;
         }
 
         public sealed class SlotInfo
@@ -74,12 +75,17 @@ namespace PCShopSell.Game
             public string Campaign;
             public string Place;
             public string ShopName;
-            public int Day, Minute;
+            public int Day, Minute, Slot, ShopCount;
             public long BalanceCents;
             public DateTime Stamp;
         }
 
         public static SlotInfo InspectSlot(bool automatic) => InspectSlot(LegacySlot(automatic), automatic);
+
+        public static SlotInfo LatestReadable() =>
+            Enumerable.Range(1, SlotCount).Select(slot => InspectSlot(slot, false))
+                .Append(InspectSlot(true)).Where(info => info.Readable)
+                .OrderByDescending(info => info.Stamp).FirstOrDefault();
 
         public static SlotInfo InspectSlot(int slot, bool automatic)
         {
@@ -93,7 +99,7 @@ namespace PCShopSell.Game
 
         private static SlotInfo InspectPath(string path, int slot, bool automatic)
         {
-            var info = new SlotInfo { Automatic = automatic };
+            var info = new SlotInfo { Automatic = automatic, Slot = slot };
             foreach (string candidate in new[] { path, path + ".bak" })
             {
                 if (!File.Exists(candidate)) continue;
@@ -110,6 +116,7 @@ namespace PCShopSell.Game
                         info.Place = data.currentPlace;
                         info.ShopName = data.shopCustomName;
                         info.BalanceCents = data.balanceCents;
+                        info.ShopCount = (string.IsNullOrEmpty(data.leasePlace) ? 0 : 1) + (data.extraShops?.Length ?? 0);
                         info.Stamp = File.GetLastWriteTimeUtc(candidate);
                         info.Readable = true;
                         return info;

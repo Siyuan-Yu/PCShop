@@ -14,6 +14,10 @@ namespace PCShopSell.Game.Runtime
         {
             if(_visitedAddress!=address || _visitedVacant!=vacant || _visitedGoods!=goods)
             {
+                Hook(null);
+                HookShopInteractions(null);
+                ReleaseStagedPayer();
+                if (_selfCheckoutTerminal != null) _selfCheckoutTerminal.SetActive(false);
                 _visitedAddress=address; _visitedVacant=vacant; _visitedGoods=goods;
                 var layout=vacant?new List<PlacedFurniture>():FurnitureCatalog.DefaultShopFixtures(Size,"computer");
                 if(!vacant && goods!="gpu")

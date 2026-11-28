@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -298,6 +299,7 @@ namespace PCShopSell.Game.UI
                 Primary("BuyUsed_", "出价收购", () =>
                 {
                     if (!S.OfferUsedPrice(id, bid())) return;
+                    PlayUsedDeskInteraction(FigureInteraction.Register);
                     if (guided) S.RecordOpeningUsedDeskPurchase(id);
                     Complete(true, 1);
                 });
@@ -308,7 +310,12 @@ namespace PCShopSell.Game.UI
             if (!item.Inspected)
             {
                 Line(parent, $"收购成本 ¥{item.Cost:N0} · 尚未鉴定", 17, Ui.Dim);
-                Primary("InspectUsed_", "检查状态", () => Complete(S.InspectUsed(id), 2));
+                Primary("InspectUsed_", "检查状态", () =>
+                {
+                    if (!S.InspectUsed(id)) return;
+                    PlayUsedDeskInteraction(FigureInteraction.Inspect);
+                    Complete(true, 2);
+                });
                 return;
             }
 
@@ -353,6 +360,13 @@ namespace PCShopSell.Game.UI
             if (S.ListUsedItem(id, price, out var blocker)) return true;
             Popup("暂时无法上架", blocker);
             return false;
+        }
+
+        private void PlayUsedDeskInteraction(FigureInteraction action)
+        {
+            var interior = _ctrl.Interior;
+            if (interior?.NearUsedBuyDesk == true)
+                interior.PlayOwnerInteraction(action, interior.UsedBuyDeskWorld - Vector3.up * .30f);
         }
 
         private static Func<long> UsedAmountEditor(Transform parent, string label, long amount, long step,

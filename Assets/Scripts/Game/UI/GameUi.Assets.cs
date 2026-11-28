@@ -66,7 +66,7 @@ namespace PCShopSell.Game.UI
             var report = S.AssetStoreReports().FirstOrDefault(r => r.Id == storeId);
             _assetStreet = report?.StreetId;
             _assetKind = report?.Kind;
-            OpenWindow("商铺经营收支", 1210, 900, BuildAssetStores, scrollContent: false);
+            OpenWindow("商铺经营收支", 1210, 770, BuildAssetStores, scrollContent: false);
         }
 
         private void BuildAssetStores(Window w)
@@ -78,9 +78,9 @@ namespace PCShopSell.Game.UI
             if (!reports.Any(r => r.Kind == _assetKind && (_assetStreet == null || r.StreetId == _assetStreet))) _assetKind = null;
             var visible = reports.Where(r => (_assetStreet == null || r.StreetId == _assetStreet) && (_assetKind == null || r.Kind == _assetKind)).ToArray();
             var scope = _assetStoreId == null ? visible : reports.Where(r => r.Id == _assetStoreId).ToArray();
-            var layout = Ui.Rect(w.Content, "AssetStoreLayout"); Ui.Size(layout, -1, 744);
+            var layout = Ui.Rect(w.Content, "AssetStoreLayout"); Ui.Size(layout, -1, 682);
             var side = Ui.Rect(layout, "StreetTree"); side.Anchor(0, 0, 0, 1, 0, 0, -198, 0); Ui.VList(side, 3, 0);
-            var tree = Ui.Scroll(side, 730);
+            var tree = Ui.Scroll(side, 668);
             void Choice(string title, string street, string kind, string id, int indent, bool active, Action toggle = null, bool expanded = true)
             {
                 Transform parent = tree;
@@ -128,10 +128,18 @@ namespace PCShopSell.Game.UI
             var cards = Ui.Row(main, 160, 8);
             BuildAssetMoneyCard(cards, "收入", totalIn, Ui.Good, income);
             BuildAssetMoneyCard(cards, "支出", totalOut, Ui.Warn, expense);
-            var net = Ui.Panel(cards, "AssetNet", Ui.PanelBg2).rectTransform; Ui.Size(net, -1, 160, 1); Ui.VList(net, 3, 10);
-            Line(net, "收支差额", 16, Ui.Dim);
-            var netAmount=Line(net,(totalIn>=totalOut?"+":"−")+Money.FromCents(Math.Abs(totalIn-totalOut)),27,Ui.Accent);
-            netAmount.resizeTextForBestFit=true;netAmount.resizeTextMinSize=17;netAmount.resizeTextMaxSize=27;
+            var net = Ui.FlatPanel(cards, "AssetNet", Ui.InfoSurface).rectTransform;
+            Ui.Size(net, 0, 160, 1);
+            Ui.VList(net, 2, 10);
+            var netHeader = Ui.Row(net, 44, 10);
+            Ui.Size(Ui.Artwork(netHeader, UiIcon.Ledger), 44, 44);
+            Ui.Size(Ui.Label(netHeader, "收支差额", 19, TextAnchor.MiddleLeft, Ui.Dim), 0, -1, 1).fontStyle = FontStyle.Bold;
+            var netAmount = Ui.Size(Ui.Label(net, (totalIn >= totalOut ? "+" : "−") + Money.FromCents(Math.Abs(totalIn - totalOut)),
+                36, TextAnchor.MiddleLeft, Ui.Accent), -1, 40);
+            netAmount.fontStyle = FontStyle.Bold;
+            netAmount.resizeTextForBestFit = true;
+            netAmount.resizeTextMinSize = 22;
+            netAmount.resizeTextMaxSize = 36;
             net.Tip("收入 − 支出，按实际收付统计。含进货付款，所以差额不等于利润。");
             var legend = Ui.Row(main, 22); Ui.Size(Ui.Label(legend, "每日收支", 17), -1, 22, 1);
             Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 80); Ui.Size(Ui.Label(legend, "● 支出  ·  元", 15, TextAnchor.MiddleRight, Ui.Warn), 135);
@@ -169,13 +177,22 @@ namespace PCShopSell.Game.UI
 
         private void BuildAssetMoneyCard(Transform parent, string title, long cents, Color color, Dictionary<string, long> sources)
         {
-            var card = Ui.Panel(parent, "Asset" + title, Ui.PanelBg2).rectTransform; Ui.Size(card, -1, 160, 1); Ui.VList(card, 2, 8);
-            Ui.Size(Ui.Label(card,title,16,TextAnchor.MiddleLeft,Ui.Dim),-1,22);
-            var amount=Ui.Size(Ui.Label(card,Money.FromCents(cents).ToString(),27,TextAnchor.MiddleLeft,color),-1,35);
-            amount.resizeTextForBestFit=true;amount.resizeTextMinSize=17;amount.resizeTextMaxSize=27;
+            var surface = color == Ui.Good ? Ui.PendingSurface : Color.Lerp(Ui.FlatWell, Ui.ButtonDanger, .13f);
+            var card = Ui.FlatPanel(parent, "Asset" + title, surface).rectTransform;
+            Ui.Size(card, 0, 160, 1);
+            Ui.VList(card, 2, 8);
+            var label = Ui.Size(Ui.Label(card, title, 19, TextAnchor.MiddleLeft, Ui.Dim), -1, 22);
+            label.fontStyle = FontStyle.Bold;
+            var headline = Ui.Row(card, 44, 8);
+            Ui.Size(Ui.Artwork(headline, UiIcon.Cash), 44, 44);
+            var amount = Ui.Size(Ui.Label(headline, Money.FromCents(cents).ToString(), 36, TextAnchor.MiddleLeft, color), 0, -1, 1);
+            amount.fontStyle = FontStyle.Bold;
+            amount.resizeTextForBestFit = true;
+            amount.resizeTextMinSize = 22;
+            amount.resizeTextMaxSize = 36;
             var sorted = sources.OrderByDescending(p => p.Value).ToArray();
-            for (int i = 0; i < Math.Min(3, sorted.Length); i++) Ui.Size(Ui.Label(card,sorted[i].Key+"  "+Money.FromCents(sorted[i].Value),14),-1,19);
-            if (sorted.Length > 3) Ui.Size(Ui.Label(card,"其余 "+(sorted.Length-3)+"项  "+Money.FromCents(sorted.Skip(3).Sum(p=>p.Value)),14,TextAnchor.MiddleLeft,Ui.Dim),-1,19);
+            for (int i = 0; i < Math.Min(3, sorted.Length); i++) Ui.Size(Ui.Label(card,sorted[i].Key+"  "+Money.FromCents(sorted[i].Value),14),-1,17);
+            if (sorted.Length > 3) Ui.Size(Ui.Label(card,"其余 "+(sorted.Length-3)+"项  "+Money.FromCents(sorted.Skip(3).Sum(p=>p.Value)),14,TextAnchor.MiddleLeft,Ui.Dim),-1,17);
 
         }
 

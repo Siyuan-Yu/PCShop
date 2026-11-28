@@ -99,6 +99,7 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>结账时用的付款方式（结账后才有值）。</summary>
         public PayChannel PaidWith { get; internal set; }
+        public bool PaidByPlayer { get; internal set; }
 
         public CustomerState State { get; internal set; }
         public LeaveReason Reason { get; internal set; }
@@ -721,7 +722,7 @@ namespace PCShopSell.Core.Shop
             ShopCustomer c = _queue.Find(x => x.Id == customerId);
             if (c == null) return -1;
             bool cash = c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0;
-            CompleteSale(c);
+            CompleteSale(c, playerCheckout: true);
             return cash ? Settings.CheckoutMinutesCash : Settings.CheckoutMinutesQr;
         }
 
@@ -1300,12 +1301,13 @@ namespace PCShopSell.Core.Shop
             return c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0;
         }
 
-        private void CompleteSale(ShopCustomer c, bool selfCheckout = false)
+        private void CompleteSale(ShopCustomer c, bool selfCheckout = false, bool playerCheckout = false)
         {
             if (c.GoodsId != null && c.GoodsExpiryDay >= 0 && c.GoodsExpiryDay < _clock.Today.TotalDays)
             { Leave(c, LeaveReason.NoStock, countAsLost: false); return; }
             c.Spend = FinalSalePrice?.Invoke(c) ?? c.Spend;
             c.PaidWith = selfCheckout ? PayChannel.SelfCheckout : c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0 ? PayChannel.Cash : PayChannel.QrCode;
+            c.PaidByPlayer = playerCheckout;
             _queue.Remove(c);
             _active.Remove(c);
             c.State = CustomerState.Paid;

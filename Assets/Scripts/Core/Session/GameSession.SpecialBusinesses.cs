@@ -313,6 +313,8 @@ namespace PCShopSell.Core.Session
             return Math.Max(0, Math.Min(quote, Math.Min(state.MaxOffer,
                 Math.Min(Math.Max(0, state.DailyBudget - state.SpentToday), Math.Max(0, cash)))));
         }
+        public event Action<OwnedShop, Employee, EmployeeRole> ShopStationWorked;
+
         private void TickUsedShop(OwnedShop shop,SpecialBusinessState state,GameTimestamp now)
         {
             long minute=now.TotalMinutes;
@@ -335,10 +337,12 @@ namespace PCShopSell.Core.Session
             {
                 seller.ArtifactAssessmentMade = true;
                 seller.ArtifactIdentified = Random.Chance(AppraiserAccuracy(worker.Intelligence));
+                ShopStationWorked?.Invoke(shop, worker, EmployeeRole.Appraiser);
             }
             if(state.AutoPurchasePaused)return;
             if(seller!=null)
             {
+                ShopStationWorked?.Invoke(shop, worker, EmployeeRole.Appraiser);
                 bool artifact = seller.Product == ArtifactProduct;
                 bool identified = artifact ? seller.ArtifactIdentified : Random.Chance(AppraiserAccuracy(worker.Intelligence));
                 var estimate = seller.Copy();

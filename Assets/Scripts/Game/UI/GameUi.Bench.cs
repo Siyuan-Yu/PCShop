@@ -12,20 +12,25 @@ namespace PCShopSell.Game.UI
     {
         public void OpenBenchWindow()
         {
+            bool empty = S.PlayerShop.Orders.Count == 0;
             OpenWindow("装机台", 900, 680, w =>
             {
                 ShopSimulation shop = S.PlayerShop;
-                Line(w.Content, $"散客装机单有 {shop.Settings.BuildOrderDueDays} 天交期。逾期影响本店口碑。", 15, Ui.Dim);
+                Line(w.Content, $"散客装机单有 {shop.Settings.BuildOrderDueDays} 天交期。逾期影响本店口碑。", 17, Ui.Dim);
+
+                if (shop.Orders.Count == 0)
+                {
+                    var empty = Ui.FlatPanel(w.Content, "Desk", Ui.FlatBand).rectTransform;
+                    Ui.VList(empty, 0, 14);
+                    Para(empty, "台面上空空的，暂时没有装机单。\n部分顾客想装整机：他们会在展示桌看中一台，离店后下装机单。", 20, Ui.Dim);
+                    return;
+                }
 
                 Image desk = Ui.FlatPanel(w.Content, "Desk", Ui.FlatBand);
                 Ui.Size(desk, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
                 RectTransform list = Ui.Scroll(desk.transform);
                 list.parent.parent.GetComponent<RectTransform>().Fill();
 
-                if (shop.Orders.Count == 0)
-                {
-                    Ui.Size(Ui.Label(list, "台面上空空的，暂时没有装机单。\n部分顾客想装整机：他们会在展示桌看中一台，离店后下装机单。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 70);
-                }
                 foreach (BuildOrder o in shop.Orders)
                 {
                     BuildOrder order = o;
@@ -52,7 +57,7 @@ namespace PCShopSell.Game.UI
                     OrderActions(card.transform, order, w.Rebuild);
                 }
 
-            }, scrollContent: false);
+            }, scrollContent: false, fitContent: empty);
         }
     }
 }

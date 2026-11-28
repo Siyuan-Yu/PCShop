@@ -116,6 +116,26 @@ namespace PCShopSell.Game.Runtime
         public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
         public Vector3 OwnerWorld => _owner.transform.position;
 
+        internal bool GreetResident(string personId) =>
+            _visitResidents.TryGetValue(personId, out var actor) && ShopInteriorView.GreetPair(_owner.transform, actor.transform);
+
+        internal bool PlayWorkbenchInteraction()
+        {
+            foreach (var entry in _furniture.Entries)
+            {
+                if (entry.Placed.Id != GameSession.HomeWorkbenchId || entry.Go == null) continue;
+                var workbench = entry.Go.transform;
+                Vector3 at = workbench.InverseTransformPoint(OwnerWorld);
+                float front = -(float)entry.Def.Depth * .5f;
+                if (at.z < front - .85f || at.z > front + .05f
+                    || Mathf.Abs(at.x) > (float)entry.Def.Width * .5f) continue;
+                float x = Mathf.Clamp(at.x, -(float)entry.Def.Width * .33f, (float)entry.Def.Width * .33f);
+                Vector3 target = workbench.TransformPoint(new Vector3(x, .97f, front + .08f));
+                return ShopInteriorView.FaceInteraction(_owner.transform, target, FigureInteraction.Type);
+            }
+            return false;
+        }
+
         public int District { get; }
 
         public HomeRoomView(Transform parent, RoomSpec room = null, int district = 0)

@@ -47,7 +47,7 @@ namespace PCShopSell.Game.UI
             return s;
         }
 
-        private const float DockContentBottom = 54;
+        private const float DockContentBottom = 69;
         private const float ShopFitWarningMinHeight = 78;
         private const float ShopFitDetailTop = 34;
         private const float ShopFitDetailBottom = 8;
@@ -148,8 +148,8 @@ namespace PCShopSell.Game.UI
             Line(C,GameSession.SizeName(S.PlayerShop.Size)+" · 最多 "+S.ShopShelfLimit+" 个货架 · 已摆 "+S.ShelvesPlaced+" 个",18,Ui.Accent).name="RenovationShopCapacity";
             if (S.CurrentShop.RetailKind == "restaurant")
                 Line(C, $"餐桌 {GameSession.RestaurantTablesPlaced(S.CurrentShop)} / {GameSession.RestaurantTableLimit(S.PlayerShop.Size)} 张", 17, Ui.Accent);
-            Line(C, "开业设施清单", 18, Ui.Accent);
-            Para(C, FitChecklistText(), 15);
+            SectionBand(C, "开业设施清单");
+            Para(C, FitChecklistText(), 17);
             if (S.IsPetShop(S.CurrentShop)) BuildPetRenovation();
             string label = S.IsRenovating ? "继续摆放" : S.ShopFitted ? "重新布置" : "开始装修";
             _openingRenovationStartButton = Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);
@@ -161,6 +161,7 @@ namespace PCShopSell.Game.UI
             {
                 string id=item.Key;var def=FurnitureCatalog.Get(id);
                 var row=Ui.Row(C,56,8);row.name="RenovationItem_"+id;
+                ItemPortrait(row, "furn:" + id, 48);
                 Ui.Size(Ui.Label(row,def.Name+" ×"+item.Value,18),-1,-1,1);
                 Ui.Size(Ui.Button(row,"摆放",()=>StartPlacement(true,id),18,Ui.ButtonBg),88,-1);
             }

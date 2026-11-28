@@ -97,6 +97,12 @@
       "en": "Start with one shop. Grow across the city."
     },
     {
+      "key": "menu_save_summary",
+      "zh": "第{0}年{1}月{2}日 · 现金 {3} · 店铺 {4} 家",
+      "ja": "{0}年{1}月{2}日 · 現金 {3} · 店舗 {4} 軒",
+      "en": "Year {0}, {1}/{2} · Cash {3} · Shops {4}"
+    },
+    {
       "key": "trial_edition",
       "zh": "第一章试玩版",
       "ja": "第1章 体験版",

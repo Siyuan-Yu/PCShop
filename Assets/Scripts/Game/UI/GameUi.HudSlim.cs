@@ -20,7 +20,8 @@ namespace PCShopSell.Game.UI
         private Button _hudFoldButton;
         private bool _hudFunctionsCollapsed;
         private bool HudFunctionsVisible => !_hudFunctionsCollapsed;
-        private float HudFunctionOffset => HudFunctionsVisible ? 54 : 0;
+        private const float HudTravelTop = 100;
+        private float HudFunctionOffset => HudFunctionsVisible ? 66 : 0;
         private float _appliedHudFunctionOffset = -1;
         private RectTransform _appliedShopDock, _appliedHomeDock;
         private Button _brandButton;
@@ -80,21 +81,21 @@ namespace PCShopSell.Game.UI
         private void BuildHudSystemControls(Transform parent)
         {
             _hudFunctionsCollapsed = PlayerPrefs.GetInt("petshop:hud-functions-collapsed", 0) != 0;
-            _hudFoldButton = Ui.Size(Ui.Button(parent, "收起功能栏 ▴  Tab", ToggleHudFunctions, 16, Ui.ChromeButton), 166);
+            _hudFoldButton = Ui.Size(Ui.Button(parent, "收起功能栏 ▴  Tab", ToggleHudFunctions, 17, Ui.HudTile), 166);
             _hudFoldButton.name = "HudFoldFunctions";
             _hudFoldButton.Tip("Tab · 收起或展开功能栏");
             _noticeButtonText = Ui.Size(HudPanelButton(parent, "通知", NoticeHotkey, OpenNoticeHistory,
-                "查看本次会话的通知记录。"), 108, -1, 0).GetComponentInChildren<Text>();
+                "查看本次会话的通知记录。", Ui.HudTile), 124, -1, 0).GetComponentInChildren<Text>();
             _noticeButtonText.transform.parent.name = "HudNotifications";
             Ui.Size(HudPanelButton(parent, "菜单", KeyCode.Escape, OpenSystemPanel,
-                "存档、读档、重新开始和音效设置。"), 116, -1, 0).name = "HudMenu";
+                "存档、读档、重新开始和音效设置。", Ui.HudTile), 116, -1, 0).name = "HudMenu";
         }
 
         private void BuildHudShortcuts(Transform parent)
         {
             _hudFunctionBar = Ui.Panel(parent, "HudFunctionBar", Ui.Chrome).rectTransform
-                .Anchor(0, 1, 1, 1, 12, -126, 12, 76);
-            var row = Ui.Row(_hudFunctionBar, 46, 8).Fill();
+                .Anchor(0, 1, 1, 1, 12, -138, 12, 76);
+            var row = Ui.Row(_hudFunctionBar, 52, 8).Fill();
             _hudShortcutRow = row;
             row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 5, 5);
             HudPanelButton(row, "我的", KeyCode.M, OpenMyPanel, "个人资料、饮食、住处、我的资产与人物关系。");

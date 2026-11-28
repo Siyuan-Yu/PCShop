@@ -134,12 +134,21 @@ namespace PCShopSell.Game.Runtime
         private void LimitTrialScenery()
         {
             if (!_firstChapterTrial || !_city.IsLakeCity) return;
-            var gates = DistrictRoadGate.ForCity(_city);
-            if (gates.Count == 0) return;
+            _trialRoadNodes = FindOutskirtsRoadNodes();
+        }
 
-            // The road graph remains intact for saves and city simulation.
+        private HashSet<string> _outskirtsRoadNodes;
+
+        private HashSet<string> FindOutskirtsRoadNodes()
+        {
+            if (_outskirtsRoadNodes != null) return _outskirtsRoadNodes;
+            var gates = DistrictRoadGate.ForCity(_city);
+            if (gates.Count == 0 || !_city.HasPlace(StarterHome)) return null;
+
+            // The same gateways bound the outskirts art and the first-chapter scenery.
+            // This traversal does not change the road graph used by the simulation.
             var home = _city.GetPlace(StarterHome).NodeId;
-            _trialRoadNodes = new HashSet<string> { home };
+            var nodes = new HashSet<string> { home };
             var frontier = new Queue<string>();
             frontier.Enqueue(home);
             while (frontier.Count > 0)
@@ -149,9 +158,10 @@ namespace PCShopSell.Game.Runtime
                 {
                     if (gates.Any(gate => (node == gate.FromNode && edge.To == gate.ToNode)
                         || (node == gate.ToNode && edge.To == gate.FromNode))) continue;
-                    if (_trialRoadNodes.Add(edge.To)) frontier.Enqueue(edge.To);
+                    if (nodes.Add(edge.To)) frontier.Enqueue(edge.To);
                 }
             }
+            return _outskirtsRoadNodes = nodes;
         }
 
         private bool BuildsRoad(string a, string b) =>

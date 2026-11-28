@@ -572,6 +572,13 @@ namespace PCShopSell.Game
             if (Session.Enter(p)) Ui.OnEnteredPlace(p);
         }
 
+        internal void GreetScenePerson(string personId)
+        {
+            if (InInterior) Interior?.GreetPerson(personId);
+            else if (InVisit) VisitRoom?.GreetResident(personId);
+            else _avatar?.Greet(_crowd?.CityActor(personId));
+        }
+
         /// <summary>别人的店打烊了：弹窗说清楚（不只是角落里一行字），人留在门口。</summary>
         private bool ShowClosed(Place p)
         {

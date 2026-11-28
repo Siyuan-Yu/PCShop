@@ -48,6 +48,7 @@ namespace PCShopSell.Game.UI
         {
             int before=S.PlayerShop.Stock.GoodsCount(id);
             if(!S.ListGoods(id,count))return;
+            _ctrl.Interior?.PlayStockBox(id);
             if (S.RetailKind == "restaurant" && id == "produce:rice") return;
             int stock=S.PlayerShop.Stock.GoodsCount(id),shown=S.PlayerShop.OnShelfGoods(id);
             Toast($"已入库 {stock-before} 件 · 本品陈列 {shown} 件 · 后仓 {Math.Max(0,stock-shown)} 件");

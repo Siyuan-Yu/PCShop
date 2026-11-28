@@ -33,12 +33,23 @@ namespace PCShopSell.Game.UI
             Ui.VList(panel, 5, 12);
             return panel;
         }
-        private static void ReportCard(Transform parent, string title, string value, string note, Color color)
+        private static void ReportCard(Transform parent, string title, string value, string note, Color color, UiIcon icon = UiIcon.None)
         {
             var card = ReportPanel(parent, "ReportCard", 106);
-            ReportText(card, title, 16, Ui.Dim, 22);
-            ReportText(card, value, 27, color, 32).fontStyle = FontStyle.Bold;
-            ReportText(card, note, 15, Ui.Dim, 23);
+            Transform text = card;
+            if (icon != UiIcon.None)
+            {
+                var row = Ui.Row(card, 83, 10);
+                row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                Ui.Size(Ui.Artwork(row, icon), 56, 56);
+                var details = Ui.Rect(row, "ReportCardDetails");
+                Ui.Size(details, 0, 81, 1);
+                Ui.VList(details, 1, 0);
+                text = details;
+            }
+            ReportText(text, title, 17, Ui.Dim, 22);
+            ReportText(text, value, 28, color, 32).fontStyle = FontStyle.Bold;
+            ReportText(text, note, 17, Ui.Dim, 23);
         }
         private static void ReportCell(Transform parent, string text, float width, Color? color = null)
             => Ui.Size(Ui.Label(parent, text, 16, TextAnchor.MiddleRight, color), width, 30);
@@ -166,12 +177,12 @@ namespace PCShopSell.Game.UI
             else if (live) ReportText(parent, $"实时报价 · {S.Clock.Today}  {S.Clock.Now.Hour:00}:{S.Clock.Now.Minute:00}    |    对比昨日 / 7 日前", 17, Ui.Dim, 32);
             var cards = Ui.Row(parent, 106, 8);
             ReportCard(cards, live ? dailyChangeLabel : "本期变化", $"<color=#{ColorUtility.ToHtmlStringRGB(Ui.Good)}>↑ {up.Length}</color>     <color=#{ColorUtility.ToHtmlStringRGB(Ui.Warn)}>↓ {down.Length}</color>     — {comparable.Length - up.Length - down.Length}",
-                comparable.Length == 0 ? "暂无相邻基准日记录" : "同口径品类数量 · 房产单列", Ui.Accent);
+                comparable.Length == 0 ? "暂无相邻基准日记录" : "同口径品类数量 · 房产单列", Ui.Accent, UiIcon.Pricing);
             void Extreme(int[] indices, string title, Color tint)
             {
                 int g = indices.FirstOrDefault();
                 ReportCard(cards, title + (indices.Length == 0 ? "" : " · " + ReportPriceGroupName(g)), indices.Length == 0 ? "—" : PriceMovement(changes[g].Value),
-                    indices.Length == 0 ? "暂无符合条件的品类" : PriceQuote(baseline, g) + " → " + PriceQuote(current, g), tint);
+                    indices.Length == 0 ? "暂无符合条件的品类" : PriceQuote(baseline, g) + " → " + PriceQuote(current, g), tint, UiIcon.Report);
             }
             Extreme(up, "↑ 最大变化", Ui.Good); Extreme(down, "↓ 最大变化", Ui.Warn);
             ReportText(parent, baseline == null ? "缺少相邻基准日记录，变化显示 —；仍可查看已有报价与历史走势。"
@@ -205,12 +216,15 @@ namespace PCShopSell.Game.UI
             if (live) ReportCell(header, "较 7 日前", 96, Ui.Dim);
             else ReportCell(header, "基准报价", 112, Ui.Dim);
             if (!visible.Contains(state.Selected)) state.Selected = (visible.Length == 0 ? -1 : visible[0]);
-            Transform list = visible.Length > (live ? 10 : 8) ? Ui.Scroll(left, bodyHeight - 94) : left;
+            const int priceRowHeight = 56;
+            int listHeight = bodyHeight - 94;
+            bool overflow = visible.Length * (priceRowHeight + 5) - 5 > listHeight;
+            Transform list = overflow ? Ui.Scroll(left, listHeight) : left;
             foreach (int g in visible)
             {
-                var row = Ui.Row(list, 32, 4);
-                Ui.Size(Ui.Button(row, ReportPriceGroupName(g) + "  ›", () => { state.Selected = g; rebuild(); }, 16,
-                    Ui.SelectedButton(state.Selected == g)), 0, 32, 1).name = "EconomicPriceGroup_" + g;
+                var row = Ui.Row(list, priceRowHeight, 8);
+                Ui.Size(Ui.Button(row, ReportPriceGroupName(g) + "  ›", () => { state.Selected = g; rebuild(); }, 18,
+                    Ui.SelectedButton(state.Selected == g)), 0, priceRowHeight, 1).name = "EconomicPriceGroup_" + g;
                 ReportCell(row, PriceQuote(current, g), 112);
                 ReportCell(row, changes[g].HasValue ? PriceMovement(changes[g].Value) : "—", 96,
                     changes[g].HasValue ? PriceMovementColor(changes[g].Value) : Ui.Dim);

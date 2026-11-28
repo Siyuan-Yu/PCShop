@@ -4,6 +4,11 @@ using UnityEngine;
 namespace PCShopSell.Game.Runtime
 {
     public enum FigureWorkAction { None, Cook, Plate, Serve, Clear, Assemble }
+    internal enum FigureInteraction
+    {
+        None, Checkout, Register, Cash, Scan, Look, Take, PutBack, StockBox,
+        PetFeed, PetWater, PetClean, Inspect, Repair, Paint, Greet, Type
+    }
 
     /// <summary>Procedural poses for the miniature figures. Only the visual rig moves; gameplay roots stay on the ground.</summary>
     public sealed class FigureMotion : MonoBehaviour
@@ -38,6 +43,16 @@ namespace PCShopSell.Game.Runtime
         private int _reachArm = 1;
         private FigureWorkAction _workAction;
         private GameObject _spatula, _screwdriver;
+        private FigureInteraction _interaction;
+        private Vector3? _interactionTarget;
+        private float _interactionTime, _interactionDuration;
+        private GameObject _interactionProp;
+        private FigureInteraction _interactionPropKind;
+        private Transform _carriedItem;
+        internal bool InteractionPlaying => _interaction != FigureInteraction.None;
+        internal bool InteractionContact => !InteractionPlaying || _interactionTime >= _interactionDuration * .55f;
+
+        internal void HoldItem(Transform item) => _carriedItem = item;
         public string ActivityKind { get; set; }
         public int ActivityOption { get; set; } = -1;
         public FigureWorkAction WorkAction
@@ -197,8 +212,38 @@ namespace PCShopSell.Game.Runtime
             ResetMotion();
         }
 
+        internal bool PlayInteraction(FigureInteraction action, Vector3? target = null)
+        {
+            if (_visual == null || !isActiveAndEnabled || _scooter != null || _bedWakePose.HasValue
+                || _seated || _furnitureSeatBlend > 0 || _reachWeight > 0) return false;
+            if (_interaction == action && _interactionTarget == target) return true;
+            StopInteraction();
+            _interaction = action;
+            _interactionTarget = target;
+            _interactionTime = 0;
+            _interactionDuration = action switch
+            {
+                FigureInteraction.Look => .32f,
+                FigureInteraction.Take or FigureInteraction.PutBack => .53f,
+                FigureInteraction.Cash or FigureInteraction.Scan or FigureInteraction.Greet => .65f,
+                FigureInteraction.Repair or FigureInteraction.Paint or FigureInteraction.Type => 1.08f,
+                _ => .88f
+            };
+            _previousPosition = transform.position;
+            _sampled = true;
+            return true;
+        }
+
+        private void StopInteraction()
+        {
+            if (!InteractionPlaying) return;
+            _interaction = FigureInteraction.None;
+            _head.localRotation = Quaternion.identity;
+            if (_interactionProp != null) _interactionProp.SetActive(false);
+        }
+
         private void OnEnable() { if (!Active.Contains(this)) Active.Add(this); ResetMotion(); }
-        private void OnDisable() { Active.Remove(this); _sampled = false; }
+        private void OnDisable() { Active.Remove(this); _sampled = false; StopInteraction(); }
         private void OnDestroy() => Active.Remove(this);
 
         // Called after all world/interior movement, including the editor smoke simulation.
@@ -238,6 +283,7 @@ namespace PCShopSell.Game.Runtime
 
         public void ResetMotion()
         {
+            StopInteraction();
             _sampled = false;
             _phase = _blend = 0;
             if (_visual != null) ApplyPose();
@@ -260,12 +306,20 @@ namespace PCShopSell.Game.Runtime
             // Loading, entering a room and teleporting must never become a giant stride.
             if (distance > Mathf.Max(2f, dt * 18f) * scale)
             {
+                StopInteraction();
                 _blend = _phase = 0;
                 ApplyPose();
                 return;
             }
             bool moving = _locomotion && distance > .0001f * scale;
-            if (!moving && !animateIdle) return; // Modal/game pause freezes the last pose.
+            bool wasInteracting = InteractionPlaying;
+            if (wasInteracting)
+            {
+                _interactionTime += dt;
+                if (moving || _interactionTime >= _interactionDuration || _reachWeight > 0
+                    || _seated || _furnitureSeatBlend > 0 || _bedWakePose.HasValue) StopInteraction();
+            }
+            if (!moving && !animateIdle && !wasInteracting) return;
             float blendDt = Mathf.Min(dt, .1f);
             _blend = Mathf.MoveTowards(_blend, moving ? 1 : 0, blendDt * (moving ? 9f : 5f));
             if (moving)
@@ -301,7 +355,8 @@ namespace PCShopSell.Game.Runtime
                 _hairTailL.localRotation = Quaternion.Euler(-2f * _blend, 0, sway + idle);
                 _hairTailR.localRotation = Quaternion.Euler(-2f * _blend, 0, sway - idle);
             }
-            bool working = !_bedWakePose.HasValue && _scooter == null && !_seated && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
+            bool working = !InteractionPlaying && !_bedWakePose.HasValue && _scooter == null && !_seated
+                && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
             const float hipHeight = PlayerCharacterModel.HipHeight;
             const float segment = PlayerCharacterModel.LegSegment;
             const float ankle = PlayerCharacterModel.AnkleHeight;
@@ -366,6 +421,22 @@ namespace PCShopSell.Game.Runtime
                 const float armSpread = 1.5f;
                 _arms[i].localRotation = Quaternion.Euler(armSwing * 14f * _blend, 0, i == 0 ? -armSpread : armSpread);
                 SetElbow(i, 6 + (4 - 3 * armSwing) * _blend);
+            }
+            if (_carriedItem != null)
+            {
+                Vector3 center = Torso.InverseTransformPoint(_carriedItem.position);
+                float grip = _carriedItem.localScale.x * .43f;
+                for (int side = 0; side < 2; side++)
+                {
+                    float sign = side == 0 ? -1 : 1;
+                    AimLimb(_arms[side], _elbows[side], _hands[side],
+                        center + new Vector3(sign * grip, -.07f, -.035f), new Vector3(sign, -1, 0));
+                }
+            }
+            if (InteractionPlaying)
+            {
+                ApplyInteractionPose();
+                return;
             }
             if (_kickFollowThrough > 0)
             {
@@ -647,6 +718,96 @@ namespace PCShopSell.Game.Runtime
         {
             if (_elbows[side] != null)
                 _elbows[side].localRotation = Quaternion.Euler(-degrees, 0, 0);
+        }
+
+        private void ApplyInteractionPose()
+        {
+            float progress = _interactionTime / _interactionDuration;
+            float weight = WakeEase(progress, 0, .32f) * (1f - WakeEase(progress, .64f, 1));
+            float stroke = Mathf.Sin(Mathf.Clamp01((progress - .30f) / .36f) * Mathf.PI);
+            bool care = _interaction is FigureInteraction.PetFeed or FigureInteraction.PetWater or FigureInteraction.PetClean;
+            bool twoHands = _interaction is FigureInteraction.StockBox or FigureInteraction.Type;
+            bool greet = _interaction == FigureInteraction.Greet;
+            float bend = care ? 49f : _interaction == FigureInteraction.StockBox ? 23f : 0f;
+            bend *= weight;
+            float lean = (care ? 29f : greet ? 0 : 10f) * weight;
+            Torso.localRotation = Quaternion.Euler(lean, 0, 0);
+            Vector3 pelvis = Vector3.up * PlayerCharacterModel.HipHeight;
+            Torso.localPosition = pelvis - Torso.localRotation * pelvis;
+            if (bend > 0)
+            {
+                float drop = 2 * PlayerCharacterModel.LegSegment * (1f - Mathf.Cos(bend * Mathf.Deg2Rad));
+                _visual.localPosition = Vector3.down * (drop * _scale);
+                for (int i = 0; i < 2; i++)
+                {
+                    _hips[i].localRotation = Quaternion.Euler(-bend, 0, 0);
+                    _knees[i].localRotation = Quaternion.Euler(2 * bend, 0, 0);
+                    _feet[i].localRotation = Quaternion.Euler(-bend, 0, 0);
+                }
+            }
+            float nod = _interaction == FigureInteraction.Register
+                ? 17f * Mathf.Sin(Mathf.Clamp01((progress - .53f) / .36f) * Mathf.PI)
+                : greet ? 15f * stroke : 0;
+            _head.localRotation = Quaternion.Euler((greet ? 3f : 13f) * weight + nod, 0, 0);
+            if (_interaction == FigureInteraction.Look) return;
+
+            Vector3 target = _interactionTarget.HasValue
+                ? Torso.InverseTransformPoint(_interactionTarget.Value)
+                : new Vector3(.16f, greet ? 1.24f : .95f, greet ? .24f : .34f);
+            if (_interaction == FigureInteraction.Register)
+                target = Vector3.Lerp(new Vector3(.18f, 1.04f, .29f), target, WakeEase(progress, .27f, .55f));
+            if (_interaction == FigureInteraction.Checkout || _interaction == FigureInteraction.Type) target.y += .026f * (1 - stroke);
+            if (_interaction is FigureInteraction.PetClean or FigureInteraction.Paint or FigureInteraction.Inspect)
+                target.x += Mathf.Sin(progress * Mathf.PI * 4) * .07f;
+            if (_interaction == FigureInteraction.Repair) target.y += Mathf.Sin(progress * Mathf.PI * 6) * .025f;
+            if (_interaction is FigureInteraction.Take or FigureInteraction.Scan) target.z += stroke * .045f;
+            if (twoHands)
+                Reach(0, target + Vector3.left * .15f, weight);
+            Reach(1, target + (twoHands ? Vector3.right * .15f : Vector3.zero), weight);
+            UpdateInteractionProp(progress, stroke);
+
+            void Reach(int side, Vector3 point, float amount)
+            {
+                Vector3 startingPoint = Torso.InverseTransformPoint(_hands[side].position);
+                Vector3 elbowOut = new Vector3(side == 0 ? -.65f : .65f, -.75f, 0);
+                AimLimb(_arms[side], _elbows[side], _hands[side],
+                    Vector3.Lerp(startingPoint, point, amount), elbowOut);
+            }
+        }
+
+        private void UpdateInteractionProp(float progress, float stroke)
+        {
+            if (_interaction is not (FigureInteraction.Register or FigureInteraction.Cash or FigureInteraction.Scan or FigureInteraction.StockBox
+                or FigureInteraction.PetFeed or FigureInteraction.PetWater or FigureInteraction.PetClean
+                or FigureInteraction.Repair or FigureInteraction.Paint)) return;
+            if (_interactionPropKind != _interaction)
+            {
+                if (_interactionProp != null)
+                {
+                    _interactionProp.SetActive(false);
+                    Kill.It(_interactionProp);
+                }
+                _interactionPropKind = _interaction;
+                var (size, color) = _interaction switch
+                {
+                    FigureInteraction.Register => (new Vector3(.14f, .015f, .105f), ArtDirection.Cream),
+                    FigureInteraction.Cash => (new Vector3(.10f, .012f, .057f), new Color(.79f, .66f, .54f)),
+                    FigureInteraction.Scan => (new Vector3(.075f, .022f, .14f), new Color(.23f, .34f, .42f)),
+                    FigureInteraction.StockBox => (new Vector3(.27f, .23f, .25f), new Color(.67f, .47f, .29f)),
+                    FigureInteraction.PetFeed => (new Vector3(.12f, .17f, .095f), ArtDirection.Brass),
+                    FigureInteraction.PetWater => (new Vector3(.09f, .18f, .09f), ArtDirection.Sage),
+                    FigureInteraction.PetClean => (new Vector3(.105f, .035f, .19f), ArtDirection.Wood),
+                    FigureInteraction.Paint => (new Vector3(.063f, .065f, .145f), ArtDirection.Sage),
+                    _ => (new Vector3(.045f, .045f, .17f), ArtDirection.Brass)
+                };
+                Vector3 grip = _interaction == FigureInteraction.StockBox
+                    ? new Vector3(-.12f, -.02f, .065f) : new Vector3(0, -.065f, .045f);
+                _interactionProp = Prims.Box(_hands[1], "InteractionProp", grip, size, Mats.Lit(color));
+            }
+            bool visible = progress is > .18f and < .78f;
+            if (_interactionProp.activeSelf != visible) _interactionProp.SetActive(visible);
+            if (_interaction is FigureInteraction.PetFeed or FigureInteraction.PetWater)
+                _interactionProp.transform.localRotation = Quaternion.Euler(40f * stroke, 0, 0);
         }
     }
 }

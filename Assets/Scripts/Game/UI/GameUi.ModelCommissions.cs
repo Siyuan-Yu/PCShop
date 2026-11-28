@@ -2,6 +2,7 @@ using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 
 namespace PCShopSell.Game.UI
@@ -75,7 +76,12 @@ namespace PCShopSell.Game.UI
 
             if (order.Stage == ModelCommissionStage.Offered)
             {
-                Action("接下委托", () => S.AcceptModelCommission(shop, order.Id));
+                Action("接下委托", () =>
+                {
+                    if (!S.AcceptModelCommission(shop, order.Id)) return false;
+                    _ctrl.Interior?.PlayOwnerCounterInteraction(FigureInteraction.Register);
+                    return true;
+                });
                 return;
             }
             if (workChoice)
@@ -95,7 +101,12 @@ namespace PCShopSell.Game.UI
                         S.ModelCommissionWorkBlocker(shop, order, false));
             }
             if (order.Stage == ModelCommissionStage.Ready)
-                Action($"交付并收款  ¥{order.Payout}", () => S.DeliverModelCommission(shop, order.Id));
+                Action($"交付并收款  ¥{order.Payout}", () =>
+                {
+                    if (!S.DeliverModelCommission(shop, order.Id)) return false;
+                    _ctrl.Interior?.PlayOwnerCounterInteraction(FigureInteraction.Checkout);
+                    return true;
+                });
             Action("归还模型", () =>
             {
                 OpenWindow("归还模型", 480, 240, confirm =>
@@ -158,6 +169,9 @@ namespace PCShopSell.Game.UI
                         ? Mathf.Lerp(1, .65f, distance / halfWidth)
                         : .65f * Mathf.Clamp01(1 - (distance - halfWidth) / .3f);
                     if (!S.CompleteModelCommissionPass(shop, order.Id, accuracy)) return;
+                    var interior = _ctrl.Interior;
+                    if (interior?.NearModelPaintBench == true)
+                        interior.PlayOwnerInteraction(FigureInteraction.Paint, interior.ModelPaintBenchWorld - Vector3.up * .41f);
                     desk.Rebuild();
                     w.Rebuild();
                 }, 18, Ui.ButtonHot), -1, 44);

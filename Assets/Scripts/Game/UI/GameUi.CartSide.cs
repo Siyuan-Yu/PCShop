@@ -140,8 +140,17 @@ namespace PCShopSell.Game.UI
                     }
                     else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
                     var quick = Ui.Row(side, 32, 8);
-                    Ui.Size(Ui.Button(quick, "背得动的放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonSecondary), -1, 32, 1);
-                    Ui.Size(Ui.Button(quick, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonSecondary), -1, 32, 1);
+                    AddDeliveryAction("CartPackWhatFits", "背得动的放背包", S.CartFillBag);
+                    AddDeliveryAction("CartShipAll", "全部叫车", S.CartAllToTruck);
+
+                    void AddDeliveryAction(string name, string caption, Action action)
+                    {
+                        var button = Ui.Button(quick, caption, () => { action(); w.Rebuild(); }, 15, Ui.PendingSurface);
+                        button.name = name;
+                        Ui.UseCaptionInk(button, Ui.Accent);
+                        Ui.FlatBorder(button.image, Ui.FlatHotEdge);
+                        Ui.Size(button, -1, 32, 1);
+                    }
                 }
             }
 
@@ -158,6 +167,7 @@ namespace PCShopSell.Game.UI
             string why = quote.blocker;
             var checkout = Ui.Button(side, why ?? $"结账 · {goods + freight}", () => CheckoutCart(w, defaultToShop),
                 why == null ? 22 : 15, Ui.ButtonHot, why == null);
+            Ui.PreferMainAction(checkout);
             checkout.name = "CartCheckout";
             Ui.Size(checkout, -1, 54);
         }

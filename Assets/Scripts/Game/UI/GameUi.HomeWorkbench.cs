@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -39,6 +40,7 @@ namespace PCShopSell.Game.UI
         private Image _wbDayFill;
         private RectTransform _wbDayMarker;
         private Text _wbClockText;
+        private long _wbShownMinute = long.MinValue;
         private static Text WbText(Transform parent,string text,int size=18,Color? color=null)
         {var t=Ui.Label(parent,text,size,TextAnchor.MiddleLeft,color??WbInk);Ui.Size(t,-1,size*1.6f);return t;}
         private static Button WbButton(Transform parent,string label,Action action,string name=null,bool selected=false,bool enabled=true)
@@ -99,6 +101,8 @@ namespace PCShopSell.Game.UI
             if(_homeWorkbench!=null&&!S.CanUseHomeWorkbench)_homeWorkbench.Close();
             UpdateWorkbenchDayBar();
         }
+        private bool _workbenchOpening;
+
         public void OpenHomeWorkbench()
         {
             if (!S.CanUseHomeWorkbench)
@@ -109,13 +113,37 @@ namespace PCShopSell.Game.UI
                 else Toast(WorkbenchAccessReason);
                 return;
             }
-            if(_homeWorkbench!=null)return;
-            _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false,fullScreen:true);
+            if (_homeWorkbench != null || _workbenchOpening) return;
+            if (_ctrl.InHome && _ctrl.HomeRoom?.PlayWorkbenchInteraction() == true)
+            {
+                _workbenchOpening = true;
+                _ctrl.StartCoroutine(OpenWorkbenchAfterGesture(S));
+                return;
+            }
+            OpenWorkbenchWindow();
+        }
+
+        private IEnumerator OpenWorkbenchAfterGesture(GameSession session)
+        {
+            yield return new WaitForSecondsRealtime(.55f);
+            _workbenchOpening = false;
+            if (ReferenceEquals(S, session) && S.CanUseHomeWorkbench && !MainMenuOpen && _homeWorkbench == null)
+                OpenWorkbenchWindow();
+        }
+
+        private void OpenWorkbenchWindow()
+        {
+            _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:() =>
+            {
+                _homeWorkbench = null;
+                if (_ctrl.InHome && !MainMenuOpen) _ctrl.HomeRoom?.PlayWorkbenchInteraction();
+            },scrollContent:false,fullScreen:true);
             // 全屏覆盖 HUD，内容区按当前画布尺寸伸展。
             var backdrop=_homeWorkbench.Root.GetComponent<Image>();if(backdrop!=null)backdrop.color=Ui.ChromeWell;
             _homeWorkbench.LiveConversation=true;
             _homeWorkbench.LiveKey = WorkbenchViewKey;
             _homeWorkbench.LiveStamp=_homeWorkbench.LiveKey();
+            UpdateWorkbenchDayBar();
         }
 
         private string WorkbenchViewKey()
@@ -141,9 +169,9 @@ namespace PCShopSell.Game.UI
             paper.color = Ui.PanelBg; paper.raycastTarget = false;
             padding.padding = new RectOffset(16,16,10,14); padding.spacing = 12;
             var title = Ui.Row(w.Content, 40, 12); title.name = "WorkbenchStatusBar";
-            _wbClockText = Ui.Size(WbText(title, S.Clock.Now + " · 在家", 16), 0, 36, 1.2f);
-            var cash = Ui.Size(WbText(title, "", 22, Ui.Accent), 0, 36, 1);
-            var worth = Ui.Size(WbText(title, "", 17), 0, 36, 1);
+            _wbClockText = Ui.Size(WbText(title, S.Clock.Now + " · 在家", 19), 0, 36, 1.2f);
+            var cash = Bold(Ui.Size(WbText(title, "", 24, Ui.Accent), 0, 36, 1));
+            var worth = Ui.Size(WbText(title, "", 20), 0, 36, 1);
             var stress = Ui.Size(WbText(title, "", 16), 125, 36);
             var pause = Ui.Size(WbControl(title, "继续", () => { S.Time.TogglePause(); w.RefreshContent?.Invoke(); }, "WorkbenchPause", false), 80, 34);
             var speeds = new System.Collections.Generic.List<(Button button, int speed)>();
@@ -252,17 +280,22 @@ namespace PCShopSell.Game.UI
             _wbDayMarker=marker.rectTransform;_wbDayMarker.Anchor(0,0,0,1,-1.5f,0,-1.5f,0);
             var pill=Ui.FlatPanel(_wbDayMarker,"CurrentTime",Ui.Chrome,Ui.Chrome);pill.rectTransform.Anchor(.5f,.5f,.5f,.5f,-40,-16,-40,-16);
             _wbDayTime=Bold(Ui.Label(pill.transform,"",16,TextAnchor.MiddleCenter,Color.white));_wbDayTime.rectTransform.Fill();_wbDayTime.raycastTarget=false;
+            _wbShownMinute = long.MinValue;
             UpdateWorkbenchDayBar();
         }
         private void UpdateWorkbenchDayBar()
         {
-            if(_homeWorkbench==null||_homeWorkbench.Closed)return;
-            if(_wbClockText!=null)_wbClockText.text=S.Clock.Now+" · 在家";
-            if(_wbDayFill==null||_wbDayMarker==null)return;
-            float progress=Mathf.Clamp01(S.Clock.MinuteOfDay/1440f);
-            _wbDayFill.rectTransform.anchorMax=new Vector2(progress,1);
-            _wbDayMarker.anchorMin=new Vector2(progress,0);_wbDayMarker.anchorMax=new Vector2(progress,1);
-            if(_wbDayTime!=null)_wbDayTime.text=GameSession.ClockText(S.Clock.MinuteOfDay);
+            if (_homeWorkbench == null || _homeWorkbench.Closed || _wbDayFill == null || _wbDayMarker == null)
+                return;
+            var now = S.Clock.Now;
+            if (_wbShownMinute == now.TotalMinutes) return;
+            _wbShownMinute = now.TotalMinutes;
+            if (_wbClockText != null) _wbClockText.text = now + " · 在家";
+            float progress = Mathf.Clamp01(S.Clock.MinuteOfDay / 1440f);
+            _wbDayFill.rectTransform.anchorMax = new Vector2(progress, 1);
+            _wbDayMarker.anchorMin = new Vector2(progress, 0);
+            _wbDayMarker.anchorMax = new Vector2(progress, 1);
+            if (_wbDayTime != null) _wbDayTime.text = GameSession.ClockText(S.Clock.MinuteOfDay);
         }
         private (GameDate from,GameDate to) WorkbenchDates(bool personal=false)
         {

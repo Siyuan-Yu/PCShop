@@ -49,7 +49,7 @@ namespace PCShopSell.Game.UI
             Ui.VList(month, gap, 0);
             var weekdays = Ui.Row(month, weekdayHeight, gap);
             foreach (string weekday in new[] { "一", "二", "三", "四", "五", "六", "日" })
-                Ui.Size(Ui.Label(weekdays, weekday, 16, TextAnchor.MiddleCenter, Ui.Dim), 0, weekdayHeight, 1);
+                Ui.Size(Ui.Label(weekdays, weekday, 18, TextAnchor.MiddleCenter, Ui.Dim), 0, weekdayHeight, 1);
             for (int rowIndex = 0; rowIndex < rows; rowIndex++)
             {
                 var row = Ui.Row(month, cellHeight, gap);
@@ -64,7 +64,7 @@ namespace PCShopSell.Game.UI
             }
 
             var selected = days[_calendarDay].ToArray();
-            var agenda = Ui.PaperPanel(w.Content, "CalendarDayDetails").rectTransform;
+            var agenda = Ui.FlatPanel(w.Content, "CalendarDayDetails", Ui.FlatWell).rectTransform;
             Ui.VList(agenda, 5, 10);
             var heading = Ui.Row(agenda, 34);
             Ui.Trim(heading, "AgendaDateRule", Ui.FlatCardEdge, 0);
@@ -88,7 +88,7 @@ namespace PCShopSell.Game.UI
         {
             bool selected = date.TotalDays == _calendarDay;
             var fill = selected ? Ui.SelectedButton(true) : Ui.FlatBand;
-            var button = Ui.Size(Ui.Button(row, "", select, 17, fill), 0, height, 1);
+            var button = Ui.Size(Ui.Button(row, "", select, 20, fill), 0, height, 1);
             button.name = "CalendarDay_" + date.TotalDays;
             if (!selected) Ui.FlatBorder(button.image, Ui.FlatCardEdge);
             button.gameObject.AddComponent<RectMask2D>();

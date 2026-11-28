@@ -23,10 +23,9 @@ namespace PCShopSell.Game.UI
 
         private void BuildBrandOverview(Transform body, Window w, BrandBusinessState state)
         {
-            var header = Ui.Row(body, 40, 8);
-            Ui.Size(Ui.Label(header, "所有品牌 · 共" + state.Brands.Length + "个", 20, color: Ui.Accent), -1, 40, 1);
+            SectionBand(body, "所有品牌 · 共" + state.Brands.Length + "个");
             var remaining = GameSession.BrandKinds.Where(kind => !state.Brands.Any(b => b.Kind == kind)).ToArray();
-            if (remaining.Length > 0) CompanyCenterLink(header);
+            if (remaining.Length > 0) CompanyCenterLink(body, primary: true);
             if (state.Brands.Length == 0) return;
             Line(body, "统计区间：" + new GameDate(S.BrandStatsFirstDay) + "—" + S.Clock.Today + "（含今天）", 15, Ui.Dim);
             long now = S.Clock.Now.TotalMinutes;

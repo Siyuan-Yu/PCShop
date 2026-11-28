@@ -434,6 +434,7 @@ namespace PCShopSell.Game.Runtime
 
         private void UpdatePetOwnerPose(float dt)
         {
+            if (_petOwnerMotion?.InteractionPlaying == true) return;
             if (_petApproach != null)
             {
                 _petOwnerMotion?.ClearReachPose();
@@ -501,6 +502,9 @@ namespace PCShopSell.Game.Runtime
         private void UpdateHeldToy()
         {
             if (_heldPetToy == null) return;
+            bool show = !PetOwnerMotion.InteractionPlaying;
+            if (_heldPetToy.activeSelf != show) _heldPetToy.SetActive(show);
+            if (!show) return;
             var handTransform = PetOwnerMotion.ReachingHand;
             Vector3 hand = _root.InverseTransformPoint(handTransform.position);
             Vector3 forward = _owner.transform.localRotation * Vector3.forward;

@@ -9,7 +9,7 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private void CompanyCenterLink(Transform parent)
+        private void CompanyCenterLink(Transform parent, bool primary = false)
         {
             var center = S.EnterpriseCenter;
             if (center == null) return;
@@ -17,7 +17,7 @@ namespace PCShopSell.Game.UI
             {
                 if (S.AtEnterpriseCenter) OpenEnterpriseServiceCenter(center);
                 else { CloseAllWindows(); S.BeginCityTravel(center.Id, enter: true); }
-            }, S.DistrictAccessBlocker(center));
+            }, S.DistrictAccessBlocker(center), primary);
         }
 
         private void OpenEnterpriseServiceCenter(Place center)

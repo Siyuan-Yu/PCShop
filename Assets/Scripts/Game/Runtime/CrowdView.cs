@@ -39,6 +39,9 @@ namespace PCShopSell.Game.Runtime
         private GameSession _citySession;
         private StreetWorldBuilder _streets;
         private readonly Dictionary<string, Walker> _cityWalkers = new Dictionary<string, Walker>();
+
+        internal Transform CityActor(string personId) =>
+            _cityWalkers.TryGetValue(personId, out var actor) && actor.Go != null ? actor.Go.transform : null;
         private readonly Dictionary<string, Walker> _cityWalkerPool = new Dictionary<string, Walker>();
         private readonly List<string> _cityPoolOrder = new List<string>();
         private readonly HashSet<string> _cityWanted = new HashSet<string>();

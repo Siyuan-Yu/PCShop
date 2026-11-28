@@ -33,7 +33,7 @@ namespace PCShopSell.Game.UI
             if (S == null) return;
             if (_phoneWindow != null && !_phoneWindow.Closed) return;
             _phoneWindow = S.HasSmartphone
-                ? OpenWindow("手机", 440, 850, BuildSmartphone, scrollContent:false)
+                ? OpenWindow("手机", 516, 852, BuildSmartphone, scrollContent:false, fitContent:true)
                 : OpenWindow("按键手机", 380, 620, BuildFeaturePhone);
             if(S.HasSmartphone)
             {
@@ -91,32 +91,32 @@ namespace PCShopSell.Game.UI
         private void BuildSmartphone(Window w)
         {
             var layout=w.Content.GetComponent<VerticalLayoutGroup>();
-            layout.padding=new RectOffset(12,12,8,8);layout.spacing=6;
-            RectTransform bar = Ui.Row(w.Content, 28);
-            Ui.Size(Ui.Label(bar, GameSession.ClockText(S.Clock.MinuteOfDay), 19, TextAnchor.MiddleLeft), 120);
-            Ui.Size(Ui.Label(bar, "5G　电量 100%", 16, TextAnchor.MiddleRight, Ui.Dim), -1, -1, 1);
+            layout.padding=new RectOffset(14,14,12,12);layout.spacing=10;
+            RectTransform bar = Ui.Row(w.Content, 36);
+            Ui.Size(Ui.Label(bar, GameSession.ClockText(S.Clock.MinuteOfDay), 22, TextAnchor.MiddleLeft), 120);
+            Ui.Size(Ui.Label(bar, "5G　电量 100%", 18, TextAnchor.MiddleRight, Ui.Dim), -1, -1, 1);
 
             BuildPhoneDesktop(w);
-            Ui.Size(Ui.Button(w.Content, "收起", w.Close, 15, Ui.ButtonSecondary), -1, 36);
+            Ui.Size(Ui.Button(w.Content, "收起", w.Close, 21), -1, 56);
         }
 
         private void BuildPhoneDesktop(Window w)
         {
 
-            Image wall = Ui.FlatPanel(w.Content, "Wallpaper", Ui.FlatBand);
+            Image wall = Ui.FlatPanel(w.Content, "Wallpaper", Ui.PanelBg);
             Ui.Size(wall).GetComponent<LayoutElement>().flexibleHeight=1;
-            Ui.VList(wall.rectTransform, 8, 12);
+            Ui.VList(wall.rectTransform, 14, 12);
             var apps = PhoneApps.All.Where(a => S.HasApp(a.Id)).ToList();
-            for (int i = 0; i < apps.Count; i += 4)
+            for (int i = 0; i < apps.Count; i += 3)
             {
-                RectTransform row = Ui.Row(wall.transform, 82, 8);
-                for (int j = i; j < apps.Count && j < i + 4; j++)
+                RectTransform row = Ui.Row(wall.transform, 169, 12);
+                for (int j = i; j < apps.Count && j < i + 3; j++)
                 {
                     PhoneAppDef a = apps[j];
-                    Button b = Ui.Button(row, a.Name, () => LaunchApp(w, a.Id), 14);
+                    Button b = Ui.Button(row, a.Name, () => LaunchApp(w, a.Id), 22, Color.clear);
                     b.name = "PhoneApp_" + a.Id;
-                    Ui.Size(b, 84, 80);
-                    Ui.ButtonArtwork(b, Ui.PhoneIcon(a.Id), stacked: true);
+                    Ui.Size(b, 138, 161);
+                    Ui.ButtonArtwork(b, Ui.PhoneIcon(a.Id), stacked: true, size: 110);
                 }
             }
             if (apps.Count < PhoneApps.All.Count)

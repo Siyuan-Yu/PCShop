@@ -51,21 +51,27 @@ namespace PCShopSell.Game.UI
             if(model.Kind==VehicleKind.Van)Line(details,"货车仅供员工采购，不可参赛",15,Ui.Dim);
             return row;
         }
-        private RectTransform BuildDealerVehicleCard(Transform parent,MotorModel model)
+        private void BuildDealerVehicleCard(Window window, MotorModel model)
         {
-            var card=Ui.Panel(parent,"VehicleCard",Ui.PanelBg2).rectTransform;
-            Ui.VList(card,8,12);
+            var card = Ui.FlatPanel(window.Content, "VehicleCard", Ui.FlatWell).rectTransform;
+            Ui.VList(card, 8, 12);
             var commuter = MotorCatalog.CommuteSpec(model.Id);
-            var header=Ui.Row(card,commuter == null ? 104 : 136,14);
-            MotorThumbnail(header,model.Id,104);
-            var details=Ui.Rect(header,"VehicleInfo");
-            Ui.Size(details,0,-1,1).GetComponent<LayoutElement>().minWidth=0;
-            Ui.VList(details,4,0);
-            Line(details,model.Name,20,Ui.Accent);
-            Line(details,"¥"+model.Price.ToString("N0"),18,Ui.Accent);
-            Line(details,$"极速 {model.Speed:0} km/h · 加速 {model.Acceleration:0.0}",17);
+            var header = Ui.Row(card, -1, 14);
+            header.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+            MotorThumbnail(header, model.Id, 104);
+            var details = Ui.Rect(header, "VehicleInfo");
+            Ui.Size(details, 0, -1, 1).GetComponent<LayoutElement>().minWidth = 0;
+            Ui.VList(details, 4, 0);
+            Line(details, model.Name, 22, Ui.TextColor).fontStyle = FontStyle.Bold;
+            Line(details, "¥" + model.Price.ToString("N0"), 20, Ui.Accent);
+            Line(details, $"极速 {model.Speed:0} km/h · 加速 {model.Acceleration:0.0}", 17);
             if (commuter != null) Line(details, TravelSpeedText(commuter), 16, Ui.Dim);
-            return card;
+            var actions = Ui.Rect(header, "VehicleActions");
+            Ui.Size(actions, 220);
+            Ui.VList(actions, 6, 0);
+            Ui.Size(Ui.Button(actions, "购买车辆 · ¥" + model.Price.ToString("N0"),
+                () => OpenMotorAcquisition(window, model.Id, false), 17, Ui.ButtonHot, S.IsDealerOpen), -1, 52);
+            BuildMotorPerformance(card, model, showSummary: false);
         }
         private void BuildMotorDealer(Window w,Place p)
         {
@@ -76,12 +82,7 @@ namespace PCShopSell.Game.UI
             if(_dealerMotorPlace!=p.Id){_dealerMotorPlace=p.Id;_dealerMotorClass=MotorCatalog.All.Where(m=>S.DealerSells(m.Id)).Select(m=>MotorCatalog.DealerClass(m.Kind)).DefaultIfEmpty(0).First();}
             BuildDealerMotorTabs(w.Content,_dealerMotorClass,c=>{_dealerMotorClass=c;w.Rebuild();});
             var models=MotorCatalog.All.Where(m=>S.DealerSells(m.Id)&&MotorCatalog.DealerClass(m.Kind)==_dealerMotorClass).ToArray();
-            foreach(var model in models)
-            {
-                var m=model;var card=BuildDealerVehicleCard(w.Content,m);
-                BuildMotorPerformance(card,m,showSummary:false);
-                Ui.Size(Ui.Button(card,"购买车辆 · ¥"+m.Price.ToString("N0"),()=>OpenMotorAcquisition(w,m.Id,false),17,Ui.ButtonHot,S.IsDealerOpen),-1,36);
-            }
+            foreach (var model in models) BuildDealerVehicleCard(w, model);
             if(models.Length==0)Para(w.Content,"本车行不出售这一类车辆。顺丰出售小电驴和三轮车，湖岸汽车城出售货车和轿车。",17,Ui.Dim);
         }
         private void OpenMotorWorkshop()

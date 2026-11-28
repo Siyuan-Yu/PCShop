@@ -90,6 +90,7 @@ namespace PCShopSell.Core.Session
                 double work = Math.Min(item.RepairWorkRemaining, UsedRepairSpeed(worker));
                 item.RepairWorkRemaining = Math.Max(0, item.RepairWorkRemaining - work);
                 item.RepairQualityWork += work * UsedRepairSuccessChance(worker);
+                if (work > 0) ShopStationWorked?.Invoke(shop, worker, EmployeeRole.Repairer);
                 if (item.RepairWorkRemaining > 0) continue;
                 item.RepairSucceeded = Random.Chance(item.RepairQualityWork / item.RepairWorkTotal);
                 if (item.RepairSucceeded) item.Condition = UsedCondition.Good;

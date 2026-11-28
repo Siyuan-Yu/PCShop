@@ -517,6 +517,7 @@ namespace PCShopSell.Game.UI
             }
             if(remote){string why=S.RemoteConversationBlocker(personId);if(why!=null){Toast(why);return;}}
             else if(definition!=null&&!S.CitySamePlace(personId)){OpenCityPersonProfile(personId,onClosed);return;}
+            if (!remote) _ctrl.GreetScenePerson(personId);
             string name=definition?.Name??npc?.Name??staff.Name;
             string role=definition!=null?S.CityPersonRole(personId):npc?.Role??staff.Role;
             string greeting = S.HasGreeted(personId)

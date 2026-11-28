@@ -93,8 +93,11 @@ namespace PCShopSell.Game.UI
         {
             var rows = S.Employees.Where(row => S.CompanyOfEmployee(row.Person.Id) == null).ToArray();
             foreach(var row in rows) S.EmployeeWellbeingOf(row.Person.Id);
-            var top=Ui.Row(w.Content,36,8);
-            Ui.Size(Ui.Label(top,$"个人员工 {rows.Length} 人 · 基础日薪 ¥{rows.Sum(x=>x.Person.DailyWageYuan):N0}",19,color:Ui.Accent),0,36,1);
+            var overview = Ui.FlatPanel(w.Content, "EmployeeOverview", Ui.FlatWell).rectTransform;
+            Ui.VList(overview, 6, 8);
+            var top=Ui.Row(overview,56,8);
+            Ui.Size(Ui.Artwork(top, UiIcon.Employees), 56, 56);
+            Ui.Size(Ui.Label(top,$"个人员工 {rows.Length} 人 · 基础日薪 ¥{rows.Sum(x=>x.Person.DailyWageYuan):N0}",22,color:Ui.TextColor),0,56,1).fontStyle=FontStyle.Bold;
             Ui.Tab(top,"全部",()=>{_employeeAttentionOnly=false;w.Rebuild();},!_employeeAttentionOnly);
             Ui.Tab(top,"需处理 "+rows.Count(r=>S.EmployeeNeedsAttention(r.Person)),()=>{_employeeAttentionOnly=true;w.Rebuild();},_employeeAttentionOnly);
             Ui.Size(Ui.Button(top,"在本店招人",()=>{w.Close();if(S.IsOwnedVenue(S.CurrentPlace))OpenVenueManagement(S.CurrentPlace);else{OpenDock();SelectTab(ShopTab.Staff);}},16,Ui.ButtonSecondary,S.InPlayerShop),160,34);
@@ -112,9 +115,9 @@ namespace PCShopSell.Game.UI
                 foreach(var row in group)
                 {
                     var e=row.Person;var card=Ui.Panel(list,"EmployeeCard_"+e.Id,Ui.PanelBg).rectTransform;Ui.VList(card,2,6);
-                    var head=Ui.Row(card,40,6);Action select=()=>{_employeeFocus=e.Id;_employeeToolId=null;w.RequestRebuild();};
-                    PortraitThumb(head,S.PersonIdOf(e),40,select);
-                    Ui.Size(Ui.Button(head,e.Name+" · "+GameSession.RoleName(row.Role),select,16,Ui.SelectedButton(_employeeFocus==e.Id)),0,36,1).name="EmployeeDetails_"+e.Id;
+                    var head=Ui.Row(card,56,8);Action select=()=>{_employeeFocus=e.Id;_employeeToolId=null;w.RequestRebuild();};
+                    PortraitThumb(head,S.PersonIdOf(e),56,select);
+                    Ui.Size(Ui.Button(head,e.Name+" · "+GameSession.RoleName(row.Role),select,18,Ui.SelectedButton(_employeeFocus==e.Id)),0,48,1).name="EmployeeDetails_"+e.Id;
                     BuildEmployeeMorale(card,e,w);
                 }
             }
@@ -241,19 +244,24 @@ namespace PCShopSell.Game.UI
 
         public void OpenFleetPanel()
         {
-            OpenWindow("车辆与占用", 860, 650, w =>
+            OpenWindow("车辆与占用", 940, 730, w =>
             {
                 Para(w.Content,"通勤车辆与入库车辆可供员工临时使用；管理具体车辆请到赛场旁的车库建筑按 F。",16,Ui.Dim);
                 Ui.Size(Ui.Button(w.Content,"湖区四大赛车场",OpenRacingDestinations,18),-1,40);
                 Para(w.Content, "每台车同时只能给一个人用。员工外出进货占用车辆，返店后释放；老板选中的出行车辆也占一台。", 18);
                 foreach (var v in Vehicles.All.Where(x => x.Purchasable))
-                    Para(w.Content, $"<b>{v.Name}</b> · 载货 {v.CargoCapacity * 2:0} 千克\n{S.VehicleUsage(v.Kind)}", 18);
+                {
+                    var card = Ui.FlatPanel(w.Content, "FleetVehicle").rectTransform;
+                    Ui.VList(card, 4, 6);
+                    MotorIdentity(card, MotorCatalog.Legacy(v.Kind)?.Id,
+                        $"<b>{v.Name}</b> · 载货 {v.CargoCapacity * 2:0} 千克", S.VehicleUsage(v.Kind));
+                }
                 Ui.Size(Ui.Button(w.Content, "去车行买车", () =>
                 {
                     CloseModalWindows();
                     _ctrl.GoToPlace(S.City.FirstOfKind(PlaceKind.Dealer));
-                }, 19, Ui.ButtonHot), -1, 44);
-            });
+                }, 19, Ui.ButtonHot), -1, 52);
+            }, fitContent: true);
         }
 
         public void OpenEmployeePurchase(string employeeId, Window parent = null, int? importedOrderId = null)

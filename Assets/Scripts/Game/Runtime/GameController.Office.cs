@@ -16,7 +16,13 @@ namespace PCShopSell.Game
         private void InteractOffice()
         {
             if (OfficeDoor) Session.Leave();
-            else if (NearOfficeReception) Ui.OpenOfficeReception(_office.Place);
+            else if (NearOfficeReception)
+            {
+                Vector2 desk = DistrictOffice.ReceptionCenter((float)_office.Place.Width, (float)_office.Place.Depth);
+                _officeFacing = _office.Root.transform.forward;
+                _avatar?.GreetToward(_office.Root.transform.TransformPoint(new Vector3(_officeLocal.x, 0, desk.y)));
+                Ui.OpenOfficeReception(_office.Place);
+            }
         }
 
         private Vector3? SyncOffice()

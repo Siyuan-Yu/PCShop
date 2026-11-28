@@ -506,7 +506,7 @@ namespace PCShopSell.Core.Session
             {
                 if (!QuestCompleted("sale")) return "完成首单后可贴招聘告示。";
                 return Flags.Contains(StaffRolesSeen) ? "在员工页点「贴招聘告示」，安排首批应聘者明天到店。"
-                    : "在员工页查看本店岗位。";
+                    : "点员工页「开店分工」旁的问号。";
             }
             if (NextOpeningStaffRole(shop) is EmployeeRole role)
             {

@@ -56,8 +56,8 @@ namespace PCShopSell.Game.UI
 
         private void WriteHudCash(Money balance)
         {
-            _cashText.text = "<size=13><color=#CDC5B1>可用现金</color></size>\n" + balance;
-            _cashText.color = balance.IsNegative ? Ui.ChromeWarn : Ui.ChromeGold;
+            _cashText.text = "<size=17>可用现金</size>\n" + balance;
+            _cashText.color = balance.IsNegative ? Ui.Warn : Ui.Accent;
         }
 
         private static float EaseOut(float progress) => progress * (2f - progress);

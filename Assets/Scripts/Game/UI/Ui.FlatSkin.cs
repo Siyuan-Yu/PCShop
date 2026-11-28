@@ -50,7 +50,19 @@ namespace PCShopSell.Game.UI
         internal static Color TabFill(bool selected) => SelectedButton(selected);
 
         public static Button Tab(Transform parent, string title, System.Action select, bool selected, float width = 124)
-            => Size(Button(parent, title, select, 17, TabFill(selected)), width, 34, 0);
+        {
+            if (parent.TryGetComponent<HorizontalLayoutGroup>(out _) && parent.TryGetComponent<LayoutElement>(out var row)
+                && row.preferredHeight >= 0 && row.preferredHeight < 48)
+                Size(row, height: 48);
+            return Size(StyleTab(Button(parent, title, select, 22, TabFill(selected))), width, 48, 0);
+        }
+
+        internal static Button StyleTab(Button button)
+        {
+            button.image.sprite = _pillPlate ??= BuildPlate(23, true);
+            button.image.type = Image.Type.Sliced;
+            return button;
+        }
 
         public static void SetButtonFill(Button button, Color fill)
         {
@@ -120,6 +132,35 @@ namespace PCShopSell.Game.UI
             image.type = Image.Type.Sliced;
         }
 
+        internal static void StyleWindow(Image frame, Image header)
+        {
+            if (frame != null)
+            {
+                frame.sprite = _windowPlate ??= BuildPlate(14, true);
+                frame.type = Image.Type.Sliced;
+                SurfaceShadow(frame, -6, .30f);
+            }
+            if (header != null && frame != null)
+            {
+                header.sprite = _titlePlate ??= BuildPlate(14, false, topOnly: true);
+                header.type = Image.Type.Sliced;
+            }
+        }
+
+        internal static void StyleAwningStripe(Image stripe)
+        {
+            stripe.sprite = _titlePlate ??= BuildPlate(14, false, topOnly: true);
+            stripe.type = Image.Type.Sliced;
+            stripe.rectTransform.localScale = new Vector3(1, -1, 1);
+        }
+
+        private static void SurfaceShadow(Image image, float offset, float opacity)
+        {
+            var shadow = image.GetComponent<Shadow>() ?? image.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(.149f, .133f, .118f, opacity);
+            shadow.effectDistance = new Vector2(0, offset);
+        }
+
         private static Color SurfaceEdge(Color color, string name)
         {
             if (color.a <= .01f) return Color.clear;
@@ -159,6 +200,7 @@ namespace PCShopSell.Game.UI
             var image = Panel(parent, name, fill ?? FlatCard);
             Round(image);
             FlatBorder(image, edge ?? FlatCardEdge);
+            if (image.color.a >= .98f) SurfaceShadow(image, -2, .18f);
             return image;
         }
 
@@ -284,6 +326,11 @@ namespace PCShopSell.Game.UI
         private static FlatStyledButton _emphasizedButton;
         private static readonly Vector3[] ButtonCorners = new Vector3[4];
 
+        internal static void PreferMainAction(Button button)
+        {
+            if (button is FlatStyledButton styled) styled.PreferredMainAction = true;
+        }
+
         internal static void SetModalButtonCanvas(Canvas canvas)
         {
             _modalButtonCanvas = canvas;
@@ -315,10 +362,13 @@ namespace PCShopSell.Game.UI
                 if (!button.IsInteractable() || (foreground != null && !button.transform.IsChildOf(foreground)))
                     continue;
                 var canvas = button.image.canvas;
-                if (canvas == null || !canvas.isActiveAndEnabled || canvas.sortingOrder <= priority
-                    || !VisibleInScroll(button.image.rectTransform)) continue;
+                if (canvas == null || !canvas.isActiveAndEnabled) continue;
+                int canvasOrder = canvas.sortingOrder;
+                if (canvasOrder < priority || (canvasOrder == priority && winner != null
+                    && (!button.PreferredMainAction || winner.PreferredMainAction))) continue;
+                if (!VisibleInScroll(button.image.rectTransform)) continue;
                 winner = button;
-                priority = canvas.sortingOrder;
+                priority = canvasOrder;
             }
             if (_emphasizedButton == winner) return;
             if (_emphasizedButton != null) _emphasizedButton.SetEmphasis(false);
@@ -344,6 +394,7 @@ namespace PCShopSell.Game.UI
         {
             private Text _caption;
             private Image _icon;
+            private Image _baseEdge;
             private Outline _edge;
             private bool _captionDimmed;
             private bool _exclusiveEmphasis;
@@ -352,6 +403,7 @@ namespace PCShopSell.Game.UI
             private Color _enabledInk;
             private Color? _requestedFill;
             private bool IsMainAction => _exclusiveEmphasis && _requestedFill == ButtonHot;
+            public bool PreferredMainAction { get; set; }
 
             public override void OnPointerClick(PointerEventData eventData)
             {
@@ -425,6 +477,13 @@ namespace PCShopSell.Game.UI
                 if (IsMainAction && !_emphasized) face = ButtonSecondary;
                 if (action && _captionDimmed) face = ButtonDisabled;
                 image.color = face;
+                if (face == ButtonHot && _baseEdge == null)
+                {
+                    _baseEdge = Panel(transform, "PrimaryButtonBase", FlatHotEdge);
+                    _baseEdge.raycastTarget = false;
+                    _baseEdge.rectTransform.Anchor(0, 0, 1, 0, 6, 1, 6, -3);
+                }
+                if (_baseEdge != null && _baseEdge.enabled != (face == ButtonHot)) _baseEdge.enabled = face == ButtonHot;
                 if (action || selected || fill == Chrome || fill == Warn || fill == StatusGreen)
                 {
                     Color edge = selected ? SelectionEdge : SurfaceEdge(face, "Button");

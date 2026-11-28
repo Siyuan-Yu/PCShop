@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -63,21 +64,51 @@ namespace PCShopSell.Tests
             {
                 typeof(StreetWorldBuilder).GetField("_root",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(builder,root.transform);
                 var timer=System.Diagnostics.Stopwatch.StartNew();
-                typeof(StreetWorldBuilder).GetMethod("BuildContinuousStreetSurfaces",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(builder,null);
+                var build = (IEnumerator)typeof(StreetWorldBuilder)
+                    .GetMethod("BuildContinuousStreetSurfaces", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(builder, null);
+                // The nested verge routine plants scenery after the road meshes have been built.
+                while (build.MoveNext()) { }
                 timer.Stop();
-                var filters=root.GetComponentsInChildren<MeshFilter>();
-                Assert.AreEqual(4,filters.Length);
+                var filters = root.transform.Find("ContinuousStreetSurfaces").GetComponentsInChildren<MeshFilter>();
                 Assert.Less(filters.Sum(f=>f.sharedMesh.vertexCount),400000,"Merged streets must not explode into excessive geometry");
                 Debug.Log("ROAD_SURFACE_BUILD ms="+timer.ElapsedMilliseconds+" vertices="+filters.Sum(f=>f.sharedMesh.vertexCount));
-                var road=filters.Single(f=>f.name=="RoadSurface").sharedMesh;
-                var walk=filters.Single(f=>f.name=="PavementSurface").sharedMesh;
-                var roadVertices=road.vertices;var roadTriangles=road.triangles;var walkVertices=walk.vertices;var walkTriangles=walk.triangles;
-                for(int i=0;i<data.edges.Length;i+=17)
+                var quarterRoad = Surface("Old quarter asphalt");
+                var townRoad = Surface("Town asphalt");
+                var quarterWalk = Surface("Old quarter paving");
+                var townWalk = Surface("Town flagstones");
+                Assert.That(filters.Select(f => f.name), Has.None.EqualTo("RoadSurface").And.None.EqualTo("PavementSurface"));
+
+                foreach (var edge in data.edges.Where((_, index) => index % 17 == 0))
                 {
-                    var a=city.ViewPosition(data.edges[i].a);var b=city.ViewPosition(data.edges[i].b);
-                    var p=new Vector2((float)(a.X+(b.X-a.X)*.371),(float)(a.Y+(b.Y-a.Y)*.371));
-                    Assert.True(Covered(roadVertices,roadTriangles,p),data.edges[i].a+" road missing");
-                    Assert.False(Covered(walkVertices,walkTriangles,p),data.edges[i].a+" paving inside carriageway");
+                    Vector2 center = Vector2.Lerp(Point(edge.a), Point(edge.b), .371f);
+                    Assert.True(On(quarterRoad, center) || On(townRoad, center), edge.a + " road missing");
+                    Assert.False(On(quarterWalk, center) || On(townWalk, center), edge.a + " paving inside carriageway");
+                }
+
+                // Opposite sides of the old colour break between the farm market and the hardware shop.
+                AssertQuarterFinish("lake_old_back_28", "lake_old_back_29");
+                AssertQuarterFinish("lake_old_back_32", "lake_old_back_33");
+
+                (Vector3[] vertices, int[] triangles) Surface(string name)
+                {
+                    Mesh mesh = filters.Single(f => f.name == name).sharedMesh;
+                    return (mesh.vertices, mesh.triangles);
+                }
+                Vector2 Point(string node)
+                {
+                    var point = city.ViewPosition(node);
+                    return new Vector2((float)point.X, (float)point.Y);
+                }
+                bool On((Vector3[] vertices, int[] triangles) mesh, Vector2 point) =>
+                    Covered(mesh.vertices, mesh.triangles, point);
+                void AssertQuarterFinish(string first, string last)
+                {
+                    Vector2 a = Point(first), b = Point(last), center = (a + b) * .5f;
+                    Vector2 direction = (b - a).normalized;
+                    float width = (float)GameSession.CityRoadWidth(city.ViewPosition(first), city.ViewPosition(last));
+                    var pavingPoint = center + new Vector2(-direction.y, direction.x) * (width * .5f + .7f);
+                    Assert.True(On(quarterRoad, center), first + " outskirts asphalt");
+                    Assert.True(On(quarterWalk, pavingPoint), first + " outskirts paving");
                 }
             }
             finally{Object.DestroyImmediate(root);}

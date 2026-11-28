@@ -66,33 +66,31 @@ namespace PCShopSell.Game.UI
         }
 
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
-        private static Sprite _roundedPlate;
-        private static Sprite RoundedPlate
+        private static Sprite _roundedPlate, _windowPlate, _titlePlate, _pillPlate;
+        private static Sprite RoundedPlate => _roundedPlate ??= BuildPlate(10, true);
+
+        private static Sprite BuildPlate(int radius, bool edge, bool topOnly = false)
         {
-            get
+            int n = radius * 2 + 4;
+            var texture = new Texture2D(n, n, TextureFormat.RGBA32, false)
+                { name = "Neighborhood UI panel", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
             {
-                if (_roundedPlate != null) return _roundedPlate;
-                const int n = 32, radius = 6;
-                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false)
-                    { name = "Neighborhood rounded UI", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-                var pixels = new Color32[n * n];
-                for (int y = 0; y < n; y++)
-                for (int x = 0; x < n; x++)
-                {
-                    float dx = Mathf.Max(Mathf.Abs(x + .5f - n / 2f) - (n / 2f - radius), 0);
-                    float dy = Mathf.Max(Mathf.Abs(y + .5f - n / 2f) - (n / 2f - radius), 0);
-                    float inside = Mathf.Min(Mathf.Min(x + .5f, n - x - .5f), Mathf.Min(y + .5f, n - y - .5f));
-                    inside = Mathf.Min(inside, radius - Mathf.Sqrt(dx * dx + dy * dy));
-                    byte alpha = (byte)Mathf.RoundToInt(255 * Mathf.Clamp01(inside + .35f));
-                    // Bake the subtle default stroke into the shared sprite so lists do not need an Outline per cell.
-                    byte shade = (byte)Mathf.RoundToInt(Mathf.Lerp(224, 255, Mathf.Clamp01(inside - .35f)));
-                    pixels[y * n + x] = new Color32(shade, shade, shade, alpha);
-                }
-                texture.SetPixels32(pixels);
-                texture.Apply(false, true);
-                return _roundedPlate = Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * .5f,
-                    100, 0, SpriteMeshType.FullRect, Vector4.one * radius);
+                float dx = Mathf.Max(Mathf.Abs(x + .5f - n / 2f) - (n / 2f - radius), 0);
+                float dy = topOnly ? Mathf.Max(y + .5f - n + radius, 0)
+                    : Mathf.Max(Mathf.Abs(y + .5f - n / 2f) - (n / 2f - radius), 0);
+                float inside = Mathf.Min(Mathf.Min(x + .5f, n - x - .5f), Mathf.Min(y + .5f, n - y - .5f));
+                inside = Mathf.Min(inside, radius - Mathf.Sqrt(dx * dx + dy * dy));
+                byte alpha = (byte)Mathf.RoundToInt(255 * Mathf.Clamp01(inside + .35f));
+                byte shade = edge ? (byte)Mathf.RoundToInt(Mathf.Lerp(224, 255, Mathf.Clamp01(inside - .35f))) : (byte)255;
+                pixels[y * n + x] = new Color32(shade, shade, shade, alpha);
             }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            return Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * .5f,
+                100, 0, SpriteMeshType.FullRect, Vector4.one * radius);
         }
 
         private static Font _font;
@@ -186,6 +184,7 @@ namespace PCShopSell.Game.UI
         public static Button Button(Transform parent, string text, Action onClick, int size = 18, Color? bg = null,
             bool interactable = true, bool exclusiveEmphasis = true)
         {
+            size = Mathf.Max(17, size);
             Image img = Panel(parent, "Button", bg ?? ButtonBg);
             var b = img.gameObject.AddComponent<FlatStyledButton>();
             b.targetGraphic = img;
@@ -329,6 +328,9 @@ namespace PCShopSell.Game.UI
             if (width >= 0) le.preferredWidth = width;
             if (height >= 0)
             {
+                if (c is Button && height is >= 36 and < 52 && (width < 0 || width >= 110)
+                    && c.transform.parent.TryGetComponent<VerticalLayoutGroup>(out _))
+                    height = 52;
                 le.preferredHeight = height;
                 le.minHeight = height;
             }
@@ -449,6 +451,8 @@ namespace PCShopSell.Game.UI
             Image bg = Panel(parent, "Bar", Edge);
             Size(bg, width, height);
             Image fill = Panel(bg.transform, "Fill", color);
+            Round(bg);
+            Round(fill);
             fill.rectTransform.Anchor(0, 0, Mathf.Clamp01(value), 1);
             return fill;
         }

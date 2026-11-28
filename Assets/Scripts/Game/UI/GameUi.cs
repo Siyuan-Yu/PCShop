@@ -312,20 +312,21 @@ namespace PCShopSell.Game.UI
             h.childAlignment = TextAnchor.MiddleLeft;
 
             AddCheatButton(row);
-            var weatherButton = Ui.Size(Ui.Button(row, "", OpenCityClimate, 20, Ui.HudTile), 216);
+            var weatherButton = Ui.Size(Ui.Button(row, "", OpenCityClimate, 22, Ui.HudTile), 242);
             Ui.ButtonArtwork(weatherButton, UiIcon.Weather);
             _dateText = weatherButton.GetComponentInChildren<Text>();
             _dateText.alignment = TextAnchor.MiddleLeft;
             _dateText.horizontalOverflow=HorizontalWrapMode.Overflow;
-            _dateText.resizeTextForBestFit=true;_dateText.resizeTextMinSize=17;_dateText.resizeTextMaxSize=20;
+            _dateText.resizeTextForBestFit=true;_dateText.resizeTextMinSize=17;_dateText.resizeTextMaxSize=22;
             weatherButton.Tip(()=>"点击查看天气预报与穿衣建议\n"+S.Clock.Today+" "+Ui.WeekdayName(S.Clock.Today.Weekday)+"\n"+S.CityWeatherForecast);
-            var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 22, Ui.ChromeButton), 184);
+            var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 32, Ui.HudTile), 250);
             Ui.ButtonArtwork(cashButton, UiIcon.Cash);
             _cashText = cashButton.GetComponentInChildren<Text>();
             _cashText.fontStyle = FontStyle.Bold;
             _cashText.alignment = TextAnchor.MiddleLeft;
             _cashText.horizontalOverflow=HorizontalWrapMode.Overflow;
-            _cashText.resizeTextForBestFit=true;_cashText.resizeTextMinSize=16;_cashText.resizeTextMaxSize=22;
+            _cashText.lineSpacing = .82f;
+            _cashText.resizeTextForBestFit=true;_cashText.resizeTextMinSize=20;_cashText.resizeTextMaxSize=34;
             cashButton.Tip("<b>总收支账本</b>：点击查看每天、每周、每月的全部收支和逐笔明细。\n资金紧张时可缩减经营、处置资产或打工继续，不会因现金为负自动清档。");
 
             BuildHudTimeControls(row);
@@ -334,14 +335,14 @@ namespace PCShopSell.Game.UI
             _placeText.resizeTextForBestFit = true;
             _placeText.resizeTextMinSize = 14;
             _placeText.resizeTextMaxSize = 17;
-            _statsText = Ui.Size(Ui.Label(row, "", 15, TextAnchor.MiddleLeft, Ui.Dim), 248);
+            _statsText = Ui.Size(Ui.Label(row, "", 17, TextAnchor.MiddleLeft, Ui.Dim), 258);
             _statsText.Tip(StatsTip);
             BuildHudSystemControls(row);
             BuildHudShortcuts(root);
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.Chrome);
             _travelBar = bottom.gameObject;
-            bottom.rectTransform.Anchor(0, 0, 1, 0, 12, 8, 12, -63);
+            bottom.rectTransform.Anchor(0, 0, 1, 0, 12, 8, 12, -HudTravelTop);
             RectTransform brow = Ui.Rect(bottom.transform, "Row").Fill();
             _hudTravelRow = brow;
             var bh = brow.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -361,13 +362,17 @@ namespace PCShopSell.Game.UI
                         S.Flags.Add(GameSession.ScooterGuideCompleted);
                         UpdateQuestTracker();
                     }
-                }, 16, Ui.HudTile, exclusiveEmphasis: false), 74);
-                if (kind == VehicleKind.Walk || kind == VehicleKind.Car)
-                    Ui.ButtonArtwork(button, kind == VehicleKind.Walk ? UiIcon.Walk : UiIcon.Car);
+                }, 18, Ui.HudTile, exclusiveEmphasis: false), 89, 80);
+                if (kind == VehicleKind.Walk || kind == VehicleKind.Taxi)
+                    Ui.ButtonArtwork(button, kind == VehicleKind.Walk ? UiIcon.Walk : UiIcon.Car, stacked: true, size: 44);
                 button.Tip(() => VehicleTip(S.CommuteVehicle(kind)));
                 _vehicleButtons.Add((button, kind));
             }
-            _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
+            var cargo = Ui.FlatPanel(brow, "TravelCargo", Ui.HudTile).rectTransform;
+            Ui.Size(cargo, 171, 80);
+            Ui.Artwork(cargo, UiIcon.Load)?.rectTransform.Anchor(0, .5f, 0, .5f, 8, -22, -52, -22);
+            _cargoText = Ui.Label(cargo, "", 17);
+            _cargoText.rectTransform.Anchor(0, 0, 1, 1, 58, 4, 4, 4);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
             BuildShortcutButton(brow, "回家睡觉", SleepShortcut, 108);
             BuildShortcutButton(brow,"我的店铺",OwnedShopShortcut,100);
@@ -377,9 +382,9 @@ namespace PCShopSell.Game.UI
             RefreshShortcutMenus();
 
             Ui.Size(Ui.Rect(brow, "TravelBarSpace"), 0, -1, 1);
-            var truck = Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 16, Ui.ButtonHot,
-                exclusiveEmphasis: false), 108);
-            Ui.ButtonArtwork(truck, UiIcon.Truck);
+            var truck = Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 19, Ui.ButtonHot,
+                exclusiveEmphasis: false), 132, 80);
+            Ui.ButtonArtwork(truck, UiIcon.Truck, stacked: true, size: 44);
             truck.Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
             BuildCityLifeHud();
             BuildShopDockToggle(root);
@@ -389,7 +394,7 @@ namespace PCShopSell.Game.UI
             _worldHintStrip = hint.gameObject;
             _hintStrip = hint;
             hint.rectTransform.pivot = new Vector2(0, .5f);
-            hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -500, -108);
+            hint.rectTransform.Anchor(0, 0, 0, 0, 16, HudTravelTop + 7, -500, -HudTravelTop - 45);
             hint.raycastTarget = false;
             _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
             _hintText.rectTransform.Fill(10);
@@ -424,8 +429,8 @@ namespace PCShopSell.Game.UI
             if (_racingButton != null) _racingButton.interactable = S.RacingUnlocked;
             FitHudTopRow();
             _dateText.text = (S.IsCityLifeTest ? "测试 " : "") +
-                $"<size=15>{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)}</size>\n" +
-                $"<b>{Ui.Hm(now.MinuteOfDay)}</b>  <size=13>{S.WeatherSummary}</size>";
+                $"<size=17>{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)}</size>\n" +
+                $"<b>{Ui.Hm(now.MinuteOfDay)}</b>  <size=16>{S.WeatherSummary}</size>";
             SetHudCash(S.Ledger.Balance);
 
             RefreshHudTimeControls();
@@ -520,7 +525,7 @@ namespace PCShopSell.Game.UI
                     name = kind == VehicleKind.Tricycle ? "三轮(扣)" : kind == VehicleKind.EBike ? "电驴(扣)" : name + "(扣)";
                 t.text = name;
             }
-            _cargoText.text = $"负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克";
+            _cargoText.text = $"负重\n{S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克";
         }
 
         // ---------- 地点名牌 ----------
@@ -956,7 +961,8 @@ namespace PCShopSell.Game.UI
         }
 
         private static float ToastTextHeight(Text label, string text, TextGenerationSettings settings) =>
-            Mathf.Ceil(label.cachedTextGeneratorForLayout.GetPreferredHeight(text, settings) / label.pixelsPerUnit) + 1;
+            Mathf.Max(Mathf.Ceil(label.fontSize * 1.45f),
+                Mathf.Ceil(label.cachedTextGeneratorForLayout.GetPreferredHeight(text, settings) / label.pixelsPerUnit) + 4);
 
         private static float FitToastText(Text label, string message, float width, float maxHeight)
         {
@@ -1007,11 +1013,16 @@ namespace PCShopSell.Game.UI
                 for (int i = _noticeHistory.Count - 1; i >= 0; i--)
                 {
                     var entry = Ui.FlatPanel(w.Content, "NoticeEntry").rectTransform;
-                    Ui.VList(entry, 0, 9);
-                    Para(entry, _noticeHistory[i], 16);
+                    Ui.VList(entry, 0, 8);
+                    var row = Ui.Row(entry, -1, 12);
+                    Ui.Size(Ui.Artwork(row, UiIcon.Notice), 44, 44);
+                    var message = Ui.Label(row, _noticeHistory[i], 18, TextAnchor.MiddleLeft);
+                    var messageSize = Ui.Size(message, 0, -1, 1).GetComponent<LayoutElement>();
+                    messageSize.minHeight = 56;
+                    row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 }
                 if (_noticeHistory.Count == 0) Line(w.Content, "还没有通知。", 18, Ui.Dim);
-            });
+            }, fitContent: true);
         }
         public void Toast(string message, EventCgFrame cg = null)
         {
@@ -1097,28 +1108,33 @@ namespace PCShopSell.Game.UI
                 prt.anchoredPosition = new Vector2(0, -10 * _windows.Count);
             }
 
-            const float titleBarHeight = 50;
+            const float titleBarHeight = 56;
+            if (!fullScreen && !showTitleBar) Ui.StyleWindow(prt.GetComponent<Image>(), null);
             if (showTitleBar)
             {
                 Image bar = Ui.Panel(prt, "TitleBar", Ui.Chrome);
+                if (!fullScreen) Ui.StyleWindow(prt.GetComponent<Image>(), bar);
                 bar.rectTransform.Anchor(0, 1, 1, 1, 0, -titleBarHeight, 0, 0);
                 bar.raycastTarget = false;
                 var icon = Ui.Artwork(bar.transform, Ui.WindowIcon(title));
-                if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 16, -12, -40, -12);
-                w.TitleText = Ui.Label(bar.transform, title, 22);
-                w.TitleText.rectTransform.Anchor(0, .5f, 1, .5f, icon == null ? 18 : 48, -15, closable ? 214 : 126, -15);
+                if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 14, -18, -50, -18);
+                w.TitleText = Ui.Label(bar.transform, title, 28);
+                w.TitleText.rectTransform.Anchor(0, 0, 1, 1, icon == null ? 18 : 59, 4, closable ? 168 : 126, 4);
                 w.TitleText.fontStyle = FontStyle.Bold;
                 w.TitleText.verticalOverflow = VerticalWrapMode.Truncate;
                 w.TitleText.resizeTextForBestFit = true;
-                w.TitleText.resizeTextMinSize = 16;
-                w.TitleText.resizeTextMaxSize = 22;
-                w.TimeStatusText = Ui.Label(bar.transform, "", 13, TextAnchor.MiddleRight, Ui.Dim);
-                float statusRight = closable ? 106 : 16;
+                w.TitleText.resizeTextMinSize = 24;
+                w.TitleText.resizeTextMaxSize = 28;
+                w.TimeStatusText = Ui.Label(bar.transform, "", 17, TextAnchor.MiddleRight, Ui.Dim);
+                float statusRight = closable ? 62 : 16;
                 w.TimeStatusText.rectTransform.Anchor(1, 0, 1, 1, -statusRight - 108, 0, statusRight, 0);
                 if (closable)
                 {
-                    Button close = w.CloseButton = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 16, Ui.ButtonSecondary);
-                    ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
+                    Button close = w.CloseButton = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 24, Ui.Chrome);
+                    ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -53, 6, 8, 6);
+                    close.GetComponentInChildren<Text>().enabled = false;
+                    Ui.Label(close.transform, "×", 31, TextAnchor.MiddleCenter, Ui.ChromeInk).rectTransform.Fill();
+                    close.Tip(() => MenuLocalization.Get("close"));
                 }
             }
 
@@ -1135,7 +1151,7 @@ namespace PCShopSell.Game.UI
             }
             if (w.Content.TryGetComponent<VerticalLayoutGroup>(out var contentLayout))
             {
-                contentLayout.spacing = 6;
+                contentLayout.spacing = 8;
                 contentLayout.padding = new RectOffset(14, 14, 12, 12);
             }
             _windows.Add(w);

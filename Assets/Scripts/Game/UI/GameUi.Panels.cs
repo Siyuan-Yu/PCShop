@@ -94,7 +94,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildDealer, 1180, 760);
                     break;
                 case PlaceKind.Station:
-                    OpenPlaceWindow(p, BuildStation, holds: S.WalletReturnStation != p);
+                    OpenPlaceWindow(p, BuildStation, 920, 790, holds: S.WalletReturnStation != p);
                     break;
                 default:
                     if(S.HasRetailWholesale(p))OpenPlaceWindow(p,BuildRetailWholesale,StoreWindowWidth,940);
@@ -289,17 +289,18 @@ namespace PCShopSell.Game.UI
             {
                 if (S.WalletReturnStation == p) w.RequestRebuild();
             };
-            Line(w.Content, GameSession.FirstChapterTrial ? "城郊地铁" : "城市地铁 · 全站互通");
+            SectionBand(w.Content, GameSession.FirstChapterTrial ? "城郊地铁" : "城市地铁 · 全站互通");
             Line(w.Content,$"票价 {GameSession.MetroFare}，约 {GameSession.MetroMinutes} 分钟。运营 6:00–23:00。",18,Ui.Dim);
             foreach(var destination in S.City.OfKind(PlaceKind.Station).Where(x=>x!=p))
             {
                 var target=destination;
                 string locked=S.DistrictAccessBlocker(target);
                 if (GameSession.FirstChapterTrial && locked != null) continue;
-                Ui.Size(Ui.Button(w.Content,(locked==null?"前往 ":"未开放 · ")+target.Name+" · "+S.City.StreetName(target.StreetId),()=>
+                var button = Ui.Size(Ui.Button(w.Content,(locked==null?"前往 ":"未开放 · ")+target.Name+" · "+S.City.StreetName(target.StreetId),()=>
                 {
                     if(S.TakeMetro(target.Id)){CloseWindowSilently(w);if(S.CurrentPlace!=null)OnEnteredPlace(S.CurrentPlace);}
-                },19,Ui.ButtonBg,locked==null),-1,44).Tip(locked??"乘地铁前往此站");
+                },19,Ui.ButtonBg,locked==null),-1,64).Tip(locked??"乘地铁前往此站");
+                Ui.ButtonArtwork(button, UiIcon.Station, size: 56);
             }
         }
 
@@ -440,15 +441,24 @@ namespace PCShopSell.Game.UI
             OpenWindow(L("game_menu"), 620, 740, w =>
             {
                 MenuTitle(w, "game_menu");
-                Ui.Size(Ui.Button(w.Content, L("resume"), w.Close, 21, Ui.ButtonHot), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L(S.CanSave ? "save" : "cannot_save"), OpenSaveMenu, 20, Ui.ButtonSecondary, S.CanSave), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(), 20, Ui.ButtonSecondary, SaveStore.Exists), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("settings"), OpenSettingsMenu, 20, Ui.ButtonSecondary), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("help"), OpenHelpMenu, 20, Ui.ButtonSecondary), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("about"), OpenAboutMenu, 20, Ui.ButtonSecondary), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("return_title"), () => ShowMainMenu(true), 20, Ui.ButtonSecondary), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L("quit"), OpenQuitMenu, 20, Ui.ButtonDanger), -1, 50);
-            }, systemWindow: true);
+                var layout = w.Content.GetComponent<VerticalLayoutGroup>();
+                layout.padding = new RectOffset(17, 17, 17, 17);
+                layout.spacing = 10;
+                Entry("resume", w.Close, UiIcon.Play, Ui.ButtonHot);
+                Entry(S.CanSave ? "save" : "cannot_save", OpenSaveMenu, UiIcon.Save, enabled: S.CanSave);
+                Entry("load", () => OpenLoadMenu(), UiIcon.Folder, enabled: SaveStore.Exists);
+                Entry("settings", OpenSettingsMenu, UiIcon.Settings);
+                Entry("help", OpenHelpMenu, UiIcon.Help);
+                Entry("about", OpenAboutMenu, UiIcon.About);
+                Entry("return_title", () => ShowMainMenu(true), UiIcon.Door);
+                Entry("quit", OpenQuitMenu, UiIcon.Power, Ui.ButtonDanger);
+
+                void Entry(string key, System.Action select, UiIcon icon, Color? fill = null, bool enabled = true)
+                {
+                    var control = Ui.Size(Ui.Button(w.Content, L(key), select, 25, fill, enabled), -1, 65);
+                    Ui.ButtonArtwork(control, icon, size: 44);
+                }
+            }, systemWindow: true, fitContent: true);
         }
 
         private int _ledgerPeriod, _ledgerFilter, _ledgerPage;
@@ -492,9 +502,20 @@ namespace PCShopSell.Game.UI
                 }
                 Money income = Money.FromCents(dailyIncome.Sum());
                 Money expense = Money.FromCents(dailyExpense.Sum());
-                Line(w.Content, $"收入 {income}　支出 {expense}　净收支 {income - expense}　当前现金 {S.Ledger.Balance}", 18, Ui.Accent);
-                var legend = Ui.Row(w.Content, 26);
-                Ui.Size(Ui.Label(legend, "每日现金收支", 18), -1, 26, 1);
+                var totals = Ui.Row(w.Content, 68, 8);
+                foreach (var (name, amount, tint) in new[]
+                {
+                    ("收入", income, Ui.Good), ("支出", expense, Ui.Warn),
+                    ("净收支", income - expense, Ui.Accent), ("当前现金", S.Ledger.Balance, Ui.TextColor)
+                })
+                {
+                    var metric = Ui.Size(Ui.FlatPanel(totals, "LedgerTotal", Ui.FlatWell), 0, 68, 1);
+                    Ui.VList(metric.rectTransform, 0, 8);
+                    Ui.Size(Ui.Label(metric.transform, name, 17, color: Ui.Dim), -1, 21);
+                    Ui.Size(Ui.Label(metric.transform, amount.ToString(), 25, color: tint), -1, 31).fontStyle = FontStyle.Bold;
+                }
+                var legend = Ui.Row(w.Content, 34);
+                Ui.Size(Ui.Label(legend, "每日现金收支", 20), 0, -1, 1).fontStyle = FontStyle.Bold;
                 Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 74);
                 Ui.Size(Ui.Label(legend, "● 支出  ·  元", 15, TextAnchor.MiddleRight, AssetTrendGraphic.ExpenseColor), 105);
                 var chart = Ui.Size(Ui.Rect(w.Content, "LedgerCashTrend"), -1, 180);
@@ -525,15 +546,15 @@ namespace PCShopSell.Game.UI
                 {
                     string sign = e.Amount.IsPositive ? "+" : "";
                     var entry = Ui.FlatPanel(list, "LedgerEntry", Ui.FlatWell).rectTransform;
-                    Ui.VList(entry, 2, 6);
-                    var header = Ui.Row(entry, 25);
-                    Ui.Size(Ui.Label(header, $"{e.Date}  {e.Category}", 16), 0, 25, 1);
-                    Ui.Size(Ui.Label(header, sign + e.Amount, 17, TextAnchor.MiddleRight,
+                    Ui.VList(entry, 4, 8);
+                    var header = Ui.Row(entry, 30);
+                    Ui.Size(Ui.Label(header, $"{e.Date}  {e.Category}", 18), 0, 30, 1);
+                    Ui.Size(Ui.Label(header, sign + e.Amount, 20, TextAnchor.MiddleRight,
                         e.Amount.IsNegative ? Ui.Warn : Ui.Good), 120);
                     var details = Ui.Row(entry, -1, 8);
-                    var memo = Ui.Label(details, e.Memo ?? string.Empty, 15, TextAnchor.UpperLeft, Ui.Dim);
+                    var memo = Ui.Label(details, e.Memo ?? string.Empty, 17, TextAnchor.UpperLeft, Ui.Dim);
                     Ui.Size(memo, 0, -1, 1);
-                    Ui.Size(Ui.Label(details, $"该笔后现金 {e.BalanceAfter}", 14, TextAnchor.UpperRight, Ui.Dim), 180);
+                    Ui.Size(Ui.Label(details, $"该笔后现金 {e.BalanceAfter}", 17, TextAnchor.UpperRight, Ui.Dim), 200);
                 }
             }, scrollContent: false);
         }

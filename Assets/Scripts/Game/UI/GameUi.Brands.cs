@@ -22,7 +22,8 @@ namespace PCShopSell.Game.UI
         public void OpenBrandBusiness()
         {
             if (!S.BrandManagementUnlocked) return;
-            OpenWorkspace("brands","brands","品牌",1160,840,BuildBrandBusiness);
+            OpenWorkspace("brands", "brands", "品牌", 1160, S.BrandBusiness.Brands.Length == 0 ? 310 : 840,
+                BuildBrandBusiness, scrollContent: false);
         }
         private void BrandButton(Transform parent,string label,Func<bool> action,Window w,bool enabled=true)
         { Ui.Size(Ui.Button(parent,label,()=>{action();S.RefreshDistrictNarrative();w.Rebuild();},17,Ui.ButtonBg,enabled),-1,38,1); }
@@ -42,10 +43,11 @@ namespace PCShopSell.Game.UI
                     _expoPage = "overview";
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
-                }, tab == _brandTab, 140);
+                }, tab == _brandTab, tab == BrandKolTab ? 192 : 140);
             }
             if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonBg),-1,36);
-            var body=Ui.Scroll(w.Content,690);
+            var body = state.Brands.Length == 0 && _brandTab == BrandOverviewTab
+                ? w.Content : PhoneFlexibleScroll(w.Content, "BrandBusinessList");
             if (_brandTab == BrandOverviewTab) { BuildBrandOverview(body, w, state); return; }
             if (_brandTab == BrandKolTab) { BuildKolBrandPage(body, w, state.Brands); return; }
             if (state.Brands.Length == 0)

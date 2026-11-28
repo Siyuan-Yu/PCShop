@@ -25,7 +25,7 @@ namespace PCShopSell.Game.UI
 
         /// <summary>在出租屋里打开的小窗口：不会离开屋子，关掉就回到屋里。</summary>
         private void OpenRoomWindow(string title, float w, float h, System.Action<Window> build,
-            bool allowDuringOpeningMeal = false, bool scrollContent = true)
+            bool allowDuringOpeningMeal = false, bool scrollContent = true, bool fitContent = false)
         {
             OpenWindow(title, w, h, win =>
             {
@@ -36,7 +36,8 @@ namespace PCShopSell.Game.UI
                 }
                 build(win);
 
-            }, true, true, scrollContent: scrollContent, allowDuringOpeningMeal: allowDuringOpeningMeal);
+            }, true, true, scrollContent: scrollContent, allowDuringOpeningMeal: allowDuringOpeningMeal,
+                fitContent: fitContent);
         }
 
         public void OpenBedWindow()
@@ -261,7 +262,13 @@ namespace PCShopSell.Game.UI
             var side = _boxSide == "temp" ? tempStacks : _boxSide == "box" ? boxStacks : bagStacks;
             BagStack pick = side.FirstOrDefault(s => s.Key == _boxSel);
             var tools=Ui.Row(w.Content,40);
-            Ui.Size(Ui.Button(tools,"全部入库（保留即食食物）",()=>{S.StoreBackpackInWarehouse();_boxSel=null;w.Rebuild();if(shop)RebuildDock();},17,Ui.ButtonHot,S.CanStoreBackpackInWarehouse),-1,-1,1);
+            Ui.Size(Ui.Button(tools,"全部入库（保留即食食物）",() =>
+            {
+                if (S.StoreBackpackInWarehouse() && shop) _ctrl.Interior?.PlayStockBox();
+                _boxSel = null;
+                w.Rebuild();
+                if (shop) RebuildDock();
+            },17,Ui.ButtonHot,S.CanStoreBackpackInWarehouse),-1,-1,1);
             if(S.CanOpenFridge)Ui.Size(Ui.Button(tools,"打开冰箱",()=>OpenFridgeWindow(),17),140);
             if(_boxSide=="bag"&&pick!=null)
             {
@@ -315,22 +322,34 @@ namespace PCShopSell.Game.UI
                 if (shop && key.StartsWith("gift:"))
                 {
                     string gid = key.Substring(5);
-                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
-                    Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
+                    Ui.Size(Ui.Button(bottom, "上架卖", () => ListBoxGoods(w, gid, 1), 16, Ui.ButtonBg), 80);
+                    Ui.Size(Ui.Button(bottom, "全上架", () => ListBoxGoods(w, gid, n), 16, Ui.ButtonBg), 80);
                 }
             }
             else
             {
                 bool toShelf = shop && key.StartsWith("part:");
-                Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonBg), 100);
-                Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 120);
+                Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => StoreBoxItem(w, key, 1, shop), 16, Ui.ButtonBg), 100);
+                Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => StoreBoxItem(w, key, n, shop), 16, Ui.ButtonBg), 120);
                 if (shop && key.StartsWith("gift:"))
                 {
                     string gid = key.Substring(5);
-                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
-                    Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
+                    Ui.Size(Ui.Button(bottom, "上架卖", () => ListBoxGoods(w, gid, 1), 16, Ui.ButtonBg), 80);
+                    Ui.Size(Ui.Button(bottom, "全上架", () => ListBoxGoods(w, gid, n), 16, Ui.ButtonBg), 80);
                 }
             }
+        }
+
+        private void StoreBoxItem(Window window, string key, int count, bool shop)
+        {
+            if (S.StoreInBox(key, count) && shop) _ctrl.Interior?.PlayStockBox();
+            window.Rebuild();
+        }
+
+        private void ListBoxGoods(Window window, string goodsId, int count)
+        {
+            if (S.ListGoods(goodsId, count)) _ctrl.Interior?.PlayStockBox(goodsId);
+            window.Rebuild();
         }
 
         // ---------- 背包 ----------
@@ -590,20 +609,23 @@ namespace PCShopSell.Game.UI
 
             });
         }
-        public void OpenRepairWindow() => OpenRoomWindow("约师傅上门修", 820, 640, BuildRepair);
+        public void OpenRepairWindow() => OpenRoomWindow("约师傅上门修", 1150, 690, BuildRepair, fitContent: true);
 
         private int _repairDay;
 
         private void BuildRepair(Window w)
         {
-            Line(w.Content, $"约一个时间，到点师傅上门，上门时人要在家，没人就白跑一趟。晚上（18:00 – 次日 6:00）上门加收 50%；至少提前 1 小时约。下单就付上门费，取消或白跑都不退（黑心，约了就别放鸽子）。师傅进门要干约 {GameSession.RepairWorkMinutes} 分钟。", 15, Ui.Dim);
+            Para(w.Content, $"约一个时间，到点师傅上门，上门时人要在家，没人就白跑一趟。晚上（18:00 – 次日 6:00）上门加收 50%；至少提前 1 小时约。下单就付上门费，取消或白跑都不退（黑心，约了就别放鸽子）。师傅进门要干约 {GameSession.RepairWorkMinutes} 分钟。", 20, Ui.Dim);
             var broken = S.BrokenHomeItems().ToList();
             if (broken.Count == 0) Line(w.Content, "屋里的东西都是好的。", 18);
             foreach (string id in broken)
             {
                 string targetId = id;
                 FurnitureDef d = FurnitureCatalog.Get(targetId);
-                Line(w.Content, $"{d.Name}  →  修好后：{FurnitureCatalog.Get(d.RepairInto).Name}", 19, Ui.Accent);
+                var appliance = Ui.Row(w.Content, 64, 10);
+                ItemPortrait(appliance, "furn:" + d.Id, 56);
+                Ui.Size(Ui.Label(appliance, $"{d.Name}  →  修好后：{FurnitureCatalog.Get(d.RepairInto).Name}",
+                    22, TextAnchor.MiddleLeft, Ui.Accent), 0, -1, 1);
                 HomeVisit v = S.VisitFor(targetId);
                 if (v != null && v.Working)
                 {
@@ -623,7 +645,7 @@ namespace PCShopSell.Game.UI
                     continue;
                 }
 
-                RectTransform drow = Ui.Row(w.Content, 44);
+                RectTransform drow = Ui.Row(w.Content, 52);
                 for (int off = 0; off < GameSession.RepairBookDays; off++)
                 {
                     int o = off;
@@ -631,22 +653,22 @@ namespace PCShopSell.Game.UI
                     {
                         _repairDay = o;
                         w.Rebuild();
-                    }, 17, Ui.SelectedButton(_repairDay == o)), 110);
+                    }, 20, Ui.SelectedButton(_repairDay == o)), 124);
                 }
                 RectTransform hrow = null;
                 int col = 0;
                 for (int hour = GameSession.RepairFirstHour; hour <= GameSession.RepairLastHour; hour++)
                 {
-                    if (col == 0) hrow = Ui.Row(w.Content, 46);
+                    if (col == 0) hrow = Ui.Row(w.Content, 56, 8);
                     int hh = hour;
                     long start = (long)(S.Clock.Today.TotalDays + _repairDay) * 1440 + hh * 60;
                     bool ok = S.RepairBookBlocker(targetId, start) == null && S.Ledger.Balance >= S.RepairPrice(d, start);
                     bool night = GameSession.IsRepairNightMinute(hh * 60);
-                    Ui.Size(Ui.Button(hrow, $"{hh:00}:00\n<size=13>{S.RepairPrice(d, start)}{(night ? " 夜" : "")}</size>", () =>
+                    Ui.Size(Ui.Button(hrow, $"{hh:00}:00\n<size=17>{S.RepairPrice(d, start)}{(night ? " 夜" : "")}</size>", () =>
                     {
                         S.BookRepair(targetId, start);
                         w.Rebuild();
-                    }, 16, interactable: ok), 120);
+                    }, 20, interactable: ok), 0, 56, 1);
                     col = (col + 1) % 6;
                 }
             }
@@ -1170,7 +1192,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             if (OpeningMealRestricted) { RemindOpeningMeal(); return; }
-            _myWindow = OpenWindow("我的", 1280, 960, BuildMyPanel, scrollContent: false, onClosed: () =>
+            _myWindow = OpenWindow("我的", 1640, 940, BuildMyPanel, scrollContent: false, onClosed: () =>
             {
                 _myWindow = null;
                 _myPortrait?.Destroy();
@@ -1182,7 +1204,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildMyPanel(Window w)
         {
-            var nav = Ui.Row(w.Content, 42, 6);
+            var nav = Ui.Row(w.Content, 54, 8);
             string[] names = { "个人资料", "饮食", "住处", "我的资产", "通讯录", "人际关系图" };
             var pages = new[] { MyPage.Profile, MyPage.Food, MyPage.Residence, MyPage.Assets, MyPage.Contacts, MyPage.Relations };
             for (int i = 0; i < names.Length; i++)
@@ -1191,7 +1213,13 @@ namespace PCShopSell.Game.UI
                 var button = Ui.Size(Ui.Button(nav, names[i], () =>
                 {
                     if (_myPage != tab) OpenMyPanel(tab);
-                }, 17, Ui.TabFill(_myPage == tab)), 0, 42, 1);
+                }, 22, Ui.TabFill(_myPage == tab)), 0, 54, 1);
+                Ui.StyleTab(button);
+                Ui.ButtonArtwork(button, tab switch
+                {
+                    MyPage.Profile => UiIcon.Profile, MyPage.Food => UiIcon.Hunger, MyPage.Residence => UiIcon.Home,
+                    MyPage.Assets => UiIcon.Ledger, MyPage.Contacts => UiIcon.Contacts, _ => UiIcon.Relations
+                }, size: 44);
                 button.name = "MyTab_" + (int)tab;
             }
 
@@ -1240,7 +1268,7 @@ namespace PCShopSell.Game.UI
 
         private static RectTransform MyCard(Transform parent, string name, float width, float height, float flex = 0)
         {
-            var card = Ui.Panel(parent, name, Ui.PanelBg2).rectTransform;
+            var card = Ui.FlatPanel(parent, name, Ui.ButtonBg).rectTransform;
             Ui.Size(card, width, height, flex);
             Ui.VList(card, 7, 12);
             return card;
@@ -1262,61 +1290,70 @@ namespace PCShopSell.Game.UI
         private void BuildMyProfile(Window w, Transform body)
         {
             var stats = S.Player;
-            var top = Ui.Row(body, 194, 10);
+            var top = Ui.Row(body, 320, 14);
 
-            var identity = MyCard(top, "MyIdentity", 397, 194);
-            var intro = Ui.Row(identity, 170, 14);
-            var portrait = Ui.Size(Ui.Panel(intro, "MyPortraitFrame", Ui.Accent), 126, 162).rectTransform;
+            var identity = MyCard(top, "MyIdentity", 550, 320);
+            var intro = Ui.Row(identity, 292, 22);
+            var portrait = Ui.Size(Ui.Panel(intro, "MyPortraitFrame", Ui.Chrome), 198, 280).rectTransform;
             var face = Ui.Rect(portrait, "MyPortrait").Fill(2).gameObject.AddComponent<RawImage>();
             face.texture = MyPortraitTexture();
             face.raycastTarget = false;
             if (face.texture == null) face.color = Ui.PanelBg;
             var info = Ui.Rect(intro, "MyIdentityText");
-            Ui.Size(info, 0, 162, 1);
+            Ui.Size(info, 0, 280, 1);
             var layout = Ui.VList(info, 8, 5);
             layout.childAlignment = TextAnchor.MiddleLeft;
-            Line(info, "玩家", 25);
+            Line(info, "玩家", 38);
             double fame = S.HasShop ? S.PlayerShop.Reputation : 0;
-            Line(info, $"名望 {fame:0.#} · {PersonStanding.Label(fame)}", 19, Ui.Accent).name = "MyStanding";
+            Line(info, $"名望 {fame:0.#} · {PersonStanding.Label(fame)}", 24, Ui.Accent).name = "MyStanding";
 
-            var condition = MyCard(top, "MyCondition", 0, 194, 1);
-            Line(condition, "身体状态", 22, Ui.Accent);
-            void Meter(Transform row, UiIcon icon, string label, double value, double max, bool warn = false)
+            var condition = MyCard(top, "MyCondition", 0, 320, 1);
+            Line(condition, "身体状态", 28, Ui.Accent);
+            void Meter(UiIcon icon, string label, double value, double max, bool warn = false)
             {
-                var cell = Ui.Size(Ui.Rect(row, "MyStat_" + label), 0, 43, 1);
-                var heading = Ui.Row(cell, 26);
-                heading.Anchor(0, 1, 1, 1, 0, -26, 0, 0);
-                var art = Ui.Artwork(heading, icon);
-                if (art != null) Ui.Size(art, 24, 21);
-                Ui.Size(Ui.Label(heading, label, 16, color: Ui.Dim), 0, 26, 1);
-                Ui.Size(Ui.Label(heading, $"{value:0} / {max:0}", 17, TextAnchor.MiddleRight, warn ? Ui.Warn : Ui.TextColor), 110, 26);
-                var rail = Ui.Panel(cell, "StatRail", Ui.PanelBg).rectTransform.Anchor(0, 0, 1, 0, 0, 4, 0, -12);
-                Color fill = warn ? Ui.Warn : value / max <= .45 && icon != UiIcon.Stress ? Ui.ChromeGold : Ui.StatusGreen;
-                Ui.Panel(rail, "StatFill", fill).rectTransform.Anchor(0, 0, Mathf.Clamp01((float)(value / max)), 1);
+                var row = Ui.Row(condition, 48, 12);
+                row.name = "MyStat_" + label;
+                row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                var art = Ui.Artwork(row, icon);
+                if (art != null) Ui.Size(art, 44, 44);
+                Ui.Size(Ui.Label(row, label, 22, color: Ui.TextColor), 72, 44);
+                Color fill = warn ? Ui.ButtonDanger : value / max <= .45 && icon != UiIcon.Stress ? Ui.ButtonHot : Ui.StatusGreen;
+                var bar = Ui.Bar(row, (float)(value / max), fill, 0, 12);
+                Ui.Size(bar.rectTransform.parent, flexWidth: 1);
+                Ui.Size(Ui.Label(row, $"{value:0} / {max:0}", 22, TextAnchor.MiddleRight, warn ? Ui.Warn : Ui.TextColor), 116, 44);
             }
-            var first = Ui.Row(condition, 43, 16);
-            Meter(first, UiIcon.Hunger, "饱腹", stats.Hunger, 100, stats.Hunger <= 20);
-            Meter(first, UiIcon.Energy, "精力", stats.Energy, Math.Max(1, stats.MaxEnergy), S.EnergyExhausted);
-            var second = Ui.Row(condition, 43, 16);
-            Meter(second, UiIcon.Health, "健康", stats.Health, 100, stats.Health <= 25);
-            Meter(second, UiIcon.Stress, "压力", stats.Stress, 100, stats.Stress >= PlayerStats.HighStressThreshold);
+            Meter(UiIcon.Hunger, "饱腹", stats.Hunger, 100, stats.Hunger <= 20);
+            Meter(UiIcon.Energy, "精力", stats.Energy, Math.Max(1, stats.MaxEnergy), S.EnergyExhausted);
+            Meter(UiIcon.Health, "健康", stats.Health, 100, stats.Health <= 25);
+            Meter(UiIcon.Stress, "压力", stats.Stress, 100, stats.Stress >= PlayerStats.HighStressThreshold);
             if (S.EnergyExhausted) Line(condition, S.EnergyExhaustionText, 15, Ui.Warn);
 
-            Line(body, "个人能力", 20, Ui.Accent);
-            var skills = Ui.Row(body, 70, 5);
-            MyFact(skills, "智力", stats.Intelligence.ToString(), UiIcon.Intelligence);
-            MyFact(skills, "魅力", S.EffectiveCharm.ToString(), UiIcon.Charm);
-            MyFact(skills, "动手能力", stats.Skill.ToString(), UiIcon.Hands);
-            MyFact(skills, "体能", stats.Stamina.ToString(), UiIcon.Fitness);
-            Ui.Size(Ui.Button(body, "天气与穿衣", OpenCityClimate, 17), -1, 38);
+            Line(body, "个人能力", 28, Ui.Accent);
+            var skills = Ui.Row(body, 117, 12);
+            Ability("智力", stats.Intelligence.ToString(), UiIcon.Intelligence);
+            Ability("魅力", S.EffectiveCharm.ToString(), UiIcon.Charm);
+            Ability("动手能力", stats.Skill.ToString(), UiIcon.Hands);
+            Ability("体能", stats.Stamina.ToString(), UiIcon.Fitness);
+            Ability("名望", fame.ToString("0.#"), UiIcon.Prestige);
+
+            void Ability(string title, string value, UiIcon icon)
+            {
+                var card = MyCard(skills, title, 0, 117, 1);
+                var heading = Ui.Row(card, 92, 16);
+                heading.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                var art = Ui.Artwork(heading, icon);
+                if (art != null) Ui.Size(art, 44, 44);
+                Ui.Size(Ui.Label(heading, $"{title}\n<size=36><b>{value}</b></size>", 22), 0, 90, 1);
+            }
+            Ui.Size(Ui.Button(body, "天气与穿衣", OpenCityClimate, 22), -1, 56);
             HelpLink(body, "身体详细资料", $"欠觉 {stats.SleepDebt:0.#} 小时 · 营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}\n压力达到 {PlayerStats.HighStressThreshold:0} 时，到岗表现奖金减少 {GameSession.HighStressWorkPenalty}%。");
             BuildPlayerWorkSummary(body, w);
 
             string blocker = WorkbenchAccessReason;
             bool canOpenWorkbench = S.CanUseHomeWorkbench || CanStartWorkbenchSetup;
             string workbenchLabel = CanStartWorkbenchSetup ? "安装居家工作台" : "居家工作台" + (blocker == null ? "" : " · " + blocker);
-            Ui.Size(Ui.Button(body, workbenchLabel, OpenHomeWorkbench, 17,
-                Ui.ButtonHot, canOpenWorkbench), -1, 38).name = "MyHomeWorkbench";
+            Ui.Size(Ui.Button(body, workbenchLabel, OpenHomeWorkbench, 22,
+                Ui.ButtonHot, canOpenWorkbench), -1, 56).name = "MyHomeWorkbench";
             if (blocker == "回家后可用")
                 Ui.Size(Ui.Button(body, "回家", () => { CloseModalWindows(); _ctrl.GoToPlace(S.Home); }, 17), -1, 36);
         }
@@ -1775,12 +1812,12 @@ namespace PCShopSell.Game.UI
 
         private void BuildHomeDock()
         {
-            _homeDock = Ui.Panel(_dockCanvas.transform, "HomeDock", Ui.PanelBg).rectTransform
-                .Anchor(1, 0, 1, 1, -HomeDockWidth, 70, 10, 120);
+            _homeDock = Ui.FlatPanel(_dockCanvas.transform, "HomeDock", Ui.PanelBg).rectTransform
+                .Anchor(1, 0, 1, 1, -HomeDockWidth, HudTravelTop + 6, 10, 120);
             var header = Ui.Panel(_homeDock, "HomeDockHeader", Ui.Chrome).rectTransform.Anchor(0, 1, 1, 1, 0, -76, 0, 0);
             var homeIcon = Ui.Artwork(header, UiIcon.Home);
-            if (homeIcon != null) homeIcon.rectTransform.Anchor(0, 1, 0, 1, 12, -38, -39, 11);
-            Ui.Label(header, "<b>我的住处</b>", 22).rectTransform.Anchor(0, 1, 1, 1, homeIcon == null ? 13 : 46, -40, 102, 7);
+            if (homeIcon != null) homeIcon.rectTransform.Anchor(0, 1, 0, 1, 12, -44, -48, 8);
+            Ui.Label(header, "<b>我的住处</b>", 28).rectTransform.Anchor(0, 1, 1, 1, homeIcon == null ? 13 : 59, -46, 102, 7);
             _homeDockTitle = Ui.Label(header, "", 17, color: Ui.Dim);
             _homeDockTitle.rectTransform.Anchor(0, 1, 1, 1, 13, -67, 102, 37);
             _homeDockTitle.resizeTextForBestFit = true;

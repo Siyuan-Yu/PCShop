@@ -22,7 +22,7 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>纸面卡片上的暖炭标题。</summary>
-        private static Text WbHeading(Transform parent, string text, int size = 19) =>
+        private static Text WbHeading(Transform parent, string text, int size = 22) =>
             Bold(Ui.Size(Ui.Label(parent, text, size, TextAnchor.MiddleLeft, Ui.TextColor), -1, size * 1.5f));
 
         private static Text Bold(Text t) { t.fontStyle = FontStyle.Bold; return t; }
@@ -88,11 +88,14 @@ namespace PCShopSell.Game.UI
         {
             var row = Ui.Row(parent, 24, 8); row.name = "Meter_" + label;
             row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
-            Ui.Size(Ui.Label(row, label, 15, TextAnchor.MiddleLeft, WbDim), 58, -1, 0);
-            var track = Ui.Panel(row, "MeterTrack", Ui.FlatWell); Ui.FlatBorder(track, Ui.FlatButtonEdge); Ui.Size(track, 0, 10, 1);
-            var fill = Ui.Panel(track.transform, "Value", warn ? Ui.Warn : Ui.Accent); fill.raycastTarget = false;
-            fill.rectTransform.Anchor(0, 0, (float)Math.Max(0, Math.Min(1, value / Math.Max(1, max))), 1);
-            var number = Ui.Label(row, valueText ?? value.ToString("0"), 15, TextAnchor.MiddleRight, WbInk); number.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Ui.Size(Ui.Label(row, label, 17, TextAnchor.MiddleLeft, WbDim), 64, -1, 0);
+            var fill = Ui.Bar(row, (float)(value / Math.Max(1, max)), warn ? Ui.Warn : Ui.Accent, 0, 12);
+            fill.name = "Value";
+            var track = fill.rectTransform.parent;
+            track.name = "MeterTrack";
+            Ui.Size(track, flexWidth: 1);
+            var number = Ui.Label(row, valueText ?? value.ToString("0"), 17, TextAnchor.MiddleRight, WbInk);
+            number.horizontalOverflow = HorizontalWrapMode.Overflow;
             Ui.Size(number, 78, -1, 0);
         }
 

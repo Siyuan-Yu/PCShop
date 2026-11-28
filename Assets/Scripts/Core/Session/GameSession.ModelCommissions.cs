@@ -124,6 +124,7 @@ namespace PCShopSell.Core.Session
                         double work = Math.Min(order.WorkMinutes - order.Work, speed);
                         order.Work += work;
                         order.QualityWork += work * ModelPainterQuality(workers[i]);
+                        if (work > 0) ShopStationWorked?.Invoke(shop, workers[i], EmployeeRole.ModelPainter);
                         if (order.Work < order.WorkMinutes - 1e-8) continue;
                         order.Quality = Math.Round(order.QualityWork / order.WorkMinutes, 1);
                         order.Stage = ModelCommissionStage.Ready;

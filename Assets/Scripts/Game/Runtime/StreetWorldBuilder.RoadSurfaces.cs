@@ -46,11 +46,14 @@ namespace PCShopSell.Game.Runtime
             return height;
         }
 
+        private enum StreetFinish { Default, Outskirts, Town }
+
         sealed class StreetSegment
         {
             public Vector2 A, B;
             public float Width, PavedWidth, Deck, DryStart, DryEnd, RampLength;
             public bool Raised, GroundAtA, GroundAtB, GardenFrontage;
+            public StreetFinish Finish;
             public int PavingIndex;
             public Vector2 Direction => (B - A).normalized;
             public float Length => (B - A).magnitude;
@@ -132,6 +135,16 @@ namespace PCShopSell.Game.Runtime
             _lakeAccessSurfaces.Clear();
             _streetPavementEnvelopes = new RoadSurfaceGeometry.Index();
             float deck = LakeAccessHeight(_city);
+            var outskirtsNodes = HasStarterArt ? FindOutskirtsRoadNodes() : null;
+            StreetFinish FinishAt(Vector2 point, string firstNode, string lastNode)
+            {
+                if (outskirtsNodes != null)
+                    return outskirtsNodes.Contains(firstNode) || outskirtsNodes.Contains(lastNode)
+                        ? StreetFinish.Outskirts : StreetFinish.Town;
+                if (InPaintedQuarter(point, 55f)) return StreetFinish.Outskirts;
+                return OuterDistrictWeight(point) > .5f ? StreetFinish.Town : StreetFinish.Default;
+            }
+
             // Doorway nodes alternate with junctions on the same boulevard. Resolve the intervening
             // segments too, respecting the district edge and leaving the open lake approaches neutral.
             var frontages=_city.PublicPlaces.Where(p=>!IsLakeAccessNode(p.NodeId))
@@ -158,10 +171,13 @@ namespace PCShopSell.Game.Runtime
                 var a=NodeWorld(n.Id);var b=NodeWorld(e.To);if((b-a).sqrMagnitude<.01f)continue;
                 bool raisedA = IsLakeAccessNode(n.Id), raisedB = IsLakeAccessNode(e.To);
                 float width = PlannedRoadWidth(a, b);
+                var middle = new Vector2((a.x + b.x) * .5f, (a.z + b.z) * .5f);
+                var finish = FinishAt(middle, n.Id, e.To);
                 segments.Add(new StreetSegment { A = new Vector2(a.x, a.z), B = new Vector2(b.x, b.z), Width = width,
                     PavedWidth = width + (float)GameSession.CityPavingWidth * 2, Deck = deck,
                     Raised = raisedA || raisedB, GroundAtA = !raisedA, GroundAtB = !raisedB,
-                    GardenFrontage = !raisedA && !raisedB && GardenStreet(new Vector2((a.x+b.x)*.5f,(a.z+b.z)*.5f)) });
+                    Finish = finish,
+                    GardenFrontage = finish != StreetFinish.Outskirts && !raisedA && !raisedB && GardenStreet(middle) });
             }
             // A raised access road owns its junction; the ground road terminates at that boundary.
             segments=segments.OrderByDescending(s=>s.Raised).ThenByDescending(s=>(s.B-s.A).sqrMagnitude).ToList();
@@ -221,12 +237,26 @@ namespace PCShopSell.Game.Runtime
                     deadline = Time.realtimeSinceStartup + .008f;
                 }
                 var p=RoadSurfaceGeometry.Road(s.A,s.B,s.Width);
-                s.AddSurface(InPaintedQuarter((s.A+s.B)*.5f,55f) ? quarterRoads : OuterDistrictWeight((s.A+s.B)*.5f) > .5f ? townRoads : roads, roadIndex.Cut(new List<Vector2[]>{p},p));roadIndex.Add(p);
+                var finish = s.Finish switch
+                {
+                    StreetFinish.Outskirts => quarterRoads,
+                    StreetFinish.Town => townRoads,
+                    _ => roads
+                };
+                s.AddSurface(finish, roadIndex.Cut(new List<Vector2[]> { p }, p));
+                roadIndex.Add(p);
             }
             void Pavement(Vector2[] p, StreetSegment street)
             {
                 var parts=roadIndex.Cut(new List<Vector2[]>{p},p);parts=pavingIndex.Cut(parts,p);
-                street.AddSurface(InPaintedQuarter((street.A+street.B)*.5f,55f) ? quarterPaving : OuterDistrictWeight((street.A+street.B)*.5f) > .5f ? townWalks : paving, parts, alignToStreet:true);pavingIndex.Add(p);
+                var finish = street.Finish switch
+                {
+                    StreetFinish.Outskirts => quarterPaving,
+                    StreetFinish.Town => townWalks,
+                    _ => paving
+                };
+                street.AddSurface(finish, parts, alignToStreet: true);
+                pavingIndex.Add(p);
             }
             foreach (var s in segments)
             {
@@ -253,6 +283,7 @@ namespace PCShopSell.Game.Runtime
                 const float entranceWidth = 2f;
                 var outline = raised ? RoadSurfaceGeometry.Road(from, to, entranceWidth) : RoadSurfaceGeometry.Strip(from, to, entranceWidth);
                 var approach = new StreetSegment { A = from, B = to, PavedWidth = entranceWidth, Raised = raised, Deck = deck,
+                    Finish = FinishAt((from + to) * .5f, p.NodeId, p.NodeId),
                     PavingIndex = _streetPavementEnvelopes.Polygons.Count };
                 _streetPavementEnvelopes.Add(outline);
                 Pavement(outline, approach);
@@ -336,7 +367,7 @@ namespace PCShopSell.Game.Runtime
                     parts = crossingBands.Cut(parts, p);
                     parts=markIndex.Cut(parts,p);s.AddSurface(buffer,parts,.015f);markIndex.Add(p);
                 }
-                bool paint = InPaintedQuarter((s.A+s.B)*.5f,55f);
+                bool paint = s.Finish == StreetFinish.Outskirts;
                 foreach(int sign in new[]{-1,1})
                 {
                     var offset=normal*sign*(s.Width*.5f-.35f);

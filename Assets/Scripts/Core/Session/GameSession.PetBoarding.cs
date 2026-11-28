@@ -163,17 +163,20 @@ namespace PCShopSell.Core.Session
 
         private bool PetShopPendingMove(OwnedShop shop) => PendingLease != null && !PendingIsNewShop && (shop == MainShop || shop == _focus);
 
+        public event Action<OwnedShop, bool, bool> PetCounterHandled;
+        public event Action<OwnedShop, Employee, PetCareAction> PetCarePerformed;
+
         public bool AcceptPetStay()
         {
             if (!InPlayerShop || !IsPetShop(_focus) || IsGameOver) return false;
             string reason = PetAcceptBlocker(_focus);
             if (reason != null) return Fail(reason);
-            ReceivePet(_focus, PetBoarding(_focus));
+            ReceivePet(_focus, PetBoarding(_focus), playerHandled: true);
             Flags.Add(OpeningPetIntakeSeen);
             return true;
         }
 
-        private void ReceivePet(OwnedShop shop, PetBoardingState state)
+        private void ReceivePet(OwnedShop shop, PetBoardingState state, bool playerHandled = false)
         {
             var stay = state.Offer;
             var advance = PetFirstWeekAdvance(stay);
@@ -188,6 +191,7 @@ namespace PCShopSell.Core.Session
             Ledger.Credit(Clock.Today, "宠物代养", advance, stay.Name + " · 首周预付款",
                 LedgerAttribution.ForShop(shop.Place.Id, $"pet:{shop.Place.Id}:{stay.Id}:advance", "代养服务"));
             Say($"{ShopTitle(shop)} · {stay.Name}入住 {stay.Weeks} 周，已收首周预付款 {advance}，一周后结清余款。");
+            PetCounterHandled?.Invoke(shop, true, playerHandled);
         }
 
         public string PetVisitBlocker(OwnedShop shop, PetStay stay)
@@ -213,11 +217,11 @@ namespace PCShopSell.Core.Session
             var stay = state?.Stays.FirstOrDefault(p => p.Id == id);
             string reason = PetVisitBlocker(_focus, stay);
             if (reason != null) return Fail(reason);
-            SettlePet(_focus, state, stay);
+            SettlePet(_focus, state, stay, playerHandled: true);
             return true;
         }
 
-        private void SettlePet(OwnedShop shop, PetBoardingState state, PetStay stay)
+        private void SettlePet(OwnedShop shop, PetBoardingState state, PetStay stay, bool playerHandled = false)
         {
             var amount = PetWeeklyPayment(stay);
             bool firstWeekBalance = stay.PaidWeeks == 0 && stay.FirstWeekAdvanceCents > 0;
@@ -240,6 +244,7 @@ namespace PCShopSell.Core.Session
                 + (reputation > 0 ? $" · 名望 +{reputation:0.#}" : " · 名望 +0（状态未高于 95%）")
                 + (satisfied ? " · 主人满意，交情 +2" : "");
             Say(ShopTitle(shop) + " · " + state.LastPickup);
+            PetCounterHandled?.Invoke(shop, false, playerHandled);
         }
 
         private void TickPetShopStaff()
@@ -338,7 +343,8 @@ namespace PCShopSell.Core.Session
                         AdjustPetCondition(pet,PetKeeperCareBonus(keeper));
                     }
                     foreach (var action in PetCareActions)
-                        if (UsesSharedCare(pet,action)) TryCompleteSharedCare(shop,state,action);
+                        if (UsesSharedCare(pet, action) && TryCompleteSharedCare(shop, state, action))
+                            PetCarePerformed?.Invoke(shop, keeper, action);
                     var toy = PetToy(shop, pet.Dog);
                     RaisePetHappiness(pet, toy == null ? 12 : 18, PetShopCatalog.ToyHappinessLimit(toy?.Id));
                 }
@@ -371,6 +377,7 @@ namespace PCShopSell.Core.Session
             var state = PetBoarding(_focus);
             if (!TryCompleteSharedCare(_focus,state,action)) return Fail(PetCareName(action)+"失败，门店库存不足。");
             Say("宠物屋 · "+PetCareName(action)+"已完成。");
+            PetCarePerformed?.Invoke(_focus, null, action);
             return true;
         }
 

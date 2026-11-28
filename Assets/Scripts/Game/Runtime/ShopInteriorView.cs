@@ -37,6 +37,14 @@ namespace PCShopSell.Game.Runtime
 
             /// <summary>0 = 逛货架；1 = 挑中了，去货架前拿货；2 = 拿着货排队等结账。</summary>
             public int Phase;
+            public FigureMotion Motion;
+            public bool Taking;
+            public bool Looking;
+            public bool ReturningItem;
+            public PayChannel? PendingPayment;
+            public bool PendingEmployeeCheckout;
+            public bool Greeted;
+            public float PaymentWalkUntil;
             public Vector3 PickSpot;
             public PartCategory ItemCat;
             public bool ItemBoxed;
@@ -174,11 +182,11 @@ namespace PCShopSell.Game.Runtime
         private ShopSimulation _hooked;
         private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
 
-        private readonly Dictionary<int, PayChannel> _payChannels = new Dictionary<int, PayChannel>();
+        private readonly Dictionary<int, (PayChannel Channel, bool Player)> _payments = new();
 
         private void OnCustomerLeft(ShopCustomer c) => _leaveReasons[c.Id] = c.Reason;
 
-        private void OnCustomerPaid(ShopCustomer c) => _payChannels[c.Id] = c.PaidWith;
+        private void OnCustomerPaid(ShopCustomer c) => _payments[c.Id] = (c.PaidWith, c.PaidByPlayer);
 
         private static string PayText(PayChannel p)
         {
@@ -217,6 +225,7 @@ namespace PCShopSell.Game.Runtime
             }
             _hooked = shop;
             _leaveReasons.Clear();
+            _payments.Clear();
             if (shop != null)
             {
                 shop.CustomerLeft += OnCustomerLeft;
@@ -317,16 +326,12 @@ namespace PCShopSell.Game.Runtime
         {
             if (v.Held != null) return;
             if (v.DisplayPc)
-            {
                 v.Held = Prims.Box(v.Go.transform, "HeldPc", new Vector3(0, 0.95f, 0.4f), new Vector3(0.3f, 0.5f, 0.42f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f), 0.5f));
-                return;
-            }
-            if (v.IsGoods)
-            {
+            else if (v.IsGoods)
                 v.Held = Prims.Box(v.Go.transform, "HeldGoods", new Vector3(0, 0.95f, 0.36f), new Vector3(0.18f, 0.22f, 0.14f), Mats.Lit(new Color(0.92f, 0.78f, 0.35f), 0.4f));
-                return;
-            }
-            v.Held = Prims.Box(v.Go.transform, "Held", new Vector3(0, 0.95f, 0.38f), new Vector3(0.3f, 0.2f, 0.36f), Mats.Lit(CategoryColor(v.ItemCat), 0.5f));
+            else
+                v.Held = Prims.Box(v.Go.transform, "Held", new Vector3(0, 0.95f, 0.38f), new Vector3(0.3f, 0.2f, 0.36f), Mats.Lit(CategoryColor(v.ItemCat), 0.5f));
+            v.Motion.HoldItem(v.Held.transform);
         }
 
         public ShopSize Size { get; }
@@ -726,7 +731,12 @@ namespace PCShopSell.Game.Runtime
 
         public void SetActive(bool on)
         {
-            if (!on) Hook(null);
+            if (!on)
+            {
+                Hook(null);
+                HookShopInteractions(null);
+                ReleaseStagedPayer();
+            }
             _root.gameObject.SetActive(on);
             if (!on && _wasOn)
             {
@@ -1174,6 +1184,7 @@ namespace PCShopSell.Game.Runtime
             if (_staffLayoutSignature != signature)
             {
                 _staffLayoutSignature = signature;
+                _salesGreeters.Clear();
                 var ids = new HashSet<string>(staff.Select(e => e.Person.Id));
                 foreach (string id in _staffFigures.Keys.Where(id => !ids.Contains(id)).ToArray())
                 {
@@ -1200,6 +1211,7 @@ namespace PCShopSell.Game.Runtime
                         CityNpcClothing.Apply(figure, session, personId);
                         _staffFigures.Add(employee.Person.Id, figure);
                     }
+                    if (employee.Role == EmployeeRole.Salesperson) _salesGreeters.Add(figure);
                     bool atUsedDesk = employee.Role == EmployeeRole.Appraiser && usedDesk != null;
                     bool buyer = employee.Role == EmployeeRole.Buyer;
                     var repairBench = employee.Role == EmployeeRole.Repairer && repairBenches.Length > 0
@@ -1365,6 +1377,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float dt, float realDt)
         {
+            HookShopInteractions(s);
             _visitedAddress=null;
             var climateShop=s.ShopAt(s.PlayerShopPlace.Id);
             bool showUpgradeClimate=climateShop!=null&&climateShop.Upgrades.Contains(ShopUpgrades.AirCon)&&!climateShop.Layout.Any(p=>p.Id=="aircon"||p.Id=="aircon_large");
@@ -1379,7 +1392,7 @@ namespace PCShopSell.Game.Runtime
             }
             if(_upgradeClimate!=null)_upgradeClimate.SetActive(showUpgradeClimate);
             if (_leaveReasons.Count > 200) _leaveReasons.Clear();
-            if (_payChannels.Count > 200) _payChannels.Clear();
+            if (_payments.Count > 200) _payments.Clear();
             _now += realDt;
             _emotes.Clear();
             if (_dressed != s.EquippedOutfit)
@@ -1397,12 +1410,14 @@ namespace PCShopSell.Game.Runtime
                 CancelCheckoutWalk();
             }
             if (_fxVersion != _decor.Version) RebuildFixtures();
+            SyncSelfCheckout(shop);
             _owner.SetActive(s.InPlayerShop);
             UpdateNearbyShelf(s.InPlayerShop);
             bool building = shop.Orders.Count > 0;
             foreach (GameObject g in _buildGlow) g.SetActive(building);
             UpdatePetBoardingView(s, realDt);
             UpdateStaff(s);
+            UpdatePetCareInteraction(s);
             UpdateSpecialBusinessVisuals(s, dt);
             UpdateRestaurantPlayer(s);
             UpdateRestaurantStockWarning(s);
@@ -1532,6 +1547,7 @@ namespace PCShopSell.Game.Runtime
                     v.Bubble = Prims.Shape(PrimitiveType.Sphere, v.Go.transform, "Bubble", new Vector3(0, 1.85f, 0), Vector3.one * 0.28f,
                         Mats.Glow(new Color(1f, 0.8f, 0.1f), new Color(3f, 2.2f, 0.2f), false));
                     v.Build = c.Intent == CustomerIntent.Build;
+                    v.Motion = v.Go.GetComponent<FigureMotion>();
                     v.Want = c.DesiredCategory;
                     v.Target = CustomerBrowseSpot(c, shop, _door);
                     v.BrowseTimer = .8f + (float)_rng.NextDouble() * .6f;
@@ -1570,23 +1586,38 @@ namespace PCShopSell.Game.Runtime
                     }
                     if (v.Phase == 1 && Reached(v))
                     {
-                        ShowHeld(v);
-                        v.Phase = 2;
+                        if (!v.Taking)
+                        {
+                            v.Taking = true;
+                            PlayShelfInteraction(v, FigureInteraction.Take);
+                        }
+                        if (v.Motion.InteractionContact)
+                        {
+                            ShowHeld(v);
+                            v.Phase = 2;
+                        }
                     }
                     if (v.Phase == 2) v.Target = QueueSpot(qi);
                 }
                 else if (v.Phase == 0 && Reached(v))
                 {
                     // 逛：站一会儿，再挪到别的货架前看看
+                    if (!v.Looking)
+                    {
+                        PlayShelfInteraction(v, FigureInteraction.Look);
+                        v.Looking = true;
+                    }
                     v.BrowseTimer -= s.Time.IsRunning ? realDt * s.Time.Speed : 0;
                     if (v.BrowseTimer <= 0)
                     {
                         v.LookedAtShelf = true;
+                        v.Looking = false;
                         v.BrowseTimer = 1f + (float)_rng.NextDouble() * 2f;
                         v.Target = CustomerBrowseSpot(c, shop, v.Go.transform.position);
                     }
                 }
-                Move(v, dt);
+                if (!v.Motion.InteractionPlaying) Move(v, dt);
+                if (dt > 0 && _salesGreeters.Count != 0) GreetArrivingCustomer(v);
                 var visiblePerson = s.CityPerson(c.PersonId);
                 if (visiblePerson != null) _emotes.Add(new EmoteInfo { Pos = v.Go.transform.position + Vector3.up * 2.45f,
                     Text = visiblePerson.Name, PersonId = c.PersonId, Color = new Color(.12f, .2f, .17f), Size = 17 });
@@ -1625,8 +1656,26 @@ namespace PCShopSell.Game.Runtime
                 Kill.It(v.Go.GetComponent<Collider>());
                 // 付了钱的拿着货走；等烦了 / 关门 / 嫌贵的，先把货放回货架再走
                 bool paid = !_leaveReasons.ContainsKey(id);
-                if (paid && v.Spend != null)
-                    _pops.Add(new Pop { Start = _counterFront + new Vector3(-0.4f, 1.8f, 0), Text = "+" + v.Spend + (_payChannels.TryGetValue(id, out PayChannel pc) ? " " + PayText(pc) : ""), T0 = _now });
+                if (_payments.Remove(id, out var payment))
+                {
+                    bool anonymous = string.IsNullOrEmpty(v.PersonId);
+                    Vector3 payStand = payment.Channel == PayChannel.SelfCheckout ? SelfCheckoutStand() : QueueSpot(0);
+                    bool atPayment = PlanarDistance(v.Go.transform.position, payStand) <= .35f;
+                    if (_stagedPayer == null && _hasCounter && v.Go.transform.position.z >= Origin.z && (anonymous || atPayment))
+                    {
+                        _stagedPayer = v;
+                        v.PendingPayment = payment.Channel;
+                        v.PendingEmployeeCheckout = !payment.Player && payment.Channel != PayChannel.SelfCheckout;
+                        v.PaymentWalkUntil = _now + 2f;
+                        v.Via.Clear();
+                        v.Target = payStand;
+                    }
+                    if (payment.Channel != PayChannel.SelfCheckout && !v.PendingEmployeeCheckout)
+                        PlayCounterInteraction(s, FigureInteraction.Checkout, payment.Player);
+                    if (v.Spend != null)
+                        _pops.Add(new Pop { Start = _counterFront + new Vector3(-0.4f, 1.8f, 0),
+                            Text = "+" + v.Spend + " " + PayText(payment.Channel), T0 = _now });
+                }
                 else if (_leaveReasons.TryGetValue(id, out LeaveReason lr))
                 {
                     v.Emote = LeaveText(lr, out v.EmoteColor);
@@ -1638,12 +1687,11 @@ namespace PCShopSell.Game.Runtime
                     v.Via.Clear();
                     v.Target = v.PickSpot;
                 }
-                else SendOut(v);
+                else if (!v.PendingPayment.HasValue) SendOut(v);
                 _leaveReasons.Remove(id);
-                if (!string.IsNullOrEmpty(v.PersonId))
+                if (!string.IsNullOrEmpty(v.PersonId) && !v.PendingPayment.HasValue)
                 {
-                    // A person-bound view hands off to the authoritative returning street route.
-                    // Keeping the legacy anonymous exit animation would render the same person twice.
+                    // Person-bound models only stay to finish a visible counter interaction.
                     Kill.It(v.Go); continue;
                 }
                 _leaving.Add(v);
@@ -1651,12 +1699,47 @@ namespace PCShopSell.Game.Runtime
             for (int i = _leaving.Count - 1; i >= 0; i--)
             {
                 Visitor v = _leaving[i];
+                if (v.Motion.InteractionPlaying) continue;
                 Move(v, dt);
+                if (v.PendingPayment is PayChannel channel)
+                {
+                    bool atCounter = PlanarDistance(v.Go.transform.position, v.Target) <= .35f;
+                    if (!atCounter && _now < v.PaymentWalkUntil && _hasCounter) continue;
+                    v.PendingPayment = null;
+                    if (v.PendingEmployeeCheckout)
+                        PlayCounterInteraction(s, FigureInteraction.Checkout, player: false);
+                    if (atCounter && _hasCounter)
+                    {
+                        if (v.Phase >= 1 && v.Held == null) ShowHeld(v);
+                        Vector3 target = channel == PayChannel.SelfCheckout ? SelfCheckoutPoint() : CounterHandPoint(v.Go.transform);
+                        FigureInteraction gesture = channel == PayChannel.Cash ? FigureInteraction.Cash : FigureInteraction.Scan;
+                        FaceInteraction(v.Go.transform, target, gesture);
+                    }
+                    if (string.IsNullOrEmpty(v.PersonId)) SendOut(v);
+                    continue;
+                }
+                if (_stagedPayer == v)
+                {
+                    _stagedPayer = null;
+                    if (!string.IsNullOrEmpty(v.PersonId))
+                    {
+                        Kill.It(v.Go);
+                        _leaving.RemoveAt(i);
+                        continue;
+                    }
+                }
                 if (v.DropFirst && !v.Dropped && Reached(v))
                 {
+                    if (!v.ReturningItem)
+                    {
+                        v.ReturningItem = true;
+                        PlayShelfInteraction(v, FigureInteraction.PutBack);
+                        if (v.Motion.InteractionPlaying) continue;
+                    }
                     v.Dropped = true;
                     if (v.Held != null) Kill.It(v.Held);
                     v.Held = null;
+                    v.Motion.HoldItem(null);
                     SendOut(v);
                     continue;
                 }
@@ -1764,7 +1847,7 @@ namespace PCShopSell.Game.Runtime
         {
             bool via = v.Via.Count > 0;
             Vector3 goal = v.Via.Count > 0 ? v.Via[0] : v.Target;
-            bool indoorGoal = via ? goal.z >= Origin.z : !v.Leaving || v.DropFirst && !v.Dropped;
+            bool indoorGoal = via ? goal.z >= Origin.z : !v.Leaving || v.PendingPayment.HasValue || v.DropFirst && !v.Dropped;
             bool inside = v.Go.transform.position.z >= Origin.z;
             float pace = inside ? 1f : (float)Vehicles.WalkingSpeedMultiplier;
             float step = OwnerWalkSpeed*pace*(float)CityTravelTiming.NpcWalkSpeedFactor*dt/(float)TimeController.WorldRate;
@@ -1962,6 +2045,7 @@ namespace PCShopSell.Game.Runtime
         public void Destroy()
         {
             Hook(null);
+            HookShopInteractions(null);
             Clear();
             Kill.It(_root.gameObject);
         }
@@ -1969,6 +2053,9 @@ namespace PCShopSell.Game.Runtime
         public void Clear()
         {
             CancelCheckoutWalk();
+            _payments.Clear();
+            _petCareInteractions.Clear();
+            _stagedPayer = null;
             ClearUsedSellerFigures();
             ClearSpecialBusinessVisuals();
             foreach (var v in _visitors.Values) Kill.It(v.Go);

@@ -724,7 +724,18 @@ namespace PCShopSell.Tests
                 r.Button("QuantityPlus_furn:" + FurnitureCatalog.ShopCounter).onClick.Invoke();
                 r.Ui.RebuildWindows();
                 StringAssert.Contains(r.S.ShopTitle(branch) + "  ▼", r.Text);
-                Assert.AreEqual(Ui.ButtonHot, r.Button("CourierDestination").image.color);
+                Assert.AreEqual(Ui.ButtonBg, r.Button("CourierDestination").image.color);
+                Assert.AreEqual(Ui.SelectionEdge, r.Button("CourierDestination").GetComponent<Outline>().effectColor);
+                Canvas.ForceUpdateCanvases();
+                Assert.AreEqual(Ui.ButtonHot, r.Button("CartCheckout").image.color);
+                var work = r.Components<Button>().Single(button => button.GetComponentInChildren<Text>()?.text == "在这里打工");
+                Assert.AreEqual(Ui.ButtonSecondary, work.image.color);
+                foreach (string name in new[] { "CartPackWhatFits", "CartShipAll" })
+                {
+                    var delivery = r.Button(name);
+                    Assert.AreEqual(Ui.PendingSurface, delivery.image.color);
+                    Assert.AreEqual(Ui.FlatHotEdge, delivery.GetComponent<Outline>().effectColor);
+                }
 
                 r.Button("ShopTab_全部").onClick.Invoke();
                 StringAssert.Contains(r.S.ShopTitle(branch) + "  ▼", r.Text,
@@ -1784,7 +1795,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void OpeningFacilityTaskOnlyShowsRemainingItemsAndUsesOutlinedAction()
+        public void OpeningFacilityTaskOnlyShowsRemainingItemsAndKeepsAmberAction()
         {
             var layout = GameSessionTests.Layout();
             layout.places = layout.places.Append(new LayoutPlaceData
@@ -1799,12 +1810,16 @@ namespace PCShopSell.Tests
             Assert.True(session.SignRetailLease("pc", false, "restaurant"));
             rig.Ui.DebugRefreshQuests();
             var action = rig.Button("QuestPrimaryAction");
-            Assert.AreEqual(Ui.FlatRow, action.image.color);
+            Assert.True(action.IsInteractable());
+            Assert.AreEqual(Ui.ButtonHot, action.image.color);
             Assert.AreEqual(Ui.FlatHotEdge, action.GetComponent<Outline>().effectColor);
+            Assert.AreEqual(Color.white, action.GetComponentInChildren<Text>().color);
             StringAssert.Contains("已备 0/4 项", rig.Ui.QuestTrackerText);
 
             session.DebugGiveFurniture(FurnitureCatalog.ShopCounter, 1);
             rig.Ui.OpenQuestWindow();
+            Canvas.ForceUpdateCanvases();
+            Assert.AreEqual(Ui.ButtonHot, action.image.color, "任务卡的主操作不参与前台窗口的强调分配");
             var guide = rig.Components<Transform>().Single(item => item.name == "Window_当前任务");
             string guideText = string.Join("\n", guide.GetComponentsInChildren<Text>().Select(item => item.text));
             StringAssert.Contains("已备 1/4 项", guideText);

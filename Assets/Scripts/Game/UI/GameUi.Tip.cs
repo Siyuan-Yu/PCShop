@@ -84,8 +84,9 @@ namespace PCShopSell.Game.UI
         private Button HudPanelButton(Transform row, string title, KeyCode key, Action open, string description, Color? bg = null)
         {
             string shortcut = HotkeyLabel(key);
-            var button = Ui.Size(Ui.Button(row, title, open, 18, bg ?? (row == _hudShortcutRow ? Ui.HudTile : Ui.ChromeButton)), 0, -1, 1)
+            var button = Ui.Size(Ui.Button(row, title, open, 20, bg ?? (row == _hudShortcutRow ? Ui.HudTile : Ui.ChromeButton)), 0, -1, 1)
                 .Tip($"<b>{title}</b>　快捷键：{shortcut}\n{description}");
+            if (row == _hudShortcutRow) Ui.StyleTab(button);
             Ui.ButtonArtwork(button, title == "股市" ? UiIcon.Stocks : Ui.WindowIcon(title), shortcut);
             _hudPanelButtons.Add(key, button);
             return button;

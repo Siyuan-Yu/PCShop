@@ -93,20 +93,21 @@ namespace PCShopSell.Game.UI
         }
         private void BuildShortcutButton(Transform parent,string label,int kind,float width)
         {
-            var group=Ui.Row(parent,42,1);group.name="Shortcut_"+kind;Ui.Size(group,width+27,42);
-            var main=Ui.Button(group,label,()=>TravelShortcut(kind),16,Ui.HudTile);
-            main.name="ShortcutGo_"+kind;Ui.Size(main,width,42);
+            width = Mathf.Max(138, width);
+            var group=Ui.Row(parent,80,1);group.name="Shortcut_"+kind;Ui.Size(group,width+31,80);
+            var main=Ui.Button(group,label,()=>TravelShortcut(kind),18,Ui.HudTile);
+            main.name="ShortcutGo_"+kind;Ui.Size(main,width,80);
             var icon = Ui.Artwork(main.transform, kind switch
             {
                 SleepShortcut => UiIcon.Home, OwnedShopShortcut => UiIcon.Shop,
                 1 => UiIcon.Wholesale, 2 => UiIcon.Agency, _ => UiIcon.None
             });
-            if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 8, -9, -26, -9);
+            if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 8, -22, -52, -22);
             var caption=main.GetComponentInChildren<Text>();
             caption.horizontalOverflow = HorizontalWrapMode.Overflow;
             caption.verticalOverflow = VerticalWrapMode.Truncate;
             caption.supportRichText = false;
-            caption.rectTransform.Anchor(0, 0, 1, 1, icon == null ? ShortcutCaptionPadding : 32, 3, ShortcutCaptionPadding, 3);
+            caption.rectTransform.Anchor(0, 0, 1, 1, icon == null ? ShortcutCaptionPadding : 56, 3, ShortcutCaptionPadding, 3);
             main.gameObject.AddComponent<RectMask2D>().padding = new Vector4(ShortcutCaptionPadding, 0, ShortcutCaptionPadding, 0);
             main.Tip(() =>
             {
@@ -122,7 +123,7 @@ namespace PCShopSell.Game.UI
             var menu=new ShortcutMenu{Kind=kind,Main=main,Caption=caption,Group=group,MinimumWidth=width};
             if(kind==3)
             {
-                var arrow=Ui.Size(Ui.Button(group,"▾",OpenCustomDestinationPicker,17),26,42);
+                var arrow=Ui.Size(Ui.Button(group,"▾",OpenCustomDestinationPicker,20),30,80);
                 arrow.name="ShortcutArrow_3";
                 arrow.Tip("搜索目的地、立即前往或保存到底栏。");
                 _shortcutMenus.Add(menu);return;
@@ -138,7 +139,7 @@ namespace PCShopSell.Game.UI
             dropdown.OptionHeader = index => index < menu.Places.Length && menu.Places[index] == null;
             dropdown.OptionBlocker = index => index < menu.Places.Length && menu.Places[index] is Place place
                 ? ShortcutBlocker(kind, place) : null;
-            menu.Dropdown=dropdown;dropdown.name="ShortcutArrow_"+kind;Ui.Size(dropdown,26,42);
+            menu.Dropdown=dropdown;dropdown.name="ShortcutArrow_"+kind;Ui.Size(dropdown,30,80);
             dropdown.captionText.gameObject.SetActive(false);
             var item = dropdown.itemText;
             item.rectTransform.Anchor(0, 0, 1, 1, 14, 6, 10, 6);
@@ -218,7 +219,7 @@ namespace PCShopSell.Game.UI
             var label = menu.Caption;
             var settings = label.GetGenerationSettings(Vector2.zero);
             float Measure(string value) => label.cachedTextGeneratorForLayout.GetPreferredWidth(value, settings) / label.pixelsPerUnit;
-            float maxWidth = menu.Kind == SleepShortcut ? 160 : 172;
+            float maxWidth = menu.Kind == SleepShortcut ? 175 : 182;
             float gutter = label.rectTransform.offsetMin.x + ShortcutCaptionPadding + 4;
             float maxTextWidth = maxWidth - gutter;
             name = name.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ');
@@ -243,8 +244,8 @@ namespace PCShopSell.Game.UI
             }
             label.text = caption;
             float width = Mathf.Clamp(Mathf.Ceil(preferred) + gutter, Mathf.Max(100, menu.MinimumWidth), maxWidth);
-            Ui.Size(menu.Main, width, 42);
-            Ui.Size(menu.Group, width + 27, 42);
+            Ui.Size(menu.Main, width, 80);
+            Ui.Size(menu.Group, width + 31, 80);
             _fittedTravelWidth = 0;
         }
 
