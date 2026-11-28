@@ -18,8 +18,6 @@ namespace PCShopSell.Core.Session
             // 城郊
             ["life_ming"] = "今天修好了一台旧机器。听见它重新响起来的时候，我就想讲给你听。",
             ["life_singer"] = "我给你留了靠墙那个位置。坐这儿听得见我，也听得见街上的声音。",
-            ["resident_sujun"] = "我下班揉了点面。下次你来，我做一碗刚出锅的给你。",
-            ["resident_leiming"] = "我练了一小段口琴。只练熟了开头，你愿意听的话，我吹给你听。",
             ["keeper_agent"] = "我路过一扇好看的旧门，拍下来了。下次想跟你一起慢慢走那条街。",
             ["keeper_phone"] = "今天看了一整天屏幕。见到你，我倒想把手机收起来，好好说会儿话。",
             ["resident_dengyue"] = "我画了两张早餐店的招牌速写。哪张更像我们平时一起走的那条街？",
@@ -37,23 +35,33 @@ namespace PCShopSell.Core.Session
             [LuZhi] = "我今天画了一扇旧窗。等下把本子给你看，然后我们聊点作品以外的事。",
             ["life_designer"] = "收店时顺手留了一块好看的布。下次见面我给你看，看见它时我刚好想起你。",
             ["resident_ningxi"] = "今天拍的照片里，有一张光线很像上次我们散步的时候。我留着想给你看。",
-            ["resident_taoran"] = "跑团已经散了。跟你走一段，我可以故意慢一点。",
             ["resident_zhaoyu"] = "下雨那会儿我录到一段很好听的声音。今天想先和你一起听。",
             ["res_coder"] = "今天已经盯够屏幕了。下次去河边吧，我带上以前钓鱼用的那副线。",
-            ["racer_2"] = "赛道这边都整备好了。终于可以不看秒表，和你待一会儿。",
             ["lin"] = "见到你还是会想起以前那块球场。我们现在有空，也还可以一起去。",
             // 花园
-            ["resident_jiangning"] = "我在地图上圈了一条安静的路。不是给客人的路线，是想和你一起走的。",
             ["life_golfer"] = "今天的课上完了。等下我们走一段，球杆就留在场边吧。",
             ["resident_jiyun"] = "客人都安顿好了。我想带你看看那盆新开的兰花。",
-            ["resident_xiaqing"] = "今天的位置总算都排妥了。晚上还留了一小会儿，想和你拼几块。",
             ["racer_3"] = "今天聊了一整天车。和你见面的时候，我更想听你说说自己的事。",
-            ["resident_siyu"] = "今天下班路上看见一只没认出来的鸟。下次想和你一起去碰碰运气。",
             ["resident_luoya"] = "散场后还有一小段旋律在脑子里。走一会儿吧，我哼给你听。",
+        };
+
+        // Existing save relationships retain their dialogue without opening a new confession route.
+        private static readonly IReadOnlyDictionary<string, string> LegacyPartnerTalk = new Dictionary<string, string>
+        {
+            ["resident_sujun"] = "我下班揉了点面。下次你来，我做一碗刚出锅的给你。",
+            ["resident_leiming"] = "我练了一小段口琴。只练熟了开头，你愿意听的话，我吹给你听。",
+            ["resident_jiangning"] = "我在地图上圈了一条安静的路。不是给客人的路线，是想和你一起走的。",
+            ["resident_siyu"] = "今天下班路上看见一只没认出来的鸟。下次想和你一起去碰碰运气。",
+            ["resident_taoran"] = "跑团已经散了。跟你走一段，我可以故意慢一点。",
+            ["racer_2"] = "赛道这边都整备好了。终于可以不看秒表，和你待一会儿。",
+            ["resident_xiaqing"] = "今天的位置总算都排妥了。晚上还留了一小会儿，想和你拼几块。",
         };
 
         public static bool IsRomanceCandidate(string personId) =>
             personId != null && PartnerTalk.ContainsKey(personId) && CityLifeCatalog.Person(personId)?.Age >= 18;
+
+        private static bool CanRestoreRomancePartner(string personId) => IsRomanceCandidate(personId)
+            || personId != null && LegacyPartnerTalk.ContainsKey(personId) && CityLifeCatalog.Person(personId)?.Age >= 18;
 
         public bool IsPlayerPartner(string personId) => personId != null && RomanceId == personId;
 
@@ -106,8 +114,22 @@ namespace PCShopSell.Core.Session
                     : "谢谢你愿意告诉我。我还没想好要不要开始一段恋爱，我们可以照常相处。";
             }
             ConfirmPartner(personId);
-            return personId == LuZhi ? "我也想和你在一起。以后可以一起做东西，也可以只是见个面，什么都不赶。"
-                : "我也喜欢和你在一起。那我们就试着认真交往吧。";
+            return personId switch
+            {
+                "keeper_agent" => "我也想和你交往。下回见面，我给你留的是我自己的时间。",
+                "keeper_phone" => "好啊，我一直在想你什么时候会说。我们交往吧，下次我也有话想主动告诉你。",
+                "life_coach" => "我也喜欢你。我们交往吧，慢一点也行，我会跟上你的步子。",
+                "racer_0" => "行，我答应了。我们交往吧。刚才我笑是因为开心，没在跟你赌什么。",
+                "ake" => "我也想和你交往。以后下了播我会主动来找你，哪怕什么好玩的都没准备。",
+                "qiao" => "我考虑过了。我也想和你交往。哪天有话说不清，你给我一点时间，我会回来讲完。",
+                "resident_baiming" => "我还想让自己看起来镇定点。算了，我笑得根本停不下来。我们交往吧。",
+                "resident_ningxi" => "好，我想和你交往。今天这个样子就让你看见好了，相机放着吧。",
+                "res_coder" => "我也想和你交往。以后我忙完了就找你，不用先编个一起打游戏的理由。",
+                "life_golfer" => "我也想和你交往。下回我来叫你，再一起找个地方站一会儿。",
+                "racer_3" => "我愿意和你交往。工作上我会把每件事问清楚，今天这句话我已经很确定了。",
+                "resident_luoya" => "好，我们就交往吧。害我心跳快了一拍，明天排练我要记得别抢。",
+                _ => "我也喜欢和你在一起。那我们就试着认真交往吧。"
+            };
         }
 
         private void ConfirmPartner(string personId)
@@ -120,8 +142,12 @@ namespace PCShopSell.Core.Session
             RememberSocial(personId, "你们确认了恋爱关系。");
         }
 
-        public string PartnerConversation(string personId) =>
-            IsPlayerPartner(personId) && PartnerTalk.TryGetValue(personId, out var line) ? line : null;
+        public string PartnerConversation(string personId)
+        {
+            if (!IsPlayerPartner(personId)) return null;
+            return PartnerTalk.TryGetValue(personId, out var line) || LegacyPartnerTalk.TryGetValue(personId, out line)
+                ? line : null;
+        }
 
         public string ActivityPartnerId(CityActivity activity)
         {
@@ -137,7 +163,9 @@ namespace PCShopSell.Core.Session
             if (id == null) return null;
             string kind = activity.DefinitionId ?? "";
             string line;
-            if (kind.StartsWith("fishing", StringComparison.Ordinal) || kind.StartsWith("hike", StringComparison.Ordinal))
+            if (PartnerMomentLine(id, kind) is string authored)
+                line = authored;
+            else if (kind.StartsWith("fishing", StringComparison.Ordinal) || kind.StartsWith("hike", StringComparison.Ordinal))
                 line = "我们走慢一点吧。今天难得能在一起待这么久。";
             else if (kind.StartsWith("dinner", StringComparison.Ordinal) || kind.StartsWith("snack", StringComparison.Ordinal))
                 line = "吃完也不急着走吧？今天我想和你多坐一会儿。";
@@ -151,7 +179,10 @@ namespace PCShopSell.Core.Session
         }
 
         public bool CanTalkToActivityPartner(CityActivity activity) =>
-            !IsGameOver && ActivityPartnerId(activity) != null && CurrentPlace?.Id == activity.VenueId;
+            MomentPerson(activity) is string personId && IsPlayerPartner(personId);
+
+        public bool HasActivityPartnerInteraction(CityActivity activity, bool holdHands) =>
+            activity?.Choices.Contains(holdHands ? HoldHandsChoice : PersonalTalkChoice) == true;
 
         public string InteractWithActivityPartner(string activityId, bool holdHands)
         {
@@ -159,12 +190,12 @@ namespace PCShopSell.Core.Session
             if (activity?.Id != activityId || !CanTalkToActivityPartner(activity)) return null;
             string id = ActivityPartnerId(activity);
             string key = holdHands ? HoldHandsChoice : PersonalTalkChoice;
-            string line = holdHands ? "好。就这样牵一会儿吧。" : PartnerConversation(id);
-            if (!activity.Choices.Contains(key))
-            {
-                activity.Choices = activity.Choices.Concat(new[] { key }).ToArray();
-                RememberSocial(id, holdHands ? "这次约会里，你们牵了手。" : "这次约会里，你们聊了彼此最近的心事。");
-            }
+            if (activity.Choices.Contains(key))
+                return holdHands ? PartnerMomentReply(id, true) ?? "好。就这样牵一会儿吧。" : PartnerConversation(id);
+            string line = PartnerMomentReply(id, holdHands)
+                ?? (holdHands ? "好。就这样牵一会儿吧。" : PartnerConversation(id));
+            activity.Choices = activity.Choices.Concat(new[] { key }).ToArray();
+            RememberSocial(id, (holdHands ? "牵手 · " : "聊心事 · ") + line);
             return line;
         }
     }

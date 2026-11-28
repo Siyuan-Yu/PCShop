@@ -1,0 +1,11 @@
+{
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12700F",
+  "gpu": "NVIDIA GeForce RTX 3070",
+  "ramGB": 31.8,
+  "unity": "2022.3.6f1",
+  "branch": "art/experiment",
+  "base": "7c51368ab27346688818a3d59468bbe11c153ffa",
+  "resolution": "1920x1080",
+  "vSync": 0,
+  "frameLimit": -1
+}

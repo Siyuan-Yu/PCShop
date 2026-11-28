@@ -4,10 +4,10 @@ using UnityEngine;
 // Portraits are small UI textures; source PNGs remain untouched for later reuse.
 public sealed class NpcPortraitImportRules : AssetPostprocessor
 {
-    public const string Root = "Assets/Art/PortraitsRetro/"; // 旧版复古头像：仅作存档/美术资料，不进游戏包（不在 Resources 下）
     public const string AnimeRoot = "Assets/Resources/PortraitsAnime/";
-    private static bool IsPortrait(string path) => path.StartsWith(Root, System.StringComparison.Ordinal)
-        || path.StartsWith(AnimeRoot, System.StringComparison.Ordinal);
+    public const string RelationshipRoot = "Assets/Resources/RelationshipPortraits/";
+    private static bool IsPortrait(string path) => path.StartsWith(AnimeRoot, System.StringComparison.Ordinal)
+        || path.StartsWith(RelationshipRoot, System.StringComparison.Ordinal);
     private void OnPreprocessTexture()
     {
         if (!IsPortrait(assetPath)) return;
@@ -15,9 +15,9 @@ public sealed class NpcPortraitImportRules : AssetPostprocessor
     }
     private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
     {
-        foreach (string path in imported)
-            if (IsPortrait(path))
-            { PCShopSell.Game.UI.GameUi.InvalidatePortraitCache(); break; }
+        if (System.Array.Exists(imported, IsPortrait) || System.Array.Exists(deleted, IsPortrait)
+            || System.Array.Exists(moved, IsPortrait) || System.Array.Exists(movedFrom, IsPortrait))
+            PCShopSell.Game.UI.GameUi.InvalidatePortraitCache();
     }
     public static void Configure(TextureImporter importer)
     {
@@ -35,10 +35,10 @@ public sealed class NpcPortraitImportRules : AssetPostprocessor
         importer.npotScale = TextureImporterNPOTScale.None;
         importer.sRGBTexture = true;
     }
-    [MenuItem("PCShop/Art/Reimport retro NPC portraits")]
+    [MenuItem("PCShop/Art/重新导入正式人物头像")]
     public static void ReimportAll()
     {
-        foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { Root.TrimEnd('/') }))
+        foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { AnimeRoot.TrimEnd('/'), RelationshipRoot.TrimEnd('/') }))
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);

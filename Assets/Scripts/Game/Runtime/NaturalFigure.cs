@@ -17,14 +17,16 @@ namespace PCShopSell.Game.Runtime
 
         internal readonly string Head;
         internal readonly Color Skin, Hair;
+        internal readonly Color? HeadAccent;
         internal readonly float Height, Width;
         internal readonly bool PrefersSkirt;
 
-        private NpcLook(string head, Color skin, Color hair, float height, float width, bool prefersSkirt)
+        private NpcLook(string head, Color skin, Color hair, float height, float width, bool prefersSkirt, Color? headAccent=null)
         {
             Head = head;
             Skin = skin;
             Hair = hair;
+            HeadAccent = headAccent;
             Height = height;
             Width = width;
             PrefersSkirt = prefersSkirt;
@@ -35,7 +37,7 @@ namespace PCShopSell.Game.Runtime
         internal static NpcLook Select(string id, string slot, Color baseSkin, Color clothing)
         {
             var art=NpcArtCatalog.Find(id);
-            if(art!=null)return new NpcLook(art.head,ArtDirection.Hex(art.skin),ArtDirection.Hex(art.hair),art.height,art.width,art.bottom.Contains("skirt")||art.bottom=="singer");
+            if(art!=null)return new NpcLook(art.head,ArtDirection.Hex(art.skin),ArtDirection.Hex(art.hair),art.height,art.width,art.bottom.Contains("skirt")||art.bottom=="singer",ArtDirection.Hex(art.accent));
             uint hash = StableHash(id ?? slot, clothing, id == null);
             string head;
             if (id != null && PortraitHeads.TryGetValue(id, out string portraitHead))

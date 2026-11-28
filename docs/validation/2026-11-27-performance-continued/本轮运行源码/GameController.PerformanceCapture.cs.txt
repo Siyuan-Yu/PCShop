@@ -1,0 +1,224 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using PCShopSell.Core.Common;
+using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
+using Unity.Profiling;
+using UnityEngine;
+using UnityEngine.Profiling;
+
+namespace PCShopSell.Game
+{
+    public sealed partial class GameController
+    {
+        [Serializable] private sealed class PlayerPerfTiming
+        {
+            public string name;
+            public int count;
+            public double totalMs,maxMs;
+            public PlayerPerfTiming Copy()=>new PlayerPerfTiming{name=name,count=count,totalMs=totalMs,maxMs=maxMs};
+        }
+        [Serializable] private sealed class PlayerPerfSpike
+        {
+            public long minute;
+            public double frameMs,stepMs;
+            public PlayerPerfTiming[] core;
+        }
+        [Serializable] private sealed class PlayerPerfSample
+        {
+            public string scene,resolution,displayedSpeed;
+            public int internalSpeed,frames,pausedFrames,recoveryFrames,missingMaterials,errorShaders,pendingTextures,notAtTargetMip;
+            public long simulatedMinutes;
+            public double fps,p99Ms,maxMs,slowestOnePercentFps,over120BudgetPercent,sampleSeconds;
+            public double stepP99Ms,stepMaxMs,drawCalls,triangles,loadSimulationMs,attachSessionMs,transitionMs;
+            public double allocatedMB,textureMB;
+            public bool rendered,renderCounterAvailable,meets120P99,recoveryCompleted;
+            public PlayerPerfTiming[] coreBreakdown;
+            public PlayerPerfSpike[] worstFrames;
+        }
+        [Serializable] private sealed class PlayerPerfReport
+        {
+            public string unity,gpu,mode="Windows 客户端真实帧间隔；每例独立恢复同一合成存档";
+            public bool diagnostic;
+            public int errors;
+            public List<PlayerPerfSample> scenarios=new List<PlayerPerfSample>();
+        }
+
+        private IEnumerator PlayerPerformanceCapture(string output,string[] args)
+        {
+            // 所有状态隔离在输出目录；不加载玩家存档，不更改已保存的显示设置。
+            // 通过正常渐进建图路径预备人物资源，不能绕过正式加载后再比较帧率。
+            var routine=PlayerPerformanceCaptureBody(output,args);
+            int errors=0;
+            void CaptureError(string message,string stack,LogType type)
+            {
+                if(type is LogType.Error or LogType.Exception or LogType.Assert)
+                {errors++;File.AppendAllText(output+".errors.txt",message+"\n"+stack+"\n");}
+            }
+            Application.logMessageReceived+=CaptureError;
+            bool success=false;
+            try
+            {
+                while(true)
+                {
+                    bool more;
+                    try {more=routine.MoveNext();}
+                    catch(Exception e){File.WriteAllText(output+".failure.txt",e.ToString());break;}
+                    if(!more){success=true;break;}
+                    yield return routine.Current;
+                }
+            }
+            finally
+            {
+                (routine as IDisposable)?.Dispose();
+                RuntimePerformanceProbe.Listener=null;
+                Application.logMessageReceived-=CaptureError;
+            }
+            if(File.Exists(output))
+            {
+                var report=JsonUtility.FromJson<PlayerPerfReport>(File.ReadAllText(output));
+                report.errors=errors;
+                File.WriteAllText(output,JsonUtility.ToJson(report,true));
+                success&=report.scenarios.All(s=>s.rendered);
+            }
+            else success=false;
+            Application.Quit(success&&errors==0?0:2);
+        }
+
+        private IEnumerator PlayerPerformanceCaptureBody(string output,string[] args)
+        {
+            string Arg(string key){int i=Array.IndexOf(args,key);return i>=0&&i+1<args.Length?args[i+1]:null;}
+            bool diagnostic=args.Contains("-pcshop-perf-hotspots");
+            string[] all={"suburb-1x","community-1x","park-1x","garden-1x","race-1x","shop-1x","home-1x","suburb-reload","garden-4x","home-sleep"};
+            string requested=Arg("-pcshop-perf-case");
+            if(requested!=null&&!all.Contains(requested))throw new ArgumentException("未知巡检场景："+requested);
+            string[] cases=requested!=null?new[]{requested}:all;
+            string directory=Path.GetDirectoryName(output);
+            Screen.SetResolution(1920,1080,FullScreenMode.Windowed);
+            EnterGame(()=>StartSession(NewSession(7)));
+            while(_enteringWorld)yield return null;
+            if(Session==null)throw new InvalidOperationException("巡检会话未创建");
+            Ui.QuestPopups=false;Session.EventsEnabled=false;Session.DebugAddCash(200000000);Session.DebugRentStarterShop(true);
+            ((DistrictProgress)typeof(GameSession).GetField("_district",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(Session)).UnlockedTier=3;
+            Session.Clock.Restore(new GameDate(15),600);
+            string initial=JsonUtility.ToJson(Session.CreateSave());
+            QualitySettings.vSyncCount=0;Application.targetFrameRate=-1;Application.runInBackground=true;
+            foreach(var canvas in Ui.Canvases)
+            {
+                var raycaster=canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if(raycaster!=null)raycaster.enabled=false;
+            }
+            var report=new PlayerPerfReport{unity=Application.unityVersion,gpu=SystemInfo.graphicsDeviceName,diagnostic=diagnostic};
+            using var drawRecorder=ProfilerRecorder.StartNew(ProfilerCategory.Render,"Draw Calls Count",1);
+            using var triangleRecorder=ProfilerRecorder.StartNew(ProfilerCategory.Render,"Triangles Count",1);
+            var totalCore=new Dictionary<string,PlayerPerfTiming>();
+            var frameCore=new Dictionary<string,PlayerPerfTiming>();
+            void Add(Dictionary<string,PlayerPerfTiming> values,string name,double ms)
+            {
+                if(!values.TryGetValue(name,out var v))values[name]=v=new PlayerPerfTiming{name=name};
+                v.count++;v.totalMs+=ms;v.maxMs=Math.Max(v.maxMs,ms);
+            }
+            if(diagnostic)RuntimePerformanceProbe.Listener=(name,ms)=>{Add(totalCore,name,ms);Add(frameCore,name,ms);};
+            foreach(string scene in cases)
+            {
+                File.AppendAllText(Path.Combine(directory,"progress.txt"),scene+"\n");
+                var transition=Stopwatch.StartNew();
+                var sample=new PlayerPerfSample{scene=scene};
+                var loaded=GameSession.Load(City,JsonUtility.FromJson<SaveData>(initial));
+                sample.loadSimulationMs=transition.Elapsed.TotalMilliseconds;
+                var attach=Stopwatch.StartNew();StartSession(loaded);sample.attachSessionMs=attach.Elapsed.TotalMilliseconds;
+                if(scene!="suburb-reload")transition.Restart();
+                Session.EventsEnabled=false;Session.StopTrip();Session.Leave();
+                Session.Player.Health=Session.Player.Hunger=Session.Player.Energy=100;
+                int tier=scene.StartsWith("community")?1:scene.StartsWith("park")?2:scene.StartsWith("garden")?3:0;
+                var place=scene.StartsWith("home")?Session.Home:scene.StartsWith("race")?City.GetPlace("race_0"):
+                    tier==0?Session.MainShop.Place:City.Places.First(p=>p.Kind==PlaceKind.Agency&&Session.DistrictTierOf(p)==tier);
+                Session.ArriveAtNode(place.NodeId);
+                if(scene.StartsWith("home")||scene.StartsWith("shop"))Session.Enter(place);
+                Session.Time.SetPaused(false);Session.Time.SetSpeed(scene.EndsWith("4x")?8:TimeController.DefaultSpeed);
+                Step(0);Ui.CloseAllWindows();Ui.CloseDock();SnapCamera();
+                sample.transitionMs=transition.Elapsed.TotalMilliseconds;
+                double warm=Time.realtimeSinceStartupAsDouble;
+                while(Time.realtimeSinceStartupAsDouble-warm<4){Step(Time.unscaledDeltaTime);yield return null;}
+                if(!drawRecorder.Valid||drawRecorder.LastValue<=0)
+                    throw new InvalidOperationException("测试窗口没有实际绘制画面，不能验收帧率。请正常显示客户端后重跑。");
+                bool rest=scene=="home-sleep";
+                if(rest&&!Session.SleepUntil(480))throw new InvalidOperationException("睡眠请求未被接受");
+                totalCore.Clear();frameCore.Clear();
+                long minute=Session.Clock.Now.TotalMinutes;
+                var frames=new List<double>();var steps=new List<double>();var spikes=new List<PlayerPerfSpike>();
+                double start=Time.realtimeSinceStartupAsDouble,draws=0,triangles=0;
+                double seconds=diagnostic&&!scene.EndsWith("4x")?30:60;
+                if(double.TryParse(Arg("-pcshop-perf-seconds"),System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,out double duration))
+                    seconds=Math.Max(15,Math.Min(180,duration));
+                long lastFrameStamp=Stopwatch.GetTimestamp();
+                do
+                {
+                    frameCore.Clear();
+                    if(Session.IsTimeAdvancing)sample.recoveryFrames++;
+                    else if(!Session.Time.IsRunning)sample.pausedFrames++;
+                    var watch=Stopwatch.StartNew();
+                    Step(Time.unscaledDeltaTime);
+                    double stepMs=watch.Elapsed.TotalMilliseconds;
+                    yield return null;
+                    long frameEndStamp=Stopwatch.GetTimestamp();
+                    double frameMs=(frameEndStamp-lastFrameStamp)*1000.0/Stopwatch.Frequency;
+                    lastFrameStamp=frameEndStamp;
+                    frames.Add(frameMs);steps.Add(stepMs);
+                    if(drawRecorder.Valid)draws+=drawRecorder.LastValue;
+                    if(triangleRecorder.Valid)triangles+=triangleRecorder.LastValue;
+                    if(diagnostic&&frameMs>1000.0/120)
+                    {
+                        var spike=new PlayerPerfSpike{frameMs=frameMs,stepMs=stepMs,minute=Session.Clock.Now.TotalMinutes,
+                            core=frameCore.Values.OrderByDescending(t=>t.totalMs).Take(16).Select(t=>t.Copy()).ToArray()};
+                        spikes.Add(spike);
+                        if(spikes.Count>32)spikes.Remove(spikes.OrderBy(s=>s.frameMs).First());
+                    }
+                    if(rest&&!Session.IsTimeAdvancing)break;
+                    if(rest&&Time.realtimeSinceStartupAsDouble-start>120)throw new TimeoutException("休息结算超时");
+                }while(rest||Time.realtimeSinceStartupAsDouble-start<seconds||frames.Count<600);
+                frames.Sort();steps.Sort();sample.frames=frames.Count;
+                sample.resolution=Screen.width+"x"+Screen.height;
+                sample.internalSpeed=Session.Time.Speed;sample.displayedSpeed=TimeController.SpeedLabel(Session.Time.Speed);
+                sample.simulatedMinutes=Session.Clock.Now.TotalMinutes-minute;sample.sampleSeconds=frames.Sum()/1000;
+                sample.fps=1000/frames.Average();sample.p99Ms=frames[(int)(frames.Count*.99)];sample.maxMs=frames.Last();
+                sample.slowestOnePercentFps=1000/frames.Skip((int)(frames.Count*.99)).Average();
+                sample.over120BudgetPercent=100.0*frames.Count(f=>f>1000.0/120)/frames.Count;
+                sample.stepP99Ms=steps[(int)(steps.Count*.99)];sample.stepMaxMs=steps.Last();
+                sample.drawCalls=draws/frames.Count;sample.triangles=triangles/frames.Count;
+                sample.renderCounterAvailable=drawRecorder.Valid;sample.rendered=drawRecorder.Valid&&sample.drawCalls>0;
+                sample.meets120P99=sample.rendered&&!rest&&sample.pausedFrames==0&&sample.fps>=120&&sample.p99Ms<=1000.0/120;
+                sample.recoveryCompleted=rest&&!Session.IsTimeAdvancing&&Session.TimeAdvanceError==null&&Session.Clock.MinuteOfDay==480;
+                sample.coreBreakdown=totalCore.Values.OrderByDescending(t=>t.totalMs).Select(t=>t.Copy()).ToArray();
+                sample.worstFrames=spikes.OrderByDescending(s=>s.frameMs).ToArray();
+                var planes=GeometryUtility.CalculateFrustumPlanes(Cam);
+                var materials=FindObjectsOfType<Renderer>().Where(r=>r.enabled&&r.gameObject.activeInHierarchy&&GeometryUtility.TestPlanesAABB(planes,r.bounds)).SelectMany(r=>r.sharedMaterials).ToArray();
+                sample.missingMaterials=materials.Count(m=>m==null);
+                sample.errorShaders=materials.Count(m=>m!=null&&(m.shader==null||!m.shader.isSupported||m.shader.name=="Hidden/InternalErrorShader"));
+                sample.pendingTextures=(int)Texture.streamingTexturePendingLoadCount;
+                sample.notAtTargetMip=materials.Where(m=>m!=null).SelectMany(m=>m.GetTexturePropertyNames().Select(m.GetTexture)).OfType<Texture2D>().Distinct().Count(t=>t.streamingMipmaps&&t.loadedMipmapLevel>t.desiredMipmapLevel);
+                sample.allocatedMB=Profiler.GetTotalAllocatedMemoryLong()/1048576.0;sample.textureMB=Texture.currentTextureMemory/1048576.0;
+                report.scenarios.Add(sample);
+                File.WriteAllText(Path.Combine(directory,scene+".json"),JsonUtility.ToJson(sample,true));
+                File.WriteAllText(output,JsonUtility.ToJson(report,true));
+                var rt=RenderTexture.GetTemporary(1920,1080,24);var previous=RenderTexture.active;var target=Cam.targetTexture;
+                Texture2D picture=null;
+                try
+                {
+                    Cam.targetTexture=rt;Cam.Render();RenderTexture.active=rt;
+                    picture=new Texture2D(1920,1080,TextureFormat.RGB24,false);picture.ReadPixels(new Rect(0,0,1920,1080),0,0);picture.Apply();
+                    File.WriteAllBytes(Path.Combine(directory,scene+".png"),picture.EncodeToPNG());
+                }
+                finally{Cam.targetTexture=target;RenderTexture.active=previous;RenderTexture.ReleaseTemporary(rt);if(picture!=null)Destroy(picture);}
+                yield return null;
+            }
+        }
+    }
+}

@@ -86,7 +86,10 @@ namespace PCShopSell.Core.Session
                 if(g.HandoverAt>=0&&now>=g.HandoverAt)
                 {
                     if(MajorityShareholder(g)!=g.PendingControllerId){g.HandoverAt=-1;g.PendingControllerId=g.PendingManagerId=null;continue;}
+                    bool playerInvolved = g.ControllerId==PlayerShareholderId || g.PendingControllerId==PlayerShareholderId
+                        || GovernanceOwnedCompany(g)!=null;
                     g.ControllerId=g.PendingControllerId;g.ManagerId=g.PendingManagerId;
+                    if (playerInvolved) g.LastPlayerHandoverAt=now;
                     g.RetainedShopIds=g.RetentionAccepted&&g.RetentionOfferShopId!=null?new[]{g.RetentionOfferShopId}:Array.Empty<string>();
                     g.PendingControllerId=g.PendingManagerId=null;g.HandoverAt=-1;g.PlayerDirector=g.ControllerId==PlayerShareholderId||g.PlayerDirector;
                     var company=GovernanceOwnedCompany(g);

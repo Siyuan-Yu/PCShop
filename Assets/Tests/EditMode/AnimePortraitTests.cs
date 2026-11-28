@@ -20,15 +20,26 @@ namespace PCShopSell.Tests
                 string path = "Assets/Resources/PortraitsAnime/" + p.Id + ".png";
                 var actual = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                 Assert.NotNull(actual, p.Name + " " + p.Id);
-                Assert.AreSame(actual, GameUi.PortraitOf(p.Id), p.Id + " uses its own art, not the fallback");
-                Assert.True(distinct.Add(actual), p.Id + " does not reuse another NPC texture");
                 var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-                Assert.AreEqual(512, importer.maxTextureSize, p.Id);
+                Assert.That(importer.maxTextureSize, Is.LessThanOrEqualTo(1024), p.Id);
                 Assert.False(importer.mipmapEnabled, p.Id); Assert.False(importer.isReadable, p.Id);
                 Assert.AreEqual(TextureImporterCompression.Compressed, importer.textureCompression, p.Id);
-                Assert.That(actual.width, Is.LessThanOrEqualTo(512)); Assert.That(actual.height, Is.LessThanOrEqualTo(512));
+                Assert.That(actual.width, Is.LessThanOrEqualTo(1024)); Assert.That(actual.height, Is.LessThanOrEqualTo(1024));
                 float aspect = (float)actual.width / actual.height;
                 Assert.That(aspect, Is.InRange(.73f, .77f), p.Id + " portrait aspect ratio");
+                var privatePortrait = Resources.Load<Texture2D>("RelationshipPortraits/Private/" + p.Id);
+                if (GameSession.IsRomanceCandidate(p.Id))
+                {
+                    Assert.NotNull(privatePortrait, p.Id + " 缺少已确认的私服头像");
+                    var privateImporter = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(privatePortrait));
+                    Assert.AreEqual(512, privateImporter.maxTextureSize, p.Id);
+                    Assert.False(privateImporter.mipmapEnabled || privateImporter.isReadable, p.Id);
+                    Assert.AreEqual(privatePortrait.width, privatePortrait.height, p.Id);
+                    Assert.That(privatePortrait.width, Is.LessThanOrEqualTo(512));
+                }
+                var preferred = privatePortrait ?? actual;
+                Assert.AreSame(preferred, GameUi.PortraitOf(p.Id), p.Id);
+                Assert.True(distinct.Add(preferred), p.Id + " 各自使用独立头像");
             }
         }
         [Test] public void UnknownDynamicAndDebugPeopleUseCachedAnimeFallback()

@@ -1,4 +1,4 @@
-"""Copy a built-in image-generation result into Unity and record its provenance.
+"""Copy a legacy portrait into a local art work folder and record its provenance.
 
 This script only imports already generated files; it never calls an image API or
 alters image pixels. Run one --id / --source pair for each completed portrait.
@@ -13,7 +13,7 @@ import shutil
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-ART = ROOT / "Assets/Resources/PortraitsRetro"
+ART = ROOT / "work/retro-portraits/images"
 MANIFEST = ROOT / "docs/art/npc-retro-portraits.json"
 
 
@@ -53,6 +53,7 @@ def main():
                       approvedSample=args.approved_sample,
                       sha256=hashlib.sha256(destination.read_bytes()).hexdigest(),
                       asset=str(destination.relative_to(ROOT)).replace("\\", "/"))
+        data["portraitRoot"] = ART.relative_to(ROOT).as_posix()
         MANIFEST.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         completed = sum(p["status"] == "complete" for p in data["portraits"])
         print(json.dumps({"id": args.id, "complete": completed, "total": len(data["portraits"])}))

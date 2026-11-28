@@ -469,6 +469,7 @@ namespace PCShopSell.Game.UI
                     int lastPressFrame = -1;
                     string insertCaption = $"投币 · ¥{GameSession.ClawPriceYuan}";
                     var grab = Ui.Size(Ui.Button(controls, insertCaption, PressClaw, 22, Ui.ButtonHot), -1, 60);
+                    BuildPartnerActivityChoices(w, S.RunningCityActivity, controls, "继续游玩");
                     var grabCaption = grab.GetComponentInChildren<Text>();
                     return () =>
                     {

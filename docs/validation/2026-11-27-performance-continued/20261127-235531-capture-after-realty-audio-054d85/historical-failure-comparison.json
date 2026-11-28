@@ -1,0 +1,32 @@
+[
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold",
+    "previouslyFailed": true,
+    "identicalPreviousMessage": true
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture",
+    "previouslyFailed": true,
+    "identicalPreviousMessage": true
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract",
+    "previouslyFailed": true,
+    "identicalPreviousMessage": true
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(\"cars\")",
+    "previouslyFailed": true,
+    "identicalPreviousMessage": true
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay",
+    "previouslyFailed": true,
+    "identicalPreviousMessage": true
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent",
+    "previouslyFailed": true,
+    "identicalPreviousMessage": true
+  }
+]

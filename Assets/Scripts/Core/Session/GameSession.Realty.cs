@@ -494,7 +494,13 @@ namespace PCShopSell.Core.Session
             return l;
         }
 
-        private List<Place> FreeUnits() => RentableUnits().Where(p => !IsMyShop(p) && !IsPendingShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null && !Listed(p)).ToList();
+        private List<Place> FreeUnits()
+        {
+            // 查询当时建立快照，不跨结算缓存，签约、到期和资产交接会立即生效。
+            var listed = new HashSet<string>(_listings.Select(l => l.PlaceId));
+            return RentableUnits().Where(p => !listed.Contains(p.Id) && !IsMyShop(p) && !IsPendingShop(p)
+                && VentureAt(p.Id) == null && PropertyAt(p.Id) == null).ToList();
+        }
 
         private Place Pick(List<Place> pool)
         {
@@ -582,8 +588,16 @@ namespace PCShopSell.Core.Session
                 }
             }
             EnsureVacantUnitListings(today);
+            var streetCounts = new Dictionary<string, int>();
+            foreach (var listing in _listings)
+            {
+                string street = AgencyStreetOf(ListingPlace(listing));
+                streetCounts.TryGetValue(street, out int count);
+                streetCounts[street] = count + 1;
+            }
+            // 保持街道遍历和随机数调用顺序；每条街只处理一次，避免逐街反复扫描挂牌。
             foreach (var street in RentableUnits().Select(AgencyStreetOf).Distinct())
-                if (_listings.Count(l => AgencyStreetOf(ListingPlace(l)) == street) < MaxListings && _realtyRng.Chance(DailyListingChance))
+                if ((!streetCounts.TryGetValue(street, out int count) || count < MaxListings) && _realtyRng.Chance(DailyListingChance))
                     AddRandomListing(today, street);
             if (Lease == null && PendingLease == null && !_listings.Any(l => l.OpenDay <= today && l.Size == ShopSize.Small))
             {

@@ -14,7 +14,7 @@ namespace PCShopSell.EditorTools
     {
         public static void RetroPortraitsFromBatch() => RunSmokeBatch(() =>
         {
-            _outDir = Path.GetFullPath("docs/previews/retro-npc-portraits"); Directory.CreateDirectory(_outDir);
+            _outDir = Path.GetFullPath("work/portrait-catalogue"); Directory.CreateDirectory(_outDir);
             ShaderUtil.allowAsyncCompilation = false; UrpSetup.Ensure();
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
             _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 7);
@@ -25,31 +25,39 @@ namespace PCShopSell.EditorTools
             Check(people.Length > 0, $"正式 NPC 名单 {people.Length} 人");
             int pages = (people.Length + 19) / 20;
             long portraitBytes = 0;
+            var fallback = Resources.Load<Texture2D>("PortraitsAnime/default");
             foreach (var person in people)
             {
-                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(NpcPortraitImportRules.Root + person.Id + ".png");
-                Check(texture != null, "独立头像 " + person.Id);
-                if (texture != null) portraitBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(texture);
+                var texture = GameUi.PortraitOf(person.Id);
+                Check(texture != null && texture != fallback, "正式头像 " + person.Id);
+                if (texture != null && texture != fallback) portraitBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(texture);
             }
-            Log("RETRO PORTRAIT_TEXTURE_BYTES=" + portraitBytes);
-            Check(GameUi.PortraitOf("employee_portrait_review_unknown") == Resources.Load<Texture2D>("PortraitsAnime/default"), "动态人物使用备用头像");
+            Log("NPC PORTRAIT_TEXTURE_BYTES=" + portraitBytes);
+            Check(GameUi.PortraitOf("employee_portrait_review_unknown") == fallback, "动态人物使用备用头像");
 
             for (int page = 0; page < pages; page++)
             {
-                var go = new GameObject("RetroPortraitCatalogue", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+                var go = new GameObject("PortraitCatalogue", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
                 var canvas = go.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceCamera;
                 canvas.worldCamera = _game.Cam; canvas.planeDistance = .5f; canvas.sortingOrder = 10000;
                 var scaler = go.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1600, 1760); scaler.matchWidthOrHeight = 0;
                 var paper = Ui.Rect(go.transform, "Paper").Fill();
                 paper.gameObject.AddComponent<Image>().color = new Color(.94f, .90f, .82f);
-                var title = Ui.Label(paper, $"复古生活漫画 · NPC头像核对 {page + 1}/{pages}", 26, TextAnchor.MiddleLeft, new Color(.22f, .16f, .11f));
+                var title = Ui.Label(paper, $"正式 NPC 头像核对 {page + 1}/{pages}", 26, TextAnchor.MiddleLeft, new Color(.22f, .16f, .11f));
                 Position(title.rectTransform, 32, 8, 1536, 52);
                 for (int cell = 0; cell < 20 && page * 20 + cell < people.Length; cell++)
                 {
                     var person = people[page * 20 + cell]; int col = cell % 5, row = cell / 5;
                     var image = Ui.Rect(paper, person.Id); Position(image, 32 + col * 310, 76 + row * 414, 264, 352);
-                    image.gameObject.AddComponent<RawImage>().texture = GameUi.PortraitOf(person.Id);
+                    var raw = Ui.Rect(image, "Texture").Fill().gameObject.AddComponent<RawImage>();
+                    raw.texture = GameUi.PortraitOf(person.Id);
+                    if (raw.texture != null)
+                    {
+                        var fit = raw.gameObject.AddComponent<AspectRatioFitter>();
+                        fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+                        fit.aspectRatio = (float)raw.texture.width / raw.texture.height;
+                    }
                     var label = Ui.Label(paper, person.Name + " · " + person.Age + "岁\n" + person.Id, 18, TextAnchor.MiddleCenter, new Color(.22f, .16f, .11f));
                     Position(label.rectTransform, 32 + col * 310, 432 + row * 414, 264, 46);
                 }
@@ -67,7 +75,7 @@ namespace PCShopSell.EditorTools
             samePlace.LocationPlaceId = _game.Session.CurrentPlace.Id;
             _game.Ui.OpenPersonDialogue("momo", firstReply: "这次合作先把适用范围和准备工作讲清楚。等下一次见面，我们再一起看实际反馈。");
             Frame(0); Shot("dialogue-momo", 1280, 720);
-            Log("RETRO NPC PORTRAITS GRAPHICS COMPLETE");
+            Log("NPC PORTRAIT CATALOGUE COMPLETE");
         });
 
         private static void Position(RectTransform rect, float x, float y, float width, float height)

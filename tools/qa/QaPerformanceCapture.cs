@@ -33,7 +33,8 @@ public static class QaPerformanceCapture
     static ProfilerRecorder[] detailRecorders;
     static readonly Dictionary<string,ProfilerRecorder> engineRecorders=new Dictionary<string,ProfilerRecorder>();
     static readonly Dictionary<string,List<double>> engineSamples=new Dictionary<string,List<double>>();
-    [Serializable] class Spike { public double frameMs,simulationMs,viewsMs,uiMs; public long minute; }
+    [Serializable] class Spike { public double frameMs,simulationMs,viewsMs,uiMs; public long minute; public Timing[] core; }
+    static readonly Dictionary<string,Timing> frameCore=new Dictionary<string,Timing>();
     static readonly List<Spike> spikes=new List<Spike>();
     static readonly Dictionary<string,List<double>> detailSamples=new Dictionary<string,List<double>>(),coreSamples=new Dictionary<string,List<double>>();
     [Serializable] class Timing { public string name; public int count; public double meanMs,p99Ms,maxMs; }
@@ -103,6 +104,7 @@ public static class QaPerformanceCapture
     };}
     public static void Run()
     {
+        CityMapBaker.EnsureBaked(false);
         Directory.CreateDirectory(Output);SessionState.SetBool(Key,true);
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
         foreach(var scene in Resources.FindObjectsOfTypeAll<SceneView>())scene.Close();
@@ -159,6 +161,8 @@ public static class QaPerformanceCapture
             {
                 ready=true;
                 game.Ui.QuestPopups=false;game.Session.EventsEnabled=false;game.Session.DebugAddCash(200000000);game.Session.DebugRentStarterShop(true);
+                foreach(string lesson in new[]{"first_meal","rent","mall","place","shelf","stock","sale","hire"})
+                    game.Session.Flags.Add("tutorial:"+lesson);
                 ((DistrictProgress)typeof(GameSession).GetField("_district",F).GetValue(game.Session)).UnlockedTier=3;
                 game.Session.Clock.Restore(new GameDate(15),600);
                 initialSave=JsonUtility.ToJson(game.Session.CreateSave());
@@ -183,7 +187,11 @@ public static class QaPerformanceCapture
                     }
                     File.WriteAllLines(Path.Combine(Output,"引擎计时器.txt"),engineRecorders.Keys);
                 }
-                if (Hotspots) RuntimePerformanceProbe.Listener=(n,ms)=>{if(!coreSamples.TryGetValue(n,out var list))coreSamples[n]=list=new List<double>();list.Add(ms);};
+                if (Hotspots) RuntimePerformanceProbe.Listener=(n,ms)=>{
+                    if(!coreSamples.TryGetValue(n,out var list))coreSamples[n]=list=new List<double>();list.Add(ms);
+                    if(!frameCore.TryGetValue(n,out var value))frameCore[n]=value=new Timing{name=n};
+                    value.count++;value.meanMs+=ms;value.maxMs=Math.Max(value.maxMs,ms);
+                };
                 Next();return;
             }
             if(Time.frameCount==lastFrame)return;lastFrame=Time.frameCount;
@@ -191,16 +199,19 @@ public static class QaPerformanceCapture
             if(sampling)
             {
                 frames.Add((now-last)*1000);drawSum+=draws.LastValue;triangleSum+=triangles.LastValue;
-                if(!game.Session.Time.IsRunning)pausedFrames++;
+                if(!game.Session.Time.IsRunning||game.Session.RequiredTutorialPaused||game.Session.OpeningClockFrozen
+                    ||game.Session.ManualActivityClockPaused||game.Session.IsGameOver)pausedFrames++;
                 if(game.Session.IsTimeAdvancing)recoveryFrames++;
                 simulationSamples.Add(simulationRecorder.Valid?simulationRecorder.LastValue/1000000.0:0);
                 viewSamples.Add(viewsRecorder.Valid?viewsRecorder.LastValue/1000000.0:0);
                 uiSamples.Add(uiRecorder.Valid?uiRecorder.LastValue/1000000.0:0);
                 foreach(var entry in engineRecorders)if(entry.Value.Valid)engineSamples[entry.Key].Add(entry.Value.LastValue/1000000.0);
-                if(Hotspots&&(now-last)*1000>1000.0/120)spikes.Add(new Spike{frameMs=(now-last)*1000,simulationMs=simulationSamples.Last(),viewsMs=viewSamples.Last(),uiMs=uiSamples.Last(),minute=game.Session.Clock.Now.TotalMinutes});
+                if(Hotspots&&(now-last)*1000>1000.0/120)spikes.Add(new Spike{frameMs=(now-last)*1000,simulationMs=simulationSamples.Last(),viewsMs=viewSamples.Last(),uiMs=uiSamples.Last(),minute=game.Session.Clock.Now.TotalMinutes,
+                    core=frameCore.Values.OrderByDescending(v=>v.meanMs).Take(12).Select(v=>new Timing{name=v.name,count=v.count,meanMs=v.meanMs/v.count,maxMs=v.maxMs}).ToArray()});
                 for(int i=0;i<detailNames.Length;i++)if(detailRecorders[i].Valid)detailSamples[detailNames[i]].Add(detailRecorders[i].LastValue/1000000.0);
             }
             float dt=(float)Math.Min(.25,Math.Max(0,now-last));last=now;
+            frameCore.Clear();
             long begin=Stopwatch.GetTimestamp();game.Step(dt);
             if(sampling)
             {
@@ -224,7 +235,7 @@ public static class QaPerformanceCapture
         if(index>=cases.Length)
         {
             bool rendered=results.All(r=>r.drawCalls>0);
-            bool throttled=results.Count(r=>r.frameMs>90&&r.frameMs<110&&r.stepMs<20)>=results.Count-1;
+            bool throttled=results.Count(r=>r.frameMs>90&&r.frameMs<110&&r.stepMs<20)>=Math.Max(1,results.Count-1);
             var report=new Report{unity=Application.unityVersion,gpu=SystemInfo.graphicsDeviceName,graphicsMemoryMB=SystemInfo.graphicsMemorySize,errors=errors,rendered=rendered,backgroundThrottleSuspected=throttled,validForFrameRate=rendered&&!throttled,scenarios=results.ToArray()};
             File.WriteAllText(Path.Combine(Output,"performance.json"),JsonUtility.ToJson(report,true));
             File.WriteAllText(Path.Combine(Output,"result.txt"),!rendered?"无有效绘制，不能作为 FPS。":throttled?"出现固定后台节流，不能作为游戏 FPS。":"Game View 已提交绘制；请按编辑器测试解释帧率。" );

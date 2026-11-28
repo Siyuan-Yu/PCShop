@@ -14,9 +14,12 @@ namespace PCShopSell.Tests
 {
     public class BusinessRegressionTests
     {
-        private static GameSession Make()
+        private static GameSession Make(bool withMotorDealer = false)
         {
-            var s=new GameSession(CityLayout.FromData(GameSessionTests.Layout()),91,Money.FromYuan(1000000),GameTimestamp.From(new GameDate(0),540),false);
+            var layout = GameSessionTests.Layout();
+            if (withMotorDealer)
+                layout.places = layout.places.Append(new LayoutPlaceData { id="motor_cars", name="汽车城", kind="dealer", node="dl" }).ToArray();
+            var s=new GameSession(CityLayout.FromData(layout),91,Money.FromYuan(1000000),GameTimestamp.From(new GameDate(0),540),false);
             s.EventsEnabled=false; s.PlayerShop.Settings.BaseCustomersPerHour=0; s.PlayerShop.Reputation=40;
             s.Meet(Npcs.Zhou,80); GameSessionTests.Teleport(s,"agency"); return s;
         }
@@ -243,13 +246,20 @@ namespace PCShopSell.Tests
                 }
             }
         }
-        [Test] public void CarVanAreLegal_PersistCapacity_AndCanBeSold()
+        [Test] public void VanPersistedInProcurementFleetCannotCommuteAndCanBeSold()
         {
-            using(var s=Make())
+            using(var s=Make(withMotorDealer:true))
             {
-                GameSessionTests.Teleport(s,"dealer");Assert.True(s.BuyVehicle(VehicleKind.Van));Assert.True(s.SetVehicle(VehicleKind.Van));
-                Assert.False(s.CurrentVehicle.Illegal);Assert.AreEqual(80,s.CurrentVehicle.CargoCapacity);
-                using(var l=Reload(s)){Assert.AreEqual(VehicleKind.Van,l.Vehicle);Assert.AreEqual(s.Cargo.Capacity,l.Cargo.Capacity);Assert.True(l.SellVehicle(VehicleKind.Van));Assert.False(l.Owns(VehicleKind.Van));Assert.AreEqual(VehicleKind.Walk,l.Vehicle);Assert.False(l.SellVehicle(VehicleKind.Van));}
+                GameSessionTests.Teleport(s,"motor_cars");
+                string model=MotorCatalog.Legacy(VehicleKind.Van).Id;
+                Assert.True(s.BuyMotor(model),s.MotorPurchaseBlocker(model));
+                Assert.False(s.SetVehicle(VehicleKind.Van));
+                Assert.AreEqual(1,s.FreeVehicleCount(VehicleKind.Van));
+                using var l=Reload(s);
+                Assert.AreEqual(VehicleKind.Walk,l.Vehicle);
+                Assert.AreEqual(1,l.FreeVehicleCount(VehicleKind.Van));
+                Assert.True(l.SellVehicle(VehicleKind.Van));Assert.False(l.Owns(VehicleKind.Van));
+                Assert.False(l.SellVehicle(VehicleKind.Van));
             }
         }
         [Test] public void AutoRestockReservesDueBillsAndPropertyMaintenance()
@@ -293,6 +303,8 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 ListUnit(s);var d=Ventures.Get(kind);
+                if (kind=="cars")
+                    ((DistrictProgress)typeof(GameSession).GetField("_district",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(s)).UnlockedTier=1;
                 if(d.HardwareCount>0)foreach(var p in PartCatalog.BuildList(d.HardwareTier))s.PlayerShop.Stock.ForceAdd(p,true,d.HardwareCount);
                 Assert.True(s.OpenVenture("tea",kind));
                 for(int day=1;day<=45;day++)Midnight(s,day);
@@ -345,7 +357,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                var c=s.Creator("momo");c.Relationship=40;c.Affection=60;
+                var c=s.Creator("ake");c.Relationship=40;c.Affection=60;c.Resources=60;
                 Assert.False(s.ResolveCreatorStory(c.Id,true),"Private stories cannot be resolved remotely from the agency");
                 Assert.AreEqual(0,c.StoryStage);
                 var person=s.CityPersonState(c.Id);Assert.NotNull(person);Assert.NotNull(person.LocationPlaceId);
@@ -353,13 +365,13 @@ namespace PCShopSell.Tests
                 Assert.True(s.CitySamePlace(c.Id),"The same persistent creator is physically present before the conversation");
                 Assert.True(s.ResolveCreatorStory(c.Id,true));Assert.True(s.ResolveCreatorStory(c.Id,true));
                 Assert.True(s.StartRomance(c.Id));
-                s.Creator("ake").Affection=80;s.Creator("ake").StoryStage=2;
-                Assert.False(s.StartRomance("ake"),"A second otherwise eligible relationship cannot replace the existing one");
+                s.Creator("qiao").Affection=80;s.Creator("qiao").StoryStage=2;
+                Assert.False(s.StartRomance("qiao"),"A second relationship cannot replace the existing one");
                 Assert.True(s.FoundMcn());Assert.True(s.SignMcnCreator(c.Id));
                 using(var l=Reload(s))
                 {
                     Assert.AreEqual(c.Id,l.RomanceId);Assert.AreEqual(2,l.Creator(c.Id).StoryStage);
-                    Assert.True(l.Flags.Contains("creator-story:momo:0:respect"));
+                    Assert.True(l.Flags.Contains("creator-story:ake:0:respect"));
                     Assert.True(l.EndRomance());Assert.Greater(l.Creator(c.Id).McnUntilDay,l.Clock.Today.TotalDays);
                     Assert.IsNull(l.RomanceId);
                 }

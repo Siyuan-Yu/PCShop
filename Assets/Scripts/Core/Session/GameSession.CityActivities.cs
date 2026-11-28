@@ -162,6 +162,9 @@ namespace PCShopSell.Core.Session
         {
             var definition=CityPerson(person.PersonId);
             if(definition==null||!City.HasPlace(person.WorkPlaceId))return false;
+            // These long shifts and transfers overlap the hours of their usual leisure venues.
+            if (person.PersonId is "life_creator" or "life_designer" or "keeper_phone" or "keeper_agent" or "life_golfer" or "racer_3"
+                && new GameDate((int)(minute / 1440)).Weekday == GameWeekday.Sunday) return false;
             if (!CityWithinHours((int)(minute % 1440), definition.WorkStart, definition.WorkEnd)) return false;
             var workplace=City.GetPlace(person.WorkPlaceId);
             if (!CityNpcWorkAllowed(workplace, person.HomePlaceId)) return false;
@@ -656,6 +659,7 @@ namespace PCShopSell.Core.Session
         {
             if (key == HoldHandsChoice) return "牵手";
             if (key == PersonalTalkChoice) return "聊聊心事";
+            if (key == PersonalMomentChoice) return "专属相处";
             return int.TryParse(key, out int index) && index >= 0 && index < (definition?.Choices.Length ?? 0)
                 ? definition.Choices[index] : null;
         }

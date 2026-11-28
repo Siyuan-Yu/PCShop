@@ -167,6 +167,7 @@ namespace PCShopSell.Core.Session
                 everHired = EverHired,
                 candidates = _candidates.Select(ToSave).ToArray(),
                 recruitmentArrivalAt = RecruitmentNoticePosted ? _recruitmentArrivalAt : -1,
+                recruitmentShopId = RecruitmentNoticePosted || _candidates.Count > 0 ? _recruitmentShopId : null,
                 openingStaffWaitUntil = _openingStaffWaitUntil,
 
                 monthGoalEvaluated = MonthGoalEvaluated,
@@ -319,6 +320,7 @@ namespace PCShopSell.Core.Session
                 && firstArrivalDay == Clock.Today.TotalDays && d.dailyCandidateDay == firstArrivalDay + 1;
             _recruitmentArrivalAt = legacyRecruitment && !legacyFirstBatchArrived
                 ? _openingStaffWaitUntil : Math.Max(0, d.recruitmentArrivalAt);
+            _recruitmentShopId = City.HasPlace(d.recruitmentShopId) ? d.recruitmentShopId : null;
 
             MonthGoalEvaluated = d.monthGoalEvaluated;
             MonthGoalPassed = d.monthGoalPassed;

@@ -1,0 +1,1480 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using PCShopSell.Core.Common;
+using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
+using PCShopSell.Core.Trade;
+using PCShopSell.Core.World;
+using PCShopSell.Game.Runtime;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace PCShopSell.Game.UI
+{
+    /// <summary>模态窗口：打开时暂停时间（Hold），关闭时恢复。内容通过 builder 重建。</summary>
+    public sealed class Window
+    {
+        public RectTransform Root;
+        public RectTransform Content;
+        public Text TitleText;
+        public Text TimeStatusText;
+        internal Button CloseButton;
+        internal string TimeStatusOverride;
+        internal Action RefreshContent;
+        // 工作台固定外壳只构建一次，刷新时仅替换侧栏与当前页。
+        internal Action RebuildContent;
+        public Action<Window> Builder;
+        public Action OnClosed;
+        public bool Holds;
+        public bool LiveConversation;
+        public Func<string> LiveKey;
+        internal string LiveStamp;
+        internal float LiveRefreshAt;
+        public bool Closed;
+        public bool Closable = true;
+        internal bool RebuildPending;
+        private bool _rebuildAfterQuantityEdit, _quantityOnly;
+        internal Action RefreshQuantityContent;
+        internal bool ResetScrollOnRebuild;
+        internal WindowFit Fitter;
+        internal bool FitContent;
+        internal RectTransform DialogIllustration;
+        internal GameUi Owner;
+        internal bool OpeningMealSystem;
+        // Owned by the loading coroutine, not by session/menu window cleanup.
+        internal bool PreserveDuringTransition;
+
+        public void Rebuild()
+        {
+            if (Closed) return;
+            _rebuildAfterQuantityEdit = false;
+            RebuildPending = false;
+            _quantityOnly = false;
+            RefreshQuantityContent = null;
+            if (RebuildContent != null) { RebuildContent(); return; }
+            RefreshContent = null;
+            DialogIllustration = null;
+            var scrolled = Ui.SaveScroll(Root);
+            Ui.Clear(Content);
+            Builder?.Invoke(this);
+            if (!Closed && FitContent) GameUi.FitWindowToContent(this);
+            Ui.RestoreScroll(Root, Root, scrolled);
+            if (ResetScrollOnRebuild)
+            {
+                ResetScrollOnRebuild = false;
+                Canvas.ForceUpdateCanvases();
+                foreach (var scroll in Root.GetComponentsInChildren<ScrollRect>())
+                {
+                    scroll.StopMovement();
+                    scroll.verticalNormalizedPosition = 1;
+                }
+            }
+        }
+
+        public void Close() => Owner.CloseWindow(this);
+        // InputField ends editing during pointer selection. Defer reconstruction so
+        // the same click can still reach its original action button.
+        public void RequestRebuild()
+        {
+            _quantityOnly = false;
+            RebuildPending = true;
+        }
+
+        internal void ApplyPendingRebuild()
+        {
+            if (!_quantityOnly || RefreshQuantityContent == null) { Rebuild(); return; }
+            RebuildPending = false;
+            _quantityOnly = false;
+            _rebuildAfterQuantityEdit = false;
+            RefreshQuantityContent();
+        }
+
+        internal void RequestQuantityRebuild(bool waitForPointer)
+        {
+            _rebuildAfterQuantityEdit |= waitForPointer;
+            if (!RebuildPending) _quantityOnly = RefreshQuantityContent != null;
+            RebuildPending = true;
+        }
+
+        internal bool CanApplyPendingRebuild(bool pointerBusy)
+        {
+            if (ListScrollbar.PressedInside(Root)) return false;
+            if (_quantityOnly && RefreshQuantityContent != null && !_rebuildAfterQuantityEdit) return true;
+            // A full refresh must leave the active control alive through the click or edit.
+            return !pointerBusy && !HasFocusedInput() && !ChoiceDropdown.OpenInside(Root);
+        }
+
+        internal bool HasFocusedInput()
+        {
+            var selected = EventSystem.current?.currentSelectedGameObject;
+            return selected != null && selected.TryGetComponent<InputField>(out var field)
+                && field.isFocused && field.transform.IsChildOf(Root);
+        }
+    }
+
+    public sealed partial class GameUi
+    {
+        private readonly GameController _ctrl;
+        private readonly Canvas _labelCanvas;
+        private readonly Canvas _hudCanvas;
+        private readonly CanvasGroup _expoHudGate;
+        private readonly Canvas _dockCanvas;
+        private readonly Canvas _modalCanvas;
+        private readonly Canvas _toastCanvas;
+        private readonly Canvas _invitationCanvas;
+        private readonly List<Window> _windows = new List<Window>();
+        private readonly List<(Text label, string message, RectTransform illustration, float until)> _toasts = new();
+        private readonly Dictionary<string, (RectTransform rt, Text text, Button button, Outline textEdge)> _labels =
+            new Dictionary<string, (RectTransform, Text, Button, Outline)>();
+        private readonly List<(RectTransform rt, Text text, Button button)> _queueLabels = new List<(RectTransform, Text, Button)>();
+        private RectTransform _toastList;
+        private readonly Vector3[] _toastQuestCorners=new Vector3[4];
+
+        private Button _storageWarning;
+        private Text _noticeButtonText;
+        private const KeyCode NoticeHotkey = KeyCode.N;
+        private int _unreadNotices;
+        private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText;
+        private readonly List<(Button b, VehicleKind kind)> _vehicleButtons = new List<(Button, VehicleKind)>();
+        private float _slowTimer;
+        private int _slowHudPhase;
+        private float _uiTime;
+        private float _hudRefreshTimer;
+
+        private GameSession S => _ctrl.Session;
+
+        public bool AnyModalOpen => _windows.Count > 0;
+
+        /// <summary>冒烟 / 调试：刷新所有打开的窗口。</summary>
+        public void RebuildWindows()
+        {
+            foreach (Window w in _windows.ToArray()) w.Rebuild();
+        }
+
+        /// <summary>鼠标是否在 UI 上（这时不处理场景点击）。</summary>
+        public static bool PointerOverUi => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+
+        public GameUi(GameController ctrl)
+        {
+            _ctrl = ctrl;
+            Ui.EnsureEventSystem();
+            _labelCanvas = Ui.CreateCanvas("UI_Labels", 0);
+            _hudCanvas = Ui.CreateCanvas("UI_Hud", 10);
+            _expoHudGate=_hudCanvas.gameObject.AddComponent<CanvasGroup>();
+            _dockCanvas = Ui.CreateCanvas("UI_Dock", 20);
+            _modalCanvas = Ui.CreateCanvas("UI_Modal", 30);
+            Ui.SetModalButtonCanvas(_modalCanvas);
+            _toastCanvas = Ui.CreateCanvas("UI_Toast", 25);
+            _invitationCanvas = Ui.CreateCanvas("UI_Invitation", 27);
+            BuildHud();
+            BuildOpeningMealGuide();
+            BuildToasts();
+            BuildTip();
+        }
+
+        public IEnumerable<Canvas> Canvases => new[] { _labelCanvas, _hudCanvas, _dockCanvas, _modalCanvas, _toastCanvas, _invitationCanvas, _tipCanvas, _tutorialCanvas };
+
+        // ---------- 每帧 ----------
+
+        private static readonly Unity.Profiling.ProfilerMarker UpdateLabelsMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateLabels");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateHudMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateHud");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateDistrictPersonMarkersMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateDistrictPersonMarkers");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateInteractMarkerMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateInteractMarker");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateTipMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateTip");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateQuestTrackerMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateQuestTracker");
+        private static readonly Unity.Profiling.ProfilerMarker RefreshShortcutMenusMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.RefreshShortcutMenus");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateUpcomingScheduleHudMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateUpcomingScheduleHud");
+        private static readonly Unity.Profiling.ProfilerMarker RefreshWorkbenchAccessMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.RefreshWorkbenchAccess");
+        private static readonly Unity.Profiling.ProfilerMarker UpdateCityLifeHudMarker = new Unity.Profiling.ProfilerMarker("PCShop.UI.UpdateCityLifeHud");
+
+        public void Update(float dt)
+        {
+            if (S == null) return;
+            if (S.IsTimeAdvancing) { RefreshTimeAdvance(); return; }
+            UpdateFishingInteraction(dt);
+            UpdateOnsitePlay(dt);
+            MaybeResumeLeisure();
+            EnsureQuarterlyExpoWindow();
+            _expoHudGate.interactable=!ExpoHudOpen;
+            _labelCanvas.enabled=!ExpoHudOpen&&!_ctrl.PetFocusActive;
+            RefreshShopDockVisibility();
+            RefreshHomeDockVisibility();
+            using (UpdateUpcomingScheduleHudMarker.Auto()) UpdateUpcomingScheduleHud();
+            UpdateLoanReminderHud();
+            PositionRightHudCards();
+            using (RefreshWorkbenchAccessMarker.Auto()) RefreshWorkbenchAccess();
+            ApplyHudFunctionLayout();
+            var selectedControl = EventSystem.current?.currentSelectedGameObject;
+            var selectedInput = selectedControl != null ? selectedControl.GetComponent<InputField>() : null;
+            if (Input.GetKeyDown(KeyCode.Tab) && !S.RequiredTutorialPaused && !AnyModalOpen && !_ctrl.Placing
+                && (selectedInput == null || !selectedInput.isFocused)
+                && !FishingInputActive && !OnsiteInputActive && !MainMenuOpen)
+                ToggleHudFunctions();
+            if (S.ScooterTutorialPaused) HoldRepeat.CancelActiveHold();
+            else HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
+            bool pointerBusy = Input.GetMouseButton(0) || Input.GetMouseButtonUp(0);
+            foreach (var window in _windows.ToArray())
+            {
+                window.Fitter?.Fit();
+                RefreshWindowTimeStatus(window);
+                window.RefreshContent?.Invoke();
+                if (window.LiveConversation && Time.unscaledTime >= window.LiveRefreshAt)
+                {
+                    window.LiveRefreshAt = Time.unscaledTime + 1;
+                    string stamp = window.LiveKey?.Invoke();
+                    if (stamp != window.LiveStamp) { window.LiveStamp = stamp; window.RequestRebuild(); }
+                }
+                if (window.RebuildPending && window.CanApplyPendingRebuild(pointerBusy))
+                    window.ApplyPendingRebuild();
+            }
+            UpdateAutoExpoChoices();
+            UpdateDisplayPreview();
+            _slowTimer -= dt;
+            bool refreshSlowHud = _slowTimer <= 0;
+            int slowPhase = _slowHudPhase;
+            if (refreshSlowHud)
+            {
+                // 每项仍约 0.4 秒刷新一次，错开四组，避免同一帧集中重排所有 HUD。
+                _slowTimer = 0.1f;
+                _slowHudPhase = (_slowHudPhase + 1) % 4;
+                if (slowPhase == 0) { UpdateEmployeeWellbeingWidgets(); UpdateGovernanceWindows(); }
+                if (slowPhase == 1 && !MainMenuOpen && !S.IsWorking) using (UpdateQuestTrackerMarker.Auto()) UpdateQuestTracker();
+            }
+            UpdateOpeningMealGuide();
+            UpdateFirstUseGuide();
+            bool tutorialPaused = S.RequiredTutorialPaused;
+            if (!tutorialPaused) CheckCookTasting();
+            if (MainMenuOpen) return;
+            if (!tutorialPaused && !QuestAnnouncementOpen)
+            {
+                ShowPendingCommunityIntroCall();
+                UpdateEventBatch();
+                ShowPendingPropertyContractPopup();
+                ShowPendingScheduledPropertyPopup();
+            }
+            RefreshOpeningKindChoice();
+            UpdateWorkScreen();
+            if (S.IsWorking) return;
+            if (!tutorialPaused)
+            {
+                CheckNegativeCashBankReminder();
+                using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("UI.CheckCustomerEventFeedback")) CheckCustomerEventFeedback();
+                using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("UI.CheckEconomicReport")) CheckEconomicReport();
+            }
+            _uiTime += dt;
+            _hudRefreshTimer -= dt;
+            if (_hudRefreshTimer <= 0 || dt <= 0) { _hudRefreshTimer = .1f; using (UpdateHudMarker.Auto()) UpdateHud(); }
+            UpdateHudCashMotion();
+            if (dt <= 0) _labelContentAt = 0;
+            using (UpdateCityLifeHudMarker.Auto()) UpdateCityLifeHud(dt);
+            using (UpdateLabelsMarker.Auto()) UpdateLabels();
+            UpdatePlayerMarker();
+            using (UpdateDistrictPersonMarkersMarker.Auto()) UpdateDistrictPersonMarkers();
+            using (UpdateInteractMarkerMarker.Auto()) UpdateInteractMarker();
+            UpdatePlacementStatus();
+            UpdateEditHud();
+            UpdateQueueLabels();
+            UpdateToasts();
+            using (UpdateTipMarker.Auto()) UpdateTip(dt);
+            if (refreshSlowHud)
+            {
+                if (slowPhase == 2) { using (RefreshShortcutMenusMarker.Auto()) RefreshShortcutMenus(); UpdateVehicleButtons(); }
+                if (slowPhase == 3 && !pointerBusy)
+                {
+                    using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("UI.RefreshDocks"))
+                    { RefreshDock(); RefreshHomeDock(); }
+                }
+            }
+            RefreshToastPlacement();
+        }
+
+        partial void UpdateEventBatch();
+
+        // ---------- HUD ----------
+
+        private void BuildHud()
+        {
+            Transform root = _hudCanvas.transform;
+            Image top = Ui.Panel(root, "TopBar", Ui.Chrome);
+            top.rectTransform.Anchor(0, 1, 1, 1, 12, -72, 12, 8);
+            RectTransform row = Ui.Rect(top.transform, "Row").Fill();
+            _hudTopRow = row;
+            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.padding = new RectOffset(10, 10, 7, 7);
+            h.spacing = 7;
+            h.childControlWidth = true;
+            h.childControlHeight = true;
+            h.childForceExpandWidth = false;
+            h.childAlignment = TextAnchor.MiddleLeft;
+
+            AddCheatButton(row);
+            var weatherButton = Ui.Size(Ui.Button(row, "", OpenCityClimate, 20, Ui.HudTile), 216);
+            Ui.ButtonArtwork(weatherButton, UiIcon.Weather);
+            _dateText = weatherButton.GetComponentInChildren<Text>();
+            _dateText.alignment = TextAnchor.MiddleLeft;
+            _dateText.horizontalOverflow=HorizontalWrapMode.Overflow;
+            _dateText.resizeTextForBestFit=true;_dateText.resizeTextMinSize=17;_dateText.resizeTextMaxSize=20;
+            weatherButton.Tip(()=>"点击查看天气预报与穿衣建议\n"+S.Clock.Today+" "+Ui.WeekdayName(S.Clock.Today.Weekday)+"\n"+S.CityWeatherForecast);
+            var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 22, Ui.ChromeButton), 184);
+            Ui.ButtonArtwork(cashButton, UiIcon.Cash);
+            _cashText = cashButton.GetComponentInChildren<Text>();
+            _cashText.fontStyle = FontStyle.Bold;
+            _cashText.alignment = TextAnchor.MiddleLeft;
+            _cashText.horizontalOverflow=HorizontalWrapMode.Overflow;
+            _cashText.resizeTextForBestFit=true;_cashText.resizeTextMinSize=16;_cashText.resizeTextMaxSize=22;
+            cashButton.Tip("<b>总收支账本</b>：点击查看每天、每周、每月的全部收支和逐笔明细。\n资金紧张时可缩减经营、处置资产或打工继续，不会因现金为负自动清档。");
+
+            BuildHudTimeControls(row);
+
+            _placeText = Ui.Size(Ui.Label(row, "", 17, TextAnchor.MiddleCenter), 150, -1, 1);
+            _placeText.resizeTextForBestFit = true;
+            _placeText.resizeTextMinSize = 14;
+            _placeText.resizeTextMaxSize = 17;
+            _statsText = Ui.Size(Ui.Label(row, "", 15, TextAnchor.MiddleLeft, Ui.Dim), 248);
+            _statsText.Tip(StatsTip);
+            BuildHudSystemControls(row);
+            BuildHudShortcuts(root);
+
+            Image bottom = Ui.Panel(root, "BottomBar", Ui.Chrome);
+            _travelBar = bottom.gameObject;
+            bottom.rectTransform.Anchor(0, 0, 1, 0, 12, 8, 12, -63);
+            RectTransform brow = Ui.Rect(bottom.transform, "Row").Fill();
+            _hudTravelRow = brow;
+            var bh = brow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            bh.padding = new RectOffset(10, 10, 6, 6);
+            bh.spacing = 6;
+            bh.childControlWidth = true;
+            bh.childControlHeight = true;
+            bh.childForceExpandWidth = false;
+            Ui.Size(Ui.Label(brow, "出行：", 18), 60);
+            foreach (var vehicle in Vehicles.All.Where(v=>v.Kind!=VehicleKind.Van))
+            {
+                var kind = vehicle.Kind;
+                var button = Ui.Size(Ui.Button(brow, vehicle.Name, () =>
+                {
+                    if (S.SetVehicle(kind) && kind == VehicleKind.EBike && S.Flags.Remove(GameSession.ScooterGuidePending))
+                    {
+                        S.Flags.Add(GameSession.ScooterGuideCompleted);
+                        UpdateQuestTracker();
+                    }
+                }, 16, Ui.HudTile, exclusiveEmphasis: false), 74);
+                if (kind == VehicleKind.Walk || kind == VehicleKind.Car)
+                    Ui.ButtonArtwork(button, kind == VehicleKind.Walk ? UiIcon.Walk : UiIcon.Car);
+                button.Tip(() => VehicleTip(S.CommuteVehicle(kind)));
+                _vehicleButtons.Add((button, kind));
+            }
+            _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
+            Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
+            BuildShortcutButton(brow, "回家睡觉", SleepShortcut, 108);
+            BuildShortcutButton(brow,"我的店铺",OwnedShopShortcut,100);
+            BuildShortcutButton(brow,"批发市场",1,100);
+            BuildShortcutButton(brow,"中介",2,72);
+            BuildShortcutButton(brow,"自定目的地",3,116);
+            RefreshShortcutMenus();
+
+            Ui.Size(Ui.Rect(brow, "TravelBarSpace"), 0, -1, 1);
+            var truck = Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 16, Ui.ButtonHot,
+                exclusiveEmphasis: false), 108);
+            Ui.ButtonArtwork(truck, UiIcon.Truck);
+            truck.Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
+            BuildCityLifeHud();
+            BuildShopDockToggle(root);
+            BuildHomeDockToggle(root);
+
+            Image hint = Ui.Panel(root, "HintStrip", Ui.Chrome);
+            _worldHintStrip = hint.gameObject;
+            _hintStrip = hint;
+            hint.rectTransform.pivot = new Vector2(0, .5f);
+            hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -500, -108);
+            hint.raycastTarget = false;
+            _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
+            _hintText.rectTransform.Fill(10);
+
+            _storageWarning = Ui.Button(root, "", () => { if (S.InPlayerShop) OpenShopLockerWindow(); else OpenStorageWindow(); }, 16, Ui.Warn);
+            ((RectTransform)_storageWarning.transform).Anchor(0.33f, 1, 0.67f, 1, 0, -108, 0, 72);
+            _storageWarning.gameObject.SetActive(false);
+            BuildQuestTracker(root);
+            BuildUpcomingScheduleHud(root);
+            BuildLoanReminderHud(root);
+            BuildSleepBanner(root);
+            BuildHungerBanner(root);
+
+            _chaseText = Ui.Notice(root, "交警在追你！快跑或躲进店里！", 27);
+            ((RectTransform)_chaseText.transform.parent).Anchor(.35f, 1, .65f, 1, 0, -130, 0, 75);
+            _chaseText.transform.parent.gameObject.SetActive(false);
+        }
+
+        /// <summary>编辑器里才有的作弊工具按钮（打包时整段不编译）。</summary>
+        partial void AddCheatButton(Transform row);
+
+        private void UpdateHud()
+        {
+            GameTimestamp now = S.Clock.Now;
+            string noticeTitle = "通知";
+            _noticeButtonText.text = _unreadNotices > 0
+                ? $"{noticeTitle} <color=#F0C979>{Math.Min(99, _unreadNotices)}</color>"
+                : noticeTitle;
+            UpdateSleepBanner();
+            _brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
+            _stockMarketButton.interactable = S.HasSmartphone;
+            if (_racingButton != null) _racingButton.interactable = S.RacingUnlocked;
+            FitHudTopRow();
+            _dateText.text = (S.IsCityLifeTest ? "测试 " : "") +
+                $"<size=15>{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)}</size>\n" +
+                $"<b>{Ui.Hm(now.MinuteOfDay)}</b>  <size=13>{S.WeatherSummary}</size>";
+            SetHudCash(S.Ledger.Balance);
+
+            RefreshHudTimeControls();
+
+            PlayerStats p = S.Player;
+            UpdateHungerBanner(p.Hunger);
+            string stress = $"压力 {p.Stress:0}";
+            if (p.Stress >= PlayerStats.HighStressThreshold) stress = $"<b><color=#9C4634>{stress}</color></b>";
+            _statsText.text = $"{HungerHudText(p.Hunger)}  健康 {Pct(p.Health)}  {stress}\n" + (S.EnergyExhausted
+                ? $"<b><color=#9C4634>精力耗尽 · {S.EnergyAwakeMinutesLeft/60}:{S.EnergyAwakeMinutesLeft%60:00}</color></b>"
+                : $"精力 {Pct(p.Energy)}/{p.MaxEnergy:0} · 名望 {S.PlayerShop.Reputation:0.0}");
+
+            string where;
+            if (S.Trip != null)
+            {
+                Place target = S.City.PlaceAtNode(S.Trip.TargetNode);
+                where = $"{S.CurrentVehicle.Name}前往 {(target != null ? S.PlaceTitle(target) : "路口")}";
+            }
+            else if (S.CurrentPlace != null) where = "在 " + S.PlaceTitle(S.CurrentPlace);
+            else where = "在街上";
+            string shopName = S.MyShopCount > 1 ? S.ShopTitle(S.CurrentShop) : "店";
+            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>"
+                : S.IsPlaceOpen(S.PlayerShopPlace) ? $"<color=#A9C9A9>{shopName}：营业中</color>"
+                : S.ShopFinishingService(S.CurrentShop) ? $"<color=#DDC18B>{shopName}：打烊收尾</color>"
+                : $"<color=#D79780>{shopName}：关门</color>";
+            _placeText.text = "<b>" + where + "</b>\n" + shopState;
+
+            bool warnStorage = S.HasTempHere && S.TempMinutesLeftHere <= 1440 && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing;
+            _storageWarning.gameObject.SetActive(warnStorage);
+            if (warnStorage) _storageWarning.GetComponentInChildren<Text>().text = S.TempDueHere
+                ? "临时存放已到期 · 点击清理（可稍后处理）" : "临时存放不足1天 · 点击整理";
+
+            if (_hintBaseDay < -1000000) _hintBaseDay = S.Clock.Today.TotalDays;
+            bool early = S.Clock.Today.TotalDays - _hintBaseDay < 2;
+            if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
+            else if (_ctrl.Placing) _hintText.text = _ctrl.PlacingShop
+                ? "左键放置 · R 旋转 · X 收纳 · Esc 取消 · Q/E 转视角 · V 复位"
+                : "左键选位置 · 侧栏确认 · R 旋转 · X 收回 · Esc 取消 · Q/E 转视角 · V 复位";
+            else if (_ctrl.InInterior) _hintText.text = early ? "WASD 移动 · 靠近人物或设施按 F 交互 · 门口按 F 离店" : "";
+            else if (_ctrl.InPachinkoRoom) _hintText.text = "WASD / 方向键走动 · F 与店员交谈、使用机台或离店";
+            else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
+            else if (S.NearbyCommunityBox>=0)
+                _hintText.text = "<color=#DDC18B>按 F 调查"+GameSession.CommunityBoxName(S.NearbyCommunityBox)+"，取回这一份图页</color>";
+            else if (S.NearbyPlace is Place residence && residence.Kind == PlaceKind.Home)
+                _hintText.text = $"<color=#DDC18B>按 F {(S.CanSleepAt(residence) ? "回家" : "查看住户")} · {S.PlaceTitle(residence)}</color>";
+            else if (S.NearbyPlace != null)
+                _hintText.text = S.ClosedReason(S.NearbyPlace) is string closed
+                    ? $"<color=#9C4634>{closed}</color>"
+                    : $"<color=#DDC18B>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
+            else if (_ctrl.InVisit)
+                _hintText.text = _ctrl.VisitRoom?.NearbyLabel is string visitHint
+                    ? "按 F：" + visitHint
+                    : !early ? "" : S.CanSleepAt(S.CurrentPlace) ? "WASD 在屋里走动 · 走近床或房门按 F" : "WASD 在屋里走动 · 走近住户或房门按 F";
+            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : early ? "WASD 在屋里走动 · 靠近家具按 F 交互 · 摆放家具请打开右侧住处面板" : "";
+            else if (S.CurrentPlace != null) _hintText.text = early ? "按 WASD 离开 · 空格暂停" : "";
+            else _hintText.text = early ? "WASD 移动 · F 进入 · 空格暂停 · 右键拖动 / 滚轮缩放" : "";
+            RefreshWorldHintVisibility();
+
+            _chaseText.transform.parent.gameObject.SetActive(S.Police.AnyChasing && S.CurrentPlace == null);
+        }
+
+        private void RefreshWorldHintVisibility()
+        {
+            bool invitationShowsRoute = !_ctrl.Placing && _invitationCanvas.enabled && _cityActivityHud.gameObject.activeInHierarchy
+                && S.Trip != null && S.CityIntent is { Cancelled: false, ActivityId: not null } intent && intent.ActivityId == _cityHudActivityId;
+            bool show = !invitationShowsRoute && !string.IsNullOrEmpty(_hintText.text);
+            _hintStrip.enabled = show;
+            _hintText.enabled = show;
+            if (show && _lastHintWidthText != _hintText.text)
+            {
+                _lastHintWidthText = _hintText.text;
+                float width = Mathf.Clamp(_hintText.preferredWidth + 24, 120, 1040);
+                _hintStrip.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+            }
+        }
+
+        private static string Pct(double v) => v.ToString("0");
+
+        private void UpdateVehicleButtons()
+        {
+            foreach (var (b, kind) in _vehicleButtons)
+            {
+                bool can = S.CanUse(kind);
+                b.interactable = can;
+                b.gameObject.SetActive(can || S.Vehicle == kind || kind <= VehicleKind.Taxi || S.ImpoundedVehicleCount(kind) > 0);
+                Ui.SetButtonFill(b, S.Vehicle == kind ? Ui.ButtonHot : Ui.HudTile);
+                Text t = b.GetComponentInChildren<Text>();
+                string name = Vehicles.Get(kind).Name;
+                if (!can && (S.CommuteMotor(kind)?.Impounded == true
+                    || S.ImpoundedVehicleCount(kind) > 0 && S.ImpoundedVehicleCount(kind) == S.VehicleCount(kind)))
+                    name = kind == VehicleKind.Tricycle ? "三轮(扣)" : kind == VehicleKind.EBike ? "电驴(扣)" : name + "(扣)";
+                t.text = name;
+            }
+            _cargoText.text = $"负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克";
+        }
+
+        // ---------- 地点名牌 ----------
+
+        private bool _streetLabelsVisible = true;
+        private float _labelContentAt;
+
+        private void UpdateLabels()
+        {
+            Camera cam = _ctrl.Cam;
+            bool show = !_ctrl.InRoom && !_ctrl.InPachinkoRoom;
+            if (!show)
+            {
+                if (_streetLabelsVisible)
+                    foreach (var label in _labels.Values) label.rt.gameObject.SetActive(false);
+                _streetLabelsVisible = false;
+                return;
+            }
+            bool refresh = !_streetLabelsVisible || _uiTime >= _labelContentAt;
+            _streetLabelsVisible = true;
+            if (refresh) _labelContentAt = _uiTime + .25f;
+            foreach (var kv in _ctrl.World.Places)
+            {
+                PlaceVisual pv = kv.Value;
+                if (refresh && pv.Sign != null)
+                {
+                    string title = S.PlaceTitle(pv.Place);
+                    if (pv.Sign.text != title)
+                    {
+                        pv.Sign.text = title;
+                        Vector2 size = ((RectTransform)pv.Sign.transform.parent).sizeDelta;
+                        pv.Sign.fontSize = Mathf.RoundToInt(Mathf.Min(size.y * .76f, size.x * .9f / Mathf.Max(1, title.Length)));
+                    }
+                }
+                Vector3 sp = cam.WorldToScreenPoint(pv.LabelPos);
+                bool visible = sp.z > 0 && sp.x > -100 && sp.x < cam.pixelWidth + 100 && sp.y > -50 && sp.y < cam.pixelHeight + 50;
+                bool created = false;
+                if (!_labels.TryGetValue(kv.Key, out var label))
+                {
+                    if (!visible) continue;
+                    created = true;
+                    Place place = pv.Place;
+                    bool important = IsMajorStreetPlace(place);
+                    Button b = Ui.Button(_labelCanvas.transform, place.Name, () => OpenStreetPlace(place),
+                        important ? 18 : 15, LabelColor(place, important));
+                    RectTransform rt = (RectTransform)b.transform;
+                    rt.anchorMin = rt.anchorMax = Vector2.zero;
+                    rt.pivot = new Vector2(0.5f, 0);
+                    rt.sizeDelta = new Vector2(important ? 170 : 120, important ? 46 : 30);
+                    var text = b.GetComponentInChildren<Text>();
+                    var textEdge = text.gameObject.AddComponent<Outline>();
+                    textEdge.effectColor = new Color(0.07f, 0.10f, 0.13f, 0.9f);
+                    textEdge.effectDistance = new Vector2(1f, -1f);
+                    label = (rt, text, b, textEdge);
+                    _labels[kv.Key] = label;
+                }
+
+                bool appeared = visible && !label.rt.gameObject.activeSelf;
+                label.rt.gameObject.SetActive(visible);
+                if (!visible) continue;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)_labelCanvas.transform, sp, LabelCam, out Vector2 local);
+                var canvasRt = (RectTransform)_labelCanvas.transform;
+                label.rt.anchoredPosition = local + canvasRt.rect.size * 0.5f;
+                if (!refresh && !created && !appeared) continue;
+                Place location = pv.Place;
+                var shop = S.ShopAt(location);
+                bool owned = shop != null || S.VentureAt(location.Id) != null || S.PropertyAt(location.Id) != null;
+                bool major = owned || IsMajorStreetPlace(location);
+                bool residential = location.Kind == PlaceKind.Home;
+                bool plainShop = !major && !S.IsVacant(location) && !HasStreetShopService(location);
+                bool plain = residential || plainShop;
+                label.text.text = plainShop ? S.PlaceTitle(location) : LabelText(location);
+                float width = residential ? 156 : major ? 180 : 120;
+                if (shop != null) width = Mathf.Max(width, S.ShopTitle(shop).Length * 18 + 18);
+                label.rt.sizeDelta = new Vector2(width, residential ? 38 : major ? 52 : 30);
+                label.text.fontSize = plain ? 14 : major ? 18 : 15;
+                Color plate = LabelColor(location, major);
+                label.textEdge.enabled = plain;
+                label.text.raycastTarget = plain;
+                label.button.image.enabled = !plain;
+                if (!plain) Ui.SetButtonFill(label.button, plate);
+                Ui.UseCaptionInk(label.button, plain ? Ui.ChromeDim : Ui.ReadableInk(S.IsMyShop(location) ? Ui.Accent : Ui.TextColor, plate));
+            }
+        }
+
+        private static bool IsMajorStreetPlace(Place place) =>
+            place.Kind != PlaceKind.Shop || place.IsPlayerShop || place.Business == GameSession.BankBusiness;
+
+        private bool HasStreetShopService(Place place) => IsCarryStore(place) || UsesCityVenuePanel(place)
+            || place.Business == GameSession.BankBusiness
+            || RaceTracks.Get(place.Id) != null || place.Id == "motor_scooter_mod" || place.Id == "life_expo"
+            || place.Id == GameSession.CommunityMcnId || place.Id == S.ParkPlaceId;
+
+        /// <summary>按地点类型区分街景名牌。</summary>
+        private void OpenStreetPlace(Place p)
+        {
+            if (S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p))
+            {
+                _businessTab = p.Id == S.ParkPlaceId ? 6 : S.VentureAt(p.Id) != null ? 3 : 5;
+                OpenBusinessPanel();
+            }
+            else _ctrl.GoToPlace(p);
+        }
+
+        private Color LabelColor(Place p, bool important)
+        {
+            var venture = S.VentureAt(p.Id);
+            if (venture != null) return venture.Paused ? Ui.WarningSurface : Ui.PendingSurface;
+            if (S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p)) return Ui.PendingSurface;
+            if (S.IsMyShop(p)) return Ui.Chrome;
+            if (S.IsVacant(p)) return Ui.PendingSurface;
+            if (p.Kind == PlaceKind.Agency || p.Business == GameSession.BankBusiness) return Ui.InfoSurface;
+            var surface = Ui.Chrome;
+            surface.a = important ? .94f : .86f;
+            return surface;
+        }
+
+        private RectTransform _playerMark;
+
+        /// <summary>街上头顶的"我"标记：镜头转到建筑背后时，人被楼挡住也找得到自己。</summary>
+        private void UpdatePlayerMarker()
+        {
+            if (_playerMark == null)
+            {
+                var marker = Ui.Panel(_labelCanvas.transform, "PlayerMarker", Ui.ButtonHot);
+                Ui.Round(marker);
+                Ui.FlatBorder(marker, Ui.FlatHotEdge);
+                marker.raycastTarget = false;
+                Ui.Label(marker.transform, "我", 16, TextAnchor.MiddleCenter, Color.white).rectTransform.Fill(6);
+                _playerMark = marker.rectTransform;
+                _playerMark.anchorMin = _playerMark.anchorMax = Vector2.zero;
+                _playerMark.pivot = new Vector2(0.5f, 0);
+                _playerMark.sizeDelta = new Vector2(34, 24);
+            }
+            Camera cam = _ctrl.Cam;
+            bool show = !_ctrl.InRoom && S.CurrentPlace == null;
+            Vector3 sp = cam.WorldToScreenPoint(_ctrl.World.StreetPosition(S.PlayerPosition) + Vector3.up * 2.6f);
+            show &= sp.z > 0;
+            _playerMark.gameObject.SetActive(show);
+            if (!show) return;
+            var canvasRt = (RectTransform)_labelCanvas.transform;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRt, sp, LabelCam, out Vector2 local);
+            _playerMark.anchoredPosition = local + canvasRt.rect.size * 0.5f;
+        }
+
+        private string LabelText(Place p)
+        {
+            var venture = S.VentureAt(p.Id);
+            if (venture != null) return S.PlaceTitle(p) + (venture.Paused ? "\n<size=13><color=#9C4634>停业 · 点击管理</color></size>" : "\n<size=13>营业中 · 点击管理</size>");
+            if (p.Id == S.ParkPlaceId) return "电脑乐园\n<size=13>点击查看布局</size>";
+            if (S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p))
+                return p.Name + "\n<size=13>已购 · " + OwnedPropertyStatus(p) + "</size>";
+            switch (p.Kind)
+            {
+                case PlaceKind.Wholesaler:
+                    return p.Name + (S.IsWholesalerOpen ? "" : "\n<size=13><color=#D79780>关门</color></size>");
+                case PlaceKind.Dealer:
+                    return p.Name + (S.IsDealerOpen ? "" : "\n<size=13><color=#D79780>关门</color></size>");
+                case PlaceKind.Shop when S.IsMyShop(p):
+                    return S.PlaceTitle(p) + (S.IsPlaceOpen(p) ? "\n<size=13><color=#A9C9A9>营业中</color></size>" : "\n<size=13>关门</size>");
+                case PlaceKind.Agency:
+                    return p.Name + (!S.IsPlaceOpen(p) ? "\n<size=13><color=#9C4634>已打烊</color></size>" : S.HasShop ? "" : "\n<size=13><color=#80551F>先来这里租铺子</color></size>");
+                default:
+                    return S.PlaceTitle(p) + (p.Kind == PlaceKind.Shop && !S.IsVacant(p) && !S.IsPlaceOpen(p) ? "\n<size=13><color=#D79780>已打烊</color></size>" : "");
+            }
+        }
+
+        private readonly System.Collections.Generic.List<Text> _emoteLabels = new System.Collections.Generic.List<Text>();
+        private readonly List<Button> _emoteChatButtons = new List<Button>();
+        private readonly List<string> _emoteChatIds = new List<string>();
+
+        private readonly System.Collections.Generic.List<ShopInteriorView.EmoteInfo> _emoteBuf = new System.Collections.Generic.List<ShopInteriorView.EmoteInfo>();
+
+        /// <summary>显示顾客行为和电饭锅取饭提醒。</summary>
+        private void UpdateEmoteLabels()
+        {
+            int n = 0;
+            _emoteBuf.Clear();
+            if (_ctrl.InInterior) _emoteBuf.AddRange(_ctrl.Interior.Emotes);
+            AddPetHouseReminder();
+            if (_ctrl.InHome && S.Pantry.CookedBowls > 0 && _ctrl.HomeRoom.CookerWorld is Vector3 cooker)
+            {
+                _emoteBuf.Add(new ShopInteriorView.EmoteInfo
+                {
+                    Pos = cooker,
+                    Text = $"<b>饭好了！</b>\n<size=16>{S.Pantry.CookedBowls} 碗，按 F 取饭</size>",
+                    Color = new Color(1f, 0.85f, 0.25f),
+                    Size = 26,
+                });
+            }
+            int nb = 0;
+            if (_emoteBuf.Count > 0)
+            {
+                var canvasRt = (RectTransform)_labelCanvas.transform;
+                foreach (var e in _emoteBuf)
+                {
+                    if (e.Bubble)
+                    {
+                        if (nb >= _bubbles.Count) _bubbles.Add(NewBubble());
+                        var (brt, btext) = _bubbles[nb++];
+                        btext.text = e.Text;
+                        btext.fontSize = e.Size;
+                        btext.color = e.Color;
+                        Vector3 bsp = _ctrl.Cam.WorldToScreenPoint(e.Pos);
+                        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRt, bsp, LabelCam, out Vector2 blocal);
+                        brt.anchoredPosition = blocal + canvasRt.rect.size * 0.5f;
+                        brt.gameObject.SetActive(bsp.z > 0);
+                        continue;
+                    }
+                    if (n >= _emoteLabels.Count)
+                    {
+                        Text lt = Ui.Label(_labelCanvas.transform, "", 14, TextAnchor.LowerCenter);
+                        lt.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        lt.verticalOverflow = VerticalWrapMode.Overflow;
+                        lt.supportRichText = true;
+                        lt.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.85f);
+                        RectTransform r = lt.rectTransform;
+                        r.anchorMin = r.anchorMax = Vector2.zero;
+                        r.pivot = new Vector2(0.5f, 0);
+                        r.sizeDelta = new Vector2(260, 28);
+                        int slot = _emoteLabels.Count;
+                        var chat = lt.gameObject.AddComponent<Button>(); chat.targetGraphic = lt;
+                        chat.onClick.AddListener(() =>
+                        {
+                            string person = _emoteChatIds[slot];
+                            if (!string.IsNullOrEmpty(person) && S.CitySamePlace(person)) OpenCityPerson(person);
+                        });
+                        _emoteChatButtons.Add(chat); _emoteChatIds.Add(null);
+                        _emoteLabels.Add(lt);
+                    }
+                    Text label = _emoteLabels[n];
+                    label.text = e.Text;
+                    _emoteChatIds[n] = e.PersonId;
+                    bool canTalk = !string.IsNullOrEmpty(e.PersonId);
+                    label.raycastTarget = canTalk; _emoteChatButtons[n].interactable = canTalk;
+                    if (canTalk && S.Flags.Add("hint_named_people")) Toast("头顶显示姓名的人可以聊天；普通行人和顾客只显示行为状态。");
+                    label.fontSize = e.Size;
+                    label.color = e.Color;
+                    Vector3 sp = _ctrl.Cam.WorldToScreenPoint(e.Pos);
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRt, sp, LabelCam, out Vector2 local);
+                    label.rectTransform.anchoredPosition = local + canvasRt.rect.size * 0.5f;
+                    label.gameObject.SetActive(sp.z > 0);
+                    n++;
+                }
+            }
+            for (; n < _emoteLabels.Count; n++) _emoteLabels[n].gameObject.SetActive(false);
+            for (; nb < _bubbles.Count; nb++) _bubbles[nb].rt.gameObject.SetActive(false);
+        }
+
+        private readonly System.Collections.Generic.List<(RectTransform rt, Text text)> _bubbles = new System.Collections.Generic.List<(RectTransform, Text)>();
+
+        /// <summary>白底圆角的对话气泡，底下一个小尖角指着说话的人；大小跟着字数走。</summary>
+        private (RectTransform, Text) NewBubble()
+        {
+            Color bg = new Color(Ui.PanelBg.r, Ui.PanelBg.g, Ui.PanelBg.b, .96f);
+            Image panel = Ui.Panel(_labelCanvas.transform, "Bubble", bg);
+            panel.raycastTarget = false;
+            RectTransform rt = panel.rectTransform;
+            rt.anchorMin = rt.anchorMax = Vector2.zero;
+            rt.pivot = new Vector2(0.5f, 0);
+            var h = panel.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.padding = new RectOffset(12, 12, 6, 7);
+            h.childControlWidth = true;
+            h.childControlHeight = true;
+            h.childForceExpandWidth = false;
+            h.childForceExpandHeight = false;
+            var fit = panel.gameObject.AddComponent<ContentSizeFitter>();
+            fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            Image tail = Ui.Panel(rt, "Tail", bg);
+            tail.raycastTarget = false;
+            tail.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            RectTransform trt = tail.rectTransform;
+            trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0);
+            trt.sizeDelta = new Vector2(12, 12);
+            trt.anchoredPosition = new Vector2(0, -1);
+            trt.localRotation = Quaternion.Euler(0, 0, 45);
+
+            Text text = Ui.Label(rt, "", 16, TextAnchor.MiddleCenter);
+            text.raycastTarget = false;
+            text.supportRichText = true;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.lineSpacing = 1.05f;
+            rt.anchoredPosition = new Vector2(-9999, -9999);
+            return (rt, text);
+        }
+
+        /// <summary>Esc：关掉最上面一层窗口。返回有没有关。</summary>
+        public bool CloseTopWindow()
+        {
+            if(_windows.Any(window=>window.PreserveDuringTransition&&!window.Closed))return true;
+            if (_windows.Count > 0 && _windows[_windows.Count - 1] == _mealDeliveryTutorialWindow
+                && !_mealDeliveryTutorialWindow.Closable) return true;
+            if(ChoiceDropdown.CancelFrame==UnityEngine.Time.frameCount)return true;
+            foreach(var canvas in Canvases)foreach(var choice in canvas.GetComponentsInChildren<ChoiceDropdown>())if(choice.CloseChoice())return true;
+            if (_windows.Count == 0) return false;
+            Window top = _windows[_windows.Count - 1];
+            if (!top.Closable) return false;
+            top.Close();
+            return true;
+        }
+
+        private void UpdateQueueLabels()
+        {
+            UpdateEmoteLabels();
+            int i = 0;
+            if (_ctrl.InInterior)
+            {
+                foreach (var kv in _ctrl.Interior.QueueHeads())
+                {
+                    if (i >= _queueLabels.Count)
+                    {
+                        int slot = i;
+                        Button b = Ui.Button(_labelCanvas.transform, "", null, 16, new Color(0.85f, 0.6f, 0.1f, 0.92f));
+                        RectTransform rt = (RectTransform)b.transform;
+                        rt.anchorMin = rt.anchorMax = Vector2.zero;
+                        rt.pivot = new Vector2(0.5f, 0);
+                        rt.sizeDelta = new Vector2(170, 44);
+                        _queueLabels.Add((rt, b.GetComponentInChildren<Text>(), b));
+                    }
+                    var (lrt, text, button) = _queueLabels[i];
+                    int id = kv.Key;
+                    button.onClick.RemoveAllListeners();
+                    button.onClick.AddListener(() => _ctrl.Checkout(id));
+                    var c = FindCustomer(id);
+                    const string act = "结账";
+                    button.interactable = _ctrl.CanRequestCheckout;
+                    text.text = c != null ? $"{act} {c.Spend}\n<size=12>{c.ItemName}</size>" : act;
+                    Vector3 sp = _ctrl.Cam.WorldToScreenPoint(kv.Value);
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)_labelCanvas.transform, sp, LabelCam, out Vector2 local);
+                    lrt.anchoredPosition = local + ((RectTransform)_labelCanvas.transform).rect.size * 0.5f;
+                    lrt.gameObject.SetActive(true);
+                    i++;
+                }
+            }
+            for (; i < _queueLabels.Count; i++) _queueLabels[i].rt.gameObject.SetActive(false);
+        }
+
+        private Camera LabelCam => _labelCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _labelCanvas.worldCamera;
+
+        private PCShopSell.Core.Shop.ShopCustomer FindCustomer(int id)
+        {
+            foreach (var c in S.PlayerShop.Queue)
+            {
+                if (c.Id == id) return c;
+            }
+            return null;
+        }
+
+        // ---------- 飘字 ----------
+
+        private const int ToastMaxCards = 3;
+        private const int ToastPaddingX = 14, ToastPaddingY = 10;
+        private const float ToastSpacing = 4, ToastIllustrationHeight = 150;
+        private static readonly Regex ToastMarkup = new Regex(@"</?(?:b|i|size|color)(?:=[^<>]+)?>");
+
+        private void BuildToasts()
+        {
+            _toastList = Ui.Rect(_toastCanvas.transform, "Toasts").Anchor(0, 1, 0, 1, 16, -684, -476, 284);
+            _toastList.gameObject.AddComponent<RectMask2D>();
+            var v = _toastList.gameObject.AddComponent<VerticalLayoutGroup>();
+            v.spacing = ToastSpacing;
+            v.childControlHeight = true;
+            v.childControlWidth = true;
+            v.childForceExpandHeight = false;
+            v.childAlignment = TextAnchor.UpperLeft;
+            RefreshToastPlacement();
+        }
+
+        private void RefreshToastPlacement()
+        {
+            if(_toastList==null)return;
+            var canvas=(RectTransform)_toastCanvas.transform;
+            float top=82+HudFunctionOffset+12;
+            if(_questPanel!=null&&_questPanel.gameObject.activeInHierarchy)
+            {
+                // Read the visible card's real bottom, including changing progress text
+                // and HUD folding. Convert coordinates across the two canvases.
+                _questPanel.rectTransform.GetWorldCorners(_toastQuestCorners);
+                float cardBottom=canvas.InverseTransformPoint(_toastQuestCorners[0]).y;
+                top=Mathf.Max(top,canvas.rect.yMax-cardBottom+12);
+            }
+            float width=Mathf.Max(160,Mathf.Min(460,canvas.rect.width-32));
+            float height=Mathf.Clamp(canvas.rect.height-top-124,0,400);
+            var bottomLeft=new Vector2(16,-top-height);
+            var topRight=new Vector2(16+width,-top);
+            var previousSize = _toastList.rect.size;
+            if((_toastList.offsetMin-bottomLeft).sqrMagnitude>.01f)_toastList.offsetMin=bottomLeft;
+            if((_toastList.offsetMax-topRight).sqrMagnitude>.01f)_toastList.offsetMax=topRight;
+            if ((_toastList.rect.size - previousSize).sqrMagnitude > .01f) LayoutToastCards();
+        }
+
+        private void LayoutToastCards()
+        {
+            if (_toasts.Count == 0) return;
+            float width = _toastList.rect.width - 2 * ToastPaddingX;
+            float remaining = _toastList.rect.height;
+            var firstLabel = _toasts[0].label;
+            var firstSettings = firstLabel.GetGenerationSettings(new Vector2(width, 0));
+            float minimumCardHeight = ToastTextHeight(firstLabel, "…", firstSettings) + 2 * ToastPaddingY;
+            // Give recent messages priority, with space for a preview of each older card that can fit.
+            for (int i = _toasts.Count - 1; i >= 0; i--)
+            {
+                var toast = _toasts[i];
+                var card = (RectTransform)toast.label.transform.parent;
+                if (remaining < minimumCardHeight)
+                {
+                    card.gameObject.SetActive(false);
+                    continue;
+                }
+
+                float minimumWithSpacing = minimumCardHeight + ToastSpacing;
+                int olderCards = Mathf.Min(i, Mathf.FloorToInt((remaining - minimumCardHeight) / minimumWithSpacing));
+                float cardBudget = remaining - olderCards * minimumWithSpacing;
+                float artHeight = 0;
+                if (toast.illustration != null)
+                {
+                    artHeight = Mathf.Min(ToastIllustrationHeight, cardBudget - minimumCardHeight);
+                    if (artHeight < 60) artHeight = 0;
+                    toast.illustration.gameObject.SetActive(artHeight > 0);
+                    if (artHeight > 0) Ui.Size(toast.illustration, -1, artHeight);
+                }
+
+                float textHeight = FitToastText(toast.label, toast.message, width, cardBudget - artHeight - 2 * ToastPaddingY);
+                float cardHeight = textHeight + artHeight + 2 * ToastPaddingY;
+                Ui.Size(toast.label, -1, textHeight);
+                Ui.Size(card, -1, cardHeight);
+                card.gameObject.SetActive(true);
+                remaining -= cardHeight + ToastSpacing;
+            }
+        }
+
+        private static float ToastTextHeight(Text label, string text, TextGenerationSettings settings) =>
+            Mathf.Ceil(label.cachedTextGeneratorForLayout.GetPreferredHeight(text, settings) / label.pixelsPerUnit) + 1;
+
+        private static float FitToastText(Text label, string message, float width, float maxHeight)
+        {
+            var settings = label.GetGenerationSettings(new Vector2(width, 0));
+            float Measure(string value) => ToastTextHeight(label, value, settings);
+
+            float height = Measure(message);
+            if (height <= maxHeight)
+            {
+                label.text = message;
+                return height;
+            }
+
+            string plain = ToastMarkup.Replace(message, "");
+            var characters = StringInfo.ParseCombiningCharacters(plain);
+            string preview = "…";
+            height = Measure(preview);
+            int low = 0, high = characters.Length - 1;
+            while (low <= high)
+            {
+                int mid = low + (high - low) / 2;
+                string candidate = plain.Substring(0, characters[mid]).TrimEnd() + "…";
+                float candidateHeight = Measure(candidate);
+                if (candidateHeight <= maxHeight)
+                {
+                    preview = candidate;
+                    height = candidateHeight;
+                    low = mid + 1;
+                }
+                else high = mid - 1;
+            }
+            label.text = preview;
+            return height;
+        }
+
+        private readonly List<string> _noticeHistory = new List<string>();
+        private Image _hintStrip;
+        private string _lastHintWidthText;
+        private int _hintBaseDay = int.MinValue / 2;
+        private string _lastToast;
+        private float _lastToastAt;
+        public void OpenNoticeHistory()
+        {
+            _unreadNotices = 0;
+            OpenWindow("通知记录", 850, 700, w =>
+            {
+                for (int i = _noticeHistory.Count - 1; i >= 0; i--)
+                {
+                    var entry = Ui.FlatPanel(w.Content, "NoticeEntry").rectTransform;
+                    Ui.VList(entry, 0, 9);
+                    Para(entry, _noticeHistory[i], 16);
+                }
+                if (_noticeHistory.Count == 0) Line(w.Content, "还没有通知。", 18, Ui.Dim);
+            });
+        }
+        public void Toast(string message, EventCgFrame cg = null)
+        {
+            if (string.IsNullOrWhiteSpace(message)) return;
+            _upcomingScheduleDirty = true;
+            for (int i = 0; i < _toasts.Count; i++)
+            {
+                var live = _toasts[i];
+                if (live.message != message) continue;
+                live.until = _uiTime + 5f;
+                _toasts[i] = live;
+                return;
+            }
+            if (_lastToast == message && _uiTime - _lastToastAt < 8) return;
+            _lastToast = message; _lastToastAt = _uiTime;
+            RefreshToastPlacement();
+            _unreadNotices++;
+            _noticeHistory.Add((S == null ? "" : S.Clock.Now + "　") + message);
+            if (_noticeHistory.Count > 150) _noticeHistory.RemoveAt(0);
+            Image bg = Ui.Panel(_toastList, "Toast", Ui.PanelBg);
+            var fit = bg.gameObject.AddComponent<VerticalLayoutGroup>();
+            fit.padding = new RectOffset(ToastPaddingX, ToastPaddingX, ToastPaddingY, ToastPaddingY);
+            fit.childControlHeight = true;
+            fit.childControlWidth = true;
+            fit.childForceExpandHeight = false;
+            Text label = Ui.Label(bg.transform, "", 18);
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            RectTransform illustration = null;
+            if (cg != null)
+            {
+                for (int i = _toasts.Count - 1; i >= 0; i--)
+                    if (_toasts[i].illustration != null) RemoveToastAt(i);
+                illustration = BuildEventCg(bg.transform, cg, ToastIllustrationHeight);
+            }
+            _toasts.Add((label, message, illustration, _uiTime + 5f));
+            if (_toasts.Count > ToastMaxCards) RemoveToastAt(0);
+            LayoutToastCards();
+            RevealAppearance(bg.transform, .18f, .25f);
+        }
+
+        private void RemoveToastAt(int index)
+        {
+            var card = _toasts[index].label.transform.parent.gameObject;
+            card.SetActive(false);
+            Kill.It(card);
+            _toasts.RemoveAt(index);
+        }
+
+        private void UpdateToasts()
+        {
+            int previousCount = _toasts.Count;
+            for (int i = _toasts.Count - 1; i >= 0; i--)
+                if (_uiTime > _toasts[i].until) RemoveToastAt(i);
+            if (_toasts.Count != previousCount) LayoutToastCards();
+        }
+
+        // ---------- 窗口 ----------
+
+        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false, bool showTitleBar = true, bool fullScreen = false, bool fitContent = false)
+        {
+            bool system = systemWindow || _windows.Any(window => window.OpeningMealSystem && !window.Closed);
+            if (OpeningMealRestricted && !allowDuringOpeningMeal && !system)
+            {
+                title = "先做饭"; width = 700; height = 390; holds = true; closable = true; onClosed = null; scrollContent = true;
+                showTitleBar = true;
+                fullScreen = false;
+                fitContent = false;
+                builder = BuildOpeningMealReminder;
+            }
+            var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable, FitContent = fitContent };
+            w.OpeningMealSystem = system;
+            Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title,
+                fullScreen ? Ui.ChromeWell : Ui.WorldShade);
+            w.Root = dim.rectTransform.Fill();
+            RectTransform prt = w.Root;
+            if (!fullScreen)
+            {
+                prt = Ui.FlatPanel(dim.transform, "Panel", Ui.FlatWindow).rectTransform;
+                prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
+                prt.sizeDelta = new Vector2(width, height);
+                w.Fitter = prt.gameObject.AddComponent<WindowFit>();
+                w.Fitter.Fit();
+                prt.anchoredPosition = new Vector2(0, -10 * _windows.Count);
+            }
+
+            const float titleBarHeight = 50;
+            if (showTitleBar)
+            {
+                Image bar = Ui.Panel(prt, "TitleBar", Ui.Chrome);
+                bar.rectTransform.Anchor(0, 1, 1, 1, 0, -titleBarHeight, 0, 0);
+                bar.raycastTarget = false;
+                var icon = Ui.Artwork(bar.transform, Ui.WindowIcon(title));
+                if (icon != null) icon.rectTransform.Anchor(0, .5f, 0, .5f, 16, -12, -40, -12);
+                w.TitleText = Ui.Label(bar.transform, title, 22);
+                w.TitleText.rectTransform.Anchor(0, .5f, 1, .5f, icon == null ? 18 : 48, -15, closable ? 214 : 126, -15);
+                w.TitleText.fontStyle = FontStyle.Bold;
+                w.TitleText.verticalOverflow = VerticalWrapMode.Truncate;
+                w.TitleText.resizeTextForBestFit = true;
+                w.TitleText.resizeTextMinSize = 16;
+                w.TitleText.resizeTextMaxSize = 22;
+                w.TimeStatusText = Ui.Label(bar.transform, "", 13, TextAnchor.MiddleRight, Ui.Dim);
+                float statusRight = closable ? 106 : 16;
+                w.TimeStatusText.rectTransform.Anchor(1, 0, 1, 1, -statusRight - 108, 0, statusRight, 0);
+                if (closable)
+                {
+                    Button close = w.CloseButton = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 16, Ui.ButtonSecondary);
+                    ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
+                }
+            }
+
+            float topInset = showTitleBar ? titleBarHeight : 0;
+            if(scrollContent)
+            {
+                w.Content = Ui.Scroll(prt);
+                ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 0, 0, topInset);
+            }
+            else
+            {
+                w.Content = Ui.Rect(prt,"FixedContent").Anchor(0,0,1,1,0,0,0,topInset);
+                if (!fullScreen) Ui.VList(w.Content);
+            }
+            if (w.Content.TryGetComponent<VerticalLayoutGroup>(out var contentLayout))
+            {
+                contentLayout.spacing = 6;
+                contentLayout.padding = new RectOffset(14, 14, 12, 12);
+            }
+            _windows.Add(w);
+            if (holds) S?.Time.Hold();
+            // The opener can stay selected after a click. Keyboard submit must start inside the new modal.
+            var events = EventSystem.current;
+            if (events != null && !events.alreadySelecting) events.SetSelectedGameObject(null);
+            w.Rebuild();
+            RefreshWindowTimeStatus(w);
+            if (showTitleBar && !w.Closed) RevealAppearance(prt, .14f, .72f);
+            return w;
+        }
+
+        private void RefreshWindowTimeStatus(Window w)
+        {
+            if (w.TimeStatusText == null) return;
+            w.TimeStatusText.text = w.TimeStatusOverride
+                ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.RequiredTutorialPaused && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
+        }
+
+        internal static void FitWindowToContent(Window w)
+        {
+            if (w.Fitter == null) return;
+            var body = w.Content.parent == w.Fitter.transform ? w.Content : (RectTransform)w.Content.parent.parent;
+            w.Fitter.FitContent(w.Content, body, w.DialogIllustration);
+        }
+
+        public void CloseWindow(Window w)
+        {
+            if (w.Closed) return;
+            _upcomingScheduleDirty = true;
+            w.Closed = true;
+            _windows.Remove(w);
+            if (w.Holds && S != null && S.Time.IsHeld) S.Time.Release();
+            w.Root.gameObject.SetActive(false);
+            Kill.It(w.Root.gameObject);
+            w.OnClosed?.Invoke();
+        }
+
+        public void CloseAllWindows()
+        {
+            CloseModalWindows();
+            CloseDock();
+        }
+
+        public void CloseModalWindows()
+        {
+            for (int i = _windows.Count - 1; i >= 0; i--)
+                if(!_windows[i].PreserveDuringTransition)CloseWindow(_windows[i]);
+        }
+
+        private readonly System.Collections.Generic.List<Window> _popups = new System.Collections.Generic.List<Window>();
+        private readonly Queue<(string Title, string Body, EventCgFrame Cg)> _scheduledPropertyPopups = new();
+        private bool PopupOpen
+        {
+            get
+            {
+                _popups.RemoveAll(p => p == null || p.Closed);
+                return _popups.Count > 0;
+            }
+        }
+
+        public void Popup(string title, string body, EventCgFrame cg = null)
+        {
+            if (title == GameSession.MealDeliveryUnlockedTitle) return;
+            if (GameSession.IsScheduledPropertyPopup(title))
+            {
+                _scheduledPropertyPopups.Enqueue((title, body, cg));
+                return;
+            }
+            if (PropertyContractOpen)
+            {
+                _propertyContractPopups.Enqueue(() => Popup(title, body, cg));
+                return;
+            }
+            if (S.IsWorking) { Toast(title + "：" + body); _workMessages.Add(title); return; }
+            OpenPopup(title, body, cg);
+        }
+
+        private void ShowPendingScheduledPropertyPopup()
+        {
+            if (_scheduledPropertyPopups.Count == 0 || PopupOpen || PropertyContractOpen || S.PendingEvent != null
+                || S.IsWorking || S.IsGameOver || S.Racing || S.CityActivityExclusive || S.OpeningAgencyGuidePending
+                || OpeningMealRestricted || _ctrl.Placing || _ctrl.PetFocusActive) return;
+            var notice = _scheduledPropertyPopups.Dequeue();
+            OpenPopup(notice.Title, notice.Body, notice.Cg);
+        }
+
+        private void OpenPopup(string title, string body, EventCgFrame cg)
+        {
+            bool purchaseResult = title == GameSession.EmployeePurchaseDeliveryTitle || title == GameSession.EmployeePurchaseIncompleteTitle;
+            string reading = Ui.EmphasizeReading(body);
+            string windowTitle = title;
+#if UNITY_EDITOR
+            if (_eventBatchCurrent == 126) windowTitle = $"#{_eventBatchCurrent:00} · {title}";
+#endif
+            _popups.Add(OpenWindow(windowTitle, cg != null ? 960 : purchaseResult ? 780 : 640, 440, w =>
+            {
+                if (cg != null) w.DialogIllustration = BuildEventCg(w.Content, cg, 300);
+                Para(w.Content, reading, purchaseResult ? 19 : 20);
+                if (title.EndsWith("发来主线邀请", StringComparison.Ordinal))
+                {
+                    var actions = Ui.Row(w.Content, 48, 10);
+                    Ui.Size(Ui.Button(actions, "知道了", w.Close, 18), 0, 48, 1);
+                    Ui.Size(Ui.Button(actions, "查看并回复邀请", () => { w.Close(); OpenDistrictStory(); }, 20, Ui.ButtonHot), 0, 48, 2);
+                }
+                else if (title == GameSession.NpcRepaymentTitle)
+                {
+                    var actions = Ui.Row(w.Content, 48);
+                    Ui.Size(Ui.Button(actions, "查看现金流水", () => { w.Close(); _ledgerFilter = 1; OpenLedger(); }, 20), -1, 48, 1);
+                    Ui.Size(Ui.Button(actions, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48, 1);
+                }
+                else Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48);
+            }, fitContent: true));
+        }
+
+        /// <summary>随机事件：必须选一个选项才能继续（不可关闭）。</summary>
+        public void ShowEvent(EventDef def)
+        {
+            if (S.IsWorking) { _workEvent = def; return; }
+            var choices = def.Choices.Select((choice, index) => (Choice: choice, Index: index))
+                .ToLookup(entry => entry.Choice.Selection?.Key);
+            var selections = choices.Where(group => group.Key != null).ToArray();
+            bool appointment = selections.Length > 0
+                && selections.All(group => group.All(entry => entry.Choice.Appointment.HasValue));
+            int selected = 0;
+            string selectedPayment = null;
+            EventChoice detailsChoice = null;
+            int purchaseChoice = -1, purchaseQuantity = 1;
+            string reading = Ui.EmphasizeReading(def.Body);
+            int visibleChoices = choices[null].Count() + (selections.Length == 0 ? 0 : selections.Max(group => group.Count()));
+            float width = !appointment && visibleChoices >= 6 ? 1060 : def.Cg != null ? 960 : 760;
+            string title = def.Title;
+#if UNITY_EDITOR
+            if (_eventBatchCurrent > 0) title = $"#{_eventBatchCurrent:00} · {title}";
+#endif
+            OpenWindow(title, width, 500, w =>
+            {
+                if (S == null || S.PendingEvent != def)
+                {
+                    w.Close();
+                    return;
+                }
+                if (purchaseChoice >= 0)
+                {
+                    BuildOnlinePurchase(w, purchaseChoice);
+                    return;
+                }
+                if (detailsChoice != null)
+                {
+                    Para(w.Content, detailsChoice.Text, 22, Ui.Accent).fontStyle = FontStyle.Bold;
+                    Para(w.Content, Ui.EmphasizeReading(detailsChoice.Details), 20);
+                    Ui.Size(Ui.Button(w.Content, "返回上一页", () =>
+                    {
+                        detailsChoice = null;
+                        w.ResetScrollOnRebuild = true;
+                        w.Rebuild();
+                    }, 18, Ui.ButtonHot), -1, 42);
+                    return;
+                }
+                if (def.Cg != null) w.DialogIllustration = BuildEventCg(w.Content, def.Cg, appointment ? 228 : 300);
+                if (appointment)
+                {
+                    BuildAppointment(w);
+                    return;
+                }
+                Para(w.Content, reading, 20);
+                if (selections.Length > 0)
+                {
+                    var selector = Ui.Row(w.Content, 42, 10);
+                    Ui.Size(Ui.Label(selector, def.SelectionPrompt ?? "请选择", 17, color: Ui.Dim), 96);
+                    Ui.Size(Ui.Choice(selector, selections.Select(group => group.First().Choice.Selection.Value.Label),
+                        selected, index => { selected = index; w.RequestRebuild(); }), 0, 42, 1).name = "EventChoiceSelection";
+                }
+                var entries = selections.Length > 0 ? selections[selected].Concat(choices[null]).ToArray() : choices[null].ToArray();
+                int columns = entries.Length >= 6 ? 2 : 1;
+                for (int first = 0; first < entries.Length; first += columns)
+                {
+                    var group = entries.Skip(first).Take(columns);
+                    var parent = columns == 2 && first + 1 < entries.Length ? Ui.Row(w.Content, -1, 8) : w.Content;
+                    foreach (var (choice, index) in group)
+                    {
+                        bool enabled = S.IsChoiceEnabled(choice);
+                        string label = enabled || string.IsNullOrEmpty(choice.DisabledReason) ? choice.Text
+                            : $"{choice.Text}\n<size=15><color=#9C4634>{choice.DisabledReason}</color></size>";
+                        var button = Ui.Button(parent, label, () => SelectChoice(w, index), 19, interactable: enabled);
+                        Ui.VList((RectTransform)button.transform, 0, 8, expandHeight: true);
+                        Ui.Size(button, 0, -1, 1).GetComponent<LayoutElement>().minHeight = 44;
+                    }
+                }
+            }, true, false, fitContent: true);
+
+            void SelectChoice(Window w, int index)
+            {
+                if (S?.PendingEvent != def) return;
+                var choice = def.Choices[index];
+                if (!S.IsChoiceEnabled(choice)) return;
+                if (choice.OnlinePurchase.HasValue)
+                {
+                    purchaseChoice = index;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }
+                else if (choice.Details == null)
+                {
+                    if (choice.Conversation.HasValue)
+                    {
+                        if (!S.ResolveEventConversation(index, out var reply)) return;
+                        w.Close();
+                        if (!S.IsGameOver) OpenActivityReply(reply.PersonId, reply.Text, "继续");
+                        return;
+                    }
+                    bool scratchLottery = def.Id == "money_win_lottery";
+                    int? previousTicket = scratchLottery ? S.ScratchTicket?.Id : null;
+                    if (!S.ResolveEvent(index)) return;
+                    w.Close();
+                    if (scratchLottery && S.ScratchTicket is { Paid: false } ticket && ticket.Id != previousTicket)
+                        OpenEventScratch();
+                }
+                else
+                {
+                    detailsChoice = choice;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }
+            }
+
+            void BuildOnlinePurchase(Window w, int index)
+            {
+                var (part, destination, maxQuantity) = def.Choices[index].OnlinePurchase.Value;
+                var product = Ui.Row(w.Content, 54, 10);
+                ItemPortrait(product, part.Id, 50);
+                Ui.Size(Ui.Label(product, part.Name, 22), 0, 54, 1);
+                Line(w.Content, $"送到 {S.ShopTitle(destination)} · 次日 10:00 · 本次限购 {maxQuantity} 件", 17, Ui.Dim);
+                var quantity = Ui.Row(w.Content, 42, 10);
+                Ui.Size(Ui.Label(quantity, "采购数量", 18), 94);
+                var prices = Line(w.Content, "", 18);
+                var status = Line(w.Content, "", 17);
+                var actions = Ui.Row(w.Content, 46, 8);
+                Ui.Size(Ui.Button(actions, "返回上一页", () =>
+                {
+                    purchaseChoice = -1;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }, 18), 150, 46);
+                var pay = Ui.Size(Ui.Button(actions, "", null, 19, Ui.ButtonHot), 0, 46, 1);
+                var payText = pay.GetComponentInChildren<Text>();
+                pay.onClick.AddListener(() =>
+                {
+                    if (S?.PendingEvent != def) return;
+                    if (S.ResolveEvent(index, purchaseQuantity)) w.Close();
+                    else Refresh();
+                });
+                PurchaseQuantity(w, quantity, "eventOnlinePurchase", purchaseQuantity, 1, maxQuantity,
+                    value => purchaseQuantity = (int)value, changed: _ => Refresh(), trackWidth: 0);
+                Refresh();
+                w.RefreshQuantityContent = Refresh;
+
+                void Refresh()
+                {
+                    var quote = S.QuoteOnlinePartOrder(part, purchaseQuantity, destination, maxQuantity);
+                    prices.text = $"单价 {quote.UnitPrice} · 运费 {Online1788.ShippingFee}"
+                        + (quote.Discount.IsPositive ? $" · 采购券减 {quote.Discount}" : "");
+                    status.text = quote.Blocker ?? $"可用现金 {S.Ledger.Balance}";
+                    status.color = quote.Blocker == null ? Ui.Dim : Ui.Warn;
+                    payText.text = $"确认付款 · {quote.Total}";
+                    pay.interactable = quote.Blocker == null;
+                }
+            }
+
+            void BuildAppointment(Window w)
+            {
+                Para(w.Content, reading, 19);
+                var packages = Ui.Row(w.Content, 42, 6);
+                Ui.Size(Ui.Label(packages, "套餐", 17, color: Ui.Dim), 84, -1);
+                for (int i = 0; i < selections.Length; i++)
+                {
+                    int index = i;
+                    string label = selections[i].First().Choice.Selection.Value.Label;
+                    Ui.Size(Ui.Button(packages, label, () =>
+                    {
+                        if (selected == index) return;
+                        selected = index;
+                        w.Rebuild();
+                    }, 18, Ui.SelectedButton(selected == i)), -1, 42, 1).name = "EventAppointmentPackage_" + i;
+                }
+
+                var options = selections[selected].ToArray();
+                var chosen = options.FirstOrDefault(item => item.Choice.Appointment.Value.Payment == selectedPayment);
+                if (chosen.Choice == null) chosen = options[0];
+                selectedPayment = chosen.Choice.Appointment.Value.Payment;
+                var payment = Ui.Row(w.Content, 42, 6);
+                Ui.Size(Ui.Label(payment, "谁付钱", 17, color: Ui.Dim), 84, -1);
+                foreach (var item in options)
+                {
+                    string label = item.Choice.Appointment.Value.Payment;
+                    Ui.Size(Ui.Button(payment, label, () =>
+                    {
+                        if (selectedPayment == label) return;
+                        selectedPayment = label;
+                        w.Rebuild();
+                    }, 17, Ui.SelectedButton(selectedPayment == label)), -1, 42, 1).name = "EventAppointmentPayment_" + item.Index;
+                }
+
+                var details = chosen.Choice.Appointment.Value;
+                bool available = S.IsChoiceEnabled(chosen.Choice);
+                string fare = details.AskHost ? "对方同意后免费" : $"到场付 {details.Price}";
+                string summary = available ? $"{EventAppointmentTime(details.Start)} · {details.Minutes} 分钟 · {fare}"
+                    : $"{details.Minutes} 分钟 · {fare} · {chosen.Choice.DisabledReason}";
+                Para(w.Content, summary, 19, available ? Ui.Accent : Ui.Warn).name = "EventAppointmentSummary";
+                if (details.Note != null) Para(w.Content, details.Note, 16, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, details.AskHost ? "商量请客" : "确认预约", () => SelectChoice(w, chosen.Index),
+                    20, Ui.ButtonHot, available), -1, 46).name = "EventAppointmentConfirm";
+
+                var secondary = Ui.Row(w.Content, 36, 6);
+                foreach (var entry in choices[null])
+                    Ui.Size(Ui.Button(secondary, entry.Choice.Text, () => SelectChoice(w, entry.Index),
+                        16, Ui.ButtonBg, S.IsChoiceEnabled(entry.Choice)), -1, 36, 1);
+            }
+        }
+
+        private string EventAppointmentTime(long start)
+        {
+            var time = new GameTimestamp(start);
+            int days = time.Date.TotalDays - S.Clock.Today.TotalDays;
+            string hour = $"{time.MinuteOfDay / 60:00}:{time.MinuteOfDay % 60:00}";
+            return days == 0 ? "今天 " + hour : days == 1 ? "明天 " + hour : time.ToString();
+        }
+
+        /// <summary>开局介绍。</summary>
+        public void ShowIntro()
+        {
+            if (S.OpeningMealTutorialPending) { UpdateOpeningMealGuide(); return; }
+            OpenWindow(L("welcome"), 740, 460, w =>
+            {
+                MenuTitle(w, "welcome");
+                Para(w.Content, L(S.HasShop ? "intro_existing" : "intro_body"), 20);
+                Para(w.Content, L("intro_move"), 18);
+                Para(w.Content, L("intro_tasks"), 17, Ui.Accent);
+                Ui.Size(Ui.Button(w.Content, L("begin_business"), w.Close, 20, Ui.ButtonHot), -1, 50);
+            });
+        }
+    }
+}

@@ -1,0 +1,72 @@
+[
+  {
+    "name": "PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding () [0x002ae] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BrandStoryUiTests.cs:88\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold () [0x00014] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:250\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture",
+    "message": "  Expected: ¥999,220\n  But was:  ¥873,220\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture () [0x0006a] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:205\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract () [0x000c7] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:355\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(\"cars\")",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays (System.String kind) [0x00074] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:297\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay",
+    "message": "  首月 + 押金 + 中介费当场付\n  Expected: 19400000\n  But was:  19500000\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay () [0x00077] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CampaignTests.cs:425\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent",
+    "message": "  首月 + 押金 + 中介费 + 搬家费（旧店没押金）\n  Expected: 60800\n  But was:  50800\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent () [0x00168] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CampaignTests.cs:503\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.ImpoundedPurchaseVehicleUsesFallbackWithoutChangingThePlan(False,Walk)",
+    "message": "  Expected: Walk\n  But was:  Taxi\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.ImpoundedPurchaseVehicleUsesFallbackWithoutChangingThePlan (System.Boolean shortShift, PCShopSell.Core.Session.VehicleKind expectedTransport) [0x00166] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:215\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(\"quota\")",
+    "message": "  Expected: not null\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods (System.String failure) [0x0018f] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:315\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.OverweightPurchase_UnloadsAndContinuesSameDayAfterLoadingSave",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Buy (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.VehicleKind kind, System.Int32 count) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:45\nat PCShopSell.Tests.WorkforceTests.OverweightPurchase_UnloadsAndContinuesSameDayAfterLoadingSave () [0x00009] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:263\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole",
+    "message": "  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole () [0x0003a] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:85\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.Transfer_LeavesTodayUntouched_AndMovesTomorrowAfterJson(Assembler)",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Transfer_LeavesTodayUntouched_AndMovesTomorrowAfterJson (PCShopSell.Core.Session.EmployeeRole role) [0x00062] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:61\n"
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.TricyclesAreImpoundedAndReturnedIndividually",
+    "message": "System.InvalidOperationException : Sequence contains more than one matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x0004a] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.WorkforceTests.TricyclesAreImpoundedAndReturnedIndividually () [0x0016e] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:253 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  },
+  {
+    "name": "PCShopSell.Tests.WorkforceTests.VehiclePool_TwoBikesCanServeBuyerAndOwner_AndLocksSurviveJson",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.WorkforceTests.Buy (PCShopSell.Core.Session.GameSession s, PCShopSell.Core.Session.VehicleKind kind, System.Int32 count) [0x00011] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:45\nat PCShopSell.Tests.WorkforceTests.VehiclePool_TwoBikesCanServeBuyerAndOwner_AndLocksSurviveJson () [0x000a9] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\WorkforceTests.cs:155\n"
+  }
+]

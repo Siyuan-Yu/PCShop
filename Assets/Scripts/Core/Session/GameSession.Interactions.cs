@@ -66,6 +66,7 @@ namespace PCShopSell.Core.Session
         public string RecruitAssignmentBlocker(string candidateId, string destination, EmployeeRole role)
         {
             if (IsGameOver || !InPlayerShop || !_candidates.Any(c => c.Id == candidateId && CandidateAvailable(c))) return "候选人已不可聘用";
+            if (!AtRecruitmentInterview) return "请到" + RecruitmentInterviewPlace.Name + "面试";
             if (!Enum.IsDefined(typeof(EmployeeRole), role)) return "请选择岗位";
             if (role == EmployeeRole.Unassigned) return StaffCapacityBlocker(_focus);
             var shop = ShopAt(destination);

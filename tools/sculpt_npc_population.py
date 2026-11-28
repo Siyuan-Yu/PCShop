@@ -353,7 +353,14 @@ def main():
             if a.names and name not in a.names:continue
             target=OUT/('PlayerB-'+prefix+value+'.bytes')
             staging=CACHE/(target.name+'.staging')
-            s.write_sample(staging,fn(name))
+            if name.startswith('date_'):
+                import sculpt_romance_npcs as romance
+                import sys
+                make = romance.head if group == 'heads' else romance.top
+                sections = make(sys.modules[__name__], name.removeprefix('date_'))
+            else:
+                sections = fn(name)
+            s.write_sample(staging, sections)
             # 先写完整模型再替换，避免 Unity 自动导入期间读取半个文件。
             staging.replace(target)
 if __name__=='__main__':main()

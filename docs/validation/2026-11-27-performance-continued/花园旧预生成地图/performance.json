@@ -1,0 +1,137 @@
+{
+    "unity": "2022.3.6f1",
+    "gpu": "NVIDIA GeForce RTX 3070",
+    "mode": "Unity Editor Game View；包含编辑器开销，不是发行包 FPS",
+    "driver": "Unity PlayerLoop.Update",
+    "graphicsMemoryMB": 8018,
+    "errors": 0,
+    "rendered": true,
+    "backgroundThrottleSuspected": false,
+    "validForFrameRate": true,
+    "hotspotDiagnostic": false,
+    "scenarios": [
+        {
+            "scene": "garden-1x",
+            "resolution": "1920x1080",
+            "place": "outdoors",
+            "frames": 9086,
+            "activeRenderers": 46600,
+            "visibleRenderers": 494,
+            "missingMaterials": 0,
+            "errorShaders": 0,
+            "pendingTextures": 0,
+            "notAtTargetMip": 0,
+            "initialPendingTextures": 0,
+            "pausedFrames": 0,
+            "recoveryFrames": 0,
+            "simulatedMinutes": 360,
+            "fps": 151.42365862341084,
+            "frameMs": 6.603987838432766,
+            "p95Ms": 7.900500000005195,
+            "p99Ms": 8.78680000000287,
+            "maxMs": 14.381799999995338,
+            "stepMs": 0.8263494497028372,
+            "drawCalls": 2206.477547875853,
+            "triangles": 3035893.6744442,
+            "allocatedMB": 1777.4212436676025,
+            "textureMB": 100.3802490234375,
+            "graphicsDriverMB": 984.1691627502441,
+            "transitionMs": 125.67840000000001,
+            "stepP99Ms": 2.7313,
+            "stepMaxMs": 7.06,
+            "sampleSeconds": 60.00383350000011,
+            "loadSimulationMs": 97.87190000000001,
+            "attachSessionMs": 6.9245,
+            "isRecovery": false,
+            "recoveryCompleted": false,
+            "cpuMarkersValid": true,
+            "simulationP99Ms": 2.0649,
+            "viewsP99Ms": 1.6364,
+            "uiP99Ms": 1.8826,
+            "simulationMaxMs": 6.4836,
+            "viewsMaxMs": 3.3325,
+            "uiMaxMs": 3.5443,
+            "over120BudgetPercent": 2.2342064714946074,
+            "slowestOnePercentFps": 101.51027205868545,
+            "internalSpeed": 2,
+            "displayedSpeed": "1×",
+            "meets120P99": false,
+            "materialWarnings": [],
+            "uiBreakdown": [
+                {
+                    "name": "UpdateLabels",
+                    "count": 9086,
+                    "meanMs": 0.1521529055690082,
+                    "p99Ms": 0.3162,
+                    "maxMs": 3.3627
+                },
+                {
+                    "name": "UpdateHud",
+                    "count": 9086,
+                    "meanMs": 0.007995289456306418,
+                    "p99Ms": 0.1441,
+                    "maxMs": 0.4074
+                },
+                {
+                    "name": "UpdateDistrictPersonMarkers",
+                    "count": 9086,
+                    "meanMs": 0.004758551617873687,
+                    "p99Ms": 0.0088,
+                    "maxMs": 0.0726
+                },
+                {
+                    "name": "UpdateInteractMarker",
+                    "count": 9086,
+                    "meanMs": 0.02067466431873226,
+                    "p99Ms": 0.0342,
+                    "maxMs": 0.1347
+                },
+                {
+                    "name": "UpdateTip",
+                    "count": 9086,
+                    "meanMs": 0.0005491415364296727,
+                    "p99Ms": 0.0011,
+                    "maxMs": 0.0065
+                },
+                {
+                    "name": "UpdateQuestTracker",
+                    "count": 9086,
+                    "meanMs": 0.004229661016949156,
+                    "p99Ms": 0.2481,
+                    "maxMs": 0.4426
+                },
+                {
+                    "name": "RefreshShortcutMenus",
+                    "count": 9086,
+                    "meanMs": 0.022478934624697339,
+                    "p99Ms": 1.3894,
+                    "maxMs": 1.6261
+                },
+                {
+                    "name": "UpdateUpcomingScheduleHud",
+                    "count": 9086,
+                    "meanMs": 0.002856603565925419,
+                    "p99Ms": 0.0053,
+                    "maxMs": 0.4338
+                },
+                {
+                    "name": "RefreshWorkbenchAccess",
+                    "count": 9086,
+                    "meanMs": 0.02997817521461582,
+                    "p99Ms": 0.0523,
+                    "maxMs": 0.1508
+                },
+                {
+                    "name": "UpdateCityLifeHud",
+                    "count": 9086,
+                    "meanMs": 0.0012203720008805214,
+                    "p99Ms": 0.0128,
+                    "maxMs": 0.0624
+                }
+            ],
+            "coreBreakdown": [],
+            "engineBreakdown": [],
+            "worstFrames": []
+        }
+    ]
+}

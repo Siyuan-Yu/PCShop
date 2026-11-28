@@ -1,5 +1,5 @@
 ﻿param([string]$Mirror='D:/tmp/pcshop-suburb-day-mam5h57m/preview',[string]$Output='D:/tmp/pcshop-qa-visual-20261127',[int]$TimeoutSeconds=900,
-      [ValidateSet('QaRuntimeCapture','QaPerformanceCapture')][string]$Capture='QaRuntimeCapture',[switch]$GameView,[switch]$Hotspots,[string]$Scenario="",[switch]$PlayerLoop)
+      [ValidateSet('QaRuntimeCapture','QaPerformanceCapture','RelationshipExperienceCapture')][string]$Capture='QaRuntimeCapture',[switch]$GameView,[switch]$Hotspots,[string]$Scenario="",[switch]$PlayerLoop)
 $ErrorActionPreference='Stop'
 $src=(Resolve-Path "$PSScriptRoot/../..").Path.TrimEnd('\')
 $dst=[IO.Path]::GetFullPath($Mirror).TrimEnd('\')

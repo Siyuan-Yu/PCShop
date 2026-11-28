@@ -150,6 +150,9 @@ namespace PCShopSell.Game.UI
                     foreach (var relation in relations) Para(w.Content, relation.Name + " · " + relation.Relationship, 17, Ui.Dim);
                 }
                 Line(w.Content, "与你的相处记录", 20, Ui.Accent);
+                if (S.RelationshipIllustrationTitle(personId) is string illustrationTitle)
+                    Ui.Size(Ui.Button(w.Content, "回看 · " + illustrationTitle,
+                        () => OpenRelationshipMemory(personId, illustrationTitle), 17, Ui.ButtonSecondary), -1, 38);
                 var memories = S.MemoriesOf(personId).ToArray();
                 const int pageSize = 8;
                 int pages = Math.Max(1, (memories.Length + pageSize - 1) / pageSize);
@@ -281,6 +284,7 @@ namespace PCShopSell.Game.UI
         private static string InvitationInterest(CityActivityDefinition activity, CityPersonDefinition person, string personId)
         {
             if (activity == null) return "赛车";
+            if (GameSession.LikesPersonalActivity(personId, activity.Id)) return GameSession.PersonalInterest(personId);
             if (personId == Npcs.Zhou && activity.Id == "oldmarket_visit") return "在青湾旧物市场淘旧电子";
             string interest = person?.Interest ?? "";
             if (activity.Id == interest)

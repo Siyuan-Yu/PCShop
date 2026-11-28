@@ -18,8 +18,10 @@ namespace PCShopSell.Tests
         [Test]
         public void AuthoredCandidatesAndFamiliarityCurveMatchTheApprovedRules()
         {
-            Assert.AreEqual(31, CityLifeCatalog.People.Count(p => GameSession.IsRomanceCandidate(p.Id)));
-            foreach (string id in new[] { "res_tea", "res_mom", "res_pupil", "story_shenxiao", "resident_yeli" })
+            Assert.AreEqual(24, CityLifeCatalog.People.Count(p => GameSession.IsRomanceCandidate(p.Id)));
+            Assert.AreEqual(12, CityLifeCatalog.People.Count(p => GameSession.HasRelationshipStory(p.Id) && GameSession.IsRomanceCandidate(p.Id)));
+            foreach (string id in new[] { "res_tea", "res_mom", "res_pupil", "story_shenxiao", "resident_yeli",
+                "resident_sujun", "resident_leiming", "resident_jiangning", "resident_siyu", "resident_taoran", "racer_2", "resident_xiaqing" })
                 Assert.IsFalse(GameSession.IsRomanceCandidate(id), id);
             Assert.AreEqual(0, GameSession.ConfessionChance(70));
             Assert.That(GameSession.ConfessionChance(71), Is.EqualTo(.30).Within(.0001));
@@ -28,6 +30,22 @@ namespace PCShopSell.Tests
             Assert.That(GameSession.ConfessionChance(100), Is.EqualTo(.95).Within(.0001));
             for (int familiarity = 72; familiarity <= 100; familiarity++)
                 Assert.Greater(GameSession.ConfessionChance(familiarity), GameSession.ConfessionChance(familiarity - 1));
+        }
+
+        [TestCase("resident_jiangning")]
+        [TestCase("resident_siyu")]
+        public void RetiredCandidateRemainsAnExistingPartnerButCannotStartRomanceAgain(string former)
+        {
+            using var session = DistrictProgressionTests.Make();
+            var save = session.CreateSave();
+            save.business.RomanceId = former;
+            using var loaded = Reload(session, save);
+            Assert.IsTrue(loaded.IsPlayerPartner(former));
+            Assert.IsNotEmpty(loaded.PartnerConversation(former));
+            Assert.IsTrue(loaded.EndRomance());
+            using var reopened = Reload(loaded, loaded.CreateSave());
+            Assert.IsNull(reopened.RomanceId);
+            Assert.IsNotNull(reopened.ConfessionBlocker(former));
         }
 
         [Test]

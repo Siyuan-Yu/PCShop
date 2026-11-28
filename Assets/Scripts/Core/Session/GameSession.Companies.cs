@@ -34,7 +34,14 @@ namespace PCShopSell.Core.Session
         public long EffectiveAt;
         public string StoreId, ManagedStoreId;
         public EmployeeRole StoreRole;
-        public CompanyPost Copy() => (CompanyPost)MemberwiseClone();
+        public CompanyPost Copy()
+        {
+            var post = (CompanyPost)MemberwiseClone();
+            // JsonUtility restores absent string fields as empty strings.
+            if (string.IsNullOrEmpty(post.StoreId)) post.StoreId = null;
+            if (string.IsNullOrEmpty(post.ManagedStoreId)) post.ManagedStoreId = null;
+            return post;
+        }
         public bool InDepartment(CompanyDepartment department) => ManagedStoreId == null && StoreId == null && Department == department;
     }
 
@@ -385,6 +392,7 @@ namespace PCShopSell.Core.Session
             string blocker = CompanyRecruitmentBlocker(company, shop);
             if (blocker != null) return Fail(blocker);
             _recruitmentArrivalAt = GameTimestamp.From(Clock.Today.AddDays(1), CandidateMinute).TotalMinutes;
+            _recruitmentShopId = shop.Place.Id;
             Say(CompanyName(company) + "已核准" + ShopTitle(shop) + "的招聘告示。明日可按现有到店面试流程聘用。");
             return true;
         }

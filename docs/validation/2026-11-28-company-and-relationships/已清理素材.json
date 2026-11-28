@@ -1,0 +1,64 @@
+{
+  "retiredResources": [
+    {
+      "path": "Assets/Resources/EventCg/community_intro_call.png",
+      "bytes": 1303343,
+      "sha256": "3c31342dbe38ccc193e5ff5f30b595624f11662769e99e1b1aadd79ca2e4cae4"
+    },
+    {
+      "path": "Assets/Resources/EventCg/opening_arrival.png",
+      "bytes": 1009787,
+      "sha256": "568aea70951ca57eefa177f4144b7f97e992b45fa1411ec29b4be8f0c15ad474"
+    },
+    {
+      "path": "Assets/Resources/EventCg/opening_hunger.png",
+      "bytes": 794474,
+      "sha256": "2cd3a5a56878b8165ac6e4b620201467248aa5f213f4b14e4de65a12efc2000d"
+    },
+    {
+      "path": "Assets/Resources/KolStudio/clothing_demo.png",
+      "bytes": 1733185,
+      "sha256": "8161783d22f31042ce2727fabb72c13d37da762a326cc320457ec6e3e9401fc6"
+    },
+    {
+      "path": "Assets/Resources/KolStudio/computer_demo.png",
+      "bytes": 1799494,
+      "sha256": "a828eac9dbe41d6e7430ea8f841db482f42611bb06ffe8ae497ece774e322b97"
+    },
+    {
+      "path": "Assets/Resources/KolStudio/models_demo.png",
+      "bytes": 1815771,
+      "sha256": "900d13522bd88f6a69b7cd938b018d50afae7b4f12b94bcc21eca84c1b92dd92"
+    },
+    {
+      "path": "Assets/Resources/Menu/CornerShopCover.png",
+      "bytes": 2253572,
+      "sha256": "e5f86001631ea7ceb9c5d0caee8c686c0878a6a60ef8df1429a94dc5bd11015a"
+    },
+    {
+      "path": "Assets/Resources/OldTown/Surfaces/afternoonCloud.png",
+      "bytes": 21716,
+      "sha256": "37e14d16ced2ccb8518ff8be9b32f87b91d3e70672e9abd4e5289a3e3a34d58f"
+    },
+    {
+      "path": "Assets/Resources/OldTown/Surfaces/fieldPlants.png",
+      "bytes": 981752,
+      "sha256": "99225ac680e93b03ac62f398f7f73e66cef818eb7ad2acf5b00734e52d3a2c4d"
+    },
+    {
+      "path": "Assets/Resources/OldTown/Surfaces/tendedLawn.png",
+      "bytes": 1753421,
+      "sha256": "38b859a9e91dc87468c9190b8ee7153956c5b66f715c9d53111102cd6f371da6"
+    },
+    {
+      "path": "Assets/Resources/OldTown/Surfaces/townAfternoon.png",
+      "bytes": 2182,
+      "sha256": "59b15bd13aa932ea782511c18517015a56f37b495f5b3a7c37c77c2207edf5dd"
+    }
+  ],
+  "retroPortraits": {
+    "path": "Assets/Art/PortraitsRetro",
+    "count": 129,
+    "bytes": 367733358
+  }
+}

@@ -2,9 +2,12 @@
 from pathlib import Path
 import argparse,json,shutil,csv,html
 from PIL import Image,ImageDraw,ImageFont
-p=argparse.ArgumentParser();p.add_argument('source');p.add_argument('destination');a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('source');p.add_argument('destination')
+p.add_argument('--portraits',type=Path,help='本次核对的已确认头像目录，文件名为角色 ID')
+a=p.parse_args()
 root=Path(__file__).resolve().parents[2];src=Path(a.source);dst=Path(a.destination);dst.mkdir(parents=True,exist_ok=True)
 font=lambda size:ImageFont.truetype('C:/Windows/Fonts/msyh.ttc',size)
+reference_label='私服头像' if a.portraits else '原立绘'
 def save_image(im,path,**options):
     # 图片可能正在桌面预览中；完整写入临时文件再替换，不截断正在查看的旧档案。
     staging=path.with_name(path.stem+'.staging'+path.suffix)
@@ -27,13 +30,18 @@ for pagefile in sorted(src.glob('*-名单.txt')):
         x=i*360
         d.text((x+16,12),names.get(ident,ident),font=font(22),fill='#2a3334')
         d.text((x+16,46),ident,font=font(12),fill='#54605d')
-        portrait=root/'Assets/Resources/PortraitsAnime'/f'{ident}.png'
+        portrait=(a.portraits or root/'Assets/Resources/PortraitsAnime')/f'{ident}.png'
+        if a.portraits and not portrait.is_file():raise FileNotFoundError(portrait)
+        if a.portraits:
+            refdir=dst/'头像原稿'
+            refdir.mkdir(exist_ok=True)
+            shutil.copy2(portrait,refdir/portrait.name)
         if ':' not in ident and portrait.exists():
             im=Image.open(portrait).convert('RGB');im.thumbnail((270,300));board.paste(im,(x+(360-im.width)//2,78))
         else:d.text((x+24,180),'临时角色／共享标准',font=font(18),fill='#737772')
         center=1200+(i-(n-1)*.5)*.84*(1350/2.64)
         im=front.crop((int(center-202),230,int(center+202),1150));im.thumbnail((330,470));board.paste(im,(x+(360-im.width)//2,402))
-        d.text((x+75,872),'上：原立绘  下：Unity 实机',font=font(14),fill='#515b55')
+        d.text((x+70,872),f'上排 {reference_label}    下排 Unity 实机',font=font(14),fill='#515b55')
     save_image(board,dst/f'{page}-立绘与模型.jpg',quality=94)
     strip=Image.new('RGB',(1200,520),'#efefed');im=front.crop((0,245,2400,1155));im.thumbnail((1200,455));strip.paste(im,(0,0));ds=ImageDraw.Draw(strip)
     for i,ident in enumerate(ids):
@@ -58,5 +66,6 @@ if work:
     save_image(work[0],dst/'工作动作.gif',save_all=True,append_images=work[1:],duration=42,loop=0,optimize=True)
     extras.append('<a href="工作动作.gif"><img src="工作动作.gif">正式装机工作动作</a>')
 if extras:blocks.append('<h2>实际环境与动作衔接</h2><div class="views">'+''.join(extras)+'</div>')
-(dst/'index.html').write_text('<!doctype html><html lang="zh"><meta charset="utf-8"><title>全体 NPC 实机检阅</title><style>body{background:#f0f1ed;color:#263735;font:16px sans-serif;max-width:1500px;margin:30px auto;padding:24px}h1{font-size:28px}section{margin:45px 0}img{max-width:100%;height:auto}.views{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}a{color:inherit;text-decoration:none}p{line-height:1.7}</style><h1>'+html.escape(dst.name)+'</h1><p>正式人物入口生成的真实 Unity 三维模型。上方原立绘只核对身份、发型和服装；身体比例沿用已确认的三人母版。点击小图查看原始截图。未补画渲染帧。</p>'+''.join(blocks)+'</html>',encoding='utf-8')
+title=f'{sum(len(f.read_text(encoding="utf-8-sig").splitlines()) for f in src.glob("*-名单.txt"))} 位 NPC 私服模型' if a.portraits else dst.name
+(dst/'index.html').write_text('<!doctype html><html lang="zh"><meta charset="utf-8"><title>全体 NPC 实机检阅</title><style>body{background:#f0f1ed;color:#263735;font:16px sans-serif;max-width:1500px;margin:30px auto;padding:24px}h1{font-size:28px}section{margin:45px 0}img{max-width:100%;height:auto}.views{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}a{color:inherit;text-decoration:none}p{line-height:1.7}</style><h1>'+html.escape(title)+'</h1><p>每组上排为'+reference_label+'，下排来自 Unity 正式人物入口。身体比例沿用三人母版。点击下方各角度可查看原始截图。</p>'+''.join(blocks)+'</html>',encoding='utf-8')
 print(dst,len(strips),'组')

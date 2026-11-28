@@ -1,0 +1,7 @@
+[
+  {
+    "name": "PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding",
+    "message": "System.InvalidOperationException : Sequence contains no matching element",
+    "stack": "  at System.Linq.Enumerable.Single[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00070] in <de4a1a1490a74771a34fee0d1d586658>:0 \n  at PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding () [0x0048c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BrandStoryUiTests.cs:128 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 "
+  }
+]

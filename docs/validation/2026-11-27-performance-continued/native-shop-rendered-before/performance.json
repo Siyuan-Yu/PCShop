@@ -1,0 +1,821 @@
+{
+    "unity": "2022.3.6f1",
+    "gpu": "NVIDIA GeForce RTX 3070",
+    "mode": "Windows 客户端真实帧间隔；每例独立恢复同一合成存档",
+    "diagnostic": true,
+    "errors": 0,
+    "scenarios": [
+        {
+            "scene": "shop-1x",
+            "resolution": "1920x1080",
+            "displayedSpeed": "1×",
+            "internalSpeed": 2,
+            "frames": 4981,
+            "pausedFrames": 0,
+            "recoveryFrames": 0,
+            "missingMaterials": 0,
+            "errorShaders": 0,
+            "pendingTextures": 0,
+            "notAtTargetMip": 0,
+            "simulatedMinutes": 34,
+            "fps": 166.03157173835698,
+            "p99Ms": 8.1334,
+            "maxMs": 20.2819,
+            "slowestOnePercentFps": 112.66983569357862,
+            "over120BudgetPercent": 0.6424412768520378,
+            "sampleSeconds": 30.00031830000005,
+            "stepP99Ms": 0.9366,
+            "stepMaxMs": 17.5071,
+            "drawCalls": 1493.840393495282,
+            "triangles": 1541476.5322224454,
+            "loadSimulationMs": 78.4453,
+            "attachSessionMs": 4.6212,
+            "transitionMs": 121.5094,
+            "allocatedMB": 1160.5298347473145,
+            "textureMB": 123.7553482055664,
+            "rendered": true,
+            "renderCounterAvailable": true,
+            "meets120P99": true,
+            "recoveryCompleted": false,
+            "coreBreakdown": [
+                {
+                    "name": "Minute.TickCityPeople",
+                    "count": 34,
+                    "totalMs": 19.396700000000004,
+                    "maxMs": 1.937
+                },
+                {
+                    "name": "Audio.BuildClip.Bell",
+                    "count": 1,
+                    "totalMs": 5.0886,
+                    "maxMs": 5.0886
+                },
+                {
+                    "name": "Npc.Outing",
+                    "count": 3836,
+                    "totalMs": 1.6680999999999389,
+                    "maxMs": 0.9047
+                },
+                {
+                    "name": "UI.CheckEconomicReport",
+                    "count": 1092,
+                    "totalMs": 1.180499999999997,
+                    "maxMs": 0.0033
+                },
+                {
+                    "name": "UI.CheckCustomerEventFeedback",
+                    "count": 1092,
+                    "totalMs": 0.7297000000000012,
+                    "maxMs": 0.0023
+                },
+                {
+                    "name": "Npc.Commute",
+                    "count": 1459,
+                    "totalMs": 0.4867999999999867,
+                    "maxMs": 0.0882
+                },
+                {
+                    "name": "Minute.TickCityClimate",
+                    "count": 34,
+                    "totalMs": 0.4709000000000001,
+                    "maxMs": 0.0204
+                },
+                {
+                    "name": "Minute.TickEventFollowups",
+                    "count": 34,
+                    "totalMs": 0.4638000000000001,
+                    "maxMs": 0.0198
+                },
+                {
+                    "name": "Minute.TickHomeWorkbench",
+                    "count": 34,
+                    "totalMs": 0.3541,
+                    "maxMs": 0.1724
+                },
+                {
+                    "name": "Minute.UpdateEmployeePurchases",
+                    "count": 34,
+                    "totalMs": 0.2552,
+                    "maxMs": 0.012
+                },
+                {
+                    "name": "Minute.SettleEmployeeWellbeing",
+                    "count": 34,
+                    "totalMs": 0.24800000000000006,
+                    "maxMs": 0.0108
+                },
+                {
+                    "name": "Minute.TickDistrictNarrative",
+                    "count": 34,
+                    "totalMs": 0.23950000000000008,
+                    "maxMs": 0.0104
+                },
+                {
+                    "name": "Minute.NormalizeWarehouses",
+                    "count": 34,
+                    "totalMs": 0.21239999999999996,
+                    "maxMs": 0.0078
+                },
+                {
+                    "name": "Minute.TickEmployeePayroll",
+                    "count": 34,
+                    "totalMs": 0.192,
+                    "maxMs": 0.0098
+                },
+                {
+                    "name": "Minute.TickVenueBusinesses",
+                    "count": 34,
+                    "totalMs": 0.156,
+                    "maxMs": 0.0064
+                },
+                {
+                    "name": "Minute.TickKolStreams",
+                    "count": 34,
+                    "totalMs": 0.15330000000000006,
+                    "maxMs": 0.0079
+                },
+                {
+                    "name": "Minute.TickCityStories",
+                    "count": 34,
+                    "totalMs": 0.1297,
+                    "maxMs": 0.0063
+                },
+                {
+                    "name": "Minute.TickCityRetail",
+                    "count": 34,
+                    "totalMs": 0.1151,
+                    "maxMs": 0.0057
+                },
+                {
+                    "name": "Minute.DeliverCouriers",
+                    "count": 34,
+                    "totalMs": 0.07310000000000001,
+                    "maxMs": 0.0033
+                },
+                {
+                    "name": "Npc.Route",
+                    "count": 1,
+                    "totalMs": 0.0727,
+                    "maxMs": 0.0727
+                },
+                {
+                    "name": "Minute.TickCityActivities",
+                    "count": 34,
+                    "totalMs": 0.0606,
+                    "maxMs": 0.0028
+                },
+                {
+                    "name": "Minute.TickVenueSponsorships",
+                    "count": 34,
+                    "totalMs": 0.0572,
+                    "maxMs": 0.0025
+                },
+                {
+                    "name": "Minute.DeliverDirect",
+                    "count": 34,
+                    "totalMs": 0.0496,
+                    "maxMs": 0.0056
+                },
+                {
+                    "name": "Minute.UpdateImpoundedVehicles",
+                    "count": 34,
+                    "totalMs": 0.04569999999999999,
+                    "maxMs": 0.0024
+                },
+                {
+                    "name": "Minute.TickBrandDeliveries",
+                    "count": 34,
+                    "totalMs": 0.034100000000000008,
+                    "maxMs": 0.0019
+                },
+                {
+                    "name": "Minute.TickSpecialBusinesses",
+                    "count": 34,
+                    "totalMs": 0.0327,
+                    "maxMs": 0.0022
+                },
+                {
+                    "name": "Minute.TickModelCommissions",
+                    "count": 34,
+                    "totalMs": 0.03049999999999999,
+                    "maxMs": 0.003
+                },
+                {
+                    "name": "Minute.TickPetShopStaff",
+                    "count": 34,
+                    "totalMs": 0.024800000000000004,
+                    "maxMs": 0.0012
+                },
+                {
+                    "name": "Minute.PreparePetVisits",
+                    "count": 34,
+                    "totalMs": 0.0208,
+                    "maxMs": 0.0013
+                },
+                {
+                    "name": "Minute.DeliverOnlineOrders",
+                    "count": 34,
+                    "totalMs": 0.0198,
+                    "maxMs": 0.001
+                },
+                {
+                    "name": "Minute.TickCityAssets",
+                    "count": 34,
+                    "totalMs": 0.0197,
+                    "maxMs": 0.0009
+                },
+                {
+                    "name": "Minute.UpdateBody",
+                    "count": 34,
+                    "totalMs": 0.0184,
+                    "maxMs": 0.0009
+                },
+                {
+                    "name": "Minute.CheckAppointments",
+                    "count": 34,
+                    "totalMs": 0.0165,
+                    "maxMs": 0.0013
+                },
+                {
+                    "name": "Minute.CheckCalendarReminders",
+                    "count": 34,
+                    "totalMs": 0.014199999999999994,
+                    "maxMs": 0.0007
+                },
+                {
+                    "name": "Minute.TickCompanyWork",
+                    "count": 34,
+                    "totalMs": 0.0126,
+                    "maxMs": 0.0014
+                },
+                {
+                    "name": "Minute.TickEnergyExhaustion",
+                    "count": 34,
+                    "totalMs": 0.0059,
+                    "maxMs": 0.0003
+                },
+                {
+                    "name": "Minute.RefreshRecruitmentCandidates",
+                    "count": 34,
+                    "totalMs": 0.005099999999999999,
+                    "maxMs": 0.0003
+                },
+                {
+                    "name": "Minute.ExpireCandidates",
+                    "count": 34,
+                    "totalMs": 0.0049,
+                    "maxMs": 0.0004
+                },
+                {
+                    "name": "Minute.CheckHomeVisits",
+                    "count": 34,
+                    "totalMs": 0.004899999999999999,
+                    "maxMs": 0.0004
+                },
+                {
+                    "name": "Minute.UpdateCooking",
+                    "count": 34,
+                    "totalMs": 0.004599999999999999,
+                    "maxMs": 0.0004
+                }
+            ],
+            "worstFrames": [
+                {
+                    "minute": 22235,
+                    "frameMs": 20.2819,
+                    "stepMs": 17.5071,
+                    "core": [
+                        {
+                            "name": "Audio.BuildClip.Bell",
+                            "count": 1,
+                            "totalMs": 5.0886,
+                            "maxMs": 5.0886
+                        },
+                        {
+                            "name": "Minute.TickCityPeople",
+                            "count": 1,
+                            "totalMs": 0.4332,
+                            "maxMs": 0.4332
+                        },
+                        {
+                            "name": "Npc.Outing",
+                            "count": 98,
+                            "totalMs": 0.01719999999999999,
+                            "maxMs": 0.001
+                        },
+                        {
+                            "name": "Minute.TickCityClimate",
+                            "count": 1,
+                            "totalMs": 0.0129,
+                            "maxMs": 0.0129
+                        },
+                        {
+                            "name": "Minute.TickEventFollowups",
+                            "count": 1,
+                            "totalMs": 0.0121,
+                            "maxMs": 0.0121
+                        },
+                        {
+                            "name": "Minute.SettleEmployeeWellbeing",
+                            "count": 1,
+                            "totalMs": 0.0068,
+                            "maxMs": 0.0068
+                        },
+                        {
+                            "name": "Npc.Commute",
+                            "count": 42,
+                            "totalMs": 0.006400000000000003,
+                            "maxMs": 0.0009
+                        },
+                        {
+                            "name": "Minute.UpdateEmployeePurchases",
+                            "count": 1,
+                            "totalMs": 0.0061,
+                            "maxMs": 0.0061
+                        },
+                        {
+                            "name": "Minute.TickDistrictNarrative",
+                            "count": 1,
+                            "totalMs": 0.0059,
+                            "maxMs": 0.0059
+                        },
+                        {
+                            "name": "Minute.NormalizeWarehouses",
+                            "count": 1,
+                            "totalMs": 0.0059,
+                            "maxMs": 0.0059
+                        },
+                        {
+                            "name": "Minute.TickKolStreams",
+                            "count": 1,
+                            "totalMs": 0.0049,
+                            "maxMs": 0.0049
+                        },
+                        {
+                            "name": "Minute.TickEmployeePayroll",
+                            "count": 1,
+                            "totalMs": 0.0048,
+                            "maxMs": 0.0048
+                        },
+                        {
+                            "name": "Minute.TickVenueBusinesses",
+                            "count": 1,
+                            "totalMs": 0.0048,
+                            "maxMs": 0.0048
+                        },
+                        {
+                            "name": "Minute.TickCityStories",
+                            "count": 1,
+                            "totalMs": 0.0034,
+                            "maxMs": 0.0034
+                        },
+                        {
+                            "name": "Minute.TickCityRetail",
+                            "count": 1,
+                            "totalMs": 0.0033,
+                            "maxMs": 0.0033
+                        },
+                        {
+                            "name": "Minute.DeliverCouriers",
+                            "count": 1,
+                            "totalMs": 0.0017,
+                            "maxMs": 0.0017
+                        }
+                    ]
+                },
+                {
+                    "minute": 22235,
+                    "frameMs": 11.6985,
+                    "stepMs": 0.2659,
+                    "core": [
+                        {
+                            "name": "UI.CheckEconomicReport",
+                            "count": 1,
+                            "totalMs": 0.0007,
+                            "maxMs": 0.0007
+                        },
+                        {
+                            "name": "UI.CheckCustomerEventFeedback",
+                            "count": 1,
+                            "totalMs": 0.0006,
+                            "maxMs": 0.0006
+                        }
+                    ]
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 10.4518,
+                    "stepMs": 7.5021,
+                    "core": [
+                        {
+                            "name": "Minute.TickCityPeople",
+                            "count": 1,
+                            "totalMs": 0.5882,
+                            "maxMs": 0.5882
+                        },
+                        {
+                            "name": "Minute.TickHomeWorkbench",
+                            "count": 1,
+                            "totalMs": 0.1724,
+                            "maxMs": 0.1724
+                        },
+                        {
+                            "name": "Npc.Outing",
+                            "count": 130,
+                            "totalMs": 0.09160000000000049,
+                            "maxMs": 0.07
+                        },
+                        {
+                            "name": "Npc.Commute",
+                            "count": 45,
+                            "totalMs": 0.020599999999999977,
+                            "maxMs": 0.0147
+                        },
+                        {
+                            "name": "Minute.TickEventFollowups",
+                            "count": 1,
+                            "totalMs": 0.0198,
+                            "maxMs": 0.0198
+                        },
+                        {
+                            "name": "Minute.TickCityClimate",
+                            "count": 1,
+                            "totalMs": 0.0167,
+                            "maxMs": 0.0167
+                        },
+                        {
+                            "name": "Minute.UpdateEmployeePurchases",
+                            "count": 1,
+                            "totalMs": 0.012,
+                            "maxMs": 0.012
+                        },
+                        {
+                            "name": "Minute.NormalizeWarehouses",
+                            "count": 1,
+                            "totalMs": 0.0076,
+                            "maxMs": 0.0076
+                        },
+                        {
+                            "name": "Minute.TickDistrictNarrative",
+                            "count": 1,
+                            "totalMs": 0.0072,
+                            "maxMs": 0.0072
+                        },
+                        {
+                            "name": "Minute.SettleEmployeeWellbeing",
+                            "count": 1,
+                            "totalMs": 0.0069,
+                            "maxMs": 0.0069
+                        },
+                        {
+                            "name": "Minute.TickCityRetail",
+                            "count": 1,
+                            "totalMs": 0.0057,
+                            "maxMs": 0.0057
+                        },
+                        {
+                            "name": "Minute.TickEmployeePayroll",
+                            "count": 1,
+                            "totalMs": 0.0054,
+                            "maxMs": 0.0054
+                        },
+                        {
+                            "name": "Minute.TickVenueBusinesses",
+                            "count": 1,
+                            "totalMs": 0.0054,
+                            "maxMs": 0.0054
+                        },
+                        {
+                            "name": "Minute.TickCityStories",
+                            "count": 1,
+                            "totalMs": 0.005,
+                            "maxMs": 0.005
+                        },
+                        {
+                            "name": "Minute.TickKolStreams",
+                            "count": 1,
+                            "totalMs": 0.0043,
+                            "maxMs": 0.0043
+                        },
+                        {
+                            "name": "Minute.DeliverDirect",
+                            "count": 1,
+                            "totalMs": 0.0039,
+                            "maxMs": 0.0039
+                        }
+                    ]
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 10.3614,
+                    "stepMs": 5.279,
+                    "core": []
+                },
+                {
+                    "minute": 22258,
+                    "frameMs": 9.5335,
+                    "stepMs": 0.3635,
+                    "core": [
+                        {
+                            "name": "UI.CheckEconomicReport",
+                            "count": 1,
+                            "totalMs": 0.0023,
+                            "maxMs": 0.0023
+                        },
+                        {
+                            "name": "UI.CheckCustomerEventFeedback",
+                            "count": 1,
+                            "totalMs": 0.0019,
+                            "maxMs": 0.0019
+                        }
+                    ]
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 9.3884,
+                    "stepMs": 0.3469000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 9.3581,
+                    "stepMs": 0.3540000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 9.1569,
+                    "stepMs": 0.3822000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.959,
+                    "stepMs": 0.3181,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.9229,
+                    "stepMs": 0.31880000000000005,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.8273,
+                    "stepMs": 0.3237000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.7472,
+                    "stepMs": 0.6384000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.7247,
+                    "stepMs": 0.3550000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.6413,
+                    "stepMs": 0.4918,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.6279,
+                    "stepMs": 0.3563,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.5927,
+                    "stepMs": 0.3326,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.5809,
+                    "stepMs": 0.343,
+                    "core": []
+                },
+                {
+                    "minute": 22236,
+                    "frameMs": 8.5351,
+                    "stepMs": 0.8463,
+                    "core": [
+                        {
+                            "name": "Minute.TickCityPeople",
+                            "count": 1,
+                            "totalMs": 0.4372,
+                            "maxMs": 0.4372
+                        },
+                        {
+                            "name": "Npc.Outing",
+                            "count": 99,
+                            "totalMs": 0.01769999999999998,
+                            "maxMs": 0.001
+                        },
+                        {
+                            "name": "Minute.TickEventFollowups",
+                            "count": 1,
+                            "totalMs": 0.0124,
+                            "maxMs": 0.0124
+                        },
+                        {
+                            "name": "Minute.TickCityClimate",
+                            "count": 1,
+                            "totalMs": 0.0124,
+                            "maxMs": 0.0124
+                        },
+                        {
+                            "name": "Minute.UpdateEmployeePurchases",
+                            "count": 1,
+                            "totalMs": 0.0068,
+                            "maxMs": 0.0068
+                        },
+                        {
+                            "name": "Minute.TickDistrictNarrative",
+                            "count": 1,
+                            "totalMs": 0.0057,
+                            "maxMs": 0.0057
+                        },
+                        {
+                            "name": "Npc.Commute",
+                            "count": 42,
+                            "totalMs": 0.005600000000000001,
+                            "maxMs": 0.0009
+                        },
+                        {
+                            "name": "Minute.SettleEmployeeWellbeing",
+                            "count": 1,
+                            "totalMs": 0.0055,
+                            "maxMs": 0.0055
+                        },
+                        {
+                            "name": "Minute.NormalizeWarehouses",
+                            "count": 1,
+                            "totalMs": 0.0049,
+                            "maxMs": 0.0049
+                        },
+                        {
+                            "name": "Minute.TickEmployeePayroll",
+                            "count": 1,
+                            "totalMs": 0.0048,
+                            "maxMs": 0.0048
+                        },
+                        {
+                            "name": "Minute.TickVenueBusinesses",
+                            "count": 1,
+                            "totalMs": 0.0037,
+                            "maxMs": 0.0037
+                        },
+                        {
+                            "name": "Minute.TickKolStreams",
+                            "count": 1,
+                            "totalMs": 0.0035,
+                            "maxMs": 0.0035
+                        },
+                        {
+                            "name": "Minute.TickCityRetail",
+                            "count": 1,
+                            "totalMs": 0.0033,
+                            "maxMs": 0.0033
+                        },
+                        {
+                            "name": "Minute.TickCityStories",
+                            "count": 1,
+                            "totalMs": 0.0032,
+                            "maxMs": 0.0032
+                        },
+                        {
+                            "name": "Minute.DeliverCouriers",
+                            "count": 1,
+                            "totalMs": 0.0022,
+                            "maxMs": 0.0022
+                        },
+                        {
+                            "name": "Minute.TickVenueSponsorships",
+                            "count": 1,
+                            "totalMs": 0.0015,
+                            "maxMs": 0.0015
+                        }
+                    ]
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.5185,
+                    "stepMs": 0.4143,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.5131,
+                    "stepMs": 0.3393,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.5047,
+                    "stepMs": 0.3425,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.4945,
+                    "stepMs": 0.343,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.4926,
+                    "stepMs": 0.3573,
+                    "core": []
+                },
+                {
+                    "minute": 22235,
+                    "frameMs": 8.4791,
+                    "stepMs": 0.3136,
+                    "core": [
+                        {
+                            "name": "UI.CheckEconomicReport",
+                            "count": 1,
+                            "totalMs": 0.0009,
+                            "maxMs": 0.0009
+                        },
+                        {
+                            "name": "UI.CheckCustomerEventFeedback",
+                            "count": 1,
+                            "totalMs": 0.0005,
+                            "maxMs": 0.0005
+                        }
+                    ]
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.4653,
+                    "stepMs": 0.32230000000000005,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.4307,
+                    "stepMs": 0.5421,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.4217,
+                    "stepMs": 0.4977000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.408,
+                    "stepMs": 0.3495000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.3986,
+                    "stepMs": 0.32,
+                    "core": []
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.362,
+                    "stepMs": 0.3474000000000001,
+                    "core": []
+                },
+                {
+                    "minute": 22243,
+                    "frameMs": 8.3438,
+                    "stepMs": 0.3781,
+                    "core": [
+                        {
+                            "name": "UI.CheckCustomerEventFeedback",
+                            "count": 1,
+                            "totalMs": 0.0011,
+                            "maxMs": 0.0011
+                        },
+                        {
+                            "name": "UI.CheckEconomicReport",
+                            "count": 1,
+                            "totalMs": 0.0011,
+                            "maxMs": 0.0011
+                        }
+                    ]
+                },
+                {
+                    "minute": 22260,
+                    "frameMs": 8.3387,
+                    "stepMs": 0.8086,
+                    "core": []
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,7 @@
+[
+  {
+    "name": "PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding",
+    "message": "  Expected: 14.0f +/- 0.100000001f\n  But was:  12.0f\n",
+    "stack": "at PCShopSell.Tests.BrandStoryUiTests.<FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding>g__AssertFixedDialogueLayout|1_10 (System.Boolean canEnd, PCShopSell.Tests.BrandStoryUiTests+<>c__DisplayClass1_0& , PCShopSell.Tests.BrandStoryUiTests+<>c__DisplayClass1_1& ) [0x00161] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BrandStoryUiTests.cs:106\nat PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding () [0x0036c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BrandStoryUiTests.cs:111\n"
+  }
+]

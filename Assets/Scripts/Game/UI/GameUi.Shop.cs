@@ -1284,6 +1284,11 @@ namespace PCShopSell.Game.UI
                 if (!guided && !S.RecruitmentNoticePosted) Line(parent, S.RecruitmentHoursText, 15, Ui.Dim);
                 return;
             }
+            if (!S.AtRecruitmentInterview && S.RecruitmentInterviewPlace is {} interview)
+            {
+                Line(parent, $"应聘者在{interview.Name}等候 · 18:00 离开", 17);
+                return;
+            }
             Line(parent, $"今日应聘者 · 剩 {candidates.Length} 位 · 18:00 离开", 17);
             Button previous = null;
             foreach (var candidate in candidates)

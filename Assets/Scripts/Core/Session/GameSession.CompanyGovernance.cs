@@ -27,6 +27,7 @@ namespace PCShopSell.Core.Session
             EnsureGovernanceCompanies(); return _companyGovernance.Find(x=>x.Ticker==ticker);
         }
         private CompanyRecord GovernanceOwnedCompany(CompanyGovernance g) => g?.Ticker?.StartsWith("listed:",StringComparison.Ordinal)==true?Company(g.Ticker.Substring(7)):null;
+        public CompanyRecord CompanyRecordFor(string ticker) => GovernanceOwnedCompany(GovernanceOf(ticker));
         public long ShareholderShares(CompanyGovernance g,string owner) => g?.Holders.FirstOrDefault(h=>h.OwnerId==owner)?.Shares??0;
         public double ShareholderRatio(CompanyGovernance g,string owner) => g?.TotalShares>0?ShareholderShares(g,owner)/(double)g.TotalShares:0;
         public string MajorityShareholder(CompanyGovernance g) => g?.Holders.FirstOrDefault(h=>h.OwnerId!=PublicShareholderId&&h.Shares>g.TotalShares/2)?.OwnerId;

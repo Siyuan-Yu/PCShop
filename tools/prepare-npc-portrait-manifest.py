@@ -83,6 +83,6 @@ portraits.append(dict(id="default", name="通用备用头像", age=30, gender="n
     status="pending", **{k:v for k,v in previous.get("default", {}).items() if k in ["sourceFile", "approvedSample", "sha256", "asset"]}))
 if previous.get("default", {}).get("status") == "complete": portraits[-1]["status"] = "complete"
 path.parent.mkdir(parents=True, exist_ok=True)
-settings.update(style="复古生活漫画风", generation="built-in image_gen", portraitRoot="Assets/Resources/PortraitsRetro", portraits=portraits)
+settings.update(style="复古生活漫画风", generation="built-in image_gen", portraitRoot="work/retro-portraits/images", portraits=portraits)
 path.write_text(json.dumps(settings, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
 print(f'Prepared {len(roster)} named NPCs and one dynamic/debug fallback; completed assets retained.')

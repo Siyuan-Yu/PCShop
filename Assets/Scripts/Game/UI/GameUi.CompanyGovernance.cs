@@ -234,6 +234,7 @@ namespace PCShopSell.Game.UI
         private void OpenCompanyTakeover(Window parent,CompanyGovernance company)
         {
             string manager=company.ManagerId;
+            string draftBudget=(company.DailyBudgetCents/100).ToString();
             OpenWindow("接管公司",840,700,w=>
             {
                 Line(w.Content,S.GovernanceName(company.Ticker)+" · 持股 "+S.ShareholderRatio(company,GameSession.PlayerShareholderId).ToString("P2"),23,Ui.Accent);
@@ -241,7 +242,8 @@ namespace PCShopSell.Game.UI
                 foreach(string id in new[]{company.ManagerId,GameSession.PlayerShareholderId}.Concat(S.CompanyInvestors.Where(i=>i.Id.StartsWith("capital_",StringComparison.Ordinal)).Select(i=>i.Id)).Distinct())
                 {string pick=id;Ui.Size(Ui.Button(w.Content,S.ShareholderName(id)+(id==company.ManagerId?" · 原经理":""),()=>{manager=pick;w.Rebuild();},16,Ui.SelectedButton(manager==id)),-1,34);}
                 Line(w.Content,"每日自主开支预算（元）",17);
-                var budget=Ui.TextInput(w.Content,(company.DailyBudgetCents/100).ToString(),"元 / 日",_=>{});Ui.Size(budget,-1,36);budget.contentType=InputField.ContentType.IntegerNumber;
+                var budget=Ui.TextInput(w.Content,draftBudget,"元 / 日",null);Ui.Size(budget,-1,36);budget.contentType=InputField.ContentType.IntegerNumber;
+                budget.onValueChanged.AddListener(value=>draftBudget=value);
                 Line(w.Content,"下一营业结算点交接。原员工、库存、订单、合同和采购继续执行。",16,Ui.Dim);
                 CompanyButton(w.Content,"确认接管…",()=>
                 {

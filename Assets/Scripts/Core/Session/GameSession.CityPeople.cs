@@ -500,7 +500,7 @@ namespace PCShopSell.Core.Session
                 if (!shift && candidate == null && TickWalletOwner(p, now)) continue;
                 string target=shift?p.WorkPlaceId:p.HomePlaceId;
                 var desiredTask=shift?CityPersonTask.Working:CityPersonTask.Home;
-                if(candidate!=null && CandidateAvailable(candidate)) {target=PlayerShopPlace.Id;desiredTask=CityPersonTask.Waiting;p.TaskLabel="等待面试";}
+                if(candidate!=null && CandidateAvailable(candidate)) {target=(RecruitmentInterviewPlace ?? PlayerShopPlace).Id;desiredTask=CityPersonTask.Waiting;p.TaskLabel="等待面试";}
                 if (candidate == null)
                 {
                     string outing;
@@ -755,7 +755,7 @@ namespace PCShopSell.Core.Session
             string text=d.Topics!=null&&d.Topics.Length>index?d.Topics[index]:d.Goal;
             if(topic=="work")text=(p.WorkPlaceId!=null&&City.HasPlace(p.WorkPlaceId)?"我现在的工作在"+City.GetPlace(p.WorkPlaceId).Name+"。":"我现在没有固定岗位。")+"\n"+text;
             if (topic == "interest" && ConversationTraits(id)[0].Name is string interest)
-                text = $"我平时喜欢{interest}。有空的时候，也想给自己放个假。";
+                text = PersonalInterestLine(id) ?? $"我平时喜欢{interest}。有空的时候，也想给自己放个假。";
             RememberSocial(id, (remote ? PhoneConversationPrefix : "") + (fresh ? NewTopicPrefix : RepeatedTopicPrefix) + text);
             OnCityStoryTalk(id,topic);
             return text;

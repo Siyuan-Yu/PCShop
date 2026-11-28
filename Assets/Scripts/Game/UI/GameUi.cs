@@ -219,7 +219,6 @@ namespace PCShopSell.Game.UI
             bool pointerBusy = Input.GetMouseButton(0) || Input.GetMouseButtonUp(0);
             foreach (var window in _windows.ToArray())
             {
-                window.Fitter?.Fit();
                 RefreshWindowTimeStatus(window);
                 window.RefreshContent?.Invoke();
                 if (window.LiveConversation && Time.unscaledTime >= window.LiveRefreshAt)
@@ -249,6 +248,7 @@ namespace PCShopSell.Game.UI
             bool tutorialPaused = S.RequiredTutorialPaused;
             if (!tutorialPaused) CheckCookTasting();
             if (MainMenuOpen) return;
+            if (refreshSlowHud && slowPhase == 0 && !tutorialPaused) TryShowCompanyHandover();
             if (!tutorialPaused && !QuestAnnouncementOpen)
             {
                 ShowPendingCommunityIntroCall();
@@ -262,8 +262,8 @@ namespace PCShopSell.Game.UI
             if (!tutorialPaused)
             {
                 CheckNegativeCashBankReminder();
-                CheckCustomerEventFeedback();
-                CheckEconomicReport();
+                using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("UI.CheckCustomerEventFeedback")) CheckCustomerEventFeedback();
+                using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("UI.CheckEconomicReport")) CheckEconomicReport();
             }
             _uiTime += dt;
             _hudRefreshTimer -= dt;
@@ -283,7 +283,11 @@ namespace PCShopSell.Game.UI
             if (refreshSlowHud)
             {
                 if (slowPhase == 2) { using (RefreshShortcutMenusMarker.Auto()) RefreshShortcutMenus(); UpdateVehicleButtons(); }
-                if (slowPhase == 3 && !pointerBusy) { RefreshDock(); RefreshHomeDock(); }
+                if (slowPhase == 3 && !pointerBusy)
+                {
+                    using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("UI.RefreshDocks"))
+                    { RefreshDock(); RefreshHomeDock(); }
+                }
             }
             RefreshToastPlacement();
         }
@@ -462,6 +466,7 @@ namespace PCShopSell.Game.UI
                 : "左键选位置 · 侧栏确认 · R 旋转 · X 收回 · Esc 取消 · Q/E 转视角 · V 复位";
             else if (_ctrl.InInterior) _hintText.text = early ? "WASD 移动 · 靠近人物或设施按 F 交互 · 门口按 F 离店" : "";
             else if (_ctrl.InPachinkoRoom) _hintText.text = "WASD / 方向键走动 · F 与店员交谈、使用机台或离店";
+            else if (S.CurrentPlace?.Model == "office_tower") _hintText.text = "WASD 走动 · 左侧前台按 F 办理 · 门口按 F 离开";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyCommunityBox>=0)
                 _hintText.text = "<color=#DDC18B>按 F 调查"+GameSession.CommunityBoxName(S.NearbyCommunityBox)+"，取回这一份图页</color>";
@@ -998,6 +1003,7 @@ namespace PCShopSell.Game.UI
             _unreadNotices = 0;
             OpenWindow("通知记录", 850, 700, w =>
             {
+                BuildRecentHandoverLinks(w.Content);
                 for (int i = _noticeHistory.Count - 1; i >= 0; i--)
                 {
                     var entry = Ui.FlatPanel(w.Content, "NoticeEntry").rectTransform;

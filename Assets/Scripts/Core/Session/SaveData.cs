@@ -95,6 +95,7 @@ namespace PCShopSell.Core.Session
         public bool hasEmployee;
         public bool everHired;
         public SaveEmployee[] candidates;
+        public string recruitmentShopId;
         public int dailyCandidateDay; // 旧版存档用来识别已到店的首批应聘者。
         public long recruitmentArrivalAt; // 0 表示旧版存档，-1 表示没有待到店的批次。
         public long openingStaffWaitUntil;

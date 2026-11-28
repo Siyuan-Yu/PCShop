@@ -17,7 +17,7 @@ namespace PCShopSell.Game.UI
         /// <summary>进入地点后打开对应面板。离开面板 = 回到街上。</summary>
         public void OnEnteredPlace(Place p, string activityId = null)
         {
-            if (p.Model == "office_tower") { Toast("已进入办公大堂。WASD 走动，回到门口按 F 离开。"); return; }
+            if (p.Model == "office_tower") { Toast("走到大厅左侧前台按 F，可办理公司业务。"); return; }
             if (TryOpenCookTasting(p, activityId)) return;
             if (S.IsWorking) { UpdateWorkScreen(); return; }
             if (S.AutomaticMealAt(p, activityId)) return;

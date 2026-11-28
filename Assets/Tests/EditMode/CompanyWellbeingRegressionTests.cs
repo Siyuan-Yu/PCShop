@@ -84,6 +84,9 @@ namespace PCShopSell.Tests
             Assert.AreEqual("capital_qing",lg.ControllerId);Assert.AreEqual(retain,loaded.PlayerManagesShop(loaded.ShopAt("pc")));
             Assert.True(loaded.PlayerManagesShop(loaded.ShopAt("tea")));Assert.AreEqual(2,loaded.MyShopCount);
             Assert.AreEqual(619999,loaded.StockState(g.Ticker).Units);Invariants(loaded);
+            Assert.Greater(lg.LastPlayerHandoverAt, 0);
+            using var afterHandover=Reload(loaded);
+            Assert.AreEqual(lg.LastPlayerHandoverAt,afterHandover.GovernanceOf(g.Ticker).LastPlayerHandoverAt);
         }
         static void Holdings(GameSession s,CompanyGovernance g,long player,string other="founder:rival_pc")
         {

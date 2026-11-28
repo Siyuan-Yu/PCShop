@@ -45,7 +45,7 @@ namespace PCShopSell.Core.Session
 
         public Employee RecruitEmployee(int index,string destination=null)
         {
-            if (IsGameOver || !InPlayerShop || index < 0 || index >= _candidates.Count) return null;
+            if (IsGameOver || !AtRecruitmentInterview || index < 0 || index >= _candidates.Count) return null;
             var hiringShop=ShopAt(destination)??_focus;
             string capacity=StaffCapacityBlocker(hiringShop);if(capacity!=null){Fail(capacity);return null;}
             var person = _candidates[index];

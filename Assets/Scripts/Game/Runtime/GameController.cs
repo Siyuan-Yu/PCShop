@@ -300,6 +300,9 @@ namespace PCShopSell.Game
                 var people = NpcArtCatalog.Prewarm();
                 try { while (people.MoveNext()) yield return people.Current; }
                 finally { (people as IDisposable)?.Dispose(); }
+                var sounds = SoundFx.Prewarm();
+                try { while (sounds.MoveNext()) yield return sounds.Current; }
+                finally { (sounds as IDisposable)?.Dispose(); }
                 CompleteWorld(world);
                 Ui.SetWorldLoadingProgress(.99f);
                 SetStage("loading_session");
@@ -644,6 +647,7 @@ namespace PCShopSell.Game
         {
             if (Session.IsTimeAdvancing)
             {
+                using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("Frame.Simulation"))
                 using (SimulationMarker.Auto()) Session.PumpTimeAdvance(2.0);
                 Ui.RefreshTimeAdvance();
                 if (!Session.IsTimeAdvancing)
@@ -654,9 +658,12 @@ namespace PCShopSell.Game
                 return;
             }
             UpdatePlacement();
+            using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("Frame.Simulation"))
             using (SimulationMarker.Auto()) Session.Tick(dt);
             if (Session.IsTimeAdvancing) return;
+            using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("Frame.Views"))
             using (ViewsMarker.Auto()) SyncViews(dt);
+            using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("Frame.UI"))
             using (UiMarker.Auto()) Ui.Update(dt);
         }
 
@@ -930,7 +937,7 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
                 if (VisitingShop) { if(Interior.NearDoor) Session.Leave(); else if(Interior.NearCounter) Ui.OnEnteredPlace(Session.CurrentPlace); }
-                else if (_office != null) { if (OfficeDoor) Session.Leave(); }
+                else if (_office != null) InteractOffice();
                 else if (InVisit) InteractVisitRoom();
                 else if (InHome) HomeInteract(HomeRoom.NearbyId);
                 else if (InPachinkoRoom) InteractPachinkoRoom();
@@ -1165,7 +1172,14 @@ namespace PCShopSell.Game
             }
             if (_office != null)
             {
-                world=_office.Entrance+Vector3.up*1.6f; label="大厅出口（按 F）"; return OfficeDoor;
+                if (NearOfficeReception)
+                {
+                    var desk=DistrictOffice.ReceptionCenter((float)_office.Place.Width,(float)_office.Place.Depth);
+                    world=_office.Root.transform.TransformPoint(new Vector3(desk.x,1.6f,desk.y));
+                    label="写字楼前台";
+                    return true;
+                }
+                world=_office.Entrance+Vector3.up*1.6f; label="大厅出口"; return OfficeDoor;
             }
             if (InPachinkoRoom) return TryGetPachinkoInteract(out world, out label);
             if(Session.IsOwnedVenue(Session.CurrentPlace))

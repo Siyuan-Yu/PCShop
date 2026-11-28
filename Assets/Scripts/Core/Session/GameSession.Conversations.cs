@@ -142,7 +142,7 @@ namespace PCShopSell.Core.Session
         public ConversationTrait[] ConversationTraits(string id)
         {
             var def = CityPerson(id);
-            string interest = def?.Interest ?? Npcs.Get(id)?.Likes ?? "";
+            string interest = PersonalInterest(id) ?? def?.Interest ?? Npcs.Get(id)?.Likes ?? "";
             switch (interest)
             {
                 case "dinner": interest = "美食"; break;

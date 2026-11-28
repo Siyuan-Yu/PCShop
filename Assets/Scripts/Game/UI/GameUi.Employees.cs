@@ -34,7 +34,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenManagementPanel(bool employees) => OpenManagementPanel(employees ? 1 : 0);
 
-        private void OpenManagementPanel(int tab)
+        private void OpenManagementPanel(int tab, string companyId = null, int companyPage = 0)
         {
             if (_managementSession != S)
             {
@@ -46,6 +46,12 @@ namespace PCShopSell.Game.UI
             }
             bool changed = _managementTab != tab;
             _managementTab = tab;
+            if (companyId != null)
+            {
+                _workspaceCompany = companyId;
+                _companyPage = companyPage;
+                _companyPerson = _companyUnit = null;
+            }
             if (_managementWindow != null && !_managementWindow.Closed)
             {
                 _managementWindow.Root.SetAsLastSibling();

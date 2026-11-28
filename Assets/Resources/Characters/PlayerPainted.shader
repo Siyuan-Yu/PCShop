@@ -116,6 +116,16 @@ Shader "PCShop/PlayerPainted"
      half diamond=1-smoothstep(.30,.34,abs(q.x)+abs(q.y));
      base*=lerp(1,.64,diamond*.65);
     }
+    if(_SurfaceKind==15)
+    {
+     // 针织麻花沿衣片纵向延伸，远镜头去除细纹。
+     float2 q=v.o.xy*float2(18,27);
+     float col=frac(q.x)-.5;
+     float cable=cos(q.y*3.14159)*.20;
+     half ridge=SoftStroke(abs(col)-abs(cable),.078);
+     half fade=1-smoothstep(.12,.62,max(fwidth(q.x),fwidth(q.y)));
+     base*=1+fade*(ridge*.055-SoftStroke(abs(col)-.39,.07)*.070);
+    }
     if(_SurfaceKind==11 && v.layer.y>.5h)base=half3(.0343h,.0296h,.0356h);
     if(v.layer.y>1.5h)base=half3(.0409h,.0296h,.0232h);
     bool skin=_SurfaceKind==1 || _SurfaceKind==12;

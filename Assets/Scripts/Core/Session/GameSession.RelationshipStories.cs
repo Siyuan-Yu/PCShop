@@ -183,7 +183,7 @@ namespace PCShopSell.Core.Session
         {
             var progress = RelationshipProgressFor(activity);
             return progress != null && progress.PersonId == personId && progress.OutingAnswer == 0
-                && activity.State == CityActivityPhase.Running && CurrentPlace?.Id == activity.VenueId && CitySamePlace(personId);
+                && MomentPerson(activity) == personId;
         }
 
         public string ReplyInRelationshipOuting(CityActivity activity, string personId, int choice)
@@ -192,6 +192,7 @@ namespace PCShopSell.Core.Session
             var responses = RelationshipStoryCatalog.ResponsesFor(personId);
             if (choice < 0 || choice >= responses.Length) return null;
             _relationshipStories[personId].OutingAnswer = choice + 1;
+            RememberRelationshipIllustration(personId);
             var response = responses[choice];
             RememberSocial(personId, response.Label + " · " + response.Reply);
             return response.Reply;
@@ -206,6 +207,7 @@ namespace PCShopSell.Core.Session
             progress.OutingCompleted = true;
             progress.OutingCompletedDay = Clock.Today.TotalDays;
             progress.MissedAppointment = false;
+            RememberRelationshipIllustration(progress.PersonId);
             RememberSocial(progress.PersonId, "一起赴约，完成了《" + RelationshipStoryTitle(progress.PersonId) + "》的相处。下次见面再聊。");
             if (progress.PersonId == LuZhi && CityStory("romance") is CityStoryProgress previous && previous.Stage < 4)
             {
@@ -223,6 +225,9 @@ namespace PCShopSell.Core.Session
             var responses = RelationshipStoryCatalog.ResponsesFor(personId);
             return response >= 0 && response < responses.Length ? responses[response].Recall + "\n\n" + line : line;
         }
+
+        public bool RelationshipStoryOutingHasAnswer(string personId) =>
+            personId != null && _relationshipStories.TryGetValue(personId, out var progress) && progress.OutingAnswer > 0;
 
         public string ResolveRelationshipStory(string personId, bool romantic)
         {

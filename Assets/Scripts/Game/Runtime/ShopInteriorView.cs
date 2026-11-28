@@ -680,6 +680,7 @@ namespace PCShopSell.Game.Runtime
 
             // 铺子租下来是空的：货架、收银台、展示桌、装机操作台都是玩家自己买、自己摆的家具，
             // 摆好后由 RebuildFixtures 从布局里认出来（顾客逛哪、排队站哪、老板站哪都跟着摆放走）。
+            BatchFixedShell();
             _owner = Prims.Figure(_root, "Owner", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.05f, FigureAppearance.Player);
             _owner.transform.localPosition = new Vector3(_doorX = doorX, 0, 0.9f);
             _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);
@@ -688,6 +689,33 @@ namespace PCShopSell.Game.Runtime
             _counterFront = Origin + new Vector3(1.8f, 0, d * 0.55f);
             _counterBack = new Vector3(0.35f, 0, d * 0.55f);
             _queueDir = Vector3.back;
+        }
+
+        private void BatchFixedShell()
+        {
+            if (!Application.isPlaying) return;
+            // 在人物、可摆家具和车辆创建之前，只合批固定房壳。开关灯、门牌和
+            // 应急灯保留独立渲染；家具编辑、人物动作和街边车流不能进入静态批次。
+            var changing = new HashSet<Renderer>(_ceilingDiffusers);
+            foreach (var go in new[] { _signOpen, _signClosed, _doorHang, _emergencyFixture })
+                if (go != null) foreach (var renderer in go.GetComponentsInChildren<Renderer>(true)) changing.Add(renderer);
+            var fixedObjects = _root.GetComponentsInChildren<MeshRenderer>(true)
+                .Where(r => !changing.Contains(r) && r.GetComponent<TextMesh>() == null
+                    && r.GetComponent<MeshFilter>()?.sharedMesh?.isReadable == true
+                    && r.sharedMaterials.All(m => m != null && m.renderQueue < 3000))
+                .Select(r => r.gameObject).ToArray();
+            if (fixedObjects.Length > 1)
+            {
+                var originalMeshes = new HashSet<Mesh>(fixedObjects.Select(go => go.GetComponent<MeshFilter>().sharedMesh));
+                StaticBatchingUtility.Combine(fixedObjects, _root.gameObject);
+                var generated = fixedObjects.Select(go => go.GetComponent<MeshFilter>().sharedMesh)
+                    .Where(mesh => mesh != null && !originalMeshes.Contains(mesh)).Distinct().ToArray();
+                if (generated.Length > 0)
+                {
+                    var owner = _root.gameObject.AddComponent<CityLandscapeResources>();
+                    foreach (var mesh in generated) owner.Owned.Add(mesh);
+                }
+            }
         }
 
         private Color ItemColor()
@@ -1480,6 +1508,7 @@ namespace PCShopSell.Game.Runtime
                 alive.Add(c.Id);
                 if (!_visitors.TryGetValue(c.Id, out Visitor v))
                 {
+                    using var timing = PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("View.NewShopCustomer");
                     string profile = ProfileOf(c, out Color shirt);
                     float shade = 0.85f + (c.Id * 37 % 100) / 100f * 0.3f;
                     var person = s.CityPerson(c.PersonId);

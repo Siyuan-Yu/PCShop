@@ -133,6 +133,15 @@ public static class NpcPopulationCapture
                     Photo(cam,"街道-默认距离-"+state.Item1);
                     cam.orthographicSize=5.5f;Photo(cam,"街道-拉近查看-"+state.Item1);
                 }
+                lighting.Apply(720,false,false);
+                for(int page=1; page*perPage<ids.Length; page++)
+                {
+                    foreach(var fig in figs) UnityEngine.Object.DestroyImmediate(fig);
+                    var row=ids.Skip(page*perPage).Take(perPage).ToArray();
+                    figs=row.Select((id,i)=>Figure(stage,id,(i-(row.Length-1)*.5f)*.84f,game)).ToArray();
+                    cam.orthographicSize=16;Photo(cam,$"街道-默认距离-白天-{page+1:00}");
+                    cam.orthographicSize=5.5f;Photo(cam,$"街道-拉近查看-白天-{page+1:00}");
+                }
             }
             File.WriteAllLines(Path.Combine(Output,"网格记录.tsv"),report);
             File.WriteAllLines(Path.Combine(Output,"人口清单.tsv"),new[]{"Id\t姓名\t身份\t年龄"}.Concat(CityLifeCatalog.People.OrderBy(p=>p.Id).Select(p=>$"{p.Id}\t{p.Name}\t{p.Role}\t{p.Age}")));

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold () [0x00014] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:250\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture",
+    "message": "  Expected: ¥999,220\n  But was:  ¥873,220\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CashHomePurchaseAndSaleRetainFurniture () [0x0006a] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:205\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract () [0x000c7] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:355\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(\"cars\")",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays (System.String kind) [0x00074] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:297\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay",
+    "message": "  首月 + 押金 + 中介费当场付\n  Expected: 19400000\n  But was:  19500000\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay () [0x00077] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CampaignTests.cs:425\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent",
+    "message": "  首月 + 押金 + 中介费 + 搬家费（旧店没押金）\n  Expected: 60800\n  But was:  50800\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.Moving_ChangesPlaceSizeTrafficAndRent () [0x00168] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CampaignTests.cs:503\n"
+  }
+]

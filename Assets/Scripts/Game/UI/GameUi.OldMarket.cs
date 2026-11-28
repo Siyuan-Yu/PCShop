@@ -74,10 +74,14 @@ namespace PCShopSell.Game.UI
             var definition = marketVisit ? S.CityActivityService(outing) : null;
             var topics = marketVisit ? ActivityTopicIndices(outing, definition) : System.Array.Empty<int>();
             bool showReserved = booking?.ServiceConfirmed == true && !GameSession.IsCommunityMarketOuting(booking);
-            var goods = BuildRosterFrame(w, place, showReserved ? 470 : topics.Length > 0 ? 370 : 310);
+            int marketHeight = S.CanTalkToActivityPartner(outing) ? 460
+                : S.PersonalMoment(outing).PersonId != null || S.RelationshipStoryOutingDialogue(outing, outing?.Participants.FirstOrDefault()?.PersonId) != null
+                    ? 410 : topics.Length > 0 ? 370 : 310;
+            var goods = BuildRosterFrame(w, place, showReserved ? 470 : marketHeight);
             Line(goods, CityPlaceHours(place), 17, Ui.Dim);
             if (marketVisit)
             {
+                BuildPartnerActivityChoices(w, outing, goods, "继续逛市场");
                 var row = Ui.Row(goods, 40, 8);
                 string status = GameSession.IsCommunityMarketOuting(outing)
                     ? GameSession.CommunityMarketGiftDelivered(outing) ? "周维成已收下旧物，结束闲逛后会告诉你线索。"

@@ -119,35 +119,11 @@ namespace PCShopSell.Game.Runtime
                 CompleteBarkOffsets();
                 if(grove)
                 {
-                    // Visible trunks carry separate sunlit fans. The outward offsets
-                    // keep each crown rounded from the opposite bank of the lake.
-                    const int lobes=7;
-                    int body=positions.Count;
-                    for(int ring=0;ring<3;ring++)
-                    for(int j=0;j<lobes;j++)
-                    {
-                        float azimuth=turn+j*Mathf.PI*2/lobes+.09f*ring;
-                        var radial=new Vector3(Mathf.Cos(azimuth),0,Mathf.Sin(azimuth));
-                        float radius=(ring==0?.23f:ring==1?.41f:.22f)*breadth*(.92f+.09f*Mathf.Sin(2*azimuth+aspect));
-                        float y=(ring==0?.43f:ring==1?.67f:.83f)+.037f*Mathf.Cos(3*azimuth);
-                        var point=radial*radius+up*y;
-                        var normal=(radial+up*(ring==0?-.30f:ring==1?.38f:1.15f)).normalized;
-                        Vertex(point,normal,new Vector2(.74f+radial.x*.15f,.034f+.011f*ring+radial.z*.008f),.74f+ring*.075f);
-                        if(ring<2)
-                        {
-                            int a=body+ring*lobes+j,b=body+ring*lobes+(j+1)%lobes;
-                            Quad(a,a+lobes,b+lobes,b);
-                        }
-                    }
-                    int baseTip=Vertex(up*.40f,Vector3.down,new Vector2(.76f,.041f),.72f);
-                    int topTip=Vertex(up*.88f,up,new Vector2(.76f,.06f),.94f);
-                    for(int j=0;j<lobes;j++)
-                    {
-                        int a=body+j,b=body+(j+1)%lobes;
-                        indices.Add(baseTip);indices.Add(a);indices.Add(b);
-                        indices.Add(topTip);indices.Add(b+2*lobes);indices.Add(a+2*lobes);
-                    }
-                    CompleteBarkOffsets();
+                    // 树冠中心也使用带透明叶缘的叶簇；旧实心壳采样图集底部的
+                    // 纯绿条，正常俯视时会穿出叶片，形成大片绿色多边形。
+                    // 两层保持不同三维中心，转镜头仍有体积，不改树位或外围轮廓。
+                    Clump(new Vector3(-.065f,.61f,.055f),breadth*.78f,.50f,aspect%2==0,.79f,0);
+                    Clump(new Vector3(.085f,.72f,-.06f),breadth*.70f,.45f,aspect%2!=0,.87f,species==3?3:0);
                     int limbs=detailed?5:3;
                     float spread=.26f+aspect%3*.033f;
                     for(int j=0;j<limbs;j++)

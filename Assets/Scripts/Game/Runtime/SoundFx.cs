@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
@@ -34,6 +35,17 @@ namespace PCShopSell.Game.Runtime
         private static AudioSource _source;
         private static readonly AudioClip[] Clips = new AudioClip[Enum.GetValues(typeof(Sfx)).Length];
         private static readonly float[] NextPlayTime = new float[Clips.Length];
+
+        /// <summary>在加载遮罩下逐帧准备音效，不播放声音，不修改音量、静音或冷却状态。</summary>
+        public static IEnumerator Prewarm()
+        {
+            for (int i = 0; i < Clips.Length; i++)
+            {
+                if (Clips[i] != null) continue;
+                Clips[i] = Make((Sfx)i);
+                yield return null;
+            }
+        }
 
         public static bool Muted
         {
@@ -91,7 +103,9 @@ namespace PCShopSell.Game.Runtime
                 _source.volume = Volume;
             }
             AudioClip clip = Clips[index];
-            if (clip == null) clip = Clips[index] = Make(sfx);
+            if (clip == null)
+                using (PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("Audio.BuildClip."+sfx))
+                    clip = Clips[index] = Make(sfx);
             _source.PlayOneShot(clip, gain);
         }
 

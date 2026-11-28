@@ -51,6 +51,7 @@ namespace PCShopSell.Game.UI
         {
             var body = _companyPage==2||_companyPage==4 ? Ui.Rect(window.Content,"CompanyWorkspaceContent") : PhoneFlexibleScroll(window.Content, "CompanyWorkspaceContent");
             if(_companyPage==2||_companyPage==4){Ui.VList(body,6,0);Ui.Size(body).GetComponent<LayoutElement>().flexibleHeight=1;}
+            if (_companyPage == 0) BuildCompanyOfficeLinks(body);
             var companies = S.Companies.ToArray();
             if (companies.Length == 0)
             {
@@ -101,19 +102,7 @@ namespace PCShopSell.Game.UI
             CompanyButton(accounting, "投入周转金", () => OpenCompanyNumber("投入公司周转金", "注入金额（元）",
                 "从个人现金转入公司，用于部门项目和生产。", 10000, value => S.FundCompany(company.BrandId, value), window));
             var shops = CompanyCard(body, "公司门店");
-            foreach (var shop in S.CompanyShops(company))
-            {
-                string summary = $"{S.ShopTitle(shop)}  ·  口碑 {shop.Sim.ShopReputation:0.#}"
-                    + (S.CompanyPromotionTraffic(shop) > 0 ? "  ·  宣传客流 +" + S.CompanyPromotionTraffic(shop).ToString("P0") : "");
-                CompanyButton(shops, summary, () =>
-                {
-                    _managementShops.Bind(S);
-                    _managementShops.CompanyId = company.BrandId;
-                    _managementShops.Select(shop.Place.Id);
-                    OpenManagementPanel(0);
-                });
-            }
-            if (!S.CompanyShops(company).Any()) Line(shops, "暂无经营门店", 16, Ui.Dim);
+            BuildOfficeCompanyStores(shops,company);
             var listing = CompanyCard(body, "证券");
             if (company.ListedDay >= 0)
             {
@@ -528,7 +517,8 @@ namespace PCShopSell.Game.UI
                         {
                             if (S.ApproveCompanyRecruitment(company.BrandId, shop.Place.Id)) w.Rebuild();
                         }, S.CompanyRecruitmentBlocker(company, shop));
-                if (S.RecruitmentNoticePosted) Line(w.Content, "应聘者到达　" + S.NextCandidateArrivalText, 17, Ui.Good);
+                if (S.RecruitmentNoticePosted) Line(w.Content,
+                    $"{S.NextCandidateArrivalText} · {S.RecruitmentInterviewPlace?.Name ?? "门店"}到店面试", 17, Ui.Good);
             });
         }
 

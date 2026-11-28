@@ -4,13 +4,13 @@ import json
 ROOT=Path(__file__).resolve().parents[1]
 # id / 发型 / 上衣结构 / 主色 / 内搭或围裙 / 标志色 / 下装 / 下装颜色
 ROWS='''
-ake tousled_headphones hoodie 293F42 263036 63A6A6 pants 343D47
+ake date_streamer date_streamer 355356 DDD2C1 69A49A pants 404655
 jie tousled workjacket 3A4B60 E4D7BC D2A471 pants 3E4651
-keeper_agent swept workbadge 344963 E5DCC6 C5A160 pants 353D4B
+keeper_agent date_map date_map 668198 EDE3D2 C4AE89 pants 505362
 keeper_dealer swept formal 344657 9C9A8F 4D4245 pants 323945
 keeper_farm curly track A6544D E9D9C0 72534F pants 4B4242
 keeper_mall crop workbadge AC8D66 35343A C5BBA0 pants 43434A
-keeper_phone bun blazerbow 3E4C67 ECDDC2 9A8580 skirt B5A38B
+keeper_phone date_plush date_rabbit AF8BB8 F3E5D6 9ABFAF skirt 5A536D
 keeper_phone2 crop apron 333B49 384859 B08C62 pants 41414A
 keeper_tobacco tousled workjacket 968164 DFD5BD D2AA6F pants 4B4850
 landlady curly landlady 9D493D E8D4B5 5C9575 longskirt 635042
@@ -19,33 +19,33 @@ life_bartender crop apron 34333B 705043 BD9E70 pants 383840
 life_chef crop chef E7D9C4 37363B 9E4940 pants 3A3B45
 life_clothier fringe vestbow 785647 E8DCC8 6F4940 skirt 594B44
 life_clothsupplier tousled workjacket 35475C E6DAC1 B39068 pants 414956
-life_coach crop track 373E49 D2D1C3 D7C9A8 pants 3A3F4A
+life_coach date_runner date_runner AB5544 E9DCC2 7D4138 shorts 4E4D53
 life_cousin swept workjacket 686C4D 343634 B89667 pants 414545
-life_creator curly flowerblouse E6DAC2 E7DAC2 A78E58 longskirt 777A55
-life_curator spectacles workbadge 65704D E8DEC8 B59464 pants 4B5148
-life_designer long_ribbon blazer E1D5C0 353037 B34B49 pants 3D3741
+life_creator date_bonnet date_clockwork 354B3A EFDFC9 BA9761 longskirt 374A3D
+life_curator date_ivy date_ivy F1E5CF 768065 785C44 pants 635848
+life_designer date_ribbon date_cape E3D5BF 312E31 8E424B pants 383236
 life_enterprise swept formal 3F4A62 9DADBD 4B4757 pants 3D4353
 life_librarian bob cardigan 8C4A51 E7D8BF 4D3E42 skirt 7E6658
 life_maker tousled workjacket 42474D E1D6C0 B08B62 pants 44444B
-life_ming tousled workjacket 344D62 D98C47 E3D2AE pants 3D4A55
+life_ming date_moto date_moto 283348 EDE4D2 3475C5 pants 394051
 life_model_supplier crop workjacket 42484D CBBEAA B3956A pants 484B50
-life_ning curly cardigan C58F91 E8DCC6 74505A skirt 41495D
+life_ning date_student date_sailor CA9096 F1E4D5 3D4157 skirt 3D435A
 life_qiao crop windbreaker 35383D D1AA4B E0D5BB pants 383D47
 life_singer twintail singer C36763 423C3F D0C3B3 singer 423C3D
 life_teacher waves floral A593B3 E6DBC6 85718F longskirt 70604E
 life_tenant bob blazerscarf 9E4E4B C8AB88 DDBB95 skirt A9957A
-lin tousled hoodie 647050 E5DDC6 C3AE86 pants 3E4851
-momo sidepony_glasses cardigan 687D98 EADFCB B5A083 skirt B3A085
+lin date_street date_openhood 5B6545 343539 DBD7C5 pants 3A4547
+momo date_badminton date_court 82A5C7 E3E7DD 516E95 skirt 536E90
 qian bun blazerscarf 73637D B6A06E C8AE7C pants 433D49
-qiao long blazer 7F454C E2D5BE C5A17B pants 3C3740
-racer_0 shortfemale track 5B7B69 E9DFC5 CD8D54 pants 424748
+qiao date_critic date_critic 80414D E8DDCE B9B3AC pants 453C44
+racer_0 date_racer date_racer 343C43 47766E D48A4C pants 414649
 racer_1 ponytail track 3C4D66 A04D4B E6D9C1 pants 3F4656
 racer_2 tousled track 8B4248 353843 CEAF7D pants 3A3A48
-racer_3 waves blazer 8A444A E9DAC3 C4A274 pants 4A3C44
+racer_3 date_driver date_driver A56945 47483D B4A58B pants 49453F
 res_auntie shortfemale blazerscarf 3D4C66 E7DDC8 718DA8 skirt 3D495D
 res_baker baker chef EBD6BE 774B3E 5B4033 chef 514C47
 res_bank_night braid vestbow 394255 E6DCC7 9B4D54 skirt 444754
-res_coder spectacles workbadge 9C5946 3C414C C7AD85 pants 404551
+res_coder date_pixel date_pixel 6D939B 695079 EABB68 pants 424956
 res_cook crop chef 38363B 8D423A C4A270 pants 3B3A42
 res_fang waves blazer E1D4BE 3A333B BD9C74 pants 3C3740
 res_flower bob floral C192A1 ECDDC7 7B667F longskirt 756078
@@ -73,10 +73,10 @@ zhang senior_glasses cardigan 6A7455 E8DBC4 B7A47D pants 535447
 zhou crop utilityvest B6A080 3E4B5D C5AC7B pants 4D504D
 '''
 RESIDENTS='''
-baiming crop utilityvest 363D43 E4DAC6 A88D67 pants 44474B
+baiming date_kaiju date_denim 40556B 36383B C2A378 pants 545454
 caihong fringe track AC625C E9DCC6 BA9873 pants 4A4753
 chenxia ponytail cardigan 8E4B52 EBDDC7 3E333C longskirt 73604C
-dengyue bun vestbow 698266 EADCC3 B98A5A pants 6A5848
+dengyue date_printbun date_pinafore 797E50 EEDDC2 B39664 longskirt 645044
 dongyu crop windbreaker 40516C E5DAC3 D08C4E pants 414A5A
 duma shortfemale blazerbow 8A6A55 E9D9BD 765544 skirt 687252
 fanglu fringe blazerscarf E5D9C1 773D4E 8E4B53 skirt 46424C
@@ -87,20 +87,20 @@ guwen swept cardigan 854B4B E2D6C0 B89D72 pants 4C4647
 hanzheng crop workjacket 3D4E60 C7864C D5BF8F pants 424B54
 hexin ponytail hoodie E2D9C3 465A73 BD9C70 pants 424A56
 jiangning crop formal 37485D D8D7CD 8E4950 pants 394457
-jiyun crop shirt A45850 E8D9BD C7A171 pants 4B4246
+jiyun date_orchid date_orchid 9D5550 EADFC8 E1BC80 pants 504749
 lanxin shortfemale vestbow 765847 EADCC5 B2946E skirt 556D80
 leiming swept workbadge 74785C E1D6BB C4A276 pants 5C5E50
 linhe bob blazerbow 8D4F55 E6DAC4 7C4F50 skirt 57434C
 lishan swept workbadge B7764F E6DBC1 BFA16C pants 56554B
 luchen swept hoodie 43556A BCC1BA B99C75 pants 3F4A58
 luhai tousled apron 80644E C4AE87 946C4B pants 5B5049
-luoya bob blazerscarf E2D7C1 3C3541 A5514A pants 433F48
+luoya date_twist date_rose 375E51 D8C4A3 A15052 longskirt 344D47
 luqiao bob hoodie E1D8BC 6E7857 C8AE59 pants 525B50
 luwei fringe apron BD9F58 83634E DDC9A2 skirt 635343
 maoning crop workjacket 43556B ADB0A8 BCA47A pants 414C5A
 mengqiu bun blazerscarf 8C4751 E5D4B9 BFA477 skirt 705949
 moxin bun hoodie 8A789C E5D8C0 B6A17A shorts 45414E
-ningxi bob workjacket 434950 E5D8C1 B5A07B pants 3C414B
+ningxi date_camera date_camera 37363D 605466 835D92 pants 45404A
 pancheng tousled utilityvest 697253 BFA887 9C8157 pants AA9478
 peiran crop hoodie E7DDC6 343C43 BBA77F pants 454B53
 penglan waves track 465970 A6B0B1 BAA27B pants 46505D
@@ -126,8 +126,8 @@ yinhe fringe blazerbow 465C74 E9DCC6 BAA382 pants BAAD95
 yuanan fringe hoodie A696B4 E6DBC4 C2AA85 pants 4E5B71
 yucheng crop workjacket 8A979B 343C47 B8A379 pants 464D56
 yujia fringe vestbow 3D506A E8D9C2 3C3540 skirt 78647D
-zengyu waves vestbow 896C54 E8DAC0 BA9F7A longskirt 80664F
-zhaoyu swept hoodie 3C424B A2A6A4 BCA478 pants 414955
+zengyu date_vinyl date_bowling 375865 A35743 984958 pants 545A67
+zhaoyu date_wolf date_cassette 877197 343139 C3A04D pants 3B3944
 zhengke swept cardigan 9B7B5D E7D9C0 BEA57C pants 605647
 zhouran crop workjacket 43586F ADB8BB C1A880 pants 454F60
 '''
@@ -190,7 +190,7 @@ park_night spectacles labcoat E8E0D3 728CA4 8FA3AD pants 4A5E75
 EXTRA='''
 life_invitation_test swept jacket 8A775C E5D8BF B89F78 pants 48505B
 life_gardener crop utilityvest 71805B CBBB99 B9A171 pants 62694F
-life_golfer swept polo D8D5C5 728975 C0A775 pants 777F70
+life_golfer date_golfer date_golf E9DCC3 ABC2A0 526F55 pants 737B65
 service_officer officer patrol 485D73 7E8C97 D5C16B pants 3E4F65
 service_repair worker workbadge 526C80 E0D0AD C6AA69 pants 495967
 CommunityRoofWorker worker utilityvest D0AE57 53647A D6C8A3 pants 57626C
@@ -210,6 +210,33 @@ quarter_stop_commuter spectacles formal 726F55 E3D8C2 5F6F7E pants 515B66
 pond_walk_0 crop track BEAA8A D9D5C5 727F65 pants 5C6357
 pond_walk_1 bun cardigan 806A65 E3D9C7 A69170 longskirt 575F4C
 '''
+
+# 私服头像的发色、肤色和母版体型。歌手沿用专用模型。
+ROMANCE_PALETTES = {
+    'life_ming': ('292738', 'F1B086', 1.010, 1.020),
+    'lin': ('28262B', 'F0B183', 1.010, 1.020),
+    'life_ning': ('583928', 'F4BA94', 0.970, 0.960),
+    'momo': ('54392F', 'F2B68E', 0.970, 0.980),
+    'life_curator': ('302929', 'EFB18A', 1.020, 0.990),
+    'life_creator': ('674637', 'F2B991', 0.970, 0.960),
+    'life_designer': ('654334', 'F0B38C', 0.980, 0.950),
+    'resident_zhaoyu': ('332C34', 'EAB187', 1.010, 0.980),
+    'resident_dengyue': ('574035', 'F1B68E', 0.970, 0.960),
+    'resident_zengyu': ('714538', 'EDAD83', 0.980, 0.980),
+    'resident_jiyun': ('634333', 'F0B387', 1.010, 0.980),
+    'keeper_agent': ('624637', 'EFB38B', 1.020, 1.000),
+    'keeper_phone': ('583D33', 'F2B589', 0.970, 0.970),
+    'life_coach': ('42312B', 'E3A279', 1.025, 1.070),
+    'racer_0': ('925B3C', 'ECAD81', 0.980, 0.990),
+    'ake': ('29282D', 'EAB186', 1.010, 1.000),
+    'qiao': ('44343A', 'F1B68D', 0.980, 0.960),
+    'resident_baiming': ('3B302F', 'E4A67D', 1.010, 1.055),
+    'resident_ningxi': ('2D2B37', 'EDB08A', 0.970, 0.960),
+    'res_coder': ('684833', 'EFB287', 1.000, 1.010),
+    'life_golfer': ('82583C', 'EDB586', 1.010, 0.990),
+    'racer_3': ('5D3C30', 'EAB08A', 0.990, 0.970),
+    'resident_luoya': ('30292C', 'EDB08C', 0.980, 0.970),
+}
 
 def build():
     rows=[]
@@ -239,7 +266,10 @@ def build():
                 for ch in ident:h=((h^ord(ch))*16777619)&0xffffffff
                 height=(.98 if ident=='res_baker' else .92)+((h>>12)%7)*.01
                 width=1.05 if ident=='res_baker' else .97
-            rows.append(dict(id=ident,head=head if head in ('baker','twintail') else 'painted_'+head,cut=cut if cut in ('chef','singer') else 'painted_'+cut,bottom=bottom if bottom in ('chef','singer') else 'painted_'+bottom,top=top,layer=layer,accent=accent,trousers=pants,skin='F4B080',hair=hair,height=height,width=width))
+            skin = 'F4B080'
+            if ident in ROMANCE_PALETTES:
+                hair, skin, height, width = ROMANCE_PALETTES[ident]
+            rows.append(dict(id=ident,head=head if head in ('baker','twintail') else 'painted_'+head,cut=cut if cut in ('chef','singer') else 'painted_'+cut,bottom=bottom if bottom in ('chef','singer') else 'painted_'+bottom,top=top,layer=layer,accent=accent,trousers=pants,skin=skin,hair=hair,height=height,width=width))
     assert len({r['id'] for r in rows})==len(rows),'重复人物'
     portraits={p.stem for p in (ROOT/'Assets/Resources/PortraitsAnime').glob('*.png')}-{'default'}
     missing=portraits-{r['id'] for r in rows}

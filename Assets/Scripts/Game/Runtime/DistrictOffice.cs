@@ -17,9 +17,18 @@ namespace PCShopSell.Game.Runtime
             }
         }
         // All dimensions are relative to the entrance centre, shared by rendering and walking.
+        internal static Vector2 ReceptionCenter(float width,float depth) => new Vector2(-width*.25f,depth*.23f);
+        internal static bool AtReception(Vector3 local,float width,float depth)
+        {
+            var center=ReceptionCenter(width,depth);
+            return Mathf.Abs(local.x-center.x)<=width*.13f+.3f
+                && local.z>=center.y-1.75f && local.z<=center.y-1.05f*.5f-.19f;
+        }
+
         private static IEnumerable<Zone> Layout(float w,float d)
         {
-            yield return new Zone(Use.Reception,-w*.25f,d*.23f,w*.26f,1.05f);
+            var reception=ReceptionCenter(w,d);
+            yield return new Zone(Use.Reception,reception.x,reception.y,w*.26f,1.05f);
             yield return new Zone(Use.Lounge,w*.30f,d*.18f,w*.22f,1.35f);
             for(int i=0;i<2;i++)
                 yield return new Zone(Use.Desk,-w*.26f,d*(.54f+i*.25f),w*.32f,2.32f);

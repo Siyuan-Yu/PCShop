@@ -1,0 +1,14 @@
+{
+  "tag": "romance-final",
+  "filter": "RomanceConversationTests;VenueSponsorshipAndStoryTests;GameplayJourneyTests;BrandStoryUiTests",
+  "started": "2026-11-28T12:42:14.5511706+08:00",
+  "seconds": 92.87,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 58,
+  "passed": 58,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\UnityProjects\\PCShop\\PCShop\\work\\relationship-qa\\20261128-124214-romance-final-a4612b"
+}

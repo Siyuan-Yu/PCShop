@@ -11,7 +11,7 @@ namespace PCShopSell.Game.Runtime
     {
         internal const float HipHeight = .755f, LegSegment = .3425f, AnkleHeight = .07f;
 
-        private enum Paint : byte { Skin, Hair, Brow, Eye, Lip, Top, Trim, Pants, Sole, Shoe, Cream, Tie, Ink, HairLight, Bow }
+        private enum Paint : byte { Skin, Hair, Brow, Eye, Lip, Top, Trim, Pants, Sole, Shoe, Cream, Tie, Ink, HairLight, Bow, Ivory }
 
         private sealed class ModelMesh
         {
@@ -83,6 +83,7 @@ namespace PCShopSell.Game.Runtime
                 SetPaint(Paint.Ink, "39302A");
                 SetPaint(Paint.HairLight, "493B38", .12f, 2);
                 SetPaint(Paint.Cream, "EADAC5");
+                SetPaint(Paint.Ivory, "E8DEC9", .12f);
                 SetPaint(Paint.Shoe, "89613E", .12f, 4);
             }
             if (appearance == FigureAppearance.Npc)
@@ -90,6 +91,8 @@ namespace PCShopSell.Game.Runtime
                 _prefersSkirt = npc.PrefersSkirt;
                 _paint[(int)Paint.Skin] = PlayerPaint(npc.Skin, .25f, PaintedSample && npc.Head == "twintail" ? 12 : 1);
                 _paint[(int)Paint.Hair] = PlayerPaint(npc.Hair, .31f, 2);
+                if (npc.HeadAccent.HasValue && npc.Head.StartsWith("painted_date_", StringComparison.Ordinal))
+                    _paint[(int)Paint.Tie] = PlayerPaint(npc.HeadAccent.Value, .14f);
                 _paint[(int)Paint.Brow] = PaintedSample ? PlayerPaint(ArtDirection.Hex("79543F"), .12f, 11)
                     : PlayerPaint(Color.Lerp(npc.Hair, ArtDirection.Hex("382729"), .68f), .12f);
                 if (PaintedSample) _paint[(int)Paint.HairLight] = PlayerPaint(Color.Lerp(npc.Hair, ArtDirection.Hex("B57A58"), .19f), .12f, 2);
@@ -166,7 +169,16 @@ namespace PCShopSell.Game.Runtime
             _paint[(int)Paint.Tie] = PlayerPaint(accent, .22f);
             if(population)
             {
-                int surface=style is "floral" or "floralblazer" or "flowerblouse" ? 13 : style=="knitvest"?14 : style is "jacket" or "workjacket" or "workbadge"?5:0;
+                int surface = style switch
+                {
+                    "floral" or "floralblazer" or "flowerblouse" => 13,
+                    "knitvest" => 14,
+                    "date_golf" or "date_sailor" => 15,
+                    "jacket" or "workjacket" or "workbadge" or "date_moto" or "date_driver"
+                        or "date_denim" or "date_map" or "date_critic" or "date_cape" => 5,
+                    "date_clockwork" or "date_rose" or "date_pinafore" => 8,
+                    _ => 0
+                };
                 _paint[(int)Paint.Top]=PlayerPaint(shirt,.12f,surface);
                 _paint[(int)Paint.Trim]=PlayerPaint(trim,.12f,style is "apron" or "apronbow" or "waistapron"?7:0);
                 _paint[(int)Paint.Pants]=PlayerPaint(trousers,.10f,bottoms.Contains("skirt")?9:10);

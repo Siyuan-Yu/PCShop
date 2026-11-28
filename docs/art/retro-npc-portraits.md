@@ -1,5 +1,7 @@
 # 复古生活漫画风NPC头像
 
+> 2026-11-28 交接更新。已从当前工作树清理退役复古头像，六张示例下方链接指向清理前的 Git 历史。当前游戏显示新的动漫头像和 24 位可攻略人物的私服头像。现行核验使用 `AnimePortraitTests`，正式头像图册输出到 `work/portrait-catalogue`。详见[当前交接](../165-current-handoff-and-resource-cleanup-2026-11-28.md)。
+
 > 2026-11-04后续归档：用户现已明确要求整理全部当前内容并上传GitHub，本套最终资源随[第59篇完整归档](../59-current-game-content-2026-11-04.md)一并提交。下文“只保留本地等待”是此前交付时的历史要求；本轮检查以[最新联合记录](../validation/59-current-archive-results.md)为准。
 
 本轮又使用当前完整工程重跑Unity图形检查，`code=0/errors=0`，下方6张全体图册及8张人物资料/对话截图已刷新为最终资源版本，包含颜值调整和去眼镜修正。运行记录见[59-current-archive-graphics.txt](../validation/59-current-archive-graphics.txt)。下文初版制作时“尚未重跑界面”的表述保留为历史交付记录。
@@ -12,8 +14,8 @@
 
 本次已替换同名游戏资源，保留原`.meta`引用及512导入上限。6张均为1086×1448，已检查人物对应、PNG尺寸、源文件一致性及清单哈希；全体121张资源哈希仍各不相同。未重新运行Unity界面测试或打包。此前下方图册及测试结果对应初版，本次新版请查看以下原图。
 
-- [莫文宁](../../Assets/Resources/PortraitsRetro/momo.png) · [乔雨桐](../../Assets/Resources/PortraitsRetro/qiao.png) · [柯承安](../../Assets/Resources/PortraitsRetro/ake.png)
-- [陆栀](../../Assets/Resources/PortraitsRetro/life_creator.png) · [温岚](../../Assets/Resources/PortraitsRetro/life_designer.png) · [宁汐](../../Assets/Resources/PortraitsRetro/resident_ningxi.png)
+- [莫文宁](https://github.com/Siyuan-Yu/PCShop/blob/7c51368ab27346688818a3d59468bbe11c153ffa/Assets/Art/PortraitsRetro/momo.png) · [乔雨桐](https://github.com/Siyuan-Yu/PCShop/blob/7c51368ab27346688818a3d59468bbe11c153ffa/Assets/Art/PortraitsRetro/qiao.png) · [柯承安](https://github.com/Siyuan-Yu/PCShop/blob/7c51368ab27346688818a3d59468bbe11c153ffa/Assets/Art/PortraitsRetro/ake.png)
+- [陆栀](https://github.com/Siyuan-Yu/PCShop/blob/7c51368ab27346688818a3d59468bbe11c153ffa/Assets/Art/PortraitsRetro/life_creator.png) · [温岚](https://github.com/Siyuan-Yu/PCShop/blob/7c51368ab27346688818a3d59468bbe11c153ffa/Assets/Art/PortraitsRetro/life_designer.png) · [宁汐](https://github.com/Siyuan-Yu/PCShop/blob/7c51368ab27346688818a3d59468bbe11c153ffa/Assets/Art/PortraitsRetro/resident_ningxi.png)
 
 本次完整提示及来源见[npc-retro-beauty-revision.json](npc-retro-beauty-revision.json)，其中乔雨桐、陆栀、宁汐另作去眼镜细节修正。旧图备份在本地`work/retro-portraits/before-beauty-revision/`。没有提交或推送GitHub，等待用户查看。
 

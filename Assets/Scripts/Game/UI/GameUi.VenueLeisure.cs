@@ -278,6 +278,7 @@ namespace PCShopSell.Game.UI
             bool ready = false;
             _karaokePicker = OpenWindow(place.Name + " · 选曲", 820, 440, w =>
             {
+                BuildRelationshipOutingButton(w.Content, activity, w.RequestRebuild, "回到选曲");
                 var difficulties = Ui.Row(w.Content, 42, 6);
                 string[] difficultyLabels = { "简单", "标准", "困难" };
                 for (int i = 0; i < difficultyLabels.Length; i++)

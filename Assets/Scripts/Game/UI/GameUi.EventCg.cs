@@ -26,7 +26,7 @@ namespace PCShopSell.Game.UI
             var seatedArt = seated ? Resources.Load<Texture2D>("EventCg/person_" + id + "_seated") : null;
             hasSeatedArt = seatedArt != null;
             return seatedArt ?? Resources.Load<Texture2D>("EventCg/person_" + id)
-                ?? ScenePortraits.FromPortrait(PortraitOf(id));
+                ?? ScenePortraits.FromPortrait(Resources.Load<Texture2D>("PortraitsAnime/" + id) ?? PortraitOf(id));
         }
 
         private RectTransform BuildEventCg(Transform parent, EventCgFrame frame, float height, bool featureDish = false)

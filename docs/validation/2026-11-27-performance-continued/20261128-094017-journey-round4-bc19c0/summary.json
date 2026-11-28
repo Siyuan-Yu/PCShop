@@ -1,0 +1,14 @@
+{
+  "tag": "journey-round4",
+  "filter": "GameplayJourneyTests;PerformanceRegressionTests;RomanceConversationTests;CompanyWellbeingRegressionTests;RealtyTests;EmployeeAssignmentTests;InteractionFlowTests;VenueSponsorshipAndStoryTests;BusinessRegressionTests;BrandStoryUiTests;BrandStoryTests;CityStoryTests",
+  "started": "2026-11-28T09:40:17.6105715+08:00",
+  "seconds": 109.15,
+  "timeout": false,
+  "exitCode": 2,
+  "result": "Failed(Child)",
+  "total": 158,
+  "passed": 157,
+  "failed": 1,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-continued-20261127\\20261128-094017-journey-round4-bc19c0"
+}

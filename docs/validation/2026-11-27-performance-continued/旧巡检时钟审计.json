@@ -1,0 +1,65 @@
+[
+  {
+    "run": "native-shop-rendered-before",
+    "scene": "shop-1x",
+    "actualMinutes": 34,
+    "expectedMinutes": 180.0,
+    "clockMatches": false,
+    "pauseFrames": 0,
+    "recoveryFrames": 0
+  },
+  {
+    "run": "native-shop-after",
+    "scene": "shop-1x",
+    "actualMinutes": 34,
+    "expectedMinutes": 180.02,
+    "clockMatches": false,
+    "pauseFrames": 0,
+    "recoveryFrames": 0
+  },
+  {
+    "run": "native-final-v2",
+    "scene": "suburb-1x",
+    "actualMinutes": 360,
+    "expectedMinutes": 360.0,
+    "clockMatches": true,
+    "pauseFrames": 0,
+    "recoveryFrames": 0
+  },
+  {
+    "run": "native-final-v2",
+    "scene": "community-1x",
+    "actualMinutes": 360,
+    "expectedMinutes": 360.02,
+    "clockMatches": true,
+    "pauseFrames": 0,
+    "recoveryFrames": 0
+  },
+  {
+    "run": "native-final-v2",
+    "scene": "park-1x",
+    "actualMinutes": 360,
+    "expectedMinutes": 360.03,
+    "clockMatches": true,
+    "pauseFrames": 0,
+    "recoveryFrames": 0
+  },
+  {
+    "run": "native-final-v2",
+    "scene": "garden-1x",
+    "actualMinutes": 360,
+    "expectedMinutes": 360.01,
+    "clockMatches": true,
+    "pauseFrames": 0,
+    "recoveryFrames": 0
+  },
+  {
+    "run": "native-garden-after",
+    "scene": "garden-4x",
+    "actualMinutes": 2565,
+    "expectedMinutes": 2879.96,
+    "clockMatches": false,
+    "pauseFrames": 27993,
+    "recoveryFrames": 124
+  }
+]

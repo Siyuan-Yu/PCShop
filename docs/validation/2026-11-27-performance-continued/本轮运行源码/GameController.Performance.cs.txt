@@ -1,0 +1,38 @@
+using System;
+using System.IO;
+using Unity.Profiling;
+using UnityEngine;
+
+namespace PCShopSell.Game
+{
+    public sealed partial class GameController
+    {
+        private static readonly ProfilerMarker SimulationMarker = new ProfilerMarker("PCShop.Simulation");
+        private static readonly ProfilerMarker ViewsMarker = new ProfilerMarker("PCShop.Views");
+        private static readonly ProfilerMarker UiMarker = new ProfilerMarker("PCShop.UI");
+        // Explicit opt-in, deterministic fresh sessions; never load or save the player's game.
+        private bool TryStartPerformanceBenchmark()
+        {
+            var args = Environment.GetCommandLineArgs();
+            int flag = Array.IndexOf(args, "-pcshop-benchmark");
+            if (flag < 0 || flag + 1 >= args.Length) return false;
+            string output=Path.GetFullPath(args[flag + 1]);
+            Directory.CreateDirectory(Path.GetDirectoryName(output));
+            SaveStore.DirectoryOverride=Path.Combine(Path.GetDirectoryName(output),"isolated-saves");
+            Bootstrap(true, 7);
+            enabled = false;
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = -1;
+            Application.runInBackground = true;
+            // Desktop clicks must not change pause/speed while a benchmark window renders.
+            foreach (var canvas in Ui.Canvases)
+            {
+                var raycaster = canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if (raycaster != null) raycaster.enabled = false;
+            }
+            StartCoroutine(PlayerPerformanceCapture(output,args));
+            return true;
+        }
+
+    }
+}

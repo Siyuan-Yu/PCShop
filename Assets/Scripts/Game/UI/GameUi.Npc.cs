@@ -19,7 +19,8 @@ namespace PCShopSell.Game.UI
             npcId = string.IsNullOrWhiteSpace(npcId) ? "default" : npcId;
             if (!PortraitCache.TryGetValue(npcId, out Texture2D tex) || tex == null)
             {
-                tex = Resources.Load<Texture2D>("PortraitsAnime/" + npcId)
+                tex = Resources.Load<Texture2D>("RelationshipPortraits/Private/" + npcId)
+                    ?? Resources.Load<Texture2D>("PortraitsAnime/" + npcId)
                     ?? Resources.Load<Texture2D>("PortraitsAnime/default");
                 PortraitCache[npcId] = tex;
             }
@@ -53,6 +54,7 @@ namespace PCShopSell.Game.UI
         private static void CropPortraitToSquare(RawImage image)
         {
             if (image.texture == null) return;
+            if (image.texture.width == image.texture.height) return;
             var crop = new Rect(.12f, .48f, .76f, .5f);
             float aspect = (float)image.texture.width / image.texture.height;
             float width = Mathf.Min(crop.width, crop.height / aspect);
@@ -306,6 +308,8 @@ namespace PCShopSell.Game.UI
             public Window W;
             public ScrollRect ReplyScroll;
             public string SpeakerId;
+            public EventCgFrame Illustration;
+            public bool ShowRelationshipReaction, AlternateRelationshipReaction;
             public TalkOpt[] Replies;
             public bool AwaitingDecision;
             public string ExitLabel { get; private set; }
@@ -345,7 +349,8 @@ namespace PCShopSell.Game.UI
             var ctx = new TalkCtx { Reply = firstReply };
             start?.Invoke(ctx);
             var ink = Ui.TextColor;
-            return OpenWindow(name + "　" + role, 930, 520, w =>
+            bool illustratedScene = ctx.Illustration != null;
+            return OpenWindow(name + "　" + role, illustratedScene ? 1170 : 930, illustratedScene ? 650 : 520, w =>
             {
                 ctx.W = w;
                 if (makeOptions != null)
@@ -362,13 +367,23 @@ namespace PCShopSell.Game.UI
                 frame.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
                 var reading = Ui.Row(frame.transform, -1, 1).Fill(1);
                 var identity = Ui.Panel(reading, "DialogueIdentity", Ui.PanelBg2);
-                Ui.Size(identity, 184, -1, 0);
+                Ui.Size(identity, ctx.Illustration == null ? 184 : illustratedScene ? 630 : 410, -1, 0);
                 var identityLayout = Ui.VList(identity.rectTransform, 5, 12);
                 identityLayout.childAlignment = TextAnchor.MiddleCenter;
-                var portrait = PortraitCard(identity.transform, speakerId, speakerName, "", 148,
-                    () => OpenCityPersonProfile(speakerId, fromConversation: true), tagText: null);
-                portrait.Find("Caption").gameObject.SetActive(false);
-                portrait.GetComponentInChildren<Button>().Tip("查看人物资料");
+                if (ctx.Illustration == null || BuildEventCg(identity.transform, ctx.Illustration, illustratedScene ? 340 : 222) == null)
+                {
+                    var portrait = PortraitCard(identity.transform, speakerId, speakerName, "", 148,
+                        () => OpenCityPersonProfile(speakerId, fromConversation: true), tagText: null);
+                    portrait.Find("Caption").gameObject.SetActive(false);
+                    portrait.GetComponentInChildren<Button>().Tip("查看人物资料");
+                    if (ctx.ShowRelationshipReaction)
+                    {
+                        var reaction = ctx.AlternateRelationshipReaction
+                            ? Resources.Load<Texture2D>("RelationshipPortraits/Alternate/" + speakerId) : null;
+                        reaction ??= Resources.Load<Texture2D>("RelationshipPortraits/Reaction/" + speakerId);
+                        if (reaction != null) portrait.GetComponentInChildren<RawImage>().texture = reaction;
+                    }
+                }
                 Ui.Label(identity.transform, PersonNameWithKolBadge(speakerId, speakerName), 22, TextAnchor.MiddleCenter, Ui.Accent).fontStyle = FontStyle.Bold;
                 Ui.Label(identity.transform, speakerRole, 15, TextAnchor.MiddleCenter, Ui.Dim);
                 Ui.Label(identity.transform, "熟悉度 " + S.Relation(speakerId), 16, TextAnchor.MiddleCenter, Ui.Good);
@@ -515,7 +530,21 @@ namespace PCShopSell.Game.UI
                 var options = new List<TalkOpt>();
                 bool near = !remote && (definition == null || S.CitySamePlace(personId));
                 bool canTalk = remote || near;
-                void Reply(string text) { ctx.Show(text); parent?.RequestRebuild(); }
+                void Reply(string text)
+                {
+                    ctx.Illustration = null;
+                    ctx.ShowRelationshipReaction = false;
+                    ctx.Show(text);
+                    parent?.RequestRebuild();
+                }
+                void ReplyReaction(string text)
+                {
+                    ctx.Illustration = null;
+                    ctx.ShowRelationshipReaction = true;
+                    ctx.AlternateRelationshipReaction = true;
+                    ctx.Show(text);
+                    parent?.RequestRebuild();
+                }
                 if (confirmingBreakup)
                 {
                     ctx.AwaitingDecision = true;
@@ -602,7 +631,10 @@ namespace PCShopSell.Game.UI
                 options.Add(new TalkOpt { Label = "聊一聊", Hot = true, Blocker = canTalk ? null : "对方已离开",
                     Id = personId == GameSession.VenueSponsorGuidePersonId ? SponsorGuideChatControl : null,
                     Act = () => StartCasualDialogue(ctx, personId, remote, Reply) });
-                AddRelationshipStoryOption(options, ctx, personId, remote, Reply);
+                AddRelationshipStoryOption(options, ctx, personId, remote, Reply, ReplyReaction);
+                if (S.HasGreeted(personId) && GameSession.PersonalInterest(personId) != null && S.ConversationTraits(personId)[0].Known)
+                    options.Add(new TalkOpt { Label = "聊聊兴趣", Blocker = canTalk ? null : "对方已离开",
+                        Act = () => Reply(S.CityTalk(personId, "interest", remote)) });
                 options.Add(new TalkOpt { Label = "交流物价", Blocker = canTalk ? null : "对方已离开",
                     Act = () => Reply(S.ExchangeMarketTalk(personId, remote, place, text => Ui.Emphasize(text))) });
                 options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId,remote:remote), Act = () =>
@@ -628,7 +660,12 @@ namespace PCShopSell.Game.UI
                     && S.Relation(personId) >= GameSession.ConfessionMinFamiliarity)
                     options.Add(new TalkOpt { Label = "表白", Hot = true,
                         Blocker = remote ? "需要当面表白" : S.ConfessionBlocker(personId),
-                        Act = () => Reply(S.ConfessToPerson(personId)) });
+                        Act = () =>
+                        {
+                            string answer = S.ConfessToPerson(personId);
+                            if (S.IsPlayerPartner(personId)) ReplyReaction(answer);
+                            else Reply(answer);
+                        } });
                 if (personId == "life_creator" && near && !S.HasStartedRelationshipStory(personId)
                     && S.CityStory("romance") is CityStoryProgress story && story.Stage == 2)
                 {

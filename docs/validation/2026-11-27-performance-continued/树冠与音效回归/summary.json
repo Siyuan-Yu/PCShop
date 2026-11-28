@@ -1,0 +1,14 @@
+{
+  "tag": "canopy-audio-regression",
+  "filter": "PerformanceRegressionTests",
+  "started": "2026-11-28T00:32:15.2493640+08:00",
+  "seconds": 84.53,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 13,
+  "passed": 13,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-continued-20261127\\20261128-003211-canopy-audio-regression-aaf106"
+}

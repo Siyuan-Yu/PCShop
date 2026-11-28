@@ -1,0 +1,14 @@
+{
+  "tag": "journey-final",
+  "filter": "GameplayJourneyTests;PerformanceRegressionTests;RomanceConversationTests;CompanyWellbeingRegressionTests;RealtyTests;EmployeeAssignmentTests;InteractionFlowTests;VenueSponsorshipAndStoryTests;BusinessRegressionTests;BrandStoryUiTests;BrandStoryTests;CityStoryTests",
+  "started": "2026-11-28T09:45:20.0288329+08:00",
+  "seconds": 122.3,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 165,
+  "passed": 165,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-performance-continued-20261127\\20261128-094519-journey-final-7de382"
+}

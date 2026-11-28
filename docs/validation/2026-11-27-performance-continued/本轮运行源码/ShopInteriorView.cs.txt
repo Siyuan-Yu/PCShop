@@ -1,0 +1,1952 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
+using PCShopSell.Core.Session;
+using PCShopSell.Core.Shop;
+using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
+using UnityEngine;
+
+namespace PCShopSell.Game.Runtime
+{
+    /// <summary>挂在店内顾客身上，点击排队的顾客即结账。</summary>
+    /// <summary>鼠标在店里指着的设施。</summary>
+    public enum FixturePick { None, Shelf, Display, Bench }
+
+    public sealed class CustomerMarker : MonoBehaviour
+    {
+        public int CustomerId;
+    }
+
+    /// <summary>
+    /// 玩家店铺的室内（按规格生成：小 48㎡ / 中 108㎡ / 大 216㎡）。放在远离城市的位置，进店时镜头切过来。
+    /// 顾客进门 → 去货架前挑货 → 到柜台前排队（头顶有 ¥）→ 结账后出门。
+    /// </summary>
+    public sealed partial class ShopInteriorView
+    {
+        public static readonly Vector3 Origin = new Vector3(600, 0, -400);
+
+        private sealed class Visitor
+        {
+            public GameObject Go;
+            public Vector3 Target;
+            public bool Leaving;
+            public GameObject Bubble;
+
+            /// <summary>0 = 逛货架；1 = 挑中了，去货架前拿货；2 = 拿着货排队等结账。</summary>
+            public int Phase;
+            public Vector3 PickSpot;
+            public PartCategory ItemCat;
+            public bool ItemBoxed;
+
+            /// <summary>拿的是杂货架上的杂货（不是配件）。</summary>
+            public bool IsGoods;
+            public int ResaleId;
+
+            /// <summary>拿的杂货属于哪类货架（ShelfKinds 的 id）。</summary>
+            public string GoodsKind;
+            public GameObject Held;
+            public float BrowseTimer;
+            public bool LookedAtShelf;
+            public bool Build;
+
+            /// <summary>拿的是展示台上的整机（不是货架上的配件）。</summary>
+            public bool DisplayPc;
+            public int PcTier;
+
+            /// <summary>离开时的路线；dropFirst 表示先走到货架前把货放回去。</summary>
+            public bool DropFirst;
+            public bool Dropped;
+
+            /// <summary>先依次走过这些点（街上 → 门口 → 店里），再走向 Target。</summary>
+            public readonly List<Vector3> Via = new List<Vector3>();
+
+            public readonly NpcRoute Route = new NpcRoute();
+
+            /// <summary>冒烟用：没到目标、又没走出多远的时间（原地打转就会一直涨）。</summary>
+            public Vector3 StuckAnchor;
+            public float StuckFor;
+
+            public PartCategory Want;
+            public string Spend;
+            public string Profile;
+            public string PersonId;
+            public string Emote;
+            public Color EmoteColor;
+            public float EmoteUntil;
+        }
+
+        /// <summary>顾客头顶的小字（想买什么、为什么走了、收了多少钱）。</summary>
+        public struct EmoteInfo
+        {
+            public Vector3 Pos;
+            public string Text;
+            public string PersonId;
+            public Color Color;
+            public int Size;
+
+            /// <summary>画成白底对话气泡（顾客说话），否则是带阴影的飘字。</summary>
+            public bool Bubble;
+        }
+
+        private sealed class Pop
+        {
+            public Vector3 Start;
+            public string Text;
+            public float T0;
+        }
+
+        private readonly List<Pop> _pops = new List<Pop>();
+        private readonly List<EmoteInfo> _emotes = new List<EmoteInfo>();
+        private float _now;
+
+        /// <summary>本帧所有要显示的头顶小字。</summary>
+        public IReadOnlyList<EmoteInfo> Emotes => _emotes;
+
+        /// <summary>老板站在柜台旁边（能给排队的人结账）。</summary>
+        public bool NearCounter { get; private set; }
+        internal bool HasCounter => _hasCounter;
+
+        /// <summary>收银台头顶的位置（给“按 F 收银”提示用）；还没摆收银台就在老位置。</summary>
+        public Vector3 CounterWorld => Origin + new Vector3(_counterPos.x, 2.3f, _counterPos.y);
+
+        private static string LeaveText(LeaveReason r, out Color color)
+        {
+            color = new Color(1f, 0.55f, 0.45f);
+            switch (r)
+            {
+                case LeaveReason.Impatient: return "等太久了！";
+                case LeaveReason.TooExpensive: return "太贵了……";
+                case LeaveReason.OverBudget: return "超出预算了……";
+                case LeaveReason.NoStock: return "怎么没货？";
+                case LeaveReason.NoCash: return "没带现金";
+                case LeaveReason.ShopClosed: return "关门了？";
+                case LeaveReason.OrderPlaced:
+                    color = new Color(0.5f, 0.95f, 0.6f);
+                    return "下单了，装好叫我";
+                default: return null;
+            }
+        }
+
+        private readonly Transform _root;
+        private readonly Dictionary<int, Visitor> _visitors = new Dictionary<int, Visitor>();
+        private readonly List<Visitor> _leaving = new List<Visitor>();
+        private readonly List<Vector3> _shelfSpots = new List<Vector3>();
+        private readonly List<Vector2> _tables = new List<Vector2>();
+        private readonly List<ShopFixtures.PcSlot> _pcSlots = new List<ShopFixtures.PcSlot>();
+
+        /// <summary>展示桌占的地（世界坐标 x/z），顾客走路绕开。</summary>
+        private readonly List<Rect> _walkAround = new List<Rect>();
+        private readonly List<ShelfDisplay> _shelves = new List<ShelfDisplay>();
+        private readonly System.Random _rng = new System.Random(5);
+        private readonly GameObject _owner;
+        private readonly Dictionary<string, GameObject> _staffFigures = new Dictionary<string, GameObject>();
+        private string _staffLayoutSignature;
+        private Vector3 _clerkStand;
+        private readonly Vector3 _door;
+        private readonly float _doorX;
+        private Vector3 _counterFront;
+        /// <summary>老板站在收银台后面的位置（店内局部坐标）。</summary>
+        private Vector3 _counterBack;
+        /// <summary>排队往哪个方向排（沿收银台长边，朝前墙 / 门的那一头）。</summary>
+        private Vector3 _queueDir;
+        private Vector2 _counterPos = new Vector2(0.9f, 3.3f);
+        private Rect _counterFoot;
+        private Quaternion _counterRot = Quaternion.identity;
+        private Vector2 _counterSize = new Vector2(2.2f, 0.8f);
+        private Rect _benchFoot;
+        private Vector2 _benchPos;
+        private Vector3 _benchWorkPoint;
+        private Vector3 _benchFront;
+        private Vector3 _assemblerStand, _salesStand;
+        private Vector3 _deskFront;
+        private bool _hasCounter;
+        private bool _hasBench;
+        private int _fxVersion = -1;
+        private readonly List<Rect> _deskFoots = new List<Rect>();
+        private readonly List<(Rect foot, ShelfDisplay shelf)> _shelfFoots = new List<(Rect, ShelfDisplay)>();
+        private float _stockTimer;
+        private readonly HashSet<int> _aliveCustomers = new HashSet<int>();
+        private readonly Dictionary<int, int> _customerQueueIndices = new Dictionary<int, int>();
+        private readonly List<int> _goneCustomers = new List<int>();
+        private ShopSimulation _hooked;
+        private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
+
+        private readonly Dictionary<int, PayChannel> _payChannels = new Dictionary<int, PayChannel>();
+
+        private void OnCustomerLeft(ShopCustomer c) => _leaveReasons[c.Id] = c.Reason;
+
+        private void OnCustomerPaid(ShopCustomer c) => _payChannels[c.Id] = c.PaidWith;
+
+        private static string PayText(PayChannel p)
+        {
+            switch (p)
+            {
+                case PayChannel.QrCode: return "扫码";
+                case PayChannel.SelfCheckout: return "自助";
+                default: return "现金";
+            }
+        }
+
+        /// <summary>顾客的类型：决定衣服颜色、身高和头顶的称呼（装机党、游戏玩家、DIY 爱好者、办公族、学生）。</summary>
+        private static string ProfileOf(ShopCustomer c, out Color shirt)
+        {
+            if (c.Intent == CustomerIntent.Goods) { shirt = new Color(0.62f, 0.68f, 0.4f); return "附近居民"; }
+            if (c.Intent == CustomerIntent.Build) { shirt = new Color(0.92f, 0.55f, 0.15f); return "装机党"; }
+            switch (c.DesiredCategory)
+            {
+                case PartCategory.Gpu: shirt = new Color(0.55f, 0.3f, 0.78f); return "游戏玩家";
+                case PartCategory.Cpu:
+                case PartCategory.Motherboard: shirt = new Color(0.25f, 0.66f, 0.4f); return "DIY 爱好者";
+                case PartCategory.Memory:
+                case PartCategory.Storage: shirt = new Color(0.35f, 0.5f, 0.72f); return "办公族";
+                default: shirt = new Color(0.2f, 0.66f, 0.72f); return "学生";
+            }
+        }
+
+        private void Hook(ShopSimulation shop)
+        {
+            if (_hooked == shop) return;
+            if (_hooked != null)
+            {
+                _hooked.CustomerLeft -= OnCustomerLeft;
+                _hooked.CustomerPaid -= OnCustomerPaid;
+                _hooked.CustomerFinishedBrowsingView = null;
+            }
+            _hooked = shop;
+            _leaveReasons.Clear();
+            if (shop != null)
+            {
+                shop.CustomerLeft += OnCustomerLeft;
+                shop.CustomerPaid += OnCustomerPaid;
+                shop.CustomerFinishedBrowsingView = c => _visitors.TryGetValue(c.Id, out var visitor) && visitor.LookedAtShelf;
+            }
+        }
+
+        private Vector3 CustomerBrowseSpot(ShopCustomer customer, ShopSimulation shop, Vector3 from)
+        {
+            if (shop.RetailKind == "secondhand") return GoodsShelfSpot("secondhand", from);
+            if (customer.Intent != CustomerIntent.Goods)
+                return customer.Intent == CustomerIntent.Build ? RandomDeskSpot() : ShelfSpotFor(customer.DesiredCategory, from, _rng);
+
+            var spots = new List<Vector3>();
+            for (int i = 0; i < _shelves.Count && i < _shelfSpots.Count; i++)
+            {
+                var kind = ShelfKinds.Get(_shelves[i].KindId);
+                if (kind != null && kind.IsGoods && kind.GiftIds.Any(id => RetailShopTypes.Sells(shop.RetailKind, id)))
+                    spots.Add(_shelfSpots[i]);
+            }
+            if (spots.Count > 0) return spots[_rng.Next(spots.Count)];
+            return _shelfSpots.Count > 0 ? _shelfSpots[_rng.Next(_shelfSpots.Count)] : Center;
+        }
+
+        /// <summary>某个品类的货架前（离 from 最近的那个）；没有这个品类的货架就随便一个。</summary>
+        private Vector3 ShelfSpotFor(PartCategory cat, Vector3 from, System.Random rng = null)
+        {
+            var spots = new List<Vector3>();
+            string kindId = ShelfKinds.ForCategory(cat).Id;
+            for (int i = 0; i < _shelves.Count && i < _shelfSpots.Count; i++)
+                if (_shelves[i].KindId == kindId) spots.Add(_shelfSpots[i]);
+            if (spots.Count == 0) return _shelfSpots.Count > 0 ? _shelfSpots[0] : Center;
+            if (rng != null) return spots[rng.Next(spots.Count)];
+            Vector3 best = spots[0];
+            float bd = float.MaxValue;
+            foreach (Vector3 s in spots)
+            {
+                float d = (s - from).sqrMagnitude;
+                if (d < bd) { bd = d; best = s; }
+            }
+            return best;
+        }
+
+        /// <summary>摆着这类杂货的货架前（离 from 最近的那个）；找不到就去收银台前。</summary>
+        private Vector3 GoodsShelfSpot(string kindId, Vector3 from)
+        {
+            bool found = false;
+            Vector3 best = _counterFront;
+            float bd = float.MaxValue;
+            for (int i = 0; i < _shelves.Count && i < _shelfSpots.Count; i++)
+            {
+                if (_shelves[i].KindId != kindId) continue;
+                float d = (_shelfSpots[i] - from).sqrMagnitude;
+                if (!found || d < bd) { found = true; bd = d; best = _shelfSpots[i]; }
+            }
+            return best;
+        }
+
+        private Vector3 RandomDeskSpot()
+        {
+            int deskCount = _shelfSpots.Count - _shelves.Count;
+            if (deskCount <= 0) return Center;
+            return _shelfSpots[_shelves.Count + _rng.Next(deskCount)];
+        }
+
+        private Vector3 Jitter(Vector3 p) => p + new Vector3((float)_rng.NextDouble() * 0.6f - 0.3f, 0, (float)_rng.NextDouble() * 0.3f - 0.15f);
+
+        private static bool Reached(Visitor v)
+        {
+            return v.Via.Count == 0 && v.Route.AtGoal(v.Go.transform.position,v.Target,.2f);
+        }
+
+        private static Color CategoryColor(PartCategory c)
+        {
+            switch (c)
+            {
+                case PartCategory.Gpu: return new Color(0.12f, 0.12f, 0.14f);
+                case PartCategory.Cpu: return new Color(0.85f, 0.55f, 0.15f);
+                case PartCategory.Memory: return new Color(0.2f, 0.65f, 0.35f);
+                case PartCategory.Storage: return new Color(0.25f, 0.45f, 0.85f);
+                case PartCategory.PowerCase: return new Color(0.75f, 0.75f, 0.78f);
+                default: return new Color(0.7f, 0.25f, 0.3f);
+            }
+        }
+
+        private Vector3 NearestDeskSpot(Vector3 from)
+        {
+            int deskCount = _shelfSpots.Count - _shelves.Count;
+            if (deskCount <= 0) return Center;
+            Vector3 best = _shelfSpots[_shelves.Count];
+            for (int i = _shelves.Count; i < _shelfSpots.Count; i++)
+                if ((_shelfSpots[i] - from).sqrMagnitude < (best - from).sqrMagnitude) best = _shelfSpots[i];
+            return best;
+        }
+
+        private void ShowHeld(Visitor v)
+        {
+            if (v.Held != null) return;
+            if (v.DisplayPc)
+            {
+                v.Held = Prims.Box(v.Go.transform, "HeldPc", new Vector3(0, 0.95f, 0.4f), new Vector3(0.3f, 0.5f, 0.42f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f), 0.5f));
+                return;
+            }
+            if (v.IsGoods)
+            {
+                v.Held = Prims.Box(v.Go.transform, "HeldGoods", new Vector3(0, 0.95f, 0.36f), new Vector3(0.18f, 0.22f, 0.14f), Mats.Lit(new Color(0.92f, 0.78f, 0.35f), 0.4f));
+                return;
+            }
+            v.Held = Prims.Box(v.Go.transform, "Held", new Vector3(0, 0.95f, 0.38f), new Vector3(0.3f, 0.2f, 0.36f), Mats.Lit(CategoryColor(v.ItemCat), 0.5f));
+        }
+
+        public ShopSize Size { get; }
+        public float Width { get; }
+        public float Depth { get; }
+        public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
+        /// <summary>刚好看到整间店的镜头大小（缩放上限）。</summary>
+        public float CameraSize => Mathf.Max(Width, Depth + 3.5f) * 0.62f + 1.5f;
+
+        /// <summary>进店时默认的镜头大小：比较近，跟着老板走。</summary>
+        public const float DefaultZoom = 5.5f;
+        public const float MinZoom = 3.2f;
+
+        public Vector3 OwnerWorld => _owner.transform.position;
+        private bool _wasOn;
+        private readonly List<GameObject> _buildGlow = new List<GameObject>();
+        // 营业 / 关门的区别：门头招牌（绿 / 暗红）、门口挂牌、顶灯亮度
+        private GameObject _signOpen, _signClosed, _doorHang;
+        private readonly List<Light> _ceilingLights = new List<Light>();
+        private readonly List<Renderer> _ceilingDiffusers = new List<Renderer>();
+        private Material _ceilingLit, _ceilingDark;
+        private bool _shopPowerOut;
+        private (bool installed, bool working, bool outage, bool candle)? _emergencyLook;
+        private GameObject _emergencyFixture, _emergencyBulbs, _emergencyReady, _emergencyBroken;
+        private Light _backupLight;
+        private float _openBlend = 1f;
+        private RoomFurniture _decor;
+        private GameObject _upgradeClimate;
+
+        /// <summary>摆出来的店内摆设（装修后由玩家摆放）。</summary>
+        public RoomFurniture Furniture => _decor;
+        public Transform Root => _root;
+
+        /// <summary>店里不能挪的东西占的地，摆放时不能压上去。现在柜台、货架这些都是摆出来的家具，自己参与碰撞检测，所以这里是空的。</summary>
+        public List<RectD> FixedBlockers() => new List<RectD>();
+
+        /// <summary>顾客 ID → 世界坐标头顶位置（给 UI 标签用）。</summary>
+        public IEnumerable<KeyValuePair<int, Vector3>> QueueHeads()
+        {
+            foreach (var kv in _visitors)
+            {
+                if (kv.Value.Bubble != null && kv.Value.Bubble.activeSelf)
+                    yield return new KeyValuePair<int, Vector3>(kv.Key, kv.Value.Go.transform.position + Vector3.up * 2.2f);
+            }
+        }
+
+        /// <summary>摆设：门边两盆绿植、地毯、墙上的钟，让店里不那么空。</summary>
+        private void BuildDecor(float w, float d, float doorX)
+        {
+            Material pot = Mats.Lit(new Color(0.55f, 0.32f, 0.2f), 0.4f);
+            Material leaf = Mats.Lit(new Color(0.22f, 0.5f, 0.28f), 0.3f);
+            Material leaf2 = Mats.Lit(new Color(0.3f, 0.62f, 0.34f), 0.3f);
+            foreach (float px in new[] { doorX - 1.3f, doorX + 1.3f })
+            {
+                Prims.Shape(PrimitiveType.Cylinder, _root, "PlantPot", new Vector3(px, 0.2f, 0.4f), new Vector3(0.38f, 0.2f, 0.38f), pot);
+                Prims.Shape(PrimitiveType.Sphere, _root, "PlantLeaf", new Vector3(px, 0.62f, 0.4f), new Vector3(0.55f, 0.5f, 0.55f), leaf);
+                Prims.Shape(PrimitiveType.Sphere, _root, "PlantLeaf", new Vector3(px + 0.08f, 0.92f, 0.36f), new Vector3(0.36f, 0.34f, 0.36f), leaf2);
+            }
+
+            // 后墙：挂钟（海报 / 灯屏是玩家自己买来挂的家具）
+            Prims.Shape(PrimitiveType.Cylinder, _root, "Clock", new Vector3(w * 0.62f, 2.45f, d - 0.03f), new Vector3(0.42f, 0.02f, 0.42f), Mats.Lit(new Color(0.95f, 0.95f, 0.92f), 0.3f)).transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            Prims.Box(_root, "ClockHandH", new Vector3(w * 0.62f, 2.5f, d - 0.05f), new Vector3(0.025f, 0.12f, 0.01f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f)));
+            Prims.Box(_root, "ClockHandM", new Vector3(w * 0.62f + 0.05f, 2.45f, d - 0.05f), new Vector3(0.1f, 0.02f, 0.01f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f)));
+        }
+
+        // ---------- 门外的街 ----------
+
+        /// <summary>门外的人行道 / 马路往店两边各伸出去多远。</summary>
+        private const float StreetExtent = 14f;
+        private const float CurbZ = -3.0f;
+        private const float RoadFarZ = -9.4f;
+
+        private static float SidewalkZ(System.Random rng) => -0.9f - (float)rng.NextDouble() * 1.5f;
+
+        private sealed class Walker
+        {
+            public GameObject Go;
+            public Vector3 Target;
+            public float Speed;
+        }
+
+        private readonly List<Walker> _walkers = new List<Walker>();
+        private readonly List<Walker> _cars = new List<Walker>();
+        private readonly List<Light> _streetLamps = new List<Light>();
+        private float _walkerTimer, _carTimer;
+
+        /// <summary>
+        /// 店门外：人行道、马路（带车道线）、路灯，右边是隔壁店的门面，左边是矮花坛。
+        /// 镜头从左前方斜着看进店里，所以店的左边、前面不能放高的东西挡住柜台。
+        /// </summary>
+        private void BuildStreet(float w, float d, float doorX)
+        {
+            float x0 = -StreetExtent, x1 = w + StreetExtent, len = x1 - x0, cx = (x0 + x1) / 2;
+            Prims.Box(_root, "Outside", new Vector3(cx, -0.12f, d / 2 - 6f), new Vector3(len + 20f, 0.05f, d + 40f), Mats.Lit(ArtDirection.Hex("A69D90"),.08f));
+            Prims.Box(_root, "Sidewalk", new Vector3(cx, -0.03f, CurbZ / 2), new Vector3(len, 0.06f, -CurbZ), Mats.Lit(new Color(0.55f, 0.54f, 0.52f), 0.15f));
+            Material seam = Mats.Lit(new Color(0.45f, 0.44f, 0.43f), 0.1f);
+            for (float x = x0 + 1.5f; x < x1; x += 1.5f)
+                Prims.Box(_root, "Paving", new Vector3(x, 0.002f, CurbZ / 2), new Vector3(0.04f, 0.01f, -CurbZ), seam);
+            Prims.Box(_root, "Curb", new Vector3(cx, 0.04f, CurbZ), new Vector3(len, 0.16f, 0.2f), Mats.Lit(new Color(0.7f, 0.7f, 0.68f), 0.2f));
+            Prims.Box(_root, "Road", new Vector3(cx, -0.06f, (CurbZ + RoadFarZ) / 2), new Vector3(len, 0.04f, CurbZ - RoadFarZ), Mats.Lit(new Color(0.2f, 0.2f, 0.22f), 0.25f));
+            Material paint = Mats.Lit(new Color(0.9f, 0.88f, 0.75f), 0.2f);
+            float mid = (CurbZ + RoadFarZ) / 2;
+            for (float x = x0 + 1f; x < x1; x += 3.2f)
+                Prims.Box(_root, "LaneDash", new Vector3(x, -0.035f, mid), new Vector3(1.6f, 0.01f, 0.14f), paint);
+            Prims.Box(_root, "CurbFar", new Vector3(cx, 0.0f, RoadFarZ - 0.1f), new Vector3(len, 0.12f, 0.2f), Mats.Lit(new Color(0.6f, 0.6f, 0.58f), 0.2f));
+
+            // 门前的台阶
+            Prims.Box(_root, "Step", new Vector3(doorX, 0.03f, -0.35f), new Vector3(1.6f, 0.06f, 0.6f), Mats.Lit(new Color(0.42f, 0.42f, 0.44f), 0.2f));
+
+            // 路灯：放在店两边，不挡门
+            Material pole = Mats.Lit(new Color(0.22f, 0.24f, 0.27f), 0.4f, 0.4f);
+            foreach (float lx in new[] { -2.5f, w + 2.5f, -10f, w + 10f })
+            {
+                Prims.Box(_root, "LampPole", new Vector3(lx, 1.9f, CurbZ + 0.35f), new Vector3(0.12f, 3.8f, 0.12f), pole);
+                Prims.Box(_root, "LampArm", new Vector3(lx, 3.75f, CurbZ + 0.0f), new Vector3(0.1f, 0.08f, 0.8f), pole);
+                Prims.Box(_root, "LampHead", new Vector3(lx, 3.65f, CurbZ - 0.35f), new Vector3(0.35f, 0.12f, 0.45f), Mats.Glow(new Color(0.9f, 0.85f, 0.6f), new Color(3f, 2.6f, 1.4f)));
+                var lg = new GameObject("StreetLamp");
+                lg.transform.SetParent(_root, false);
+                lg.transform.localPosition = new Vector3(lx, 3.4f, CurbZ - 0.3f);
+                var light = lg.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.range = 9f;
+                light.intensity = 0f;
+                light.color = new Color(1f, 0.82f, 0.55f);
+                _streetLamps.Add(light);
+            }
+
+            // Keep the active sidewalk and its passers-by visible from the shop entrance.
+            // The cutaway's open side needs a low silhouette even when the camera is rotated.
+            foreach (float px in new[]{-2.0f,w+1.9f})
+                DistrictRoomArt.Plant(_root,new Vector3(px,0,-1.0f),.92f);
+            Material bike = Mats.Lit(new Color(0.95f, 0.75f, 0.1f), 0.3f);
+            for (int i = 0; i < 3; i++)
+            {
+                float bx = -6.5f + i * 0.7f;
+                Prims.Box(_root, "Bike", new Vector3(bx, 0.45f, -0.7f), new Vector3(0.08f, 0.5f, 1.3f), bike);
+                Prims.Box(_root, "BikeSeat", new Vector3(bx, 0.75f, -0.5f), new Vector3(0.14f, 0.05f, 0.25f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
+            }
+        }
+
+        private static readonly Color[] Shirts =
+        {
+            new Color(0.8f, 0.2f, 0.25f), new Color(0.2f, 0.4f, 0.8f), new Color(0.9f, 0.9f, 0.9f), new Color(0.25f, 0.25f, 0.25f),
+            new Color(0.6f, 0.3f, 0.7f), new Color(0.3f, 0.7f, 0.4f), new Color(0.85f, 0.6f, 0.2f), new Color(0.4f, 0.55f, 0.6f),
+        };
+
+        /// <summary>人流：白天多、半夜几乎没人（0 ~ 1）。</summary>
+        private static float StreetBusy(float minuteOfDay)
+        {
+            float h = minuteOfDay / 60f;
+            if (h < 6f) return 0.05f;
+            if (h < 8f) return Mathf.Lerp(0.2f, 0.8f, (h - 6f) / 2f);
+            if (h < 21f) return h > 11.5f && h < 13.5f || h > 17.5f && h < 19.5f ? 1f : 0.75f;
+            if (h < 24f) return Mathf.Lerp(0.6f, 0.1f, (h - 21f) / 3f);
+            return 0.05f;
+        }
+
+        /// <summary>门外的路人和车：只是背景，随时间多少变化，不影响生意。</summary>
+        private void UpdateStreet(float realDt, float minuteOfDay)
+        {
+            float busy = StreetBusy(minuteOfDay);
+            float h = minuteOfDay / 60f;
+            float lampOn = h < 6.3f || h > 18.6f ? 1f : 0f;
+            foreach (Light l in _streetLamps) l.intensity = lampOn * 1.6f;
+
+            _walkerTimer -= realDt;
+            if (_walkerTimer <= 0 && _walkers.Count < 4 + Mathf.RoundToInt(busy * 10))
+            {
+                _walkerTimer = Mathf.Lerp(9f, 0.9f, busy) * (0.6f + (float)_rng.NextDouble() * 0.8f);
+                SpawnWalker();
+            }
+            for (int i = _walkers.Count - 1; i >= 0; i--)
+            {
+                Walker wk = _walkers[i];
+                Transform tr = wk.Go.transform;
+                Vector3 dv = wk.Target - tr.position;
+                dv.y = 0;
+                float m = dv.magnitude;
+                if (m < 0.1f)
+                {
+                    Kill.It(wk.Go);
+                    _walkers.RemoveAt(i);
+                    continue;
+                }
+                Vector3 p = tr.position + dv / m * Mathf.Min(m, wk.Speed * realDt);
+                p.y = Origin.y;
+                tr.position = p;
+                tr.rotation = Quaternion.LookRotation(dv / m);
+            }
+
+            _carTimer -= realDt;
+            if (_carTimer <= 0 && _cars.Count < 5)
+            {
+                _carTimer = Mathf.Lerp(14f, 2.5f, busy) * (0.6f + (float)_rng.NextDouble() * 0.8f);
+                SpawnCar();
+            }
+            for (int i = _cars.Count - 1; i >= 0; i--)
+            {
+                Walker car = _cars[i];
+                Transform tr = car.Go.transform;
+                Vector3 dv = car.Target - tr.position;
+                dv.y = 0;
+                float m = dv.magnitude;
+                if (m < 0.2f)
+                {
+                    Kill.It(car.Go);
+                    _cars.RemoveAt(i);
+                    continue;
+                }
+                tr.position += dv / m * Mathf.Min(m, car.Speed * realDt);
+            }
+        }
+
+        private void SpawnWalker()
+        {
+            bool fromLeft = _rng.NextDouble() < 0.5;
+            float z = SidewalkZ(_rng);
+            float xa = -StreetExtent + 0.5f, xb = Width + StreetExtent - 0.5f;
+            Color shirt = Shirts[_rng.Next(Shirts.Length)];
+            Color[] skins = { new Color(0.92f, 0.78f, 0.62f), new Color(0.85f, 0.66f, 0.5f), new Color(0.98f, 0.84f, 0.72f) };
+            GameObject go = Prims.Figure(_root, "Passerby", shirt, skins[_rng.Next(skins.Length)], 0.85f + (float)_rng.NextDouble() * 0.25f);
+            if (_rng.NextDouble() < 0.35)
+                Prims.Box(go.transform, "Bag", new Vector3(0.32f, 0.6f, 0), new Vector3(0.12f, 0.3f, 0.28f), Mats.Lit(Shirts[_rng.Next(Shirts.Length)], 0.3f));
+            go.transform.position = Origin + new Vector3(fromLeft ? xa : xb, 0, z);
+            _walkers.Add(new Walker
+            {
+                Go = go,
+                Target = Origin + new Vector3(fromLeft ? xb : xa, 0, z + ((float)_rng.NextDouble() - 0.5f) * 0.6f),
+                Speed = OwnerWalkSpeed * (float)Vehicles.WalkingSpeedMultiplier * (float)CityTravelTiming.NpcWalkSpeedFactor,
+            });
+        }
+
+        private void SpawnCar()
+        {
+            bool eastbound = _rng.NextDouble() < 0.5;
+            float z = eastbound ? CurbZ - 1.6f : RoadFarZ + 1.6f;
+            float xa = -StreetExtent - 2f, xb = Width + StreetExtent + 2f;
+            var root = new GameObject("Car");
+            root.transform.SetParent(_root, false);
+            root.transform.position = Origin + new Vector3(eastbound ? xa : xb, 0, z);
+            root.transform.rotation = Quaternion.LookRotation(eastbound ? Vector3.right : Vector3.left);
+            Color body = Shirts[_rng.Next(Shirts.Length)];
+            bool taxi = _rng.NextDouble() < 0.3;
+            if (taxi) body = new Color(0.95f, 0.78f, 0.15f);
+            Prims.Box(root.transform, "Body", new Vector3(0, 0.45f, 0), new Vector3(1.6f, 0.55f, 3.8f), Mats.Lit(body, 0.6f, 0.2f));
+            Prims.Box(root.transform, "Cabin", new Vector3(0, 0.95f, -0.2f), new Vector3(1.4f, 0.5f, 2.0f), Mats.Lit(new Color(0.15f, 0.18f, 0.22f), 0.8f));
+            Prims.Box(root.transform, "HeadL", new Vector3(-0.55f, 0.5f, 1.91f), new Vector3(0.3f, 0.14f, 0.03f), Mats.Glow(new Color(0.9f, 0.9f, 0.8f), new Color(3f, 3f, 2.4f)));
+            Prims.Box(root.transform, "HeadR", new Vector3(0.55f, 0.5f, 1.91f), new Vector3(0.3f, 0.14f, 0.03f), Mats.Glow(new Color(0.9f, 0.9f, 0.8f), new Color(3f, 3f, 2.4f)));
+            Prims.Box(root.transform, "Tail", new Vector3(0, 0.5f, -1.91f), new Vector3(1.3f, 0.1f, 0.03f), Mats.Glow(new Color(0.6f, 0.1f, 0.1f), new Color(2.4f, 0.2f, 0.2f)));
+            if (taxi) Prims.Box(root.transform, "TaxiSign", new Vector3(0, 1.28f, -0.2f), new Vector3(0.5f, 0.15f, 0.25f), Mats.Glow(new Color(0.9f, 0.9f, 0.9f), new Color(2f, 2f, 1.6f), false));
+            foreach (float wz in new[] { -1.2f, 1.2f })
+            foreach (float wx in new[] { -0.8f, 0.8f })
+                Prims.Shape(PrimitiveType.Cylinder, root.transform, "Wheel", new Vector3(wx, 0.22f, wz), new Vector3(0.44f, 0.1f, 0.44f), Mats.Lit(new Color(0.08f, 0.08f, 0.08f))).transform.localRotation = Quaternion.Euler(0, 0, 90f);
+            _cars.Add(new Walker { Go = root, Target = Origin + new Vector3(eastbound ? xb : xa, 0, z), Speed = 6f + (float)_rng.NextDouble() * 4f });
+        }
+
+        public int District { get; }
+
+        public ShopInteriorView(Transform parent, ShopSize size, int district = 0)
+        {
+            _moveAlongRoute = MoveOwner;
+            District = district;
+            Size = size;
+            _root = new GameObject("ShopInterior").transform;
+            _root.SetParent(parent, false);
+            _root.position = Origin;
+            _decor = new RoomFurniture(_root, District);
+
+            var room = RoomSpec.ForShop(size);
+            Width = (float)room.Width;
+            Depth = (float)room.Depth;
+            float w = Width, d = Depth;
+
+            DistrictRoomArt.Build(_root,w,d,district,false);
+            // Unpowered rooms keep their natural window light, while cove diffusers lose emission.
+            foreach(var renderer in _root.GetComponentsInChildren<Renderer>())
+                if(renderer.sharedMaterial==DistrictRoomArt.Warm) _ceilingDiffusers.Add(renderer);
+            foreach(var lamp in _root.GetComponentsInChildren<Light>())
+                if(lamp.type==LightType.Spot && lamp.GetComponent<InteriorWindowLight>()==null) _ceilingLights.Add(lamp);
+            BuildStreet(w, d, w - 3.0f);
+            // 大门开在货架这一侧（右前方），收银台在左边：顾客进门先逛货架，再回左边结账
+            float doorX = w - 3.0f;
+            Material lowWall = DistrictRoomArt.Finish(district>=2?"958678":"A09D8C");
+            Prims.Box(_root, "WallFrontLowA", new Vector3((doorX - 0.7f) / 2, 0.10f, -0.05f), new Vector3(doorX - 0.7f, 0.20f, 0.1f), lowWall);
+            Prims.Box(_root, "WallFrontLowB", new Vector3((doorX + 0.7f + w) / 2, 0.10f, -0.05f), new Vector3(w - doorX - 0.7f, 0.20f, 0.1f), lowWall);
+            Prims.Box(_root, "DoorMat", new Vector3(doorX, 0.012f, 0.45f), new Vector3(1.3f, 0.014f, 0.8f), Mats.Lit(new Color(0.35f, 0.18f, 0.16f)));
+            Material doorPost = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
+            Prims.Box(_root, "DoorPostL", new Vector3(doorX - 0.72f, 1.13f, -0.05f), new Vector3(0.075f, 2.26f, 0.095f), doorPost);
+            Prims.Box(_root, "DoorPostR", new Vector3(doorX + 0.72f, 1.13f, -0.05f), new Vector3(0.075f, 2.26f, 0.095f), doorPost);
+            _signOpen = Prims.Box(_root, "DoorSignOpen", new Vector3(doorX + .73f, 1.52f, -.12f), new Vector3(.22f, .15f, .05f), Mats.Glow(new Color(0.25f, 0.8f, 0.4f), new Color(0.5f, 2.6f, 0.9f), false));
+            _signClosed = Prims.Box(_root, "DoorSignClosed", new Vector3(doorX + .73f, 1.52f, -.12f), new Vector3(.22f, .15f, .05f), Mats.Lit(new Color(0.32f, 0.12f, 0.12f), 0.2f));
+            // 门口的红色“休息中”挂牌（关门时才有）：挂在门框上，一眼看出没营业
+            _doorHang = new GameObject("DoorClosedHang");
+            _doorHang.transform.SetParent(_root, false);
+            Prims.Box(_doorHang.transform, "Board", new Vector3(doorX, 1.15f, -0.12f), new Vector3(0.7f, 0.32f, 0.04f), Mats.Glow(new Color(0.85f, 0.2f, 0.18f), new Color(1.8f, 0.2f, 0.15f), false));
+            Prims.Box(_doorHang.transform, "Cord", new Vector3(doorX, 1.38f, -0.12f), new Vector3(0.03f, 0.2f, 0.03f), Mats.Lit(new Color(0.2f, 0.2f, 0.2f)));
+            // 关门时拉一道红白拦带横在门口
+            Prims.Box(_doorHang.transform, "Tape", new Vector3(doorX, 0.85f, -0.1f), new Vector3(1.34f, 0.07f, 0.03f), Mats.Lit(new Color(0.9f, 0.25f, 0.2f), 0.2f));
+            Prims.Box(_doorHang.transform, "Tape2", new Vector3(doorX, 0.55f, -0.1f), new Vector3(1.34f, 0.07f, 0.03f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f), 0.2f));
+
+            if (district == 0) BuildDecor(w, d, doorX);
+            else DistrictRoomArt.Plant(_root, new Vector3(doorX+1.28f,0,.36f),.82f);
+            if(district==0) SuburbanRoomFinish.RollerDoor(_root,doorX);
+            else
+            {
+                DistrictRoomArt.Box(_root,"门头横框",doorX,2.28f,-.05f,1.52f,.075f,.105f,doorPost);
+                var leaf=DistrictRoomArt.Group(_root,"向外开启的店门",new Vector3(doorX-.68f,0,-.10f),76f);
+                var glazing=DistrictFinishes.VillaPane(true);
+                DistrictRoomArt.Box(leaf,"门扇",.5f,1.06f,0,.99f,2.11f,.025f,glazing);
+                foreach(float y in new[]{.10f,2.12f}) DistrictRoomArt.Box(leaf,"扇框",.5f,y,0,1.01f,.065f,.063f,doorPost);
+                DistrictRoomArt.Box(leaf,"锁边",.98f,1.1f,0,.055f,2.11f,.063f,doorPost);
+                DistrictRoomArt.Box(leaf,"拉手",.88f,1.06f,-.06f,.028f,.36f,.036f,doorPost);
+            }
+            BuildEmergencyFixture();
+
+            _ceilingLit = district==0 ? Mats.Glow(ArtDirection.Hex("EEE8D6"),new Color(.86f,.80f,.68f),false)
+                : Mats.Glow(ArtDirection.Cream, new Color(2.3f, 1.65f, .8f), false);
+            _ceilingDark = Mats.Lit(new Color(.47f, .46f, .42f));
+            if(district==0)
+            {
+                SuburbanRoomFinish.Lamps(_root.Find("后墙"),w,_shopCeilingLampMeshes,_ceilingDiffusers,_ceilingLights,_ceilingLit);
+                SuburbanRoomFinish.Lamps(_root.Find("侧墙"),d,_shopCeilingLampMeshes,_ceilingDiffusers,_ceilingLights,_ceilingLit);
+            }
+            else
+            {
+                int lampsX = Mathf.Max(1, Mathf.CeilToInt(w / 6f)), lampsZ = Mathf.Max(1, Mathf.CeilToInt(d / 6f));
+                for (int lx = 0; lx < lampsX; lx++)
+                for (int lz = 0; lz < lampsZ; lz++)
+                {
+                    var lampGo = new GameObject("CeilingLight");
+                    lampGo.transform.SetParent(_root, false);
+                    // Fix lights to a wall bracket or cove, leaving the cutaway ceiling open.
+                    float along = w*(lx+.5f)/lampsX;
+                    bool side = lz%2==1;
+                    lampGo.transform.localPosition = side
+                        ? new Vector3(w-.14f,2.65f,d*(lx+.5f)/lampsX)
+                        : new Vector3(along,2.65f,d-.15f);
+                    if(side) lampGo.transform.localRotation=Quaternion.Euler(0,90,0);
+                    var lamp = lampGo.AddComponent<Light>();
+                    lamp.type = LightType.Point;
+                    lamp.range = 9f;
+                    lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
+                    lamp.color = new Color(1f, 0.87f, 0.66f);
+                    _shopCeilingLampMeshes.Add(Prims.Box(lampGo.transform, "Steel light housing", Vector3.zero, new Vector3(district==0?.78f:.22f,.10f,.22f), Mats.Lit(ArtDirection.Ink,.4f,.5f)));
+                    var diffuser = Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(district==0?.72f:.17f,.03f,.175f), _ceilingLit);
+                    _shopCeilingLampMeshes.Add(diffuser);
+                    _ceilingDiffusers.Add(diffuser.GetComponent<Renderer>());
+                    _ceilingLights.Add(lamp);
+                }
+            }
+
+            // 铺子租下来是空的：货架、收银台、展示桌、装机操作台都是玩家自己买、自己摆的家具，
+            // 摆好后由 RebuildFixtures 从布局里认出来（顾客逛哪、排队站哪、老板站哪都跟着摆放走）。
+            _owner = Prims.Figure(_root, "Owner", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.05f, FigureAppearance.Player);
+            _owner.transform.localPosition = new Vector3(_doorX = doorX, 0, 0.9f);
+            _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);
+
+            _door = Origin + new Vector3(doorX, 0, -0.6f);
+            _counterFront = Origin + new Vector3(1.8f, 0, d * 0.55f);
+            _counterBack = new Vector3(0.35f, 0, d * 0.55f);
+            _queueDir = Vector3.back;
+        }
+
+        private Color ItemColor()
+        {
+            Color[] c = { new Color(0.85f, 0.2f, 0.2f), new Color(0.2f, 0.4f, 0.85f), new Color(0.15f, 0.15f, 0.15f), new Color(0.9f, 0.9f, 0.92f), new Color(0.2f, 0.7f, 0.4f) };
+            return c[_rng.Next(c.Length)];
+        }
+
+        public void SetActive(bool on)
+        {
+            if (!on) Hook(null);
+            _root.gameObject.SetActive(on);
+            if (!on && _wasOn)
+            {
+                ClearUsedSellerFigures();
+                ClearSpecialBusinessVisuals();
+            }
+            if (on && !_wasOn)
+            {
+                _owner.transform.localPosition = new Vector3(_doorX, 0, 0.9f);
+                _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);
+                if (_walkers.Count == 0)
+                    for (int i = 0; i < 5; i++)
+                    {
+                        SpawnWalker();
+                        Walker wk = _walkers[_walkers.Count - 1];
+                        wk.Go.transform.position = Vector3.Lerp(wk.Go.transform.position, wk.Target, (float)_rng.NextDouble() * 0.9f);
+                    }
+            }
+            _wasOn = on;
+        }
+
+        /// <summary>WASD：按世界方向走一步，会被柜台、装机台、展示桌挡住（沿墙滑动）。</summary>
+        private const float OwnerWalkSpeed = 4.8f;
+        public void MoveOwner(Vector3 worldDir, float realDt)
+        {
+            Vector3 d = new Vector3(worldDir.x, 0, worldDir.z);
+            if (d.sqrMagnitude < 1e-4f) return;
+            d.Normalize();
+            Transform tr = _owner.transform;
+            Vector3 p = tr.localPosition;
+            float step = OwnerWalkSpeed * realDt;
+            Vector3 tx = p + new Vector3(d.x * step, 0, 0);
+            if (CanStand(tx, p)) p = tx;
+            Vector3 tz = p + new Vector3(0, 0, d.z * step);
+            if (CanStand(tz, p)) p = tz;
+            tr.localPosition = p;
+            tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 1f - Mathf.Exp(-12f * realDt));
+        }
+
+        private List<Vector3> _cityExitPath;
+        private int _cityExitIndex;
+        private List<Vector3> _checkoutPath;
+        private int _checkoutPathIndex;
+        private readonly System.Action<Vector3, float> _moveAlongRoute;
+        private Rect IndoorWalkArea => Rect.MinMaxRect(.3f, .4f, Width - .3f, Depth - .3f);
+
+        public void CancelCityDoorWalk(){_cityExitPath=null;_cityExitIndex=0;}
+        public int WalkToDoor(float dt)
+        {
+            if(NearDoor)return 1;
+            var at=_owner.transform.localPosition;
+            if(_cityExitPath==null)
+            {
+                _cityExitPath = CityRoomRoute.Find(at, IndoorWalkArea, NearDoorAt, _decor.Blockers);
+                _cityExitIndex=0;if(_cityExitPath==null)return -1;
+            }
+            if (_cityExitIndex >= _cityExitPath.Count) return -1;
+            return CityRoomRoute.Advance(_cityExitPath, ref _cityExitIndex, _owner.transform, dt,
+                OwnerWalkSpeed, _moveAlongRoute) ? 0 : -1;
+        }
+
+        internal bool PlanCheckoutWalk()
+        {
+            if (!_hasCounter) return false;
+            Vector3 at = _owner.transform.localPosition;
+            Rect area = IndoorWalkArea;
+            // Prefer the cashier side. A counter placed against a wall can still be used from the aisle.
+            _checkoutPath = CityRoomRoute.Find(at, area, point => NearCounterAt(point, cashierSideOnly: true), _decor.Blockers)
+                ?? CityRoomRoute.Find(at, area, point => NearCounterAt(point), _decor.Blockers);
+            _checkoutPathIndex = 0;
+            return _checkoutPath != null;
+        }
+
+        internal int WalkToCheckoutCounter(float dt)
+        {
+            if (_checkoutPath == null && !PlanCheckoutWalk()) return -1;
+            var owner = _owner.transform;
+            if (!CityRoomRoute.Advance(_checkoutPath, ref _checkoutPathIndex, owner, dt, OwnerWalkSpeed, _moveAlongRoute))
+                return -1;
+            if (_checkoutPathIndex < _checkoutPath.Count) return 0;
+            if (!NearCounterAt(owner.localPosition)) return -1;
+            var towardCounter = new Vector3(_counterPos.x, 0, _counterPos.y) - owner.localPosition;
+            if (towardCounter.sqrMagnitude > .001f) owner.localRotation = Quaternion.LookRotation(towardCounter);
+            return 1;
+        }
+
+        internal void CancelCheckoutWalk()
+        {
+            _checkoutPath = null;
+            _checkoutPathIndex = 0;
+        }
+
+        private bool CanStand(Vector3 to, Vector3 from)
+        {
+            bool doorway = Mathf.Abs(to.x - _doorX) < 0.5f && to.z >= -1.1f && to.z < 0.4f;
+            if (to.x < 0.3f || to.x > Width - 0.3f || (to.z < 0.4f && !doorway) || to.z > Depth - 0.3f) return false;
+            if (doorway) return true;
+            if (!Blocked(to)) return true;
+            return Blocked(from); // 已经卡在里面时允许走出来
+        }
+
+        private bool Blocked(Vector3 p)
+        {
+            foreach (Rect r in _decor.Blockers)
+                if (r.Contains(new Vector2(p.x, p.z))) return true;
+            return false;
+        }
+
+        /// <summary>老板走到门口（够得着门，按 F 或者接着往外走就出门）。</summary>
+        public bool NearDoor => NearDoorAt(_owner.transform.localPosition);
+
+        private bool NearDoorAt(Vector3 point) => Mathf.Abs(point.x - _doorX) < .9f && point.z < 1.1f;
+
+        public Vector3 DoorWorld => Origin + new Vector3(_doorX, 2.0f, 0f);
+
+        /// <summary>老板已经走出门槛（该回到街上了）。</summary>
+        public bool OwnerOutside => _owner.transform.localPosition.z < -0.55f;
+
+        /// <summary>出不去（比如有事走不开）时，把老板退回门里。</summary>
+        public void StepBackInside()
+        {
+            _owner.transform.localPosition = new Vector3(_doorX, 0, 0.6f);
+            _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);
+        }
+
+        /// <summary>镜头看全景时的中心：店里加上门外一截人行道。</summary>
+        public Vector3 ViewCenter => Origin + new Vector3(Width / 2, 0, (Depth - 3.5f) / 2);
+
+        /// <summary>冒烟 / 调试：直接站到柜台后面。</summary>
+        public void StandAtCounter()
+        {
+            _owner.transform.localPosition = _counterBack;
+            _owner.transform.localRotation = Quaternion.LookRotation(_counterFront - Origin - _counterBack + new Vector3(0.001f, 0, 0));
+        }
+
+        private string _dressed;
+
+        /// <summary>店里认出来的每个货架设置的货类（没设置的是 null）。</summary>
+        public List<string> ShelfKindIds => _shelves.ConvertAll(s => s.KindId);
+
+        /// <summary>摆了几个货架。</summary>
+        public int ShelfCount => _shelves.Count;
+
+        /// <summary>冒烟用：顾客在没到目标时原地打转的最长时间（游戏帧时间，秒）。</summary>
+        public float MaxStuckSeconds { get; set; }
+
+        /// <summary>冒烟 / 调试：直接站到第 i 个货架前面。</summary>
+        public void StandAtShelf(int i)
+        {
+            if (i < 0 || i >= _shelfSpots.Count) return;
+            _owner.transform.localPosition = _shelfSpots[i] - Origin;
+        }
+
+        /// <summary>冒烟 / 调试：直接站到店门里面。</summary>
+        public void StandAtDoor() => StepBackInside();
+
+        /// <summary>冒烟 / 调试：直接站到整机展示台前。</summary>
+        public void StandAtDisplay()
+        {
+            if (_tables.Count == 0) return;
+            _owner.transform.localPosition = _deskFront;
+        }
+
+        /// <summary>走到货架跟前时，那个货架在店面布局里的下标；没靠近是 -1。</summary>
+        public int NearbyShelf { get; private set; } = -1;
+
+        /// <summary>靠近的货架摆的货类（没设置是 null）。</summary>
+        public string NearbyShelfKind { get; private set; }
+
+        public bool NearShelf => NearbyShelf >= 0;
+
+        /// <summary>靠近的货架头顶的世界坐标（给“按 F”提示用）。</summary>
+        public Vector3 NearbyShelfWorld { get; private set; }
+
+        /// <summary>站在整机展示台旁边（能按 F 看展示的整机和装机单）。</summary>
+        public bool NearDisplay { get; private set; }
+
+        public Vector3 NearDisplayWorld { get; private set; }
+
+        /// <summary>站在装机台旁边（能按 F 开装机单和装机小游戏）。</summary>
+        public bool NearBench { get; private set; }
+
+        public Vector3 NearBenchWorld { get; private set; }
+
+        /// <summary>站在店里的纸箱旁边（能按 F 打开店里纸箱）。</summary>
+        public bool NearBox { get; private set; }
+
+        public Vector3 NearBoxWorld { get; private set; }
+
+        public bool NearFridge { get; private set; }
+        public Vector3 NearFridgeWorld { get; private set; }
+        private readonly List<Rect> _fridgeFoots = new List<Rect>();
+        private readonly List<Rect> _boxFoots = new List<Rect>();
+
+        /// <summary>冒烟 / 调试：直接站到装机台正前方。</summary>
+        public void StandAtBench()
+        {
+            if (_hasBench) _owner.transform.localPosition = _benchFront;
+        }
+
+        private bool NearCounterAt(Vector3 point, bool cashierSideOnly = false)
+        {
+            if (!_hasCounter) return false;
+            Vector3 local = Quaternion.Inverse(_counterRot) * (point - new Vector3(_counterPos.x, 0, _counterPos.y));
+            float halfDepth = _counterSize.y / 2f;
+            float frontLimit = cashierSideOnly ? halfDepth : -halfDepth - 1f;
+            return Mathf.Abs(local.x) < _counterSize.x / 2f + .3f && local.z > frontLimit && local.z < halfDepth + .6f;
+        }
+
+        private void UpdateNearbyShelf(bool active)
+        {
+            NearbyShelf = -1;
+            NearbyShelfKind = null;
+            NearCounter = false;
+            NearDisplay = false;
+            NearBench = false;
+            NearBox = false; NearFridge = false;
+            if (!active) return;
+            Vector3 op = _owner.transform.localPosition;
+            NearCounter = NearCounterAt(op);
+            Vector3 lp = _owner.transform.localPosition;
+            float best = 1.5f;
+            foreach (ShelfDisplay sh in _shelves)
+            {
+                float dd = new Vector2(lp.x - sh.Pos.x, lp.z - sh.Pos.z).magnitude;
+                if (dd >= best) continue;
+                best = dd;
+                NearbyShelf = sh.LayoutIndex;
+                NearbyShelfKind = sh.KindId;
+                NearbyShelfWorld = Origin + sh.Pos + new Vector3(0, 2.3f, 0);
+            }
+            // 展示桌：离桌边 1.0 米以内
+            float bestTable = 1.0f;
+            for (int i = 0; i < _deskFoots.Count; i++)
+            {
+                float dd = DistToRect(_deskFoots[i], lp);
+                if (dd >= bestTable) continue;
+                bestTable = dd;
+                NearDisplay = true;
+                NearDisplayWorld = Origin + new Vector3(_deskFoots[i].center.x, 1.9f, _deskFoots[i].center.y);
+            }
+            // 装机操作台：离台边 1.0 米以内；和展示桌都够得着时取近的
+            if (_hasBench)
+            {
+                float bd = DistToRect(_benchFoot, lp);
+                if (bd < 1.0f && (!NearDisplay || bd <= bestTable))
+                {
+                    NearBench = true;
+                    NearDisplay = false;
+                    NearBenchWorld = Origin + new Vector3(_benchPos.x, 2.0f, _benchPos.y);
+                }
+            }
+            float bestFridge = 0.8f;
+            foreach (Rect r in _fridgeFoots)
+            {
+                float dd = DistToRect(r, lp);
+                if (dd >= bestFridge) continue;
+                bestFridge = dd; NearFridge = true;
+                NearFridgeWorld = Origin + new Vector3(r.center.x, 1.8f, r.center.y);
+            }
+            float bestBox = 0.8f;
+            foreach (Rect r in _boxFoots)
+            {
+                float dd = DistToRect(r, lp);
+                if (dd >= bestBox) continue;
+                bestBox = dd;
+                NearBox = true;
+                NearBoxWorld = Origin + new Vector3(r.center.x, 1.2f, r.center.y);
+            }
+        }
+
+        /// <summary>
+        /// 鼠标指着的设施（货架 / 整机展示桌 / 装机台），按占地矩形 + 高度做射线检测，取最近的。
+        /// 货架给出布局下标；world 是头顶提示的位置。
+        /// </summary>
+        public FixturePick PickFixture(Ray ray, out int shelfIndex, out string shelfKind, out Vector3 world)
+        {
+            FixturePick pick = FixturePick.None;
+            float best = float.MaxValue;
+            Vector3 at = Vector3.zero;
+            ShelfDisplay hit = null;
+            void Try(Rect r, float height, FixturePick kind, ShelfDisplay sh)
+            {
+                var b = new Bounds(Origin + new Vector3(r.center.x, height / 2f, r.center.y), new Vector3(r.width, height, r.height));
+                if (!b.IntersectRay(ray, out float d) || d >= best) return;
+                best = d;
+                pick = kind;
+                at = Origin + new Vector3(r.center.x, height + 0.3f, r.center.y);
+                hit = sh;
+            }
+            foreach (var (foot, sh) in _shelfFoots) Try(foot, 2.0f, FixturePick.Shelf, sh);
+            foreach (Rect r in _deskFoots) Try(r, 1.6f, FixturePick.Display, null);
+            if (_hasBench) Try(_benchFoot, 1.7f, FixturePick.Bench, null);
+            world = at;
+            shelfIndex = hit != null ? hit.LayoutIndex : -1;
+            shelfKind = hit?.KindId;
+            return pick;
+        }
+
+        /// <summary>点到矩形（x/y = 店内局部 x/z）的距离，在里面是 0。</summary>
+        private static float DistToRect(Rect r, Vector3 p)
+        {
+            float dx = Mathf.Max(r.xMin - p.x, p.x - r.xMax, 0f);
+            float dz = Mathf.Max(r.yMin - p.z, p.z - r.yMax, 0f);
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
+        /// <summary>
+        /// 布局变了：从摆出来的家具里重新认出货架、收银台、展示桌、操作台，
+        /// 并重算顾客逛货架的站位、绕行区域、排队的位置和老板站柜台的位置。
+        /// </summary>
+        private void RebuildFixtures()
+        {
+            _fxVersion = _decor.Version;
+            _shelves.Clear();
+            _shelfFoots.Clear();
+            _shelfSpots.Clear();
+            _tables.Clear();
+            _pcSlots.Clear();
+            _buildGlow.Clear();
+            _deskFoots.Clear();
+            _walkAround.Clear();
+            _hasCounter = false;
+            _hasBench = false;
+            _usedBuyDesk = null;
+            _clerkStand = new Vector3(0.5f, 0, Depth * 0.55f);
+            var deskSpots = new List<Vector3>();
+            _boxFoots.Clear(); _fridgeFoots.Clear();
+            foreach (RoomFurniture.Entry e in _decor.Entries)
+            {
+                if (e.Def.Role == FurnitureRole.Storage && e.HasFoot) _boxFoots.Add(e.Foot);
+                if (e.Def.Role == FurnitureRole.Fridge && e.HasFoot) _fridgeFoots.Add(e.Foot);
+                if (e.Def.Id == "used_buydesk" && _usedBuyDesk == null) _usedBuyDesk = e.Placed;
+                if (!e.Def.IsFixture) continue;
+                var h = e.Go.GetComponent<FixtureHandle>();
+                if (h == null) continue;
+                var pos = new Vector3((float)e.Placed.X, 0, (float)e.Placed.Z);
+                Quaternion rot = Quaternion.Euler(0, 90f * e.Placed.Rot, 0);
+                Vector3 front = rot * Vector3.back; // 设施的正面
+                switch (e.Def.Fixture)
+                {
+                    case FixtureKind.Shelf:
+                        h.Shelf.Pos = pos;
+                        h.Shelf.LayoutIndex = e.Go.GetComponent<PlacedVisual>().Index;
+                        _shelves.Add(h.Shelf);
+                        _shelfFoots.Add((e.Foot, h.Shelf));
+                        _shelfSpots.Add(Origin + pos + front * 1.0f);
+                        break;
+                    case FixtureKind.Display:
+                        _tables.Add(new Vector2(pos.x, pos.z));
+                        _deskFoots.Add(e.Foot);
+                        _pcSlots.AddRange(h.Slots);
+                        if(h.Shelf!=null)
+                        {
+                            h.Shelf.Pos=pos; h.Shelf.LayoutIndex=e.Go.GetComponent<PlacedVisual>().Index;
+                            h.Shelf.MaxItems=Mathf.Clamp(e.Placed.DisplayLimit<=0?2:e.Placed.DisplayLimit,1,6);
+                            _shelves.Add(h.Shelf);_shelfSpots.Add(Origin+pos+front*1.15f);
+                        }
+                        else deskSpots.Add(Origin + pos + front * 1.15f);
+                        break;
+                    case FixtureKind.Counter:
+                        if (_hasCounter) break; // 摆了好几个收银台：只认第一个
+                        _hasCounter = true;
+                        _counterPos = new Vector2(pos.x, pos.z);
+                        _counterFoot = e.Foot;
+                        _counterRot = rot;
+                        _counterSize = new Vector2((float)e.Def.Width, (float)e.Def.Depth);
+                        _counterFront = Origin + pos + front * 0.9f;
+                        _counterBack = pos - front * 0.55f;
+                        // 沿收银台长边排队，朝前墙（门）那头排
+                        Vector3 axis = rot * Vector3.right;
+                        _queueDir = axis.z < 0 ? axis : -axis;
+                        if (Mathf.Abs(axis.z) < 0.1f) _queueDir = _doorX >= pos.x ? Vector3.right : Vector3.left;
+                        _clerkStand = _counterBack + _queueDir * 0.8f;
+                        break;
+                    case FixtureKind.Bench:
+                        if (_hasBench) break;
+                        _hasBench = true;
+                        _benchPos = new Vector2(pos.x, pos.z);
+                        _benchWorkPoint = pos + rot * new Vector3(-.1f, 0, -.05f);
+                        _benchFoot = e.Foot;
+                        _benchFront = pos + front * 0.95f;
+                        break;
+                }
+                h.Glow.RemoveAll(g => g == null);
+                _buildGlow.AddRange(h.Glow);
+            }
+            _assemblerStand = FindAssemblerStand();
+            _salesStand = FindAssemblerStand(true);
+            _shelfSpots.AddRange(deskSpots);
+            _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
+            if (deskSpots.Count > 0) _deskFront = deskSpots[0] - Origin;
+            // 顾客走路绕开所有地面家具（货架、柜台、展示桌、沙发……）
+            foreach (Rect r in _decor.Blockers)
+                _walkAround.Add(Grow(new Rect(r.x + Origin.x,r.y + Origin.z,r.width,r.height),BodyRadius));
+            RebuildUsedSellerStands();
+            _stockTimer = 0f;
+        }
+        /// <summary>营业：门头绿招牌、顶灯全亮；关门：门头变暗红、挂“休息中”牌 + 拦带、顶灯调暗。</summary>
+        private Vector3 FindAssemblerStand(bool sales = false)
+        {
+            Vector3 preferred = sales ? new Vector3(Width*.5f,0,Depth*.4f) : _hasBench ? _benchFront : _counterBack + Vector3.right;
+            Vector3 best = preferred;
+            float bestScore = float.PositiveInfinity;
+            const float clearance = 0.24f;
+            for (float x = 0.4f; x <= Width - 0.4f; x += 0.2f)
+                for (float z = 0.4f; z <= Depth - 0.4f; z += 0.2f)
+                {
+                    var point = new Vector3(x, 0, z);
+                    bool blocked = false;
+                    foreach (var foot in _decor.Blockers)
+                        if (new Rect(foot.xMin - clearance, foot.yMin - clearance,
+                            foot.width + clearance * 2, foot.height + clearance * 2).Contains(new Vector2(x, z)))
+                        { blocked = true; break; }
+                    if (blocked || (point - _clerkStand).sqrMagnitude < 0.64f
+                        || sales && (point-_assemblerStand).sqrMagnitude<.64f) continue;
+                    float score = (point - preferred).sqrMagnitude;
+                    if (!sales && _hasBench) score += DistToRect(_benchFoot, point) * 2;
+                    if (score >= bestScore) continue;
+                    bestScore = score; best = point;
+                }
+            // Even an entirely obstructed shop must not place the employee outside its walls.
+            if (float.IsPositiveInfinity(bestScore))
+                best = new Vector3(Mathf.Clamp(preferred.x, 0.4f, Width - 0.4f), 0, Mathf.Clamp(preferred.z, 0.4f, Depth - 0.4f));
+            return best;
+        }
+
+        private string AssemblerState(GameSession session, bool assembling)
+        {
+            if (!_hasBench) return "等待装机台";
+            if (!session.AutoBuildEnabled) return "自动装机已关";
+            var shop = session.PlayerShop;
+            if (assembling) return "装机中";
+            if (shop.Orders.Count == 0) return "等待订单";
+            foreach (var order in shop.Orders)
+                if (shop.MissingParts(order).Count == 0) return "准备装机";
+            return "等待配件";
+        }
+
+        private void UpdateStaff(GameSession session)
+        {
+            var staff = session.Employees.Where(e => e.Shop == session.CurrentShop
+                && session.CityEmployeeAvailable(e.Person, e.Shop)).ToArray();
+            string signature = _fxVersion + ":" + string.Join(";", staff.Select(e => e.Person.Id + ":" + e.Role));
+            if (_staffLayoutSignature != signature)
+            {
+                _staffLayoutSignature = signature;
+                var ids = new HashSet<string>(staff.Select(e => e.Person.Id));
+                foreach (string id in _staffFigures.Keys.Where(id => !ids.Contains(id)).ToArray())
+                {
+                    var figure = _staffFigures[id];
+                    figure.SetActive(false);
+                    if (Application.isPlaying) Object.Destroy(figure); else Object.DestroyImmediate(figure);
+                    _staffFigures.Remove(id);
+                }
+                var occupied = new List<Vector3>();
+                var usedDesk = session.CurrentShop.RetailKind == "secondhand" ? _usedBuyDesk : null;
+                var repairBenches = session.CurrentShop.Layout.Where(p=>p.Id=="used_repairbench").ToArray();
+                var paintBenches = session.CurrentShop.Layout.Where(p => p.Id == FurnitureCatalog.ModelPaintBench).ToArray();
+                int repairerIndex = 0, painterIndex = 0, buyerIndex = 0;
+                if (usedDesk != null) occupied.AddRange(_usedSellerStands);
+                foreach (var employee in staff.OrderBy(e => e.Role == EmployeeRole.Cashier ? 0
+                    : usedDesk != null && e.Role == EmployeeRole.Appraiser ? 1 : 2))
+                {
+                    string personId = session.PersonIdOf(employee.Person);
+                    if (!_staffFigures.TryGetValue(employee.Person.Id, out var figure))
+                    {
+                        figure = Prims.FigureForPerson(_root, "ShopEmployee_" + employee.Person.Id,
+                            CrowdView.PersonClothing(personId), new Color(.95f, .8f, .65f), 1f, personId);
+                        figure.AddComponent<CityPersonMarker>().PersonId = personId;
+                        CityNpcClothing.Apply(figure, session, personId);
+                        _staffFigures.Add(employee.Person.Id, figure);
+                    }
+                    bool atUsedDesk = employee.Role == EmployeeRole.Appraiser && usedDesk != null;
+                    bool buyer = employee.Role == EmployeeRole.Buyer;
+                    var repairBench = employee.Role == EmployeeRole.Repairer && repairBenches.Length > 0
+                        ? repairBenches[repairerIndex++ % repairBenches.Length]
+                        : employee.Role == EmployeeRole.ModelPainter && paintBenches.Length > 0
+                            ? paintBenches[painterIndex++ % paintBenches.Length] : null;
+                    var preferred = repairBench != null ? UsedDeskStand(repairBench, seller: false)
+                        : atUsedDesk ? UsedDeskStand(usedDesk, seller: false)
+                        : employee.Role == EmployeeRole.Cashier ? _clerkStand
+                        : employee.Role == EmployeeRole.Assembler ? _assemblerStand
+                        : employee.Role == EmployeeRole.PetKeeper && PetHousePresent ? new Vector3(_petArea.center.x,0,_petArea.yMin-.42f)
+                        : employee.Role is EmployeeRole.Chef or EmployeeRole.Waiter ? new Vector3(_doorX, 0, .9f) : _salesStand;
+                    Vector3 stand = buyer ? BuyerStandOutside(buyerIndex++) : FindStaffStand(preferred, occupied);
+                    if (!buyer) occupied.Add(stand);
+                    figure.transform.localPosition = stand;
+                    Vector3 facing = employee.Role == EmployeeRole.Cashier ? _counterRot * Vector3.back
+                        : employee.Role == EmployeeRole.Assembler && _hasBench ? _benchWorkPoint - stand : Vector3.back;
+                    if (repairBench != null) FaceUsedDesk(figure.transform, repairBench);
+                    else if (atUsedDesk) FaceUsedDesk(figure.transform, usedDesk);
+                    else if (facing.sqrMagnitude > .01f) figure.transform.localRotation = Quaternion.LookRotation(facing);
+                }
+            }
+            bool restaurant = session.CurrentShop.RetailKind == "restaurant";
+            var actors = staff.Select(employee => (Employee: employee, Worker: restaurant && employee.Role != EmployeeRole.Buyer
+                ? session.RestaurantActor(session.CurrentShop.Place.Id, employee.Person.Id) : null));
+            List<Vector3> restaurantStands = null;
+            if (restaurant)
+            {
+                // Keep working actors in place when a route crosses their position.
+                actors = actors.OrderBy(a => a.Worker == null ? 0 : a.Worker.Busy
+                    ? a.Worker.OperateUntil >= 0 ? 1 : 2 : 3);
+                restaurantStands = new List<Vector3>();
+                var player = session.RestaurantActor(session.CurrentShop.Place.Id, GameSession.RestaurantPlayer);
+                if (player?.Busy == true && player.OperateUntil >= 0)
+                    restaurantStands.Add(RestaurantActorPosition(session, player));
+            }
+            foreach (var (employee, restaurantWorker) in actors)
+            {
+                bool assembler = employee.Role == EmployeeRole.Assembler;
+                bool assembling = assembler && _hasBench && session.EmployeeAssembling(employee.Shop, employee.Person.Id);
+                var figure = _staffFigures[employee.Person.Id];
+                if (restaurantWorker != null) ApplyRestaurantActor(session,restaurantWorker,figure,restaurantStands);
+                else
+                {
+                    restaurantStands?.Add(figure.transform.localPosition);
+                    figure.GetComponent<FigureMotion>().WorkAction = assembling ? FigureWorkAction.Assemble : FigureWorkAction.None;
+                    RestaurantCarry(figure, false);
+                }
+                string state = assembler ? "\n" + AssemblerState(session, assembling) : "";
+                if(restaurantWorker?.Busy==true)state="\n"+(restaurantWorker.OperateUntil<0?"走向操作位置 · ":"操作中 · ")+GameSession.RestaurantJobName(restaurantWorker.Job);
+                _emotes.Add(new EmoteInfo { Pos = figure.transform.position + Vector3.up * 2.15f,
+                    PersonId = session.PersonIdOf(employee.Person),
+                    Text = employee.Person.Name + " · " + GameSession.RoleName(employee.Role) + state,
+                    Color = new Color(.85f, .8f, .95f), Size = 17 });
+            }
+        }
+
+        private Vector3 BuyerStandOutside(int index)
+        {
+            // Additional buyers line up along the wider left frontage.
+            const float doorClearance = 1.65f, spacing = .95f;
+            float x = index == 0 ? _doorX + doorClearance : _doorX - doorClearance - (index - 1) * spacing;
+            return new Vector3(x, 0, -.42f);
+        }
+
+        private Vector3 FindStaffStand(Vector3 preferred, IReadOnlyList<Vector3> occupied) =>
+            TryFindIndoorStand(preferred, occupied, .24f, out var stand)
+                ? stand : ClampIndoorNpc(Origin + preferred) - Origin;
+
+        private bool TryFindIndoorStand(Vector3 preferred, IReadOnlyList<Vector3> occupied, float clearance,
+            out Vector3 best, float searchRadius = float.PositiveInfinity)
+        {
+            best = default;
+            float bestScore = float.PositiveInfinity;
+            for (float x = Mathf.Max(BodyRadius, preferred.x - searchRadius); x <= Mathf.Min(Width - BodyRadius, preferred.x + searchRadius); x += .2f)
+                for (float z = Mathf.Max(BodyRadius, preferred.z - searchRadius); z <= Mathf.Min(Depth - BodyRadius, preferred.z + searchRadius); z += .2f)
+                {
+                    var point = new Vector3(x, 0, z);
+                    var floor = new Vector2(x, z);
+                    if (_decor.Blockers.Any(r => Grow(r, clearance).Contains(floor))
+                        || occupied.Any(p => (p - point).sqrMagnitude < .81f)) continue;
+                    float score = (point - preferred).sqrMagnitude;
+                    if (score >= bestScore) continue;
+                    bestScore = score; best = point;
+                }
+            return !float.IsPositiveInfinity(bestScore);
+        }
+
+        private void BuildEmergencyFixture()
+        {
+            _emergencyFixture = new GameObject("Emergency wall light");
+            var fixture = _emergencyFixture.transform;
+            fixture.SetParent(_root, false);
+            fixture.localPosition = new Vector3(Width * .36f, 2.58f, Depth - .11f);
+            Prims.Box(fixture, "Emergency housing", Vector3.zero, new Vector3(.56f, .23f, .17f), Mats.Lit(ArtDirection.Ink));
+            _emergencyBulbs = new GameObject("Emergency bulbs");
+            _emergencyBulbs.transform.SetParent(fixture, false);
+            var lens = Mats.Lit(ArtDirection.Cream);
+            var lit = Mats.Glow(ArtDirection.Cream, new Color(2.7f, 2.4f, 1.9f), false);
+            foreach (float x in new[] { -.16f, .16f })
+            {
+                Prims.Box(fixture, "Lens", new Vector3(x, .01f, -.1f), new Vector3(.17f, .14f, .07f), lens);
+                Prims.Box(_emergencyBulbs.transform, "Lit lens", new Vector3(x, .01f, -.14f), new Vector3(.16f, .13f, .015f), lit);
+            }
+            _emergencyReady = Indicator("Ready", new Color(.22f, .91f, .48f));
+            _emergencyBroken = Indicator("Broken", new Color(1f, .23f, .14f));
+            _emergencyFixture.SetActive(false);
+
+            var light = new GameObject("Backup shop illumination");
+            light.transform.SetParent(_root, false);
+            _backupLight = light.AddComponent<Light>();
+            _backupLight.type = LightType.Point;
+            _backupLight.enabled = false;
+
+            GameObject Indicator(string name, Color color) =>
+                Prims.Box(fixture, name, new Vector3(0, -.035f, -.096f), new Vector3(.072f, .035f, .027f), Mats.Glow(color, color * 2f, false));
+        }
+
+        private void UpdateEmergencyLighting(ShopEmergencyLighting lighting, int day, long minute)
+        {
+            bool outage = lighting.PowerOutAt(minute);
+            bool working = lighting.WorksOn(day);
+            bool battery = outage && working;
+            bool candle = outage && !battery && lighting.UsingCandles;
+            var look = (lighting.Installed, working, outage, candle);
+            if (_emergencyLook.HasValue && _emergencyLook.Value == look) return;
+            _emergencyLook = look;
+            _emergencyFixture.SetActive(lighting.Installed);
+            _emergencyBulbs.SetActive(battery);
+            _emergencyReady.SetActive(working);
+            _emergencyBroken.SetActive(lighting.Installed && !working);
+            _backupLight.enabled = battery || candle;
+            if (battery)
+            {
+                _backupLight.transform.localPosition = _emergencyFixture.transform.localPosition + new Vector3(0, -.18f, -.45f);
+                _backupLight.color = new Color(1f, .95f, .82f);
+                _backupLight.range = Mathf.Max(Width, Depth);
+                _backupLight.intensity = 1.4f;
+            }
+            else if (candle)
+            {
+                _backupLight.transform.localPosition = new Vector3(Width * .5f, 1f, Depth * .5f);
+                _backupLight.color = new Color(1f, .61f, .27f);
+                _backupLight.range = 4f;
+                _backupLight.intensity = .75f;
+            }
+            if (_shopPowerOut == outage) return;
+            _shopPowerOut = outage;
+            foreach (var diffuser in _ceilingDiffusers)
+                diffuser.sharedMaterial = outage ? _ceilingDark : _ceilingLit;
+        }
+
+        private void UpdateOpenLook(bool open, float realDt)
+        {
+            _openBlend = Mathf.MoveTowards(_openBlend, open ? 1f : 0f, realDt * 2f);
+            if (_signOpen != null) _signOpen.SetActive(open);
+            if (_signClosed != null) _signClosed.SetActive(!open);
+            if (_doorHang != null) _doorHang.SetActive(!open);
+            float k = Mathf.Lerp(0.3f, 1f, _openBlend);
+            float baseI = _ceilingLights.Count > 1 ? 1.6f : 2.2f;
+            foreach (Light l in _ceilingLights) l.intensity = _shopPowerOut ? 0 : baseI * k;
+        }
+
+        public void Update(GameSession s, float dt, float realDt)
+        {
+            _visitedAddress=null;
+            var climateShop=s.ShopAt(s.PlayerShopPlace.Id);
+            bool showUpgradeClimate=climateShop!=null&&climateShop.Upgrades.Contains(ShopUpgrades.AirCon)&&!climateShop.Layout.Any(p=>p.Id=="aircon"||p.Id=="aircon_large");
+            if(showUpgradeClimate&&_upgradeClimate==null)
+            {
+                var def=FurnitureCatalog.Get("aircon");
+                _upgradeClimate=FurnitureVisuals.Build(_root, def, false, district: District);
+                FurnitureVisuals.Place(_upgradeClimate,def,new PlacedFurniture{Id="aircon",X=Width*.7,Z=Depth},s.ShopRoom);
+                var marker=_upgradeClimate.AddComponent<PlacedVisual>();marker.Index=-1;marker.FurnitureId="aircon";
+                // A wall device needs a narrow click volume; it never blocks walking.
+                var click=_upgradeClimate.AddComponent<BoxCollider>();click.center=new Vector3(0,2.3f,0);click.size=new Vector3(1.2f,.7f,.35f);
+            }
+            if(_upgradeClimate!=null)_upgradeClimate.SetActive(showUpgradeClimate);
+            if (_leaveReasons.Count > 200) _leaveReasons.Clear();
+            if (_payChannels.Count > 200) _payChannels.Clear();
+            _now += realDt;
+            _emotes.Clear();
+            if (_dressed != s.EquippedOutfit)
+            {
+                _dressed = s.EquippedOutfit;
+                Prims.Dress(_owner, _dressed);
+            }
+            UpdateStreet(s.Time.IsRunning ? realDt * s.Time.Speed : 0f, s.Clock.MinuteOfDay);
+            ShopSimulation shop = s.PlayerShop;
+            UpdateEmergencyLighting(climateShop?.EmergencyLighting ?? default, s.Clock.Today.TotalDays, s.Clock.Now.TotalMinutes);
+            UpdateOpenLook(shop.IsOpen, realDt);
+            if (_decor.Sync(s.ShopLayout, s.ShopRoom))
+            {
+                CancelCityDoorWalk();
+                CancelCheckoutWalk();
+            }
+            if (_fxVersion != _decor.Version) RebuildFixtures();
+            _owner.SetActive(s.InPlayerShop);
+            UpdateNearbyShelf(s.InPlayerShop);
+            bool building = shop.Orders.Count > 0;
+            foreach (GameObject g in _buildGlow) g.SetActive(building);
+            UpdatePetBoardingView(s, realDt);
+            UpdateStaff(s);
+            UpdateSpecialBusinessVisuals(s, dt);
+            UpdateRestaurantPlayer(s);
+            UpdateRestaurantStockWarning(s);
+
+            // Shelf meshes are presentation, not simulation. 8x must not rebuild
+            // every shelf eight times as often (nor freeze stock refresh when paused).
+            _stockTimer -= realDt;
+            if (_stockTimer <= 0)
+            {
+                _stockTimer = 0.25f;
+                var counts = new Dictionary<(PartCategory, bool), int>();
+                void Bump((PartCategory, bool) k, int d) => counts[k] = Mathf.Max(0, (counts.TryGetValue(k, out int n0) ? n0 : 0) + d);
+                // 只数货架上摆着的（后仓里的不算）
+                foreach (PartCategory cat in PartCatalog.Categories)
+                    foreach (var line in shop.ShelfFillOf(cat).Parts)
+                        Bump((cat, line.Boxed), line.Count);
+                var goodsOn = new Dictionary<string, int>();
+                void BumpGoods(string kind, int d)
+                {
+                    if (kind != null) goodsOn[kind] = Mathf.Max(0, (goodsOn.TryGetValue(kind, out int g0) ? g0 : 0) + d);
+                }
+                foreach (ShelfKind gk in ShelfKinds.GoodsKinds)
+                    foreach (var kv in shop.ShelfFillOf(gk).Goods) BumpGoods(gk.Id, kv.Value);
+                var resaleProducts=shop.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(o=>o.Product).ToList();
+                int resaleOffset=0;
+                BumpGoods("secondhand",resaleProducts.Count);
+                // 顾客还在走去拿货的路上：货架上还摆着；正在走去放回去的：货架上还没有
+                var pcs = new List<int>(shop.DisplayPcs);
+                foreach (Visitor pv in _visitors.Values)
+                    if (pv.Phase == 1)
+                    {
+                        if (pv.DisplayPc) pcs.Add(pv.PcTier);
+                        else if (pv.IsGoods)
+                        {
+                            BumpGoods(pv.GoodsKind, 1);
+                            if(pv.GoodsKind=="secondhand")
+                            {
+                                var item=s.SpecialBusiness(s.CurrentShop.Place.Id).Used.FirstOrDefault(i=>i.Id==pv.ResaleId);
+                                if(item!=null)resaleProducts.Add(item.Product);
+                            }
+                        }
+                        else Bump((pv.ItemCat, pv.ItemBoxed), 1);
+                    }
+                foreach (Visitor pv in _leaving)
+                    if (pv.DropFirst && !pv.Dropped)
+                    {
+                        if (pv.DisplayPc) pcs.Remove(pv.PcTier);
+                        else if (pv.IsGoods) BumpGoods(pv.GoodsKind, -1);
+                        else Bump((pv.ItemCat, pv.ItemBoxed), -1);
+                    }
+                pcs.Sort();
+                for (int i = 0; i < _pcSlots.Count; i++)
+                {
+                    bool on = i < pcs.Count;
+                    _pcSlots[i].Root.SetActive(on);
+                    if (on) ShopFixtures.SetSlotTier(_pcSlots[i], pcs[i]);
+                }
+                foreach (ShelfDisplay sh in _shelves.OrderByDescending(display=>display.IsDisplay))
+                {
+                    if (sh.Unset) continue; // 没设置摆什么：空架子
+                    // 同一类货有几个货架，货就摊给它们（每个显示一份）
+                    int same = 0;
+                    foreach (ShelfDisplay o in _shelves)
+                        if (o.KindId == sh.KindId) same++;
+                    same = Mathf.Max(1, same);
+                    if (sh.Goods)
+                    {
+                        // 杂货架：这类杂货一共几件就亮几件（最多摆满三层）
+                        int goodsTotal = goodsOn.TryGetValue(sh.KindId, out int gt) ? Mathf.Min(gt,Mathf.Min(sh.MaxItems,sh.GoodsItems.Count)) : 0;
+                        goodsOn[sh.KindId]=Mathf.Max(0,(goodsOn.TryGetValue(sh.KindId,out int left)?left:0)-goodsTotal);
+                        if (sh.EmptyMark != null) sh.EmptyMark.SetActive(goodsTotal == 0);
+                        for (int i = 0; i < sh.GoodsItems.Count; i++) sh.GoodsItems[i].SetActive(i < goodsTotal);
+                        if(sh.KindId=="secondhand")
+                            for(int i=0;i<goodsTotal;i++)
+                            {
+                                int product=resaleOffset<resaleProducts.Count?resaleProducts[resaleOffset]:0;resaleOffset++;
+                                var model=sh.GoodsItems[i].transform;
+                                for(int j=0;j<model.childCount;j++)model.GetChild(j).gameObject.SetActive(j==product);
+                            }
+                        continue;
+                    }
+                    int boxedHave = counts.TryGetValue((sh.Category, true), out int bh) ? bh : 0;
+                    int looseHave = counts.TryGetValue((sh.Category, false), out int lh) ? lh : 0;
+                    // 整盒摆在最上层，散件摆在下面两层；一件都没有就板上全空，亮红色“缺货”条
+                    int showBoxed = Mathf.Min(sh.MaxItems,Mathf.Min(sh.BoxedItems.Count, boxedHave));
+                    int showLoose = Mathf.Min(Mathf.Max(0,sh.MaxItems-showBoxed),Mathf.Min(sh.LooseItems.Count, looseHave));
+                    counts[(sh.Category,true)]=Mathf.Max(0,boxedHave-showBoxed);
+                    counts[(sh.Category,false)]=Mathf.Max(0,looseHave-showLoose);
+                    if (sh.EmptyMark != null) sh.EmptyMark.SetActive(boxedHave + looseHave == 0);
+                    for (int i = 0; i < sh.BoxedItems.Count; i++) sh.BoxedItems[i].SetActive(i < showBoxed);
+                    for (int i = 0; i < sh.LooseItems.Count; i++) sh.LooseItems[i].SetActive(i < showLoose);
+                }
+            }
+            Hook(shop);
+            var alive = _aliveCustomers; alive.Clear();
+            int queueIndex = 0;
+            var queueIds = _customerQueueIndices; queueIds.Clear();
+            foreach (ShopCustomer c in shop.Queue) queueIds[c.Id] = queueIndex++;
+
+            foreach (ShopCustomer c in shop.ActiveCustomers)
+            {
+                if (!string.IsNullOrEmpty(c.PersonId) && !s.CityCustomerIsInside(c, shop.ShopId)) continue;
+                alive.Add(c.Id);
+                if (!_visitors.TryGetValue(c.Id, out Visitor v))
+                {
+                    using var timing = PCShopSell.Core.Common.RuntimePerformanceProbe.Measure("View.NewShopCustomer");
+                    string profile = ProfileOf(c, out Color shirt);
+                    float shade = 0.85f + (c.Id * 37 % 100) / 100f * 0.3f;
+                    var person = s.CityPerson(c.PersonId);
+                    if (person != null) { shirt = CrowdView.PersonClothing(c.PersonId); shade = 1; profile = person.Name + " · " + person.Role; }
+                    Color[] skins = { new Color(0.92f, 0.78f, 0.62f), new Color(0.85f, 0.66f, 0.5f), new Color(0.98f, 0.84f, 0.72f) };
+                    v = new Visitor
+                    {
+                        Go = Prims.FigureForPerson(_root, "Customer" + c.Id, new Color(shirt.r * shade, shirt.g * shade, shirt.b * shade),
+                            person != null ? skins[0] : skins[c.Id % skins.Length], person != null ? .95f : .9f + (c.Id * 53 % 100) / 100f * .15f,
+                            person?.Id),
+                        Profile = profile, PersonId = c.PersonId,
+                    };
+                    v.Go.transform.position = StreetSpawn();
+                    RouteIn(v);
+                    var col = v.Go.AddComponent<CapsuleCollider>();
+                    col.center = new Vector3(0, 0.8f, 0);
+                    col.height = 1.8f;
+                    col.radius = 0.4f;
+                    v.Go.AddComponent<CustomerMarker>().CustomerId = c.Id;
+                    if (person != null) { v.Go.AddComponent<CityPersonMarker>().PersonId = c.PersonId; CityNpcClothing.Apply(v.Go,s,c.PersonId); }
+                    v.Bubble = Prims.Shape(PrimitiveType.Sphere, v.Go.transform, "Bubble", new Vector3(0, 1.85f, 0), Vector3.one * 0.28f,
+                        Mats.Glow(new Color(1f, 0.8f, 0.1f), new Color(3f, 2.2f, 0.2f), false));
+                    v.Build = c.Intent == CustomerIntent.Build;
+                    v.Want = c.DesiredCategory;
+                    v.Target = CustomerBrowseSpot(c, shop, _door);
+                    v.BrowseTimer = .8f + (float)_rng.NextDouble() * .6f;
+                    _visitors[c.Id] = v;
+                }
+
+                if (c.Spend.IsPositive) v.Spend = c.Spend.ToString();
+                bool waiting = queueIds.TryGetValue(c.Id, out int qi);
+                v.Bubble.SetActive(waiting && v.Phase == 2);
+                if (waiting && (c.Item != null || c.DisplayTier >= 0 || c.GoodsId != null || c.ResaleId>0))
+                {
+                    if (v.Phase == 0)
+                    {
+                        // 挑中了：先去货架 / 展示台前把货拿下来
+                        v.DisplayPc = c.DisplayTier >= 0;
+                        v.IsGoods = c.GoodsId != null || c.ResaleId>0;
+                        v.ResaleId = c.ResaleId;
+                        if (v.DisplayPc)
+                        {
+                            v.PcTier = c.DisplayTier;
+                            v.PickSpot = NearestDeskSpot(v.Go.transform.position);
+                        }
+                        else if (v.IsGoods)
+                        {
+                            v.GoodsKind = c.ResaleId>0?"secondhand":ShelfKinds.ForGift(c.GoodsId)?.Id;
+                            v.PickSpot = Jitter(GoodsShelfSpot(v.GoodsKind, v.Go.transform.position));
+                        }
+                        else
+                        {
+                            v.ItemCat = c.Item.Category;
+                            v.ItemBoxed = c.ItemBoxed;
+                            v.PickSpot = Jitter(ShelfSpotFor(v.ItemCat, v.Go.transform.position));
+                        }
+                        v.Target = v.PickSpot;
+                        v.Phase = 1;
+                    }
+                    if (v.Phase == 1 && Reached(v))
+                    {
+                        ShowHeld(v);
+                        v.Phase = 2;
+                    }
+                    if (v.Phase == 2) v.Target = QueueSpot(qi);
+                }
+                else if (v.Phase == 0 && Reached(v))
+                {
+                    // 逛：站一会儿，再挪到别的货架前看看
+                    v.BrowseTimer -= s.Time.IsRunning ? realDt * s.Time.Speed : 0;
+                    if (v.BrowseTimer <= 0)
+                    {
+                        v.LookedAtShelf = true;
+                        v.BrowseTimer = 1f + (float)_rng.NextDouble() * 2f;
+                        v.Target = CustomerBrowseSpot(c, shop, v.Go.transform.position);
+                    }
+                }
+                Move(v, dt);
+                var visiblePerson = s.CityPerson(c.PersonId);
+                if (visiblePerson != null) _emotes.Add(new EmoteInfo { Pos = v.Go.transform.position + Vector3.up * 2.45f,
+                    Text = visiblePerson.Name, PersonId = c.PersonId, Color = new Color(.12f, .2f, .17f), Size = 17 });
+                if (Reached(v) || Flat(v.Go.transform.position - v.StuckAnchor).sqrMagnitude > 0.36f)
+                {
+                    v.StuckAnchor = v.Go.transform.position;
+                    v.StuckFor = 0;
+                }
+                else v.StuckFor += dt;
+                MaxStuckSeconds = Mathf.Max(MaxStuckSeconds, v.StuckFor);
+
+                // 头顶的对话气泡：逛的时候说想买什么、店里有没有货；挑中了说要哪件、多少钱
+                string say = Say(c, v, shop, s.Clock.Now);
+                if (say != null)
+                    _emotes.Add(new EmoteInfo
+                    {
+                        Pos = v.Go.transform.position + Vector3.up * 2.05f,
+                        Text = say,
+                        Color = new Color(0.12f, 0.13f, 0.16f),
+                        Size = 18,
+                        Bubble = true,
+                    });
+            }
+
+            var gone = _goneCustomers; gone.Clear();
+            foreach (var kv in _visitors)
+            {
+                if (!alive.Contains(kv.Key)) gone.Add(kv.Key);
+            }
+            foreach (int id in gone)
+            {
+                Visitor v = _visitors[id];
+                _visitors.Remove(id);
+                v.Leaving = true;
+                v.Bubble.SetActive(false);
+                Kill.It(v.Go.GetComponent<Collider>());
+                // 付了钱的拿着货走；等烦了 / 关门 / 嫌贵的，先把货放回货架再走
+                bool paid = !_leaveReasons.ContainsKey(id);
+                if (paid && v.Spend != null)
+                    _pops.Add(new Pop { Start = _counterFront + new Vector3(-0.4f, 1.8f, 0), Text = "+" + v.Spend + (_payChannels.TryGetValue(id, out PayChannel pc) ? " " + PayText(pc) : ""), T0 = _now });
+                else if (_leaveReasons.TryGetValue(id, out LeaveReason lr))
+                {
+                    v.Emote = LeaveText(lr, out v.EmoteColor);
+                    v.EmoteUntil = _now + 2.6f;
+                }
+                v.DropFirst = !paid && v.Held != null;
+                if (v.DropFirst)
+                {
+                    v.Via.Clear();
+                    v.Target = v.PickSpot;
+                }
+                else SendOut(v);
+                _leaveReasons.Remove(id);
+                if (!string.IsNullOrEmpty(v.PersonId))
+                {
+                    // A person-bound view hands off to the authoritative returning street route.
+                    // Keeping the legacy anonymous exit animation would render the same person twice.
+                    Kill.It(v.Go); continue;
+                }
+                _leaving.Add(v);
+            }
+            for (int i = _leaving.Count - 1; i >= 0; i--)
+            {
+                Visitor v = _leaving[i];
+                Move(v, dt);
+                if (v.DropFirst && !v.Dropped && Reached(v))
+                {
+                    v.Dropped = true;
+                    if (v.Held != null) Kill.It(v.Held);
+                    v.Held = null;
+                    SendOut(v);
+                    continue;
+                }
+                if (!v.DropFirst || v.Dropped)
+                {
+                    if (Reached(v))
+                    {
+                        Kill.It(v.Go);
+                        _leaving.RemoveAt(i);
+                        continue;
+                    }
+                }
+                if (v.Emote != null && _now < v.EmoteUntil)
+                    _emotes.Add(new EmoteInfo { Pos = v.Go.transform.position + Vector3.up * 2.3f, Text = v.Emote, Color = v.EmoteColor, Size = 22 });
+            }
+
+            for (int i = _pops.Count - 1; i >= 0; i--)
+            {
+                float age = _now - _pops[i].T0;
+                if (age > 1.8f) { _pops.RemoveAt(i); continue; }
+                _emotes.Add(new EmoteInfo { Pos = _pops[i].Start + Vector3.up * (age * 0.7f), Text = _pops[i].Text, Color = new Color(0.55f, 1f, 0.6f, 1f - age / 2.2f), Size = 28 });
+            }
+        }
+
+        private const string Ok = "#2E9E4F";
+        private const string Bad = "#D2453A";
+
+        /// <summary>顾客气泡里说的话；排队等结账时头顶已有结账按钮，不再说话。</summary>
+        private static string Say(ShopCustomer c, Visitor v, ShopSimulation shop, GameTimestamp now)
+        {
+            if (v.Phase == 2) return null;
+            if(v.Phase==1&&c.ResaleId>0)return $"就要这件二手货！\n<b>{c.ItemName}</b>\n<color={Ok}>{c.Spend}</color>";
+            if (v.Phase == 1 && c.DisplayTier >= 0)
+                return $"展示台这台我要了！\n<b>{c.ItemName}</b>\n<color={Ok}>{c.Spend}</color>";
+            if (v.Phase == 1 && c.GoodsId != null)
+                return $"就要这个！\n<b>{c.ItemName}</b>\n<color={Ok}>{shop.GoodsPriceOf(c.GoodsId)}</color>";
+            if (v.Phase == 1 && c.Item != null)
+                return $"就要这个！\n<b>{c.Item.Name}</b>（{(c.ItemBoxed ? "盒装" : "散件")}）\n<color={Ok}>{shop.PriceOf(c.Item, c.ItemBoxed)}</color>";
+            string browsing = BrowseLine(v);
+            if (c.Intent == CustomerIntent.Goods)
+                return "看看店里的" + RetailShopTypes.Name(shop.RetailKind).Replace("店", "商品") + "\n" + browsing;
+            if (v.Build)
+            {
+                string tierName = PartCatalog.TierName(c.BuildTier);
+                if (shop.DisplayCount(c.BuildTier) > 0)
+                    return $"<size=13>{v.Profile}</size>\n想买一台<b>{tierName}</b>整机\n<color={Ok}>✓ 展示台上就有，看看就带走</color>\n{browsing}";
+                int missing = 0;
+                foreach (PartDef p in PartCatalog.BuildList(c.BuildTier))
+                    if (shop.Stock.CountAll(p) == 0) missing++;
+                string parts = missing == 0 ? $"<color={Ok}>✓ 配件都有，可以下单装</color>" : $"<color={Bad}>✗ 展台没有，店里还缺 {missing} 样配件</color>";
+                return $"<size=13>{v.Profile}</size>\n想装一台<b>{tierName}</b>整机\n{parts}\n{browsing}";
+            }
+            PartDef want = c.DesiredPart;
+            int exact = shop.OnShelf(want), total = shop.ShelfFillOf(c.DesiredCategory).Total;
+            string stock = exact > 0 ? $"<color={Ok}>货架上有 {exact} 件</color>"
+                : total > 0 ? $"<color={Bad}>货架上没这款</color>，同类有 {total} 件"
+                : $"<color={Bad}>货架上没有{PartCatalog.CategoryName(c.DesiredCategory)}</color>";
+            return $"<size=13>{v.Profile}</size>\n想买<b>{want.Name}</b>\n{stock}\n{browsing}";
+        }
+
+        /// <summary>按实际站位显示正在找货架或查看商品。</summary>
+        private static string BrowseLine(Visitor visitor)
+        {
+            string action = Reached(visitor) ? "看看款式和价格…" : "去货架前看看…";
+            return $"<size=13><color=#6B6F78>{action}</color></size>";
+        }
+
+        /// <summary>排队的第 k 个位置：沿柜台长边排，接近前墙或侧墙时转向。</summary>
+        private Vector3 QueueSpot(int k)
+        {
+            float run = k * 0.75f;
+            Vector3 p = ClampIndoorNpc(_counterFront);
+            Vector3 q = _queueDir;
+            // 沿 q 能直着走多远：直到离前墙 1.9 米，或离左右墙 0.9 米
+            float straight = 40f;
+            if (q.z < -0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (p.z - Origin.z - 1.9f) / -q.z));
+            if (q.x > 0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (Origin.x + Width - 0.9f - p.x) / q.x));
+            if (q.x < -0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (p.x - Origin.x - 0.9f) / -q.x));
+            if (run <= straight) return ClampIndoorNpc(p + q * run);
+            Vector3 end = p + q * straight;
+            if (Mathf.Abs(q.x)>.1f)
+            {
+                float direction = end.z-Origin.z > Depth*.5f ? -1f : 1f;
+                return ClampIndoorNpc(end+Vector3.forward*direction*(run-straight));
+            }
+            end.z = Mathf.Max(end.z, Origin.z + 1.9f);
+            float side = Origin.x + _doorX >= end.x ? 1f : -1f;
+            float x = Mathf.Clamp(end.x + side * (run - straight), Origin.x + 0.9f, Origin.x + Width - 0.9f);
+            return ClampIndoorNpc(new Vector3(x, p.y, end.z));
+        }
+
+        private sealed class NpcRoute
+        {
+            public readonly List<Vector3> Detours = new List<Vector3>();
+            public Vector3 Requested = new Vector3(float.NaN,0,0), End;
+            public int LayoutVersion = -1;
+            public bool Indoors;
+
+            public bool AtGoal(Vector3 position,Vector3 requested,float tolerance) =>
+                (Requested-requested).sqrMagnitude < .0004f && Detours.Count == 0
+                && Flat(position-End).sqrMagnitude < tolerance*tolerance;
+        }
+
+        private void Move(Visitor v, float dt)
+        {
+            bool via = v.Via.Count > 0;
+            Vector3 goal = v.Via.Count > 0 ? v.Via[0] : v.Target;
+            bool indoorGoal = via ? goal.z >= Origin.z : !v.Leaving || v.DropFirst && !v.Dropped;
+            bool inside = v.Go.transform.position.z >= Origin.z;
+            float pace = inside ? 1f : (float)Vehicles.WalkingSpeedMultiplier;
+            float step = OwnerWalkSpeed*pace*(float)CityTravelTiming.NpcWalkSpeedFactor*dt/(float)TimeController.WorldRate;
+            if (MoveNpc(v.Go.transform,v.Route,goal,step,indoorGoal) && via) v.Via.RemoveAt(0);
+        }
+
+        private bool MoveNpc(Transform actor,NpcRoute route,Vector3 goal,float step,bool indoorGoal)
+        {
+            Vector3 p = actor.position;
+            if (route.LayoutVersion != _decor.Version || route.Indoors != indoorGoal
+                || float.IsNaN(route.Requested.x) || (route.Requested-goal).sqrMagnitude >= .0004f)
+            {
+                route.LayoutVersion = _decor.Version;
+                route.Indoors = indoorGoal;
+                route.Requested = goal;
+                PlanAround(p,indoorGoal ? ClampIndoorNpc(goal) : goal,route);
+            }
+            Vector3 next = route.Detours.Count > 0 ? route.Detours[0] : route.End;
+            Vector3 delta = Flat(next-p);
+            float distance = delta.magnitude;
+            if (distance > 1e-5f)
+            {
+                actor.position = p+delta/distance*Mathf.Min(distance,step);
+                actor.rotation = Quaternion.LookRotation(delta);
+            }
+            // Reach the corner itself before changing direction so the next segment cannot cut through the wall.
+            if (distance > step + 1e-5f) return false;
+            if (route.Detours.Count == 0) return true;
+            route.Detours.RemoveAt(0);
+            return false;
+        }
+
+        private const float BodyRadius = .43f;
+        private const float DoorwayHalfWidth = .25f;
+
+        private static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0, v.z);
+
+        private Vector3 ClampIndoorNpc(Vector3 p) => new Vector3(
+            Mathf.Clamp(p.x,Origin.x+BodyRadius,Origin.x+Width-BodyRadius),p.y,
+            Mathf.Clamp(p.z,Origin.z+BodyRadius,Origin.z+Depth-BodyRadius));
+
+        private bool FitsNpcWalls(Vector2 p)
+        {
+            if (p.y<=Origin.z-BodyRadius) return true;
+            if (p.y<Origin.z+BodyRadius) return Mathf.Abs(p.x-Origin.x-_doorX)<=DoorwayHalfWidth;
+            Vector3 world = new Vector3(p.x,0,p.y);
+            return (ClampIndoorNpc(world)-world).sqrMagnitude < 1e-8f;
+        }
+
+        private bool NpcDoorClear(Vector2 a,Vector2 b)
+        {
+            float lo = Origin.z-BodyRadius, hi = Origin.z+BodyRadius;
+            if (a.y>b.y) (a,b) = (b,a);
+            if (b.y<=lo || a.y>=hi) return true;
+            float door = Origin.x+_doorX;
+            float dz = b.y-a.y;
+            float first = dz>1e-5f ? Mathf.Lerp(a.x,b.x,Mathf.Clamp01((lo-a.y)/dz)) : a.x;
+            float last = dz>1e-5f ? Mathf.Lerp(a.x,b.x,Mathf.Clamp01((hi-a.y)/dz)) : b.x;
+            return Mathf.Max(Mathf.Abs(first-door),Mathf.Abs(last-door)) <= DoorwayHalfWidth;
+        }
+
+        /// <summary>可见路径的每条边都遵守人物宽度、店面边界及家具占地。</summary>
+        private void PlanAround(Vector3 p,Vector3 goal,NpcRoute route)
+        {
+            route.Detours.Clear();
+            route.End = goal;
+            var a = new Vector2(p.x, p.z);
+            var b = new Vector2(goal.x, goal.z);
+            bool Clear(Vector2 u,Vector2 w,bool startsAtActor)
+            {
+                if (!NpcDoorClear(u,w)) return false;
+                foreach (Rect h in _walkAround)
+                    if (!(startsAtActor && h.Contains(u)) && SegmentHits(u,w,h)) return false;
+                return true;
+            }
+
+            var nodes = new List<Vector2> { a, b };
+            bool Free(Vector2 point)
+            {
+                if (!FitsNpcWalls(point)) return false;
+                foreach (Rect h in _walkAround) if (h.Contains(point)) return false;
+                return true;
+            }
+            bool goalFree = Free(b);
+            if (goalFree && Clear(a,b,true)) return;
+
+            void Add(Vector2 point)
+            {
+                if (Free(point)) nodes.Add(point);
+            }
+            if (a.y<Origin.z+BodyRadius || b.y<Origin.z+BodyRadius)
+            {
+                Add(new Vector2(Origin.x+_doorX,Origin.z-.65f));
+                Add(new Vector2(Origin.x+_doorX,Origin.z+.65f));
+            }
+            foreach (Rect zone in _walkAround)
+            {
+                Rect c = Grow(zone,.04f);
+                if (c.yMax<Origin.z+BodyRadius) continue;
+                if (c.yMin>=Origin.z+BodyRadius)
+                {
+                    Add(new Vector2(c.xMin,c.yMin));
+                    Add(new Vector2(c.xMax,c.yMin));
+                    Add(new Vector2(Mathf.Clamp(b.x,c.xMin,c.xMax),c.yMin));
+                }
+                Add(new Vector2(c.xMin,c.yMax));
+                Add(new Vector2(c.xMax,c.yMax));
+                Add(new Vector2(Mathf.Clamp(b.x,c.xMin,c.xMax),c.yMax));
+                float z = Mathf.Clamp(b.y,Mathf.Max(c.yMin,Origin.z+BodyRadius),c.yMax);
+                Add(new Vector2(c.xMin,z));
+                Add(new Vector2(c.xMax,z));
+            }
+            int n = nodes.Count;
+            var dist = new float[n];
+            var prev = new int[n];
+            var done = new bool[n];
+            for (int i = 0; i < n; i++) { dist[i] = float.MaxValue; prev[i] = -1; }
+            dist[0] = 0;
+            for (int iter = 0; iter < n; iter++)
+            {
+                int u = -1;
+                for (int i = 0; i < n; i++)
+                    if (!done[i] && dist[i] < float.MaxValue && (u < 0 || dist[i] < dist[u])) u = i;
+                if (u < 0 || u == 1) break;
+                done[u] = true;
+                for (int k = 0; k < n; k++)
+                {
+                    if (done[k] || k == u || k == 1 && !goalFree) continue;
+                    float alt = dist[u] + (nodes[k] - nodes[u]).magnitude;
+                    if (alt < dist[k] && Clear(nodes[u],nodes[k],u==0)) { dist[k] = alt; prev[k] = u; }
+                }
+            }
+            int end = 0;
+            for (int i=1; i<n; i++)
+                if (prev[i]>=0 && (nodes[i]-b).sqrMagnitude<(nodes[end]-b).sqrMagnitude) end = i;
+            route.End = new Vector3(nodes[end].x,p.y,nodes[end].y);
+            for (int k=prev[end]; k>0; k=prev[k])
+                route.Detours.Insert(0,new Vector3(nodes[k].x,p.y,nodes[k].y));
+        }
+
+        private static Rect Grow(Rect r, float k) => Rect.MinMaxRect(r.xMin - k, r.yMin - k, r.xMax + k, r.yMax + k);
+
+        /// <summary>线段 a→b 是否穿过矩形（Liang–Barsky 裁剪）。</summary>
+        private static bool SegmentHits(Vector2 a, Vector2 b, Rect r)
+        {
+            Vector2 d = b - a;
+            float t0 = 0f, t1 = 1f;
+            return Clip(-d.x,a.x-r.xMin) && Clip(d.x,r.xMax-a.x)
+                && Clip(-d.y,a.y-r.yMin) && Clip(d.y,r.yMax-a.y) && t1-t0>1e-4f;
+
+            bool Clip(float direction,float distance)
+            {
+                if (Mathf.Abs(direction)<1e-6f) return distance>=0;
+                float t = distance/direction;
+                if (direction < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+                else { if (t < t0) return false; if (t < t1) t1 = t; }
+                return true;
+            }
+        }
+
+        /// <summary>顾客从街上一头走过来，到门口拐进店。</summary>
+        private Vector3 StreetSpawn()
+        {
+            float side = _rng.NextDouble() < 0.5 ? -1f : 1f;
+            float x = _doorX + side * (4f + (float)_rng.NextDouble() * 4f);
+            return Origin + new Vector3(x, 0, SidewalkZ(_rng));
+        }
+
+        private void RouteIn(Visitor v)
+        {
+            v.Via.Clear();
+            v.Via.Add(Origin + new Vector3(_doorX + ((float)_rng.NextDouble() - 0.5f) * 0.4f, 0, -1.0f));
+            v.Via.Add(Origin + new Vector3(_doorX, 0, 0.7f));
+        }
+
+        /// <summary>出门，拐上人行道，往街的一头走掉。</summary>
+        private void SendOut(Visitor v)
+        {
+            float side = _rng.NextDouble() < 0.5 ? -1f : 1f;
+            v.Via.Clear();
+            if (v.Go.transform.position.z >= Origin.z-BodyRadius)
+                v.Via.Add(Origin + new Vector3(_doorX, 0, 0.6f));
+            float z = SidewalkZ(_rng);
+            v.Via.Add(Origin + new Vector3(_doorX + side * 0.3f, 0, z));
+            v.Target = Origin + new Vector3(side < 0 ? -StreetExtent + 1f : Width + StreetExtent - 1f, 0, z);
+        }
+
+        private Color RandomColor()
+        {
+            Color[] c = { new Color(0.8f, 0.2f, 0.25f), new Color(0.2f, 0.4f, 0.8f), new Color(0.9f, 0.9f, 0.9f), new Color(0.25f, 0.25f, 0.25f), new Color(0.6f, 0.3f, 0.7f), new Color(0.3f, 0.7f, 0.4f) };
+            return c[_rng.Next(c.Length)];
+        }
+
+        /// <summary>整个店内场景销毁（店面扩建后换一个新尺寸的）。</summary>
+        public void Destroy()
+        {
+            Hook(null);
+            Clear();
+            Kill.It(_root.gameObject);
+        }
+
+        public void Clear()
+        {
+            CancelCheckoutWalk();
+            ClearUsedSellerFigures();
+            ClearSpecialBusinessVisuals();
+            foreach (var v in _visitors.Values) Kill.It(v.Go);
+            foreach (var v in _leaving) Kill.It(v.Go);
+            _visitors.Clear();
+            _leaving.Clear();
+        }
+    }
+}

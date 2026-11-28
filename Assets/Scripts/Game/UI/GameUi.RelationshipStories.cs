@@ -10,26 +10,69 @@ namespace PCShopSell.Game.UI
     {
         private void BuildRelationshipOutingButton(Transform parent, CityActivity activity, Action refresh, string returnLabel = "继续活动")
         {
-            string personId = activity.Participants.FirstOrDefault()?.PersonId;
-            if (S.RelationshipStoryOutingDialogue(activity, personId) is not string line) return;
+            string storyPerson = activity.Participants.FirstOrDefault()?.PersonId;
+            string storyLine = S.RelationshipStoryOutingDialogue(activity, storyPerson);
+            var moment = S.PersonalMoment(activity);
+            bool story = storyLine != null;
+            string personId = story ? storyPerson : moment.PersonId;
+            if (personId == null) return;
             var person = S.CityPerson(personId);
-            Ui.Size(Ui.Button(parent, "聊聊今天", () => OpenDialogue(personId, person.Name, S.CityPersonRole(personId),
-                "", null, onClosed: refresh, start: ctx => ShowRelationshipOutingDialogue(ctx, activity, personId, line, returnLabel)),
-                17, Ui.ButtonHot), -1, 40);
+            string label = story ? "聊聊今天" : moment.Title;
+            Ui.Size(Ui.Button(parent, label, () => OpenDialogue(personId, person.Name, S.CityPersonRole(personId), "", null,
+                onClosed: refresh, start: ctx =>
+                {
+                    if (story) ShowRelationshipOutingDialogue(ctx, activity, personId, storyLine, returnLabel);
+                    else ShowPersonalMoment(ctx, activity, personId, moment.Line, moment.Illustrated, returnLabel);
+                }), 17, Ui.ButtonHot), -1, 40);
         }
 
         private void ShowRelationshipOutingDialogue(TalkCtx ctx, CityActivity activity, string personId, string line, string returnLabel)
         {
             var session = S;
-            var replies = session.RelationshipStoryOutingOptions(personId).Select((label, index) => new TalkOpt
+            ShowRelationshipScene(ctx, personId, line, returnLabel, true, session.RelationshipStoryOutingOptions(personId),
+                index => session.ReplyInRelationshipOuting(activity, personId, index));
+        }
+
+        private void ShowPersonalMoment(TalkCtx ctx, CityActivity activity, string personId, string line, bool illustrated, string returnLabel)
+        {
+            var session = S;
+            ShowRelationshipScene(ctx, personId, line, returnLabel, illustrated, session.PersonalMomentOptions(personId, illustrated),
+                index => session.ReplyInPersonalMoment(activity, personId, index));
+        }
+
+        private static EventCgFrame RelationshipIllustration(string personId) => new EventCgFrame("Relationships/" + personId);
+
+        private static void ShowRelationshipScene(TalkCtx ctx, string personId, string line, string returnLabel, bool illustrated,
+            string[] options, Func<int, string> respond)
+        {
+            ctx.Illustration = illustrated ? RelationshipIllustration(personId) : null;
+            ctx.ShowRelationshipReaction = false;
+            var replies = options.Select((label, index) => new TalkOpt
             {
                 Label = label,
-                Act = () => ctx.Finish(session.ReplyInRelationshipOuting(activity, personId, index) ?? line, returnLabel)
+                Act = () =>
+                {
+                    string answer = respond(index);
+                    ctx.Illustration = null;
+                    ctx.ShowRelationshipReaction = illustrated && answer != null;
+                    ctx.AlternateRelationshipReaction = index == 1;
+                    ctx.Finish(answer ?? "下次有机会再聊这件事。", returnLabel);
+                }
             }).ToArray();
             ctx.Show(line, replies);
         }
 
-        private void AddRelationshipStoryOption(List<TalkOpt> options, TalkCtx ctx, string personId, bool remote, Action<string> reply)
+        private void OpenRelationshipMemory(string personId, string title)
+        {
+            var picture = RelationshipIllustration(personId);
+            OpenWindow(title, 968, 611, w =>
+            {
+                BuildEventCg(w.Content, picture, 510);
+            }, true);
+        }
+
+        private void AddRelationshipStoryOption(List<TalkOpt> options, TalkCtx ctx, string personId, bool remote,
+            Action<string> reply, Action<string> replyReaction)
         {
             var step = S.GetRelationshipStoryStep(personId, remote);
             if (step == RelationshipStoryStep.None) return;
@@ -63,10 +106,16 @@ namespace PCShopSell.Game.UI
                             var line = S.RelationshipStoryDecisionLine(personId);
                             if (line == null) break;
                             bool alreadyTogether = S.IsPlayerPartner(personId);
+                            if (!S.RelationshipStoryOutingHasAnswer(personId)) ctx.Illustration = RelationshipIllustration(personId);
                             ctx.Show(line,
                                 new TalkOpt { Label = alreadyTogether ? "我也想和你一起" : "我想和你交往", Hot = true,
                                     Blocker = S.RomanceId != null && !alreadyTogether ? "已有伴侣" : null,
-                                    Act = () => reply(S.ResolveRelationshipStory(personId, romantic: true)) },
+                                    Act = () =>
+                                    {
+                                        string answer = S.ResolveRelationshipStory(personId, romantic: true);
+                                        if (S.IsPlayerPartner(personId)) replyReaction(answer);
+                                        else reply(answer);
+                                    } },
                                 new TalkOpt { Label = "继续做朋友", Blocker = alreadyTogether ? "你们正在交往" : null,
                                     Act = () => reply(S.ResolveRelationshipStory(personId, romantic: false)) },
                                 new TalkOpt { Label = "让我再想想", Act = () => reply("好，等你想聊的时候再说。") });

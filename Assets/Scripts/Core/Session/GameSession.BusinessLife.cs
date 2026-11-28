@@ -69,7 +69,8 @@ namespace PCShopSell.Core.Session
         public long HomeMonthlyPrincipalCents {get;private set;}
         public string HomeTitle => City.HasPlace(_residentialHomeId)?City.GetPlace(_residentialHomeId).Name:HomeTier==3 ? "花园独栋别墅" : HomeTier==2 ? "公园豪华公寓" : HomeTier==1 ? "宜居改善住宅" : "城郊老破小出租屋";
         public Money CurrentHomeRent => HomePriceCents>0 ? Money.Zero : Money.FromCents(_homeLeaseRentCents);
-        public Money HomePurchasePrice => ResidentialPrice(Home);
+        public Money HomePurchasePrice => HomeTier > 0 && !City.HasPlace(_residentialHomeId)
+            && ResidencePlace(HomeTier) == null ? ResidencePrice(HomeTier) : ResidentialPrice(Home);
         private Money ResidentialMarketRent(int tier) => WeeklyResidentialRent(HomeBaseRent(tier)).Scale(HomeRentFactor);
         public Money HomeTierRentQuote(int tier) => tier == 0 ? HomeRent : ResidentialMarketRent(tier);
         public bool ChangeHomeTier(int tier)
@@ -111,11 +112,18 @@ namespace PCShopSell.Core.Session
         {
             if(today.TotalDays<=_lastBusinessDay) return;
             _lastBusinessDay=today.TotalDays;
-            TickBrandBusiness(previous,today);
+            using(RuntimePerformanceProbe.Measure("Business.Brand")) TickBrandBusiness(previous,today);
             SettleGarageRent(today);
             if (VehicleCount(VehicleKind.Car) > 0) Ledger.ForceDebit(today,"交通",Money.FromYuan(40) * VehicleCount(VehicleKind.Car),"轿车日养护（含油费保险）");
             if (VehicleCount(VehicleKind.Van) > 0) Ledger.ForceDebit(today,"交通",Money.FromYuan(60) * VehicleCount(VehicleKind.Van),"货车日养护（含油费保险）");
-            TickCityAssets(); SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMaintenance(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
+            using(RuntimePerformanceProbe.Measure("Business.Assets")) TickCityAssets();
+            using(RuntimePerformanceProbe.Measure("Business.SupplierDebts")) SettleSupplierDebts(today.TotalDays);
+            using(RuntimePerformanceProbe.Measure("Business.Ventures")) SettleVentures(today);
+            using(RuntimePerformanceProbe.Measure("Business.Properties")) SettleProperties(today);
+            using(RuntimePerformanceProbe.Measure("Business.HomeMaintenance")) SettleHomeMaintenance(today);
+            using(RuntimePerformanceProbe.Measure("Business.Creators")) SettleCreators(previous,today);
+            using(RuntimePerformanceProbe.Measure("Business.Relationships")) SettleMcnAndRelationships(previous,today);
+            using(RuntimePerformanceProbe.Measure("Business.Offer")) RefreshEnterpriseOffer();
         }
         private void SaveBusiness(SaveData d)
         {
@@ -135,7 +143,7 @@ namespace PCShopSell.Core.Session
             _brandStories.Clear();
             _brandStories.AddRange((d.brandStories??Array.Empty<BrandStoryRecord>()).Where(s=>s!=null).GroupBy(s=>s.Id).Select(g=>g.First().Copy()));
             var b=d.business; if(!d.hasBusiness || b==null || b.NextDebtId<=0) return;
-            ParkPlaceId=City.HasPlace(b.ParkPlaceId) ? b.ParkPlaceId : null; ParkReadyDay=b.ParkReadyDay; HasMcn=b.HasMcn; RomanceId=IsRomanceCandidate(b.RomanceId) ? b.RomanceId : null;
+            ParkPlaceId=City.HasPlace(b.ParkPlaceId) ? b.ParkPlaceId : null; ParkReadyDay=b.ParkReadyDay; HasMcn=b.HasMcn; RomanceId=CanRestoreRomancePartner(b.RomanceId) ? b.RomanceId : null;
             _supplierDebts.Clear();_supplierDebts.AddRange((b.Debts??Array.Empty<SupplierDebt>()).Select(x=>x.Copy()));
             _directShipments.Clear();_directShipments.AddRange((b.Shipments??Array.Empty<DirectShipment>()).Where(x=>PartCatalog.Exists(x.PartId) && x.Count>0).Select(x=>x.Copy()));
             _contracts.Clear();_contracts.AddRange((b.Contracts??Array.Empty<EnterpriseContract>()).Select(x=>x.Copy()));

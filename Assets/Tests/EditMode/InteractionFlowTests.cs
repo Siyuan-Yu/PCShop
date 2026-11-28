@@ -146,7 +146,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void RecruitWithAssignment_RejectsOccupiedRole_WithoutHiringOrRemovingCandidate()
+        public void RecruitWithAssignment_RejectsFullShop_WithoutHiringOrRemovingCandidate()
         {
             using (var s = Make())
             {
@@ -157,13 +157,19 @@ namespace PCShopSell.Tests
                 s.AdvanceClock(2);
                 var candidate = s.Candidates.First();
                 int count = s.Candidates.Count;
-                s.MainShop.Employee = new Employee();
+                for (int i = 0; i < GameSession.StaffLimit(s.MainShop.Place.Size); i++)
+                    s.MainShop.AdditionalEmployees.Add(new AdditionalShopEmployee
+                    {
+                        Role = EmployeeRole.Cashier,
+                        Person = new Employee { Id = "capacity-" + i }
+                    });
                 Assert.False(s.RecruitAndAssign(candidate.Id, s.MainShop.Place.Id, EmployeeRole.Cashier));
                 Assert.AreEqual(count, s.Candidates.Count);
                 Assert.IsNull(s.FindEmployee(candidate.Id));
-                Assert.True(s.RecruitAndAssign(candidate.Id, s.MainShop.Place.Id, EmployeeRole.Buyer));
+                s.MainShop.AdditionalEmployees.RemoveAt(0);
+                Assert.True(s.RecruitAndAssign(candidate.Id, s.MainShop.Place.Id, EmployeeRole.Cashier));
                 Assert.AreEqual(count - 1, s.Candidates.Count);
-                Assert.AreEqual(EmployeeRole.Buyer, s.FindEmployee(candidate.Id).Role);
+                Assert.AreEqual(EmployeeRole.Cashier, s.FindEmployee(candidate.Id).Role);
             }
         }
 

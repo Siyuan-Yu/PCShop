@@ -1,0 +1,14 @@
+{
+  "tag": "office-regression",
+  "filter": "GameplayJourneyTests;CompanyWellbeingRegressionTests;EmployeeAssignmentTests",
+  "started": "2026-11-28T10:29:16.4666301+08:00",
+  "seconds": 88.26,
+  "timeout": false,
+  "exitCode": 0,
+  "result": "Passed",
+  "total": 59,
+  "passed": 59,
+  "failed": 0,
+  "skipped": 0,
+  "directory": "D:\\tmp\\pcshop-company-office-20261128\\20261128-102916-office-regression-aef75c"
+}

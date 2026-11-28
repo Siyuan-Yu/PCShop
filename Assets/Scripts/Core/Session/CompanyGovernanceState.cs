@@ -32,6 +32,7 @@ namespace PCShopSell.Core.Session
     {
         public string Ticker, ControllerId, ManagerId, PendingControllerId, PendingManagerId;
         public long TotalShares, CashCents, DailyBudgetCents = 1000000, HandoverAt = -1;
+        public long LastPlayerHandoverAt, ReviewedPlayerHandoverAt;
         public long LastDividendPerShare;
         public string LastDividendKey;
         public int DistributedProfitMonth = -1;

@@ -1,5 +1,9 @@
 # 美术/音频资源登记（AI 生成必填）
 
+## 2026-11-28 素材清理与交接
+
+清理 11 张仍在 Unity `Resources` 的过程图和 129 张退役复古头像的工程副本。感情线 24 张 CG、私服头像与表情资源随当前版本交付。[清理范围、字节统计和原图历史](165-current-handoff-and-resource-cleanup-2026-11-28.md#过程图清理)
+
 ## 2026-11-14 — 全体NPC的03动漫头像
 
 - 内置 image_gen 制作125张独立头像：124位固定NPC与1张动态备用图。5张沿用本轮03风格样张，其余120张分别生成，保留性别、年龄和人物气质。
@@ -44,3 +48,4 @@
 - `RiceCookerVisual.cs`：灯光、锅盖和蒸汽程序动画；`AgencyBuildingGlow.cs`：uGUI 建筑凸包高亮；`ShopFixtures.cs`：花束/盆栽、餐盒程序模型。均为本项目代码生成，没有复制参考游戏美术或新增 AI 位图。
 - `Assets/Plugins/WebGL/PCShopStorage.jslib`：浏览器文件系统同步桥接代码。
 - 此轮不生成新验收截图、不运行图形冒烟，也未重打最新 WebGL 包。历史 `docs/previews/` 文件继续作为原版本资料。
+

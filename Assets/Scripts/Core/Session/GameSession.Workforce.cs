@@ -244,7 +244,7 @@ namespace PCShopSell.Core.Session
 
         public bool HireBuyer(int index)
         {
-            if (IsGameOver || !InPlayerShop || index < 0 || index >= _candidates.Count) return false;
+            if (IsGameOver || !AtRecruitmentInterview || index < 0 || index >= _candidates.Count) return false;
             string capacity=StaffCapacityBlocker(_focus);if(capacity!=null)return Fail(capacity);
             if (!CandidateAvailable(_candidates[index])) return Fail("这位应聘者已经离开了。");
             var hired=_candidates[index];AddShopEmployee(_focus,EmployeeRole.Buyer,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;

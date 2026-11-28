@@ -6,6 +6,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
@@ -86,6 +87,10 @@ namespace PCShopSell.Core.Session
         public IReadOnlyList<Employee> Candidates => _candidates;
 
         private long _recruitmentArrivalAt;
+        private string _recruitmentShopId;
+        public Place RecruitmentInterviewPlace => City.HasPlace(_recruitmentShopId) ? City.GetPlace(_recruitmentShopId) : null;
+        public bool AtRecruitmentInterview => InPlayerShop
+            && (RecruitmentInterviewPlace == null || CurrentPlace == RecruitmentInterviewPlace);
 
         public const int CandidateLeaveMinute = 18 * 60;
         public string RecruitmentHoursText => $"贴告示后，{CandidatesPerNotice} 位应聘者次日 {Hm(CandidateMinute)} 到店，{Hm(CandidateLeaveMinute)} 离开。";
@@ -93,12 +98,14 @@ namespace PCShopSell.Core.Session
         public string NextCandidateArrivalText => RecruitmentNoticePosted
             ? $"{DescribeDay(new GameTimestamp(_recruitmentArrivalAt).Date.TotalDays)} {Hm(CandidateMinute)}" : null;
         public bool CanPostRecruitmentNotice => InPlayerShop && !IsGameOver && !RecruitmentNoticePosted
+            && (RecruitmentInterviewPlace == null || !_candidates.Any(CandidateAvailable))
             && (!FirstRecruitmentNotScheduled || OpeningStaffStep == OpeningStaffLesson.PostRecruitment);
 
         public bool PostRecruitmentNotice()
         {
             if (!CanPostRecruitmentNotice) return false;
             _recruitmentArrivalAt = GameTimestamp.From(Clock.Today.AddDays(1), CandidateMinute).TotalMinutes;
+            _recruitmentShopId = null;
             if (FirstRecruitmentNotScheduled) _openingStaffWaitUntil = _recruitmentArrivalAt;
             return true;
         }
@@ -229,6 +236,7 @@ namespace PCShopSell.Core.Session
         public bool Hire(int candidateIndex)
         {
             if (IsGameOver || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
+            if (RecruitmentInterviewPlace != null && !AtRecruitmentInterview) return Fail("请到核准招聘的门店面试。");
             string capacity=StaffCapacityBlocker(_focus);if(capacity!=null)return Fail(capacity);
             if (!CandidateAvailable(_candidates[candidateIndex])) return Fail("这位应聘者已经离开了。");
             var hired=_candidates[candidateIndex];AddShopEmployee(_focus,EmployeeRole.Cashier,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
@@ -296,6 +304,13 @@ namespace PCShopSell.Core.Session
             if (!RecruitmentNoticePosted || Clock.Now.TotalMinutes < _recruitmentArrivalAt) return;
             long leaveAt = _recruitmentArrivalAt + CandidateLeaveMinute - CandidateMinute;
             _recruitmentArrivalAt = 0;
+            if (RecruitmentInterviewPlace is Place target
+                && (ShopAt(target.Id) is not OwnedShop hiringShop || !hiringShop.Rented || !PlayerManagesShop(hiringShop)))
+            {
+                _recruitmentShopId = null;
+                Say("招聘门店已不可经营，本批招聘已取消。");
+                return;
+            }
             if (Clock.Now.TotalMinutes >= leaveAt || IsGameOver || MyShopCount == 0) return;
             for (int i = 0; i < CandidatesPerNotice; i++)
             {

@@ -169,22 +169,34 @@ namespace PCShopSell.Game.UI
             if (effects.Length != 0) Para(parent, effects, 16, Ui.Dim);
         }
 
-        private void BuildPartnerActivityChoices(Window w, CityActivity activity)
+        private void BuildPartnerActivityChoices(Window w, CityActivity activity, Transform parent = null,
+            string returnLabel = "继续活动")
         {
-            BuildRelationshipOutingButton(w.Content, activity, w.RequestRebuild);
+            parent ??= w.Content;
+            BuildRelationshipOutingButton(parent, activity, w.RequestRebuild, returnLabel);
             string line = S.PartnerActivityLine(activity);
             if (line == null) return;
-            Para(w.Content, line, 17, Ui.Accent);
+            if (!S.PersonalMoment(activity).Illustrated) Para(parent, line, 17, Ui.Accent);
             if (!S.CanTalkToActivityPartner(activity)) return;
-            var row = Ui.Row(w.Content, 40, 6);
+            var row = Ui.Row(parent, 40, 6);
             void Interact(bool holdHands)
             {
                 string partner = S.ActivityPartnerId(activity);
                 string reply = S.InteractWithActivityPartner(activity.Id, holdHands);
-                OpenActivityReply(partner, reply);
+                var person = S.CityPerson(partner);
+                if (reply == null || person == null) return;
+                OpenDialogue(partner, person.Name, S.CityPersonRole(partner), "", null, onClosed: w.RequestRebuild,
+                    start: ctx =>
+                    {
+                        ctx.ShowRelationshipReaction = true;
+                        ctx.AlternateRelationshipReaction = holdHands;
+                        ctx.Finish(reply, "继续约会");
+                    });
             }
-            Ui.Size(Ui.Button(row, "牵手", () => Interact(true), 16), -1, 40, 1);
-            Ui.Size(Ui.Button(row, "聊聊心事", () => Interact(false), 16), -1, 40, 1);
+            Ui.Size(Ui.Button(row, S.HasActivityPartnerInteraction(activity, true) ? "牵过手了" : "牵手",
+                () => Interact(true), 16, Ui.ButtonSecondary, !S.HasActivityPartnerInteraction(activity, true)), -1, 40, 1);
+            Ui.Size(Ui.Button(row, S.HasActivityPartnerInteraction(activity, false) ? "聊过心事了" : "聊聊心事",
+                () => Interact(false), 16, Ui.ButtonSecondary, !S.HasActivityPartnerInteraction(activity, false)), -1, 40, 1);
         }
 
         private void BuildCityVenue(Window w, Place place) => BuildCityVenue(w, place, null);

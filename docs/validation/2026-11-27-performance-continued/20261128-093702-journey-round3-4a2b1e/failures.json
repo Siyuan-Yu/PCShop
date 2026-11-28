@@ -1,0 +1,7 @@
+[
+  {
+    "name": "PCShopSell.Tests.InteractionFlowTests.RecruitWithAssignment_RejectsOccupiedRole_WithoutHiringOrRemovingCandidate",
+    "message": "  Expected: False\n  But was:  True\n",
+    "stack": "at PCShopSell.Tests.InteractionFlowTests.RecruitWithAssignment_RejectsOccupiedRole_WithoutHiringOrRemovingCandidate () [0x00083] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\InteractionFlowTests.cs:161\n"
+  }
+]

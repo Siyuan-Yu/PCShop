@@ -14,6 +14,67 @@ namespace PCShopSell.Tests
 {
     public sealed class PerformanceRegressionTests
     {
+        [TestCase(0, false)] [TestCase(0, true)] [TestCase(3, false)] [TestCase(3, true)]
+        public void ForestCrownsHaveTexturedLeafLayersInsteadOfExposedSolidGreenPanels(int species, bool detailed)
+        {
+            var woodland = typeof(ShopInteriorView).Assembly.GetType("PCShopSell.Game.Runtime.PaintedWoodland");
+            var template = woodland.GetMethod("Template", BindingFlags.Static | BindingFlags.NonPublic);
+            for (int aspect = 0; aspect < 6; aspect++)
+            {
+                var mesh = (Mesh)template.Invoke(null, new object[] { 6, species, aspect, detailed, false, true });
+                var uv = mesh.uv;
+                var offsets = new List<Vector2>();
+                mesh.GetUVs(2, offsets);
+                Assert.AreEqual(mesh.vertexCount, offsets.Count, "所有顶点都需要明确的树皮或叶簇朝向信息");
+                int leaves = 0;
+                for (int i = 0; i < uv.Length; i++)
+                {
+                    if (offsets[i].sqrMagnitude > .0001f)
+                    {
+                        leaves++;
+                        Assert.Greater(uv[i].y, .10f, "叶簇必须采样有透明轮廓的叶片区");
+                    }
+                    else Assert.Less(uv[i].x, .50f, "固定几何只能取树皮区，不能再用纯绿条生成实心树冠壳");
+                }
+                Assert.GreaterOrEqual(leaves, 24, "去除实心壳后中心仍需有叶簇填充，不能留下空冠");
+            }
+        }
+
+        [Test]
+        public void SoundPrewarmPreparesAllClipsWithoutPlaybackOrPreferenceChanges()
+        {
+            var flags = BindingFlags.Static | BindingFlags.NonPublic;
+            var clips = (AudioClip[])typeof(SoundFx).GetField("Clips", flags).GetValue(null);
+            var original = (AudioClip[])clips.Clone();
+            var cooldowns = (float[])typeof(SoundFx).GetField("NextPlayTime", flags).GetValue(null);
+            var originalCooldowns = (float[])cooldowns.Clone();
+            var sourceField = typeof(SoundFx).GetField("_source", flags);
+            var source = sourceField.GetValue(null);
+            bool muted = SoundFx.Muted;
+            float volume = SoundFx.Volume;
+            Array.Clear(clips, 0, clips.Length);
+            try
+            {
+                var warm = SoundFx.Prewarm();
+                int steps = 0;
+                while (warm.MoveNext()) steps++;
+                Assert.AreEqual(Enum.GetValues(typeof(Sfx)).Length, steps, "每帧最多准备一种音效");
+                Assert.True(clips.All(c => c != null && c.samples > 0 && c.channels == 1));
+                var prepared = (AudioClip[])clips.Clone();
+                Assert.False(SoundFx.Prewarm().MoveNext(), "重复加载必须复用已有音效");
+                CollectionAssert.AreEqual(prepared, clips);
+                CollectionAssert.AreEqual(originalCooldowns, cooldowns);
+                Assert.AreSame(source, sourceField.GetValue(null), "预热不能创建播放源或开始播放");
+                Assert.AreEqual(muted, SoundFx.Muted);
+                Assert.AreEqual(volume, SoundFx.Volume);
+            }
+            finally
+            {
+                foreach (var clip in clips) if (clip != null) UnityEngine.Object.DestroyImmediate(clip);
+                Array.Copy(original, clips, clips.Length);
+            }
+        }
+
         [Test]
         public void IndexedPathSearchMatchesOriginalTieBreakingAndDistances()
         {

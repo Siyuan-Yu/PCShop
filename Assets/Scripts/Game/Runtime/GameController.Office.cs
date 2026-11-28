@@ -10,6 +10,14 @@ namespace PCShopSell.Game
         private Vector3 _officeLocal, _officeFacing;
         private List<Rect> _officeFurniture;
         private bool OfficeDoor => Mathf.Abs(_officeLocal.x)<1.25f && _officeLocal.z<1.65f;
+        private bool NearOfficeReception => _office != null
+            && DistrictOffice.AtReception(_officeLocal,(float)_office.Place.Width,(float)_office.Place.Depth);
+
+        private void InteractOffice()
+        {
+            if (OfficeDoor) Session.Leave();
+            else if (NearOfficeReception) Ui.OpenOfficeReception(_office.Place);
+        }
 
         private Vector3? SyncOffice()
         {

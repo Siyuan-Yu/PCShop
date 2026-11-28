@@ -1,0 +1,42 @@
+[
+  {
+    "name": "PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding",
+    "message": "  Expected: 16.0f +/- 0.100000001f\n  But was:  14.000061f\n",
+    "stack": "at PCShopSell.Tests.BrandStoryUiTests.<FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding>g__AssertFixedDialogueLayout|1_10 (System.Boolean canEnd, PCShopSell.Tests.BrandStoryUiTests+<>c__DisplayClass1_0& , PCShopSell.Tests.BrandStoryUiTests+<>c__DisplayClass1_1& ) [0x00128] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BrandStoryUiTests.cs:105\nat PCShopSell.Tests.BrandStoryUiTests.FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding () [0x0036c] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BrandStoryUiTests.cs:111\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CarVanAreLegal_PersistCapacity_AndCanBeSold () [0x00014] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:250\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.CreatorStoryMemoryAndExclusiveRomancePersistSeparatelyFromContract () [0x000c7] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:355\n"
+  },
+  {
+    "name": "PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays(\"cars\")",
+    "message": "  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.BusinessRegressionTests.EveryVentureCanOperateSaveResumeAndExitOverNinetyDays (System.String kind) [0x00074] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\BusinessRegressionTests.cs:297\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameplayJourneyTests.CompanyDepartmentRecruitmentAndDismissalSurviveRealMapAndReload",
+    "message": "  Expected: \"journey_leader\"\n  But was:  null\n",
+    "stack": "at PCShopSell.Tests.GameplayJourneyTests.CompanyDepartmentRecruitmentAndDismissalSurviveRealMapAndReload () [0x00109] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\GameplayJourneyTests.cs:98\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameplayJourneyTests.EveryStoryCanScheduleItsActualVenueAndKeepAppointmentAfterReload(\"life_creator\")",
+    "message": "  最近的班次和日程碰不上。等排班空下来再约吧。\n  Expected: greater than 2040\n  But was:  -1\n",
+    "stack": "at PCShopSell.Tests.GameplayJourneyTests.EveryStoryCanScheduleItsActualVenueAndKeepAppointmentAfterReload (System.String person) [0x00053] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\GameplayJourneyTests.cs:54\n"
+  },
+  {
+    "name": "PCShopSell.Tests.GameplayJourneyTests.EveryStoryCanScheduleItsActualVenueAndKeepAppointmentAfterReload(\"life_designer\")",
+    "message": "  最近的班次和日程碰不上。等排班空下来再约吧。\n  Expected: greater than 2040\n  But was:  -1\n",
+    "stack": "at PCShopSell.Tests.GameplayJourneyTests.EveryStoryCanScheduleItsActualVenueAndKeepAppointmentAfterReload (System.String person) [0x00053] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\GameplayJourneyTests.cs:54\n"
+  },
+  {
+    "name": "PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay",
+    "message": "  交房前的月租照扣\n  Expected: True\n  But was:  False\n",
+    "stack": "at PCShopSell.Tests.RealtyTests.AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay () [0x00174] in D:\\tmp\\PCShop-main-build-5f4a412c\\Assets\\Tests\\EditMode\\CampaignTests.cs:437\n"
+  }
+]
